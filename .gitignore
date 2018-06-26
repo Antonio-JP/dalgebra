@@ -1,0 +1,7 @@
+# Ingored files in Dalgebra repository #
+########################################
+#
+#
+#
+### Compiled files (.pyc)
+*.pyc
