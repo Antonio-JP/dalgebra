@@ -33,7 +33,9 @@ To use this module, it is enough to import it with the following Sage line::
 From this site, you can explore all the documentation (which contains several examples of usage) for all
 the modules included in this package. 
 
-For a live demo (with no need of installation), access (not available)
+For a live demo (with no need of installation), got to (not available)
+
+.. warning:: the demo is currently not available
 
 List of Packages 
 =================
