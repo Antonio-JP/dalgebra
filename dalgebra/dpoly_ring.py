@@ -1,7 +1,13 @@
+
+from sage.categories.all import Morphism, Rings
+from sage.categories.pushout import pushout
+from sage.categories.pushout import ConstructionFunctor
+
+#Private variables for module
+_Rings = Rings.__classcall__(Ring)
+
 class DiffPolynomialRing ():
     r'''
-        
-
         EXAMPLES::
 
             sage: from dalgebra import *
@@ -89,3 +95,30 @@ class DiffPolynomialRing ():
         
     def is_noetherian(self, **kwds):
         pass
+
+class DPolyRingFunctor (ConstructionFunctor):
+    def __init__(self, variables):
+        self.__variables = variables
+        super().__init__(_Rings,_Rings)
+        
+    ### Methods to implement
+    def _coerce_into_domain(self, x):
+        if(x not in self.domain()):
+            raise TypeError("The object [%s] is not an element of [%s]" %(x, self.domain()))
+        return x
+        
+    def _apply_functor(self, x):
+        return DiffPolynomialRing(x,self.__variables)
+        
+    def _repr_(self):
+        return "DiffPolynomialRing(*,%s)" %(self.__variables)
+        
+    def __eq__(self, other):
+        if(other.__class__ == self.__class__):
+            return (other.__variables == self.__variables)
+
+    def merge(self, other):
+        pass
+
+    def variables(self):
+        return self.__variables
