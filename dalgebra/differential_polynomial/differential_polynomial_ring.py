@@ -1,16 +1,39 @@
+r"""
+File for the ring structure of Differential polynomials
 
-from sage.all import latex, cached_method, ZZ, diff, prod, parent
+This file contains all the parent structures for Differential polynomials
+and all the coercion associated classes.
+
+AUTHORS:
+
+    - Antonio Jimenez-Pastor (2012-05-19): initial version
+
+"""
+
+# ****************************************************************************
+#  Copyright (C) 2021 Antonio Jimenez-Pastor <ajpastor@risc.uni-linz.ac.at>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#                  https://www.gnu.org/licenses/
+# ****************************************************************************
+
+from sage.all import cached_method, ZZ, latex, diff, prod, parent
+
 from sage.categories.all import Morphism, Rings
 from sage.categories.pushout import ConstructionFunctor, pushout
-from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialGen
-from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense, InfinitePolynomial_sparse
+from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
+from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense
 
-#Private variables for module
+from .differential_polynomial_element import DiffPolynomial, DiffPolynomialGen
+
 _Rings = Rings.__classcall__(Rings)
 
 def is_InfinitePolynomial(element):
     R = element.parent()
-    return (isinstance(R, InfinitePolynomialRing_dense) or isinstance(R, InfinitePolynomial_sparse))
+    return (isinstance(R, InfinitePolynomialRing_dense) or isinstance(R, InfinitePolynomialRing_sparse))
 
 class DiffPolynomialRing (InfinitePolynomialRing_dense):
     r'''
@@ -19,7 +42,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
             sage: from dalgebra import *
     '''
     
-    Element = None
+    Element = DiffPolynomial
     __CACHED_RINGS = {}
         
     @staticmethod
@@ -183,72 +206,6 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
             R = DiffPolynomialRing(R, [el._name for el in left_gens])
             return R(result)
                                 
-class DiffPolynomialGen (InfinitePolynomialGen):
-    r'''
-        TODO: do documentation
-    '''
-    def __init__(self, parent, name):
-        if(not (isinstance(parent, DiffPolynomialRing))):
-            raise TypeError("The DiffPolynomialGen must have a DiffPolynomialRing parent")
-        super().__init__(parent, name)
-
-    def __getitem__(self, i):
-        return self._parent(super().__getitem__(i))
-
-    def contains(self, element):
-        name = str(element)
-        spl = name.split("_")
-        first = "_".join(spl[:-1])
-        return first == self._name
-
-    def index(self, element):
-        if(self.contains(element)):
-            return int(str(element).split("_")[-1])
-
-    def __hash__(self):
-        return hash(self._name)
-
-class DiffPolynomial (InfinitePolynomial_dense):
-    r'''
-        TODO: do documentation
-    '''
-    def __init__(self, parent, polynomial):   
-        if(is_InfinitePolynomial(polynomial)):
-            polynomial = polynomial.polynomial()
-        super().__init__(parent, polynomial)
-
-    # Magic methods
-    def __call__(self, *args, **kwargs):
-        return self.parent().eval(self, *args, **kwargs)
-
-    # Arithmetic methods
-    def _add_(self, x):
-        return DiffPolynomial(self.parent(), super()._add_(x))
-    def _sub_(self, x):
-        return DiffPolynomial(self.parent(), super()._sub_(x))
-    def _mul_(self, x):
-        return DiffPolynomial(self.parent(), super()._mul_(x))
-    def _rmul_(self, x):
-        return DiffPolynomial(self.parent(), super()._rmul_(x))
-    def _lmul_(self, x):
-        return DiffPolynomial(self.parent(), super()._lmul_(x))
-    def __pow__(self, n):
-        return DiffPolynomial(self.parent(), super().__pow__(n))
-
-    # Differential methods
-    @cached_method
-    def derivative(self, times=1):
-        if((not times in ZZ) or (times < 0)):
-            raise ValueError("A differential polynomial can not be differentiated %s times" %times)
-        elif(times == 0):
-            return self
-        elif(times > 1):
-            return self.derivative(times=times-1).derivative()
-        else:
-            return self.parent().derivation(self)
-
-DiffPolynomialRing.Element = DiffPolynomial
-
 class DPolyRingFunctor (ConstructionFunctor):
     def __init__(self, variables):
         self.__variables = variables
