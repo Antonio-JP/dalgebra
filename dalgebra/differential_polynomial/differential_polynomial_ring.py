@@ -2,7 +2,19 @@ r"""
 File for the ring structure of Differential polynomials
 
 This file contains all the parent structures for Differential polynomials
-and all the coercion associated classes.
+and all the coercion associated classes. Mainly, this module provides the 
+class :class:`DiffPolynomialRing`, which is the main parent class defining
+a ring of differential polynomials.
+
+EXAMPLES::
+
+    sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+    sage: R.<y> = DiffPolynomialRing(QQ['x']) 
+    sage: x = R.base().gens()[0] 
+    sage: p = x^2*y[1]^2 - y[2]*y[1]; p
+    -y_2*y_1 + x^2*y_1^2
+    sage: R
+    Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field]
 
 AUTHORS:
 
@@ -26,16 +38,63 @@ from sage.categories.all import Morphism, Rings
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense
+from sage.misc.classcall_metaclass import ClasscallMetaclass
 
 from .differential_polynomial_element import DiffPolynomial, DiffPolynomialGen
 
 _Rings = Rings.__classcall__(Rings)
 
-class DiffPolynomialRing (InfinitePolynomialRing_dense):
+class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetaclass):
     r'''
+        Class for a Ring of differential polynomials.
+
+        Given a differential ring `R`, we can define the ring of differential polynomials
+        on `y` over `R` as the *infinite polynomial ring* 
+
+        .. MATH::
+
+            R[y_0, y_1,\ldots]
+
+        where the derivation `\partial` has been uniquely extended such that, for all `n \in \mathbb{N}`:
+
+        .. MATH::
+
+            \partial(y_n) = y_{n+1}.
+
+        The ring of differential polynomials on `y` over `R` is denoted by `R\{y\}`. We can iterate the 
+        process to define th ring of differential polynomials in several variables:
+
+        .. MATH::
+
+            R\{y,z\} \simeq R\{y\}\{z\} \simeq R\{z\}\{y\}
+
+        This class represents exactly the ring of differential polynomial over the given ring ``base`` 
+        with variables given in ``names``.
+
+        This class inherits from :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_dense`,
+        which is the Sage structure to manipulate polynomial rings over infinitely many variables.
+
+        INPUT:
+
+        * ``base``: ring structure that represent the base ring of coefficients `R`.
+        * ``names``: set of names for the variables of the new ring.
+
         EXAMPLES::
 
-            sage: from dalgebra import *
+            sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+            sage: R.<y> = DiffPolynomialRing(QQ['x']); R
+            Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field]
+            sage: S.<a,b> = DiffPolynomialRing(ZZ); S
+            Ring of differential polynomials in (a, b) over [Integer Ring]
+
+        We can now create objects in those rings using the generators ``y``, ``a`` and ``b``:
+
+            sage: y[1]
+            y_1
+            sage: diff(y[1])
+            y_2
+            sage: diff(a[1]*b[0]) #Leibniz Rule
+            a_2*b_0 + a_1*b_1
     '''
     
     Element = DiffPolynomial
@@ -43,20 +102,100 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
         
     @staticmethod
     def __classcall__(cls, *args, **kwds):
-        if(len(args) == 1 and type(args) in (list, tuple)):
+        r'''
+            Special constructor for :class:`DiffPolynomialRing`.
+
+            This method mimic the behavior of :class:`UniqueRepresentation` in the particular
+            case of :class:`DiffPolynomialRing`. This allows the user to use also a 
+            InfinitePolynomialRing structure as input to transform it into a ring of 
+            differential polynomials directly.
+
+            EXAMPLES::
+
+                sage: from dalgebra.differential_polynomial.differential_polynomial_ring
+                sage: R.<y> = DiffPolynomialRing(QQ['x']); R
+                Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field]
+                sage: S = DiffPolynomialRing(QQ['x'], 'y')
+                sage: R is DiffPolynomialRing(QQ['x'], 'y')
+                True
+                sage: R is DiffPolynomialRing(QQ['x'], ['y'])
+                True
+                sage: R is DiffPolynomialRing(QQ['x'], ('y'))
+                True
+                sage: R is DiffPolynomialRing(InfinitePolynomialRing(QQ['x'], 'y'))
+                True
+                sage: R is DiffPolynomialRing(R)
+                True
+
+            We can also see the unique generation even with several variables::
+
+                sage: S = DiffPolynomialRing(QQ['x'], ('y','a')); S
+                Ring of differential polynomials in (a, y) over [Univariate Polynomial Ring in x over Rational Field]
+                sage: S is DiffPolynomialRing(QQ['x'], ['y','a'])
+                True
+                sage: S is DiffPolynomialRing(QQ['x'], ('y','a'))
+                True
+                sage: S is DiffPolynomialRing(QQ['x'], names = ('y','a'))
+                True
+                sage: S is DiffPolynomialRing(R, 'a')
+                True
+                sage: S is DiffPolynomialRing(R, ['a'])
+                True
+
+            Remark that, in order to have real uniqueness, the variable names are sorted. The use of 
+            the Sage notation ``<·,·>`` is then discouraged::
+
+                sage: S.<y,a> = DiffPolynomialRing(QQ['x'])
+                sage: y
+                a_*
+                sage: a
+                y_*
+        '''
+        ## Allowing the args input to not be unrolled
+        if(len(args) == 1 and type(args[0]) in (list, tuple)):
             args = args[0]
         
-        base, names = (None, None)
-        if(len(args) == 1 and isinstance(args, InfinitePolynomial_dense)):
-            base = args[0].base()
-            names = args[0]._names
+        ## Extracting the input from args and kwds
+        if(len(args) == 0):
+            base = kwds["base"]; names = kwds.get("names", [])
+        elif(len(args) == 1):
+            base = args[0]
+            if("base" in kwds):
+                raise TypeError("Duplicated value for the base ring")
+            names = kwds.get("names", [])
         else:
-            base = kwds.get("base", args[0])
-            names = kwds.get("names", args[1])
+            base = args[0]; names = args[1]
+            if("base" in kwds):
+                raise TypeError("Duplicated value for the base ring")
+            if("names" in kwds):
+                raise TypeError("Duplicated value for the generators")
+
+        ## Processing the input
+        if not type(names) in (list, tuple):
+            names = tuple([str(names)])
+
+        if(isinstance(base, InfinitePolynomial_dense) or isinstance(base, InfinitePolynomialRing_sparse)):
+            names = tuple(list(base._names)+list(names))
+            base = base.base()
+
+        if(len(names) == 0):
+            raise ValueError("No variables given: impossible to create a ring")
+
+        ## Sorting the variables
+        names = list(names); names.sort(); names = tuple(names)
 
         key = (base, names)
         if(not (key in DiffPolynomialRing.__CACHED_RINGS)):
-            DiffPolynomialRing.__CACHED_RINGS[key] = DiffPolynomialRing(base, names)
+            tmp = InfinitePolynomialRing_dense.__new__(cls)
+            DiffPolynomialRing.__init__(tmp, base, names)
+            ## Checking the overlaping between previous variables and the new generators
+            for v in base.gens():
+                for g in tmp.gens():
+                    if(g.contains(v)):
+                        raise TypeError("There ir an overlapping in variables: %s inside %s" %(v, g))
+            ## Adding the new ring to the CACHE
+            DiffPolynomialRing.__CACHED_RINGS[key] = tmp
+        ## Returnign the cached ring
         return DiffPolynomialRing.__CACHED_RINGS[key]
     
     def __init__(self, base, names):
@@ -85,6 +224,12 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
         return (not(coer is False) and not(coer is None))
         
     def _element_constructor_(self, x):
+        r'''
+            Extended definition of :func:`_element_constructor_`.
+
+            Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_dense`
+            and then transforms the output into a :class:`~dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomial`.
+        '''
         p = super()._element_constructor_(x)
         return DiffPolynomial(self, p)
 
@@ -93,6 +238,38 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
         r'''
             Override method to create the `i^{th}` generator (see method 
             :func:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse.gen`).
+
+            For a :class:`DiffPolynomialRing`, the generator type is 
+            :class:`~dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen`
+            which provides extra features to know if an object can be generated by that generator.
+            See tis documentation for further details.
+
+            INPUT:
+
+            * ``i``: index of the required generator.
+
+            OUTPUT:
+
+            A :class:`~dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen`
+            representing the `i^{th}` generator of ``self``.
+
+            EXAMPLES::
+
+                sage: from dalgebra.differential_polynomial import *
+                sage: R.<y> = DiffPolynomialRing(QQ['x'])
+                sage: R.gen(0)
+                y_*
+                sage: R.gen(0) is y
+                True
+                sage: isinstance(R.gen(0), DiffPolynomialGen)
+                True
+                sage: S = DiffPolynomialRing(ZZ, ('a', 'b'))
+                sage: S
+                Ring of differential polynomials in (a, b) over [Integer Ring]
+                sage: S.gen(0)
+                a_*
+                sage: S.gen(1)
+                b_*
         '''
         if(not(i in ZZ) or (i < 0 or i > len(self._names))):
             raise ValueError("Invalid index for generator")
@@ -100,6 +277,28 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
         return DiffPolynomialGen(self, self._names[i])
                 
     def construction(self):
+        r'''
+            Return the associated functor and input to create ``self``.
+
+            The method construction returns a :class:`~sage.categories.pushout.ConstructionFunctor` and 
+            a valid input for it that would create ``self`` again. This is a necessary method to
+            implement all the coercion system properly.
+
+            For a :class:`DiffPolynomialRing`, the associated functor class is :class:`DPolyRingFunctor`.
+            See its documentation for further information.
+
+            EXAMPLES::
+
+                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import *^
+                sage: R.<y> = DiffPolynomialRing(QQ['x'])
+                sage: F, S = R.construction()
+                sage: isinstance(F, DPolyRingFunctor)
+                True
+                sage: F
+                DiffPolynomialRing(*,y)
+                sage: S == QQ['x']
+                True
+        '''
         return DPolyRingFunctor(self._names), self._base
     
     #################################################
@@ -111,7 +310,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
 
     ## Other magic methods   
     def __repr__(self):
-        return "Differential ring of polynomials in %s over %s" %(self._names, self._base)
+        return "Ring of differential polynomials in (%s) over [%s]" %(", ".join(self._names), self._base)
 
     def _latex_(self):
         return latex(self._base) + r"\{" + ", ".join(self._names) + r"\}"
@@ -120,23 +319,86 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
     ### Element generation methods
     #################################################
     def one(self):
+        r'''
+            Return the one element in ``self``.
+
+            EXAMPLES::
+
+                from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+                sage: R.<y> = DiffPolynomialRing(QQ['x'])
+                sage: R.one()
+                1
+        '''
         return self(1)
     
     def zero(self):
+        r'''
+            Return the zero element in ``self``.
+
+            EXAMPLES::
+
+                from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+                sage: R.<y> = DiffPolynomialRing(QQ['x'])
+                sage: R.zero()
+                0
+        '''
         return self(0)
     
-    def random_element(self,**kwds):
-        p = super().random_element(**kwds)
+    def random_element(self,*args,**kwds):
+        r'''
+            Creates a randome element in this ring.
+
+            This method creates a random element in the base infinite polynomial ring and 
+            cast it into an element of ``self``.
+        '''
+        p = super().random_element(*args,**kwds)
         return self(p)
 
     def derivation(self, element):
+        r'''
+            Computes the derivation of an element.
+
+            This method catchs the essence of a :class:`DiffPolynomialRing`: the extension
+            of the derivation on the base ring (retrieved by ``self.base()``) to the 
+            infinite polynomial ring in such a way that the variables are linked linearly with the 
+            derivation.
+
+            For element in the base ring, this method relies on the Sage method :func:`diff`.
+
+            INPUT:
+
+            * ``element``: an object. Must be included in ``self``. 
+
+            OUTPUT:
+
+            An element in ``self`` that represents the derivative of ``element``.
+
+            EXAMPLES::
+
+                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+                sage: R.<y> = DiffPolynomialRing(QQ['x']); x = R.base().gens()[0]
+                sage: R.derivation(y[0])
+                y[1]
+                sage: R.derivation(x)
+                1
+                sage: R.derivation(x*y[10])
+                x*y_11 + y_10
+                sage: R.derivation(x^2*y[1]^2 - y[2]*y[1])
+                -y_3*y_1 - y_2^2 + x^2*y_2*y_1 + 2*x*y_1^2
+
+            This derivation also works naturally with several infinite variables::
+
+                sage: S = DiffPolynomialRing(R, 'a'); a,y = S.gens()
+                sage: S.derivation(a[1] + y[0]*a[0])
+                a_1*y_0 + a_0*y_1 + a_2
+        '''
         if(element in self):
             element = self(element)
         else:
             element=self(str(element))
             
         if(element in self.base()):
-            return diff(self.base()(element))
+            return self.base()(diff(self.base()(element)))
         
         if(not element in self.__cache_derivatives):
             generators = self.gens()
@@ -164,6 +426,61 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
         return self.__cache_derivatives[element]
 
     def eval(self, element, *args, **kwds):
+        r'''
+            Method to evaluate elements in the ring of differential polynomials.
+
+            Since the differential polynomials have an intrinsic meaning (namely, the 
+            variables are related by derivation), evaluating a differential polynomial
+            is a straight-forward computation once the objects for the `*_0` term is given.
+
+            This method evaluates elements in ``self`` following that rule.
+
+            INPUT:
+
+            * ``element``: element (that must be in ``self``) to be evaluated
+            * ``args``: list of arguments that will be linearly related with the generators
+              of ``self`` (like they are given by ``self.gens()``)
+            * ``kwds``: dictionary for providing values to the generators of ``self``. The 
+              name of the keys must be the names of the generators (as they can be got using 
+              the attribute ``_name``).
+
+            We allow a mixed used of ``args`` and ``kwds`` but an error will be raised if
+
+            * There are too many arguments in ``args``,
+            * An input in ``kwds`` is not a valid name of a generator,
+            * There are duplicate entries for a generator.
+
+            OUTPUT:
+
+            The resulting element after evaluating the variable `\alpha_n = \partial^n(\alpha)`,
+            where `\alpha` is the name of the generator.
+
+            EXAMPLES::
+
+                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+                sage: R.<y> = DiffPolynomialRing(QQ['x']); x = R.base().gens()[0]
+                sage: R.eval(y[1], 0)
+                0
+                sage: R.eval(y[0] + y[1], x)
+                x + 1
+                sage: R.eval(y[0] + y[1], y=x)
+                x + 1
+
+            This method commutes with the use of :func:`derivation`::
+
+                sage: R.eval(R.derivation(x^2*y[1]^2 - y[2]*y[1]), y=x) == R.derivation(R.eval(x^2*y[1]^2 - y[2]*y[1], y=x))
+                True
+
+            This evaluation also works naturally with several infinite variables::
+
+                sage: S = DiffPolynomialRing(R, 'a'); a,y = S.gens()
+                sage: S.eval(a[1] + y[0]*a[0], a=x, y=x^2)
+                x^3 + 1
+                sage: in_eval = S.eval(a[1] + y[0]*a[0], y=x); in_eval
+                a_1 + x*a_0
+                sage: parent(in_eval)
+                Ring of differential polynomials in (a) over [Univariate Polynomial Ring in x over Rational Field]
+        '''
         if(not element in self):
             raise TypeError("Impossible to evaluate %s as an element of %s" %(element, self))
         g = self.gens(); final_input = {}
@@ -187,7 +504,10 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
                     max_derivation[gen] = max(max_derivation[gen], gen.index(v))
                     break
         
-        to_evaluate = {str(gen[i]): diff(final_input[gen], i) for i in range(max_derivation[gen]+1) for gen in max_derivation}
+        to_evaluate = {}
+        for gen in max_derivation:
+            for i in range(max_derivation[gen]+1):
+                to_evaluate[str(gen[i])] = diff(final_input[gen], i)
         result = element.polynomial()(**to_evaluate)
 
         ## Computing the final ring
@@ -204,6 +524,33 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
             return R(result)
                                 
 class DPolyRingFunctor (ConstructionFunctor):
+    r'''
+        Class representing Functor for creating :class:`DiffPolynomialRing`.
+
+        This class represents the functor `F: R \mapsto R\{y^(1),\ldots,y^{(n)}\}.
+        The names of the variables must be given to the functor and, then
+        this can take any ring and create the corresponding ring of differential 
+        polynomials.
+
+        INPUT:
+
+        * ``variables``: names of the variables that the functor will add (see 
+          the input ``names`` in :class:`DiffPolynomialRing`)
+
+        EXAMPLES::
+
+            sage: from dalgebra.differential_polynomial.differential_polynomial_ring import *
+            sage: R.<y> = DiffPolynomialRing(QQ['x'])
+            sage: F, S = R.construction()
+            sage: F(S) is R
+            True
+            sage: R = DiffPolynomialRing(R, 'a')
+            sage: F, T = R.construction()
+            sage: F
+            DiffPolynomialRing(*,('a', 'y'))
+            sage: R is F(T)
+            True
+    '''
     def __init__(self, variables):
         self.__variables = variables
         super().__init__(_Rings,_Rings)
@@ -218,7 +565,7 @@ class DPolyRingFunctor (ConstructionFunctor):
         return DiffPolynomialRing(x,self.__variables)
         
     def _repr_(self):
-        return "DiffPolynomialRing(*,%s)" %(self.__variables)
+        return "DiffPolynomialRing(*,%s)" %(str(self.__variables))
         
     def __eq__(self, other):
         if(other.__class__ == self.__class__):
@@ -231,6 +578,12 @@ class DPolyRingFunctor (ConstructionFunctor):
         return self.__variables
 
 class DiffPolySimpleMorphism (Morphism):
+    r'''
+        Class representing maps to simpler rings.
+
+        This map allows the coercion system to detect that some elements in a 
+        :class:`DiffPolynomialRing` are included in simpler rings.
+    '''
     def __init__(self, domain, codomain):
         super().__init__(domain, codomain)
         
