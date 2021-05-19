@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Differential algebra in Sage &#8212; Differential Algebra in Sage 0.0 documentation</title>
+    <title>Package differential_polynomial &#8212; Differential Algebra in Sage 0.0 documentation</title>
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     
@@ -18,7 +18,8 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Package differential_polynomial" href="differential_polynomial.html" /> 
+    <link rel="next" title="Parent structures for Differential polynomials" href="differential_polynomial/differential_polynomial_ring.html" />
+    <link rel="prev" title="Differential algebra in Sage" href="index.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -30,10 +31,13 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="differential_polynomial.html" title="Package differential_polynomial"
+          <a href="differential_polynomial/differential_polynomial_ring.html" title="Parent structures for Differential polynomials"
              accesskey="N">next</a> |</li>
-        <li class="nav-item nav-item-0"><a href="#">dalgebra</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">Differential algebra in Sage</a></li> 
+        <li class="right" >
+          <a href="index.html" title="Differential algebra in Sage"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">dalgebra</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code></a></li> 
       </ul>
     </div>  
 
@@ -42,43 +46,16 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="differential-algebra-in-sage">
-<h1>Differential algebra in Sage<a class="headerlink" href="#differential-algebra-in-sage" title="Permalink to this headline">¶</a></h1>
-<p>Differential Algebra is a wide field of Mathematics that involve
-algorithms such as Symbolic Integration. The main idea of this field
-is to add a derivative operator <span class="math notranslate nohighlight">\(\partial\)</span> to an algebraic structure
-that satisfies the following two properties:</p>
-<div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{c}
-    \partial(a+b) = \partial(a) + \partial(b)\\
-    \partial(ab) = \partial(a)b + a\partial(b)
-\end{array}\end{split}\]</div>
-<p>This setting can be used in commutative and non-commutative algebra, with rings, fields,
-modules, vector spaces, etc.</p>
-<p>This package provides a unified interface to create these algebraic structures, manipulate
-its elements and, in last instance, provide the specialized algorithms of Differential
-Algebra.</p>
-<p>For some references, the reader can follow the following texts:</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://www.springer.com/gp/book/9783662033869">Symbolic Integration I</a></p></li>
-<li><p><a class="reference external" href="https://bookstore.ams.org/coll-33">Differential Algebra</a></p></li>
-</ul>
-<p>To use this module, it is enough to import it with the following Sage line:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="o">*</span>
-</pre></div>
-</div>
-<p>From this site, you can explore all the documentation (which contains several examples of usage) for all
-the modules included in this package.</p>
-<p>For a live demo (with no need of installation), got to (not available)</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>the demo is currently not available</p>
-</div>
-<div class="section" id="list-of-packages">
-<h2>List of Packages<a class="headerlink" href="#list-of-packages" title="Permalink to this headline">¶</a></h2>
+  <div class="section" id="package-differential-polynomial">
+<h1>Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code><a class="headerlink" href="#package-differential-polynomial" title="Permalink to this headline">¶</a></h1>
+<p>This package includes the main structures and built-in functions for working with rings of
+differential polynomials.</p>
+<div class="section" id="modules">
+<h2>Modules<a class="headerlink" href="#modules" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="differential_polynomial.html">Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="differential_polynomial/differential_polynomial_ring.html">Parent structures for Differential polynomials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="differential_polynomial/differential_polynomial_element.html">Element structures for Differential polynomials</a></li>
 </ul>
 </div>
 </div>
@@ -99,22 +76,25 @@ the modules included in this package.</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3><a href="#">Table of Contents</a></h3>
+  <h3><a href="index.html">Table of Contents</a></h3>
   <ul>
-<li><a class="reference internal" href="#">Differential algebra in Sage</a><ul>
-<li><a class="reference internal" href="#list-of-packages">List of Packages</a></li>
+<li><a class="reference internal" href="#">Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code></a><ul>
+<li><a class="reference internal" href="#modules">Modules</a></li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and Tables</a></li>
 </ul>
 </li>
 </ul>
 
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Differential algebra in Sage</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="differential_polynomial.html"
-                        title="next chapter">Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code></a></p>
+  <p class="topless"><a href="differential_polynomial/differential_polynomial_ring.html"
+                        title="next chapter">Parent structures for Differential polynomials</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/index.rst.txt"
+      <li><a href="_sources/differential_polynomial.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -142,10 +122,13 @@ the modules included in this package.</p>
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="differential_polynomial.html" title="Package differential_polynomial"
+          <a href="differential_polynomial/differential_polynomial_ring.html" title="Parent structures for Differential polynomials"
              >next</a> |</li>
-        <li class="nav-item nav-item-0"><a href="#">dalgebra</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">Differential algebra in Sage</a></li> 
+        <li class="right" >
+          <a href="index.html" title="Differential algebra in Sage"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">dalgebra</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code></a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

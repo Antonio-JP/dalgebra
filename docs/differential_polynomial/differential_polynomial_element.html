@@ -1,0 +1,240 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Element structures for Differential polynomials &#8212; Differential Algebra in Sage 0.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script async="async" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Parent structures for Differential polynomials" href="differential_polynomial_ring.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="differential_polynomial_ring.html" title="Parent structures for Differential polynomials"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">dalgebra</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../differential_polynomial.html" accesskey="U">Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code></a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Element structures for Differential polynomials</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-dalgebra.differential_polynomial.differential_polynomial_element">
+<span id="element-structures-for-differential-polynomials"></span><h1>Element structures for Differential polynomials<a class="headerlink" href="#module-dalgebra.differential_polynomial.differential_polynomial_element" title="Permalink to this headline">¶</a></h1>
+<p>File for the ring structure of Differential polynomials</p>
+<p>This file contains all the element structures for Differential polynomials.</p>
+<p>AUTHORS:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Antonio Jimenez-Pastor (2012-05-19): initial version</p></li>
+</ul>
+</div></blockquote>
+<dl class="py class">
+<dt id="dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomial">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.differential_polynomial.differential_polynomial_element.</code><code class="sig-name descname">DiffPolynomial</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parent</span></em>, <em class="sig-param"><span class="n">polynomial</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.rings.polynomial.infinite_polynomial_element.InfinitePolynomial_dense</span></code></p>
+<p>Class for representing differential polynomials.</p>
+<p>Given a differential ring <span class="math notranslate nohighlight">\(R\)</span>, we can define the ring of differential polynomials
+on <span class="math notranslate nohighlight">\(y\)</span> over <span class="math notranslate nohighlight">\(R\)</span> as the <em>infinite polynomial ring</em></p>
+<div class="math notranslate nohighlight">
+\[R[y_0, y_1,\ldots]\]</div>
+<p>where the derivation <span class="math notranslate nohighlight">\(\partial\)</span> has been uniquely extended such that, for all <span class="math notranslate nohighlight">\(n \in \mathbb{N}\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\partial(y_n) = y_{n+1}.\]</div>
+<p>The ring of differential polynomials on <span class="math notranslate nohighlight">\(y\)</span> over <span class="math notranslate nohighlight">\(R\)</span> is denoted by <span class="math notranslate nohighlight">\(R\{y\}\)</span>. We can iterate the 
+process to define th ring of differential polynomials in several variables:</p>
+<div class="math notranslate nohighlight">
+\[R\{y,z\} \simeq R\{y\}\{z\} \simeq R\{z\}\{y\}\]</div>
+<p>This object of this class represents the polynomials of a ring of differential polynomials. They 
+are a natural extension of the class <code class="xref py py-class docutils literal notranslate"><span class="pre">InfinitePolynomial_dense</span></code>
+including some extra functionality more specific of differential polynomials (such as the derivation and the evaluation).</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">parent</span></code>: a <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing</span></code></a> 
+where the new element will be contained.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">polynomial</span></code>: a valid polynomial to be casted into an element of <code class="docutils literal notranslate"><span class="pre">parent</span></code>.</p></li>
+</ul>
+<p>We recommend not to use this constructor, but instead build the polynomials using the generators of the 
+corresponding <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing</span></code></a>.</p>
+<dl class="py method">
+<dt id="dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomial.derivative">
+<code class="sig-name descname">derivative</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">times</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomial.derivative" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the derivative of a differential polynomial.</p>
+<p>Since the derivation for a differential polynomial is determined once 
+we know the derivation in the ring of coefficients, the only extra argument
+or this method is the amount of derivatives to compute.</p>
+<p>This method relies on the method 
+<a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing.derivation" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing.derivation"><code class="xref py py-func docutils literal notranslate"><span class="pre">derivation()</span></code></a>.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">times</span></code>: amount of derivatives of <code class="docutils literal notranslate"><span class="pre">self</span></code> to be computed.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">times</span></code>-th derivative of <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra.differential_polynomial.differential_polynomial_ring</span> <span class="k">import</span> <span class="o">*</span> 
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DiffPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="n">y_1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="n">y_6</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">^</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">times</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="mi">3</span><span class="o">*</span><span class="n">y_3</span><span class="o">*</span><span class="n">y_0</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">18</span><span class="o">*</span><span class="n">y_2</span><span class="o">*</span><span class="n">y_1</span><span class="o">*</span><span class="n">y_0</span> <span class="o">+</span> <span class="mi">6</span><span class="o">*</span><span class="n">y_1</span><span class="o">^</span><span class="mi">3</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">10</span><span class="p">])</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="n">x</span><span class="o">*</span><span class="n">y_11</span> <span class="o">+</span> <span class="n">y_10</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">^</span><span class="mi">2</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="o">-</span><span class="n">y_3</span><span class="o">*</span><span class="n">y_1</span> <span class="o">-</span> <span class="n">y_2</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y_2</span><span class="o">*</span><span class="n">y_1</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">y_1</span><span class="o">^</span><span class="mi">2</span>
+</pre></div>
+</div>
+<p>This derivation also works naturally with several infinite variables:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">S</span> <span class="o">=</span> <span class="n">DiffPolynomialRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">);</span> <span class="n">a</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">gens</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="n">a_1</span><span class="o">*</span><span class="n">y_0</span> <span class="o">+</span> <span class="n">a_0</span><span class="o">*</span><span class="n">y_1</span> <span class="o">+</span> <span class="n">a_2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">a_2</span><span class="o">*</span><span class="n">y_0</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">a_1</span><span class="o">*</span><span class="n">y_1</span> <span class="o">+</span> <span class="n">a_0</span><span class="o">*</span><span class="n">y_2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">a_3</span><span class="o">*</span><span class="n">y_0</span> <span class="o">+</span> <span class="mi">3</span><span class="o">*</span><span class="n">a_2</span><span class="o">*</span><span class="n">y_1</span> <span class="o">+</span> <span class="mi">3</span><span class="o">*</span><span class="n">a_1</span><span class="o">*</span><span class="n">y_2</span> <span class="o">+</span> <span class="n">a_0</span><span class="o">*</span><span class="n">y_3</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.differential_polynomial.differential_polynomial_element.</code><code class="sig-name descname">DiffPolynomialGen</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parent</span></em>, <em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialGen</span></code></p>
+<p>Class for generators of <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing</span></code></a>.</p>
+<p>A generator of a <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing</span></code></a> is 
+an object that can create the infinitely many variables associated with a particular name. The variables it generates
+are of the form <code class="docutils literal notranslate"><span class="pre">name_x</span></code> where <code class="docutils literal notranslate"><span class="pre">x</span></code> is the index.</p>
+<p>In the case of a ring of differential polynomials, <code class="docutils literal notranslate"><span class="pre">name_x</span></code> represents the x-th derivative of the variable with 
+given name.</p>
+<p>To allow more flexibility, this class provides methods to know if an object can be generated with this
+generator and to obtain the corresponding index.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">parent</span></code>: a <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing</span></code></a> 
+where <code class="docutils literal notranslate"><span class="pre">self</span></code> will generate its elements.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: main part of the name for the generated variales.</p></li>
+</ul>
+<dl class="py method">
+<dt id="dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen.contains">
+<code class="sig-name descname">contains</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen.contains" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to know if an object can be generated using <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>This method analyzes the string associated with <code class="docutils literal notranslate"><span class="pre">element</span></code> to determined
+if it is of the appropriate shape to be generated by <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">element</span></code>: the element to be checked.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p><code class="docutils literal notranslate"><span class="pre">True</span></code> if the string of the element is of the shape <code class="docutils literal notranslate"><span class="pre">X_Y</span></code> where <code class="docutils literal notranslate"><span class="pre">X</span></code> is the 
+value of <code class="docutils literal notranslate"><span class="pre">self._name</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen.index">
+<code class="sig-name descname">index</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to know the index to generate <code class="docutils literal notranslate"><span class="pre">element</span></code> using <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>This method analyzes the string associated with <code class="docutils literal notranslate"><span class="pre">element</span></code> to determined
+the appropriate index to generated <code class="docutils literal notranslate"><span class="pre">element</span></code> using <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">element</span></code>: the element to be checked.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>Assumed the string form of <code class="docutils literal notranslate"><span class="pre">X_Y</span></code> from <a class="reference internal" href="#dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen.contains" title="dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen.contains"><code class="xref py py-func docutils literal notranslate"><span class="pre">contains()</span></code></a>, this method returns
+the numerical value of <code class="docutils literal notranslate"><span class="pre">Y</span></code> or an error if not possible.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="dalgebra.differential_polynomial.differential_polynomial_element.is_InfinitePolynomial">
+<code class="sig-prename descclassname">dalgebra.differential_polynomial.differential_polynomial_element.</code><code class="sig-name descname">is_InfinitePolynomial</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.differential_polynomial.differential_polynomial_element.is_InfinitePolynomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to decide whether or not an element is a polynomial with infinite variables.</p>
+<p>This is a call to <code class="docutils literal notranslate"><span class="pre">isinstance</span></code> with the two main element classes of Infinite Polynomial
+Rings.</p>
+</dd></dl>
+
+</div>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="differential_polynomial_ring.html"
+                        title="previous chapter">Parent structures for Differential polynomials</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/differential_polynomial/differential_polynomial_element.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="differential_polynomial_ring.html" title="Parent structures for Differential polynomials"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">dalgebra</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../differential_polynomial.html" >Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code></a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Element structures for Differential polynomials</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+    </div>
+  </body>
+</html>
