@@ -22,15 +22,17 @@ AUTHORS:
 from sage.all import cached_method, ZZ
 
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialGen
-from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense
+from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense, InfinitePolynomial_sparse
 
-from .differential_polynomial_ring import DiffPolynomialRing, is_InfinitePolynomial
+def is_InfinitePolynomial(element):
+    return (isinstance(element, InfinitePolynomial_dense) or isinstance(element, InfinitePolynomial_sparse))
 
 class DiffPolynomialGen (InfinitePolynomialGen):
     r'''
         TODO: do documentation
     '''
     def __init__(self, parent, name):
+        from .differential_polynomial_ring import DiffPolynomialRing
         if(not (isinstance(parent, DiffPolynomialRing))):
             raise TypeError("The DiffPolynomialGen must have a DiffPolynomialRing parent")
         super().__init__(parent, name)
@@ -55,7 +57,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
     r'''
         TODO: do documentation
     '''
-    def __init__(self, parent, polynomial):   
+    def __init__(self, parent, polynomial):
         if(is_InfinitePolynomial(polynomial)):
             polynomial = polynomial.polynomial()
         super().__init__(parent, polynomial)

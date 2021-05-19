@@ -31,10 +31,6 @@ from .differential_polynomial_element import DiffPolynomial, DiffPolynomialGen
 
 _Rings = Rings.__classcall__(Rings)
 
-def is_InfinitePolynomial(element):
-    R = element.parent()
-    return (isinstance(R, InfinitePolynomialRing_dense) or isinstance(R, InfinitePolynomialRing_sparse))
-
 class DiffPolynomialRing (InfinitePolynomialRing_dense):
     r'''
         EXAMPLES::
@@ -172,6 +168,8 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
             raise TypeError("Impossible to evaluate %s as an element of %s" %(element, self))
         g = self.gens(); final_input = {}
         names = [el._name for el in g]
+        if(len(args) > self.ngens()):
+            raise ValueError("Too many argument for evaluation: given %d, expected (at most) %d" %(len(args), self.ngens()))
         for i in range(len(args)):
             final_input[g[i]] = args[i]
         for key in kwds:
@@ -182,7 +180,6 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
                 raise TypeError("Duplicated value for generator %s" %gen)
             final_input[gen] = kwds[key]
 
-        variables = element.variables()
         max_derivation = {gen: 0 for gen in final_input}
         for v in element.variables():
             for gen in max_derivation:
