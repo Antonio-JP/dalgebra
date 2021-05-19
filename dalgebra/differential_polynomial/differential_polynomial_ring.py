@@ -378,13 +378,13 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
                 sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
                 sage: R.<y> = DiffPolynomialRing(QQ['x']); x = R.base().gens()[0]
                 sage: R.derivation(y[0])
-                y[1]
+                y_1
                 sage: R.derivation(x)
                 1
                 sage: R.derivation(x*y[10])
                 x*y_11 + y_10
                 sage: R.derivation(x^2*y[1]^2 - y[2]*y[1])
-                -y_3*y_1 - y_2^2 + x^2*y_2*y_1 + 2*x*y_1^2
+                -y_3*y_1 - y_2^2 + 2*x^2*y_2*y_1 + 2*x*y_1^2
 
             This derivation also works naturally with several infinite variables::
 
@@ -412,7 +412,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
                 first_term = self.derivation(c)*self(str(m))
                 second_term = self.zero()
                 for i in range(len(v)):
-                    to_add = prod([v[j] for j in range(len(v)) if j != i], self.one())
+                    to_add = d[i]*prod([v[j] for j in range(len(v)) if j != i], self.one())
                     for g in generators:
                         if(g.contains(v[i])):
                             to_add *= g[g.index(v[i])+1]
@@ -592,3 +592,5 @@ class DiffPolySimpleMorphism (Morphism):
             return self.codomain()(p.coefficients()[0])
 
         return self.codomain(str(p))
+
+__all__ = ["DiffPolynomialRing"]
