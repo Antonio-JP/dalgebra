@@ -1,7 +1,7 @@
 
-from sage.all import latex, cached_method, ZZ, diff, prod
+from sage.all import latex, cached_method, ZZ, diff, prod, parent
 from sage.categories.all import Morphism, Rings
-from sage.categories.pushout import ConstructionFunctor
+from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialGen
 from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense, InfinitePolynomial_sparse
 
@@ -145,7 +145,43 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense):
         return self.__cache_derivatives[element]
 
     def eval(self, element, *args, **kwds):
-        raise NotImplementedError("Evaluation not yet implemented")
+        if(not element in self):
+            raise TypeError("Impossible to evaluate %s as an element of %s" %(element, self))
+        g = self.gens(); final_input = {}
+        names = [el._name for el in g]
+        for i in range(len(args)):
+            final_input[g[i]] = args[i]
+        for key in kwds:
+            if(not key in names):
+                raise TypeError("Invalid name for argument %s" %key)
+            gen = g[names.index(key)]
+            if(gen in final_input):
+                raise TypeError("Duplicated value for generator %s" %gen)
+            final_input[gen] = kwds[key]
+
+        variables = element.variables()
+        max_derivation = {gen: 0 for gen in final_input}
+        for v in element.variables():
+            for gen in max_derivation:
+                if(gen.contains(v)):
+                    max_derivation[gen] = max(max_derivation[gen], gen.index(v))
+                    break
+        
+        to_evaluate = {str(gen[i]): diff(final_input[gen], i) for i in range(max_derivation[gen]+1) for gen in max_derivation}
+        result = element.polynomial()(**to_evaluate)
+
+        ## Computing the final ring
+        values = list(final_input.values())
+        R = parent(values[0])
+        for i in range(1, len(values)):
+            R = pushout(R, parent(values[i]))
+
+        if(len(final_input) == len(g)): # Base ring
+            return R(result)
+        else:
+            left_gens = [gen for gen in g if gen not in final_input]
+            R = DiffPolynomialRing(R, [el._name for el in left_gens])
+            return R(result)
                                 
 class DiffPolynomialGen (InfinitePolynomialGen):
     r'''
@@ -169,6 +205,8 @@ class DiffPolynomialGen (InfinitePolynomialGen):
         if(self.contains(element)):
             return int(str(element).split("_")[-1])
 
+    def __hash__(self):
+        return hash(self._name)
 
 class DiffPolynomial (InfinitePolynomial_dense):
     r'''
