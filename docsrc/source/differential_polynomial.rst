@@ -1,6 +1,6 @@
-=============================
+====================================
 Package ``differential_polynomial``
-=============================
+====================================
 
 This package includes the main structures and built-in functions for working with rings of
 differential polynomials. 

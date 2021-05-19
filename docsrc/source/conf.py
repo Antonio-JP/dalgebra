@@ -152,7 +152,7 @@ html_theme_path = [os.path.join(SAGE_DOC_SRC, 'common', 'themes', 'sage')]
 # "<project> v<release> documentation".
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
-html_short_title = "dd_functions"
+html_short_title = "dalgebra"
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.

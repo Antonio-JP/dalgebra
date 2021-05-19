@@ -182,7 +182,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
 
             EXAMPLES::
 
-            sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
                 sage: R.<y> = DiffPolynomialRing(QQ['x']); x = R.base().gens()[0]
                 sage: y[0].derivative()
                 y_1

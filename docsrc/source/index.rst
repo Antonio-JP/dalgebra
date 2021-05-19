@@ -43,7 +43,7 @@ List of Packages
 .. toctree::
    :maxdepth: 1
 
-    differential_polynomial
+   differential_polynomial
 
 
 Indices and Tables
