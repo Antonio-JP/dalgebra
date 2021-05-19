@@ -112,7 +112,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
 
             EXAMPLES::
 
-                sage: from dalgebra.differential_polynomial.differential_polynomial_ring
+                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import *
                 sage: R.<y> = DiffPolynomialRing(QQ['x']); R
                 Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field]
                 sage: S = DiffPolynomialRing(QQ['x'], 'y')
@@ -256,6 +256,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
             EXAMPLES::
 
                 sage: from dalgebra.differential_polynomial import *
+                sage: from dalgebra.differential_polynomial.differential_polynomial_element import DiffPolynomialGen
                 sage: R.<y> = DiffPolynomialRing(QQ['x'])
                 sage: R.gen(0)
                 y_*
@@ -289,13 +290,13 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
 
             EXAMPLES::
 
-                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import *^
+                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import DiffPolynomialRing, DPolyRingFunctor
                 sage: R.<y> = DiffPolynomialRing(QQ['x'])
                 sage: F, S = R.construction()
                 sage: isinstance(F, DPolyRingFunctor)
                 True
                 sage: F
-                DiffPolynomialRing(*,y)
+                DiffPolynomialRing(*,('y',))
                 sage: S == QQ['x']
                 True
         '''
@@ -324,7 +325,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
 
             EXAMPLES::
 
-                from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import *
                 sage: R.<y> = DiffPolynomialRing(QQ['x'])
                 sage: R.one()
                 1
@@ -337,7 +338,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
 
             EXAMPLES::
 
-                from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
                 sage: R.<y> = DiffPolynomialRing(QQ['x'])
                 sage: R.zero()
                 0

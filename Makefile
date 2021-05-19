@@ -24,7 +24,7 @@ develop:
 	$(SAGE) -pip install --upgrade -e .
 
 test: install
-	$(SAGE) -t --force-lib .
+	$(SAGE) -t --force-lib ./dalgebra
 
 coverage:
 	$(SAGE) -coverage $(PACKAGE)/*
