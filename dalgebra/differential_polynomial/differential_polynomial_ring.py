@@ -87,7 +87,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
             sage: S.<a,b> = DiffPolynomialRing(ZZ); S
             Ring of differential polynomials in (a, b) over [Integer Ring]
 
-        We can now create objects in those rings using the generators ``y``, ``a`` and ``b``:
+        We can now create objects in those rings using the generators ``y``, ``a`` and ``b``::
 
             sage: y[1]
             y_1
@@ -431,7 +431,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
 
             Since the differential polynomials have an intrinsic meaning (namely, the 
             variables are related by derivation), evaluating a differential polynomial
-            is a straight-forward computation once the objects for the `*_0` term is given.
+            is a straight-forward computation once the objects for the ``*_0`` term is given.
 
             This method evaluates elements in ``self`` following that rule.
 
