@@ -38,7 +38,7 @@ from sage.categories.all import Morphism, Rings
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense
-from sage.misc.classcall_metaclass import ClasscallMetaclass
+from sage.misc.classcall_metaclass import ClasscallMetaclass # pylint: disable=no-name-in-module
 
 from .differential_polynomial_element import DiffPolynomial, DiffPolynomialGen
 
@@ -182,7 +182,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
             raise ValueError("No variables given: impossible to create a ring")
 
         ## Sorting the variables
-        names = list(names); names.sort(); names = tuple(names)
+        names = list(names); names.sort(); names = tuple(names) # pylint: disable=no-member
 
         key = (base, names)
         if(not (key in DiffPolynomialRing.__CACHED_RINGS)):
@@ -509,7 +509,6 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
         for gen in max_derivation:
             for i in range(max_derivation[gen]+1):
                 to_evaluate[str(gen[i])] = diff(final_input[gen], i)
-        result = element.polynomial()(**to_evaluate)
 
         ## Computing the final ring
         values = list(final_input.values())
@@ -517,12 +516,20 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
         for i in range(1, len(values)):
             R = pushout(R, parent(values[i]))
 
-        if(len(final_input) == len(g)): # Base ring
-            return R(result)
+        poly = element.polynomial()
+        ## Adding all the non-appearing variables on element
+        if(len(final_input) == len(g)):
+            for v in poly.parent().gens():
+                if (v not in poly.variables()) and (not str(v) in to_evaluate):
+                    to_evaluate[str(v)] = 0
         else:
             left_gens = [gen for gen in g if gen not in final_input]
             R = DiffPolynomialRing(R, [el._name for el in left_gens])
-            return R(result)
+            for v in poly.parent().gens():
+                if (not any(gen.contains(v) for gen in left_gens)) and (not str(v) in to_evaluate):
+                    to_evaluate[str(v)] = 0
+
+        return R(poly(**to_evaluate))
                                 
 class DPolyRingFunctor (ConstructionFunctor):
     r'''

@@ -265,3 +265,12 @@ class DiffPolynomial (InfinitePolynomial_dense):
             return self.derivative(times=times-1).derivative()
         else:
             return self.parent().derivation(self)
+
+    def _derivative(self, *args):
+        r'''
+            Overriden method to implement properly the derivation in Fraction Field
+
+            This method simply calls the method :func:`derivative`. See its documentation
+            for further information on the input, output and examples.
+        '''
+        return self.derivative(times=1)
