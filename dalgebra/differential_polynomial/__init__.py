@@ -6,7 +6,7 @@ manipulating differential polynomial ring over arbitrary ground rings.
 
 AUTHORS:
 
-    - Antonio Jimenez-Pastor (2012-05-19): initial version
+    - Antonio Jimenez-Pastor (2021-05-19): initial version
 
 """
 
