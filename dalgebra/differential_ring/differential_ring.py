@@ -24,7 +24,7 @@ EXAMPLES::
     sage: from dalgebra import DifferentialRing
     sage: R = DifferentialRing(QQ['x'], lambda p: p.derivative(x))
     sage: R
-    Differential Ring (Univariate Polynomial Ring in x over Rational Field, ...) 
+    Differential Ring (Univariate Polynomial Ring in x over Rational Field) [...]
 
 AUTHORS:
 
@@ -42,11 +42,12 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
+from sage.all import ZZ, latex
 from sage.categories.all import Morphism, CommutativeRings
 from sage.misc.classcall_metaclass import ClasscallMetaclass # pylint: disable=no-name-in-module
 from sage.rings.ring import CommutativeRing
 
-_CommutativeRings = Rings.__classcall__(CommutativeRings)
+_CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
 
 class DifferentialRing (CommutativeRing, metaclass=ClasscallMetaclass):
     r'''
@@ -74,11 +75,11 @@ class DifferentialRing (CommutativeRing, metaclass=ClasscallMetaclass):
             sage: from dalgebra import DifferentialRing
             sage: R = DifferentialRing(QQ['x'], lambda p: p.derivative(x))
             sage: R
-            Differential Ring (Univariate Polynomial Ring in x over Rational Field, ...) 
+            Differential Ring (Univariate Polynomial Ring in x over Rational Field) [...]
     '''
     def __init__(self, base, derivation):
         ## We initialize first the same structure as in base
-        base.__class__.__init__(self)
+        base.__class__.__init__(self, base.base(), category=base.categories())
 
         if(not isinstance(derivation, Morphism)):
             raise TypeError("The derivation must be a morphism")
@@ -110,4 +111,51 @@ class DifferentialRing (CommutativeRing, metaclass=ClasscallMetaclass):
         else: # the base case when we compute one derivative
             return self(self.__derivation(self.__base(element)))
 
+    
+    #################################################
+    ### Coercion methods
+    #################################################
+    def _has_coerce_map_from(self, S):
+        r'''
+            Standard implementation for ``_has_coerce_map_from``
+        '''
+        coer =  self._coerce_map_from_(S)
+        return (not(coer is False) and not(coer is None))
+        
+    def _element_constructor_(self, x):
+        r'''
+            Extended definition of :func:`_element_constructor_`.
+
+            Need to be implemented to construct the elements inside the differential ring.
+        '''
+        raise NotImplementedError()
+
+    def construction(self):
+        r'''
+            Return the associated functor and input to create ``self``.
+
+            The method construction returns a :class:`~sage.categories.pushout.ConstructionFunctor` and 
+            a valid input for it that would create ``self`` again. This is a necessary method to
+            implement all the coercion system properly.
+
+            For a :class:`DifferentialRing`, the associated functor class is :class:`DiffRingFunctor`.
+            See its documentation for further information.
+
+            TODO: add examples and tests.
+        '''
+        raise NotImplementedError
+
+    #################################################
+    ### Magic python methods
+    #################################################
+    def __call__(self, *args, **kwds):
+        res = super().__call__(*args, **kwds)
+        raise NotImplementedError
+
+    ## Other magic methods   
+    def __repr__(self):
+        return "Differential Ring (%s) [%s]" %(self.__base, self.__derivation)
+
+    def _latex_(self):
+        return r"(" + latex(self._base) + r", \partial)"
     
