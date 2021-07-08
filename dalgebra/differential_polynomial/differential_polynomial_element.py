@@ -222,7 +222,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
             or this method is the amount of derivatives to compute.
 
             This method relies on the method 
-            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing.derivation`.
+            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing.derivative`.
 
             INPUT:
 
@@ -264,7 +264,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
         elif(times > 1):
             return self.derivative(times=times-1).derivative()
         else:
-            return self.parent().derivation(self)
+            return self.parent().derivative(self)
 
     def _derivative(self, *args):
         r'''

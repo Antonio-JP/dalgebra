@@ -355,7 +355,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
         p = super().random_element(*args,**kwds)
         return self(p)
 
-    def derivation(self, element):
+    def deriavtive(self, element):
         r'''
             Computes the derivation of an element.
 
@@ -378,19 +378,19 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
 
                 sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
                 sage: R.<y> = DiffPolynomialRing(QQ['x']); x = R.base().gens()[0]
-                sage: R.derivation(y[0])
+                sage: R.derivative(y[0])
                 y_1
-                sage: R.derivation(x)
+                sage: R.derivative(x)
                 1
-                sage: R.derivation(x*y[10])
+                sage: R.derivative(x*y[10])
                 x*y_11 + y_10
-                sage: R.derivation(x^2*y[1]^2 - y[2]*y[1])
+                sage: R.derivative(x^2*y[1]^2 - y[2]*y[1])
                 -y_3*y_1 - y_2^2 + 2*x^2*y_2*y_1 + 2*x*y_1^2
 
             This derivation also works naturally with several infinite variables::
 
                 sage: S = DiffPolynomialRing(R, 'a'); a,y = S.gens()
-                sage: S.derivation(a[1] + y[0]*a[0])
+                sage: S.derivative(a[1] + y[0]*a[0])
                 a_1*y_0 + a_0*y_1 + a_2
         '''
         if(element in self):
@@ -410,7 +410,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
                 v = [self(str(el)) for el in v]
                 base = c*prod([v[i]**(d[i]-1) for i in range(len(v))], self.one())
 
-                first_term = self.derivation(c)*self(str(m))
+                first_term = self.derivative(c)*self(str(m))
                 second_term = self.zero()
                 for i in range(len(v)):
                     to_add = d[i]*prod([v[j] for j in range(len(v)) if j != i], self.one())
@@ -422,7 +422,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
                 self.__cache_derivatives[element] = first_term + base*second_term
             else:
                 c = element.coefficients(); m = [self(str(el)) for el in element.monomials()]
-                self.__cache_derivatives[element] = sum(self.derivation(c[i])*m[i] + c[i]*self.derivation(m[i]) for i in range(len(m)))
+                self.__cache_derivatives[element] = sum(self.derivative(c[i])*m[i] + c[i]*self.derivative(m[i]) for i in range(len(m)))
                 
         return self.__cache_derivatives[element]
 
@@ -467,9 +467,9 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
                 sage: R.eval(y[0] + y[1], y=x)
                 x + 1
 
-            This method commutes with the use of :func:`derivation`::
+            This method commutes with the use of :func:`derivative`::
 
-                sage: R.eval(R.derivation(x^2*y[1]^2 - y[2]*y[1]), y=x) == R.derivation(R.eval(x^2*y[1]^2 - y[2]*y[1], y=x))
+                sage: R.eval(R.derivative(x^2*y[1]^2 - y[2]*y[1]), y=x) == R.derivative(R.eval(x^2*y[1]^2 - y[2]*y[1], y=x))
                 True
 
             This evaluation also works naturally with several infinite variables::
