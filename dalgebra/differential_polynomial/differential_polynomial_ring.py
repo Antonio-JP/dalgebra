@@ -355,7 +355,7 @@ class DiffPolynomialRing (InfinitePolynomialRing_dense, metaclass=ClasscallMetac
         p = super().random_element(*args,**kwds)
         return self(p)
 
-    def deriavtive(self, element):
+    def derivative(self, element):
         r'''
             Computes the derivation of an element.
 

@@ -42,12 +42,15 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
+import logging
+
 from sage.all import ZZ, latex
 from sage.categories.all import Morphism, CommutativeRings
 from sage.misc.classcall_metaclass import ClasscallMetaclass # pylint: disable=no-name-in-module
 from sage.rings.ring import CommutativeRing
 
 _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
+logger = logging.getLogger(__name__)
 
 class DifferentialRing (CommutativeRing, metaclass=ClasscallMetaclass):
     r'''
@@ -77,19 +80,69 @@ class DifferentialRing (CommutativeRing, metaclass=ClasscallMetaclass):
             sage: R
             Differential Ring (Univariate Polynomial Ring in x over Rational Field) [...]
     '''
-    def __init__(self, base, derivation):
-        ## We initialize first the same structure as in base
-        base.__class__.__init__(self, base.base(), category=base.categories())
+    def __init__(self, base, derivation, category=None):
+        ## Checking the type of 'base'
+        if(not isinstance(base, CommutativeRing)):
+            raise TypeError("The base ring for a differential ring must be a Commutative Ring")
 
-        if(not isinstance(derivation, Morphism)):
-            raise TypeError("The derivation must be a morphism")
-        if(derivation.domain() != base):
-            raise TypeError("The domain of the derivation must be the base ring")
-        if(derivation.codomain() != base):
-            raise TypeError("The codomain of the derivation must be the base ring")
 
+        ## We save the two objects for future use
         self.__base = base
         self.__derivation = derivation
+
+        ## We initialize first the same structure as in base
+        CommutativeRing.__init__(self, base.base(), category=base.categories())
+
+    def __getattr__(self, attr):
+        try:
+            return super().__getattr__(attr)
+        except AttributeError:
+            return getattr(self.__base, attr)
+
+    __CACHED_RINGS = {}
+    @staticmethod
+    def __classcall__(cls, *args, **kwds):
+        r'''
+            Special builder for Differential Rings
+
+            This method guarantees the uniqueness of the differential ring
+            given a particular function. Remark that this method only
+            checks equality of the derivation as a function. This may create
+            two different rings for different derivations or, even worse, 
+            create two different rings with the same derivation instanciated in 
+            different functions.
+        '''
+        ## Allowing the args input to not be unrolled
+        if(len(args) == 1 and type(args[0]) in (list, tuple)):
+            args = args[0]
+        
+        ## Extracting the input from args and kwds
+        if(len(args) == 0):
+            base = kwds["base"]; derivation = kwds.get("derivation", None)
+        elif(len(args) == 1):
+            base = args[0]
+            if("base" in kwds):
+                raise TypeError("Duplicated value for the base ring")
+            derivation = kwds.get("derivation", None)
+        else:
+            base = args[0]; derivation = args[1]
+            if("base" in kwds):
+                raise TypeError("Duplicated value for the base ring")
+            if("derivation" in kwds):
+                raise TypeError("Duplicated value for the derivation")   
+
+        ## Checking for existing ring in the Cache
+        if(not base in DifferentialRing.__CACHED_RINGS):
+            DifferentialRing.__CACHED_RINGS[base] = [] 
+        for el in DifferentialRing.__CACHED_RINGS[base]:
+            if(el[0] == derivation):
+                return el[1]
+
+        ## No cached ring found: we create one
+        tmp = DifferentialRing.__new__(cls)
+        cls.__init__(tmp, base, derivation)
+        DifferentialRing.__CACHED_RINGS[base] += [derivation, tmp]
+        return tmp
 
     def derivative(self, element, times=1):
         r'''
@@ -115,12 +168,15 @@ class DifferentialRing (CommutativeRing, metaclass=ClasscallMetaclass):
     #################################################
     ### Coercion methods
     #################################################
+    def __contains__(self, element):
+        if(not element in self.__base):
+            raise NotImplementedError
+
     def _has_coerce_map_from(self, S):
         r'''
             Standard implementation for ``_has_coerce_map_from``
         '''
-        coer =  self._coerce_map_from_(S)
-        return (not(coer is False) and not(coer is None))
+        return self.__base._has_coerce_map_from(S)
         
     def _element_constructor_(self, x):
         r'''
@@ -128,7 +184,7 @@ class DifferentialRing (CommutativeRing, metaclass=ClasscallMetaclass):
 
             Need to be implemented to construct the elements inside the differential ring.
         '''
-        raise NotImplementedError()
+        return self(self.__base(x))
 
     def construction(self):
         r'''
@@ -149,7 +205,7 @@ class DifferentialRing (CommutativeRing, metaclass=ClasscallMetaclass):
     ### Magic python methods
     #################################################
     def __call__(self, *args, **kwds):
-        res = super().__call__(*args, **kwds)
+        res = self.__base(*args, **kwds)
         raise NotImplementedError
 
     ## Other magic methods   
@@ -158,4 +214,44 @@ class DifferentialRing (CommutativeRing, metaclass=ClasscallMetaclass):
 
     def _latex_(self):
         return r"(" + latex(self._base) + r", \partial)"
+
+    ################################################
+    ### Element generation methods
+    #################################################
+    def one(self):
+        r'''
+            Return the one element in ``self``.
+
+            EXAMPLES::
+
+                sage: from dalgebra.differential_ring import *
+                sage: R = DifferentialRing(QQ['x'], lambda p : diff(p))
+                sage: R.one()
+                1
+        '''
+        return self(self.__base.one())
+    
+    def zero(self):
+        r'''
+            Return the zero element in ``self``.
+
+            EXAMPLES::
+
+                sage: from dalgebra.differential_ring import *
+                sage: R = DifferentialRing(QQ['x'], lambda p : diff(p))
+                sage: R.zero()
+                0
+        '''
+        return self(self.__base.zero())
+    
+    def random_element(self,*args,**kwds):
+        r'''
+            Creates a randome element in this ring.
+
+            This method creates a random element in the base ring and 
+            cast it into an element of ``self``.
+        '''
+        p = super().random_element(*args,**kwds)
+        return self(p)
+
     
