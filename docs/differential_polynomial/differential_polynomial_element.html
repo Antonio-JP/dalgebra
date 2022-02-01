@@ -1,48 +1,77 @@
-
 <!DOCTYPE html>
-
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Element structures for Differential polynomials &#8212; Differential Algebra in Sage 0.0 documentation</title>
-    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Element structures for Differential polynomials &mdash; Differential Algebra in Sage 0.0 documentation</title><link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script src="../_static/jquery.js"></script>
-    <script src="../_static/underscore.js"></script>
-    <script src="../_static/doctools.js"></script>
-    <script src="../_static/language_data.js"></script>
-    <script async="async" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="prev" title="Parent structures for Differential polynomials" href="differential_polynomial_ring.html" /> 
-  </head><body>
-    <div class="related" role="navigation" aria-label="related navigation">
-      <h3>Navigation</h3>
-      <ul>
-        <li class="right" style="margin-right: 10px">
-          <a href="../genindex.html" title="General Index"
-             accesskey="I">index</a></li>
-        <li class="right" >
-          <a href="../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
-          <a href="differential_polynomial_ring.html" title="Parent structures for Differential polynomials"
-             accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">dalgebra</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../differential_polynomial.html" accesskey="U">Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code></a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">Element structures for Differential polynomials</a></li> 
-      </ul>
-    </div>  
+</head>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
-            
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Differential Algebra in Sage
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../differential_polynomial.html">Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code></a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../differential_polynomial.html#modules">Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="differential_polynomial_ring.html">Parent structures for Differential polynomials</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Element structures for Differential polynomials</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../differential_polynomial.html#indices-and-tables">Indices and Tables</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Differential Algebra in Sage</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../differential_polynomial.html">Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code></a> &raquo;</li>
+      <li>Element structures for Differential polynomials</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/differential_polynomial/differential_polynomial_element.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
   <div class="section" id="module-dalgebra.differential_polynomial.differential_polynomial_element">
 <span id="element-structures-for-differential-polynomials"></span><h1>Element structures for Differential polynomials<a class="headerlink" href="#module-dalgebra.differential_polynomial.differential_polynomial_element" title="Permalink to this headline">¶</a></h1>
 <p>File for the ring structure of Differential polynomials</p>
@@ -74,21 +103,22 @@ are a natural extension of the class <code class="xref py py-class docutils lite
 including some extra functionality more specific of differential polynomials (such as the derivation and the evaluation).</p>
 <p>INPUT:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">parent</span></code>: a <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing</span></code></a> 
+<li><p><code class="docutils literal notranslate"><span class="pre">parent</span></code>: a <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing_dense</span></code></a> 
 where the new element will be contained.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">polynomial</span></code>: a valid polynomial to be casted into an element of <code class="docutils literal notranslate"><span class="pre">parent</span></code>.</p></li>
 </ul>
 <p>We recommend not to use this constructor, but instead build the polynomials using the generators of the 
-corresponding <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing</span></code></a>.</p>
-<dl class="py method">
+corresponding <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing_dense</span></code></a>.</p>
+<dl class="py attribute">
 <dt id="dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomial.derivative">
-<code class="sig-name descname">derivative</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">times</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomial.derivative" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute the derivative of a differential polynomial.</p>
+<code class="sig-name descname">derivative</code><a class="headerlink" href="#dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomial.derivative" title="Permalink to this definition">¶</a></dt>
+<dd><p>File: dalgebra/differential_polynomial/differential_polynomial_element.py (starting at line 215)</p>
+<p>Compute the derivative of a differential polynomial.</p>
 <p>Since the derivation for a differential polynomial is determined once 
 we know the derivation in the ring of coefficients, the only extra argument
 or this method is the amount of derivatives to compute.</p>
 <p>This method relies on the method 
-<a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing.derivation" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing.derivation"><code class="xref py py-func docutils literal notranslate"><span class="pre">derivation()</span></code></a>.</p>
+<a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense.derivation" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense.derivation"><code class="xref py py-func docutils literal notranslate"><span class="pre">derivation()</span></code></a>.</p>
 <p>INPUT:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">times</span></code>: amount of derivatives of <code class="docutils literal notranslate"><span class="pre">self</span></code> to be computed.</p></li>
@@ -128,8 +158,8 @@ or this method is the amount of derivatives to compute.</p>
 <dt id="dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen">
 <em class="property">class </em><code class="sig-prename descclassname">dalgebra.differential_polynomial.differential_polynomial_element.</code><code class="sig-name descname">DiffPolynomialGen</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parent</span></em>, <em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomialGen" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialGen</span></code></p>
-<p>Class for generators of <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing</span></code></a>.</p>
-<p>A generator of a <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing</span></code></a> is 
+<p>Class for generators of <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing_dense</span></code></a>.</p>
+<p>A generator of a <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing_dense</span></code></a> is 
 an object that can create the infinitely many variables associated with a particular name. The variables it generates
 are of the form <code class="docutils literal notranslate"><span class="pre">name_x</span></code> where <code class="docutils literal notranslate"><span class="pre">x</span></code> is the index.</p>
 <p>In the case of a ring of differential polynomials, <code class="docutils literal notranslate"><span class="pre">name_x</span></code> represents the x-th derivative of the variable with 
@@ -138,7 +168,7 @@ given name.</p>
 generator and to obtain the corresponding index.</p>
 <p>INPUT:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">parent</span></code>: a <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing</span></code></a> 
+<li><p><code class="docutils literal notranslate"><span class="pre">parent</span></code>: a <a class="reference internal" href="differential_polynomial_ring.html#dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense" title="dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DiffPolynomialRing_dense</span></code></a> 
 where <code class="docutils literal notranslate"><span class="pre">self</span></code> will generate its elements.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: main part of the name for the generated variales.</p></li>
 </ul>
@@ -185,56 +215,33 @@ Rings.</p>
 </div>
 
 
-            <div class="clearer"></div>
+           </div>
           </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="differential_polynomial_ring.html" class="btn btn-neutral float-left" title="Parent structures for Differential polynomials" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="differential_polynomial_ring.html"
-                        title="previous chapter">Parent structures for Differential polynomials</a></p>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/differential_polynomial/differential_polynomial_element.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3 id="searchlabel">Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" />
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</div>
-<script>$('#searchbox').show(0);</script>
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="related" role="navigation" aria-label="related navigation">
-      <h3>Navigation</h3>
-      <ul>
-        <li class="right" style="margin-right: 10px">
-          <a href="../genindex.html" title="General Index"
-             >index</a></li>
-        <li class="right" >
-          <a href="../py-modindex.html" title="Python Module Index"
-             >modules</a> |</li>
-        <li class="right" >
-          <a href="differential_polynomial_ring.html" title="Parent structures for Differential polynomials"
-             >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">dalgebra</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="../differential_polynomial.html" >Package <code class="docutils literal notranslate"><span class="pre">differential_polynomial</span></code></a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">Element structures for Differential polynomials</a></li> 
-      </ul>
-    </div>
-    <div class="footer" role="contentinfo">
-        &#169; Copyright 2021.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
-    </div>
-  </body>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
 </html>
