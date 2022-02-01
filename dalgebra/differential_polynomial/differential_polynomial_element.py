@@ -35,9 +35,9 @@ def is_InfinitePolynomial(element):
 
 class DiffPolynomialGen (InfinitePolynomialGen):
     r'''
-        Class for generators of :class:`~~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing`.
+        Class for generators of :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense`.
 
-        A generator of a :class:`~~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing` is 
+        A generator of a :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense` is 
         an object that can create the infinitely many variables associated with a particular name. The variables it generates
         are of the form ``name_x`` where ``x`` is the index.
 
@@ -49,14 +49,14 @@ class DiffPolynomialGen (InfinitePolynomialGen):
 
         INPUT:
 
-        * ``parent``: a :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing` 
+        * ``parent``: a :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense` 
           where ``self`` will generate its elements.
         * ``name``: main part of the name for the generated variales.
     '''
     def __init__(self, parent, name):
-        from .differential_polynomial_ring import DiffPolynomialRing
-        if(not (isinstance(parent, DiffPolynomialRing))):
-            raise TypeError("The DiffPolynomialGen must have a DiffPolynomialRing parent")
+        from .differential_polynomial_ring import is_DiffPolynomialRing
+        if(not is_DiffPolynomialRing(parent)):
+            raise TypeError("The DiffPolynomialGen must have a ring of differential polynomial as parent")
         super().__init__(parent, name)
 
     def __getitem__(self, i):
@@ -138,12 +138,12 @@ class DiffPolynomial (InfinitePolynomial_dense):
 
         INPUT:
 
-        * ``parent``: a :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing` 
+        * ``parent``: a :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense` 
           where the new element will be contained.
         * ``polynomial``: a valid polynomial to be casted into an element of ``parent``.
 
         We recommend not to use this constructor, but instead build the polynomials using the generators of the 
-        corresponding :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing`.
+        corresponding :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense`.
     '''
     def __init__(self, parent, polynomial):
         if(is_InfinitePolynomial(polynomial)):
@@ -157,17 +157,17 @@ class DiffPolynomial (InfinitePolynomial_dense):
 
             Evaluating a differential polynomial has a different meaning than evaluating a polynomial
             with infinitely many variables (see method 
-            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing.eval`
+            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense.eval`
             for further information)
 
             INPUT:
 
             * ``args`` and ``kwargs`` with the same format as in 
-              :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing.eval`
+              :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense.eval`
 
             OUTPUT:
 
-            The evaluate object as in :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing.eval`.
+            The evaluate object as in :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense.eval`.
 
             EXAMPLES::
 
@@ -222,7 +222,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
             or this method is the amount of derivatives to compute.
 
             This method relies on the method 
-            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing.derivation`.
+            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense.derivation`.
 
             INPUT:
 
@@ -266,9 +266,9 @@ class DiffPolynomial (InfinitePolynomial_dense):
         else:
             return self.parent().derivation(self)
 
-    def _derivative(self, *args):
+    def _derivative(self, *_):
         r'''
-            Overriden method to implement properly the derivation in Fraction Field
+            Overridden method to implement properly the derivation in Fraction Field
 
             This method simply calls the method :func:`derivative`. See its documentation
             for further information on the input, output and examples.
