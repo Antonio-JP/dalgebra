@@ -35,6 +35,7 @@ AUTHORS:
 
 from sage.all import CommutativeRing, ZZ
 from sage.categories.all import Category, CommutativeRings
+from sage.misc.abstract_method import abstract_method
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
@@ -46,21 +47,9 @@ class DifferentialRings(Category):
 
     # methods that all differential structures must implement
     class ParentMethods:
+        @abstract_method
         def derivation(self, element):
-            r'''
-                Method that computes the derivative of an element of ``self``.
-            '''
-            if(not element in self):
-                raise TypeError("The derivation can only be computed from elements of %s" %self)
-
-            return self._derivation(element)
-
-        def _derivation(self, element):
-            r'''
-                Method that actually implements the derivation of a differential structure.
-                It assumes that ``element`` is an element of ``self``.
-            '''
-            raise NotImplementedError
+            pass
 
     # methods that all differential elements must implement
     class ElementMethods:
