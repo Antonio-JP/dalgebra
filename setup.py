@@ -35,7 +35,8 @@ setup(
     ], # classifiers list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
     keywords = "SageMath differential algebra",
     packages = ["dalgebra",
-                "dalgebra.differential_polynomial"],
+                "dalgebra.differential_polynomial",
+                "dalgebra.differential_ring"],
     setup_requires   = [],
     install_requires = ['sphinx'],
 )
