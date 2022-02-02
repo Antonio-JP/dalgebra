@@ -64,6 +64,7 @@ class DifferentialRings(Category):
             else:
                 return self.derivative(times=times-1).derivative()
 
+        @abstract_method
         def _derivative(self):
             r'''
                 Method that actually computes the derivative of an element of a differential ring.
