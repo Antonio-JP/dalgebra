@@ -32,9 +32,9 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from sage.all import cached_method, ZZ, latex, diff, prod, parent, Parent
+from sage.all import cached_method, ZZ, latex, diff, prod, parent, CommutativeRing
 
-from sage.categories.all import Morphism, Rings
+from sage.categories.all import Morphism, Rings, CommutativeAlgebras
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense
@@ -198,9 +198,13 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
     Element = DiffPolynomial
 
     def __init__(self, base, names):
+        ## Line to set the appropriate parent class
+        CommutativeRing.__init__(self, base, category=[DifferentialRings(), CommutativeAlgebras(base)])
+        ## Initializing the ring of infinitely many variables
         super().__init__(base, names, 'deglex')
-        Parent.__init__(self, category=[self.category(), DifferentialRings()])
-
+        ## Resetting the category to be the appropriate
+        CommutativeRing.__init__(self, base, category=[DifferentialRings(), CommutativeAlgebras(base)])
+        
         # cache variables
         self.__cache_derivatives = {}
 
@@ -231,7 +235,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
             and then transforms the output into a :class:`~dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomial`.
         '''
         p = super()._element_constructor_(x)
-        return DiffPolynomial(self, p)
+        return self.element_class(self, p)
 
     @cached_method
     def gen(self, i=None):
@@ -308,7 +312,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
     #################################################
     def __call__(self, *args, **kwds):
         res = super().__call__(*args, **kwds)
-        return DiffPolynomial(self, res)
+        return self.element_class(self, res)
 
     ## Other magic methods   
     def __repr__(self):
