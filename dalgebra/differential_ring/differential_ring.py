@@ -32,3 +32,63 @@ AUTHORS:
 # (at your option) any later version.
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
+
+from sage.all import CommutativeRing, ZZ
+from sage.categories.all import Category, CommutativeRings
+from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
+
+_CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
+
+class DifferentialRings(Category):
+    # methods of the category itself
+    def super_categories(self):
+        return [_CommutativeRings]
+
+    # methods that all differential structures must implement
+    class ParentMethods:
+        def derivation(self, element):
+            r'''
+                Method that computes the derivative of an element of ``self``.
+            '''
+            if(not element in self):
+                raise TypeError("The derivation can only be computed from elements of %s" %self)
+
+            return self._derivation(element)
+
+        def _derivation(self, element):
+            r'''
+                Method that actually implements the derivation of a differential structure.
+                It assumes that ``element`` is an element of ``self``.
+            '''
+            raise NotImplementedError
+
+    # methods that all differential elements must implement
+    class ElementMethods:
+        def derivative(self, times=1):
+            if(not times in ZZ or times < 0):
+                raise ValueError("The argument ``times`` must be a non-negative integer")
+
+            if(times == 0):
+                return self
+            elif(times == 1):
+                return self._derivative()
+            else:
+                return self.derivative(times=times-1).derivative()
+
+        def _derivative(self):
+            r'''
+                Method that actually computes the derivative of an element of a differential ring.
+            '''
+            raise NotImplementedError
+
+    # methods that all morphisms involving differential rings must implement
+    class MorphismMethods: 
+        pass
+
+class DifferentialRingFactory(UniqueFactory):
+    pass
+
+DifferentialRing = DifferentialRingFactory("dalgebra.differential_ring.differential_ring.DifferentialRing")
+
+class DifferentialRing_Wrapper(CommutativeRing):
+    pass
