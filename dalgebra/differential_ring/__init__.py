@@ -1,17 +1,17 @@
 r"""
-Package DAlgebra
+Module ``differential_ring``
 
-This is the main entry package point for the functionalities included in the
-repository :git:`Antonio-JP/dalgebra`.
+This is the main entry package point for the functionalities of differential 
+structures.
 
 AUTHORS::
 
-    - Antonio Jimenez-Pastor (2012-05-15): initial version
+    - Antonio Jimenez-Pastor (2022-02-02): initial version
 
 """
 
 # ****************************************************************************
-#  Copyright (C) 2021 Antonio Jimenez-Pastor <ajpastor@risc.uni-linz.ac.at>
+#  Copyright (C) 2022 Antonio Jimenez-Pastor <jimenezpastor@lix.polytechnique.fr>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,5 +20,4 @@ AUTHORS::
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from .differential_polynomial import *
-from .differential_ring import *
+from .differential_ring import DifferentialRings, DifferentialRing

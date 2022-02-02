@@ -8,7 +8,7 @@ a ring of differential polynomials.
 
 EXAMPLES::
 
-    sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+    sage: from dalgebra import DiffPolynomialRing
     sage: R.<y> = DiffPolynomialRing(QQ['x']) 
     sage: x = R.base().gens()[0] 
     sage: p = x^2*y[1]^2 - y[2]*y[1]; p
@@ -32,7 +32,7 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from sage.all import cached_method, ZZ, latex, diff, prod, parent
+from sage.all import cached_method, ZZ, latex, diff, prod, parent, Parent
 
 from sage.categories.all import Morphism, Rings
 from sage.categories.pushout import ConstructionFunctor, pushout
@@ -41,6 +41,7 @@ from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 from .differential_polynomial_element import DiffPolynomial, DiffPolynomialGen
+from ..differential_ring.differential_ring import DifferentialRings 
 
 _Rings = Rings.__classcall__(Rings)
 
@@ -53,7 +54,7 @@ class DiffPolynomialRingFactory(UniqueFactory):
 
         EXAMPLES::
 
-                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import *
+                sage: from dalgebra import DiffPolynomialRing
                 sage: R.<y> = DiffPolynomialRing(QQ['x']); R
                 Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field]
                 sage: S = DiffPolynomialRing(QQ['x'], 'y')
@@ -178,7 +179,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         EXAMPLES::
 
-            sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+            sage: from dalgebra import DiffPolynomialRing
             sage: R.<y> = DiffPolynomialRing(QQ['x']); R
             Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field]
             sage: S.<a,b> = DiffPolynomialRing(ZZ); S
@@ -198,6 +199,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
     def __init__(self, base, names):
         super().__init__(base, names, 'deglex')
+        Parent.__init__(self, category=[self.category(), DifferentialRings()])
 
         # cache variables
         self.__cache_derivatives = {}
@@ -253,7 +255,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             EXAMPLES::
 
-                sage: from dalgebra.differential_polynomial import *
+                sage: from dalgebra import DiffPolynomialRing
                 sage: from dalgebra.differential_polynomial.differential_polynomial_element import DiffPolynomialGen
                 sage: R.<y> = DiffPolynomialRing(QQ['x'])
                 sage: R.gen(0)
@@ -288,7 +290,8 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             EXAMPLES::
 
-                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import DiffPolynomialRing, DPolyRingFunctor
+                sage: from dalgebra import DiffPolynomialRing
+                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import DPolyRingFunctor
                 sage: R.<y> = DiffPolynomialRing(QQ['x'])
                 sage: F, S = R.construction()
                 sage: isinstance(F, DPolyRingFunctor)
@@ -323,7 +326,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             EXAMPLES::
 
-                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import *
+                sage: from dalgebra import DiffPolynomialRing
                 sage: R.<y> = DiffPolynomialRing(QQ['x'])
                 sage: R.one()
                 1
@@ -336,7 +339,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             EXAMPLES::
 
-                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+                sage: from dalgebra import DiffPolynomialRing
                 sage: R.<y> = DiffPolynomialRing(QQ['x'])
                 sage: R.zero()
                 0
@@ -374,7 +377,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             EXAMPLES::
 
-                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+                sage: from dalgebra import DiffPolynomialRing
                 sage: R.<y> = DiffPolynomialRing(QQ['x']); x = R.base().gens()[0]
                 sage: R.derivation(y[0])
                 y_1
@@ -456,7 +459,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             EXAMPLES::
 
-                sage: from dalgebra.differential_polynomial.differential_polynomial_ring import * 
+                sage: from dalgebra import DiffPolynomialRing
                 sage: R.<y> = DiffPolynomialRing(QQ['x']); x = R.base().gens()[0]
                 sage: R.eval(y[1], 0)
                 0
@@ -551,7 +554,7 @@ class DPolyRingFunctor (ConstructionFunctor):
 
         EXAMPLES::
 
-            sage: from dalgebra.differential_polynomial.differential_polynomial_ring import *
+            sage: from dalgebra import DiffPolynomialRing
             sage: R.<y> = DiffPolynomialRing(QQ['x'])
             sage: F, S = R.construction()
             sage: F(S) is R

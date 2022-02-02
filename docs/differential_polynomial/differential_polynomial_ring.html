@@ -170,7 +170,7 @@ may be overloaded for subclasses, such as the quotient functor.</p>
 <p>This allows to cache the same rings of differential polynomials created from different
 objects.</p>
 <p>EXAMPLES:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    sage: from dalgebra.differential_polynomial.differential_polynomial_ring import *
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    sage: from dalgebra import DiffPolynomialRing
     sage: R.&lt;y&gt; = DiffPolynomialRing(QQ[&#39;x&#39;]); R
     Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field]
     sage: S = DiffPolynomialRing(QQ[&#39;x&#39;], &#39;y&#39;)
