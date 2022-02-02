@@ -19,8 +19,6 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from sage.all import cached_method, ZZ
-
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialGen
 from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense, InfinitePolynomial_sparse
 
@@ -197,6 +195,15 @@ class DiffPolynomial (InfinitePolynomial_dense):
         '''
         return self.parent().eval(self, *args, **kwargs)
 
+    def divides(self, other):
+        r'''
+            Method that checks whether a differential polynomial divides ``other``.
+
+            This method relies on the base polynomial structure behind the infinite polynomial ring.
+        '''
+        other = self.parent()(other)
+        return self.polynomial().divides(other.polynomial())
+
     # Arithmetic methods
     def _add_(self, x):
         return DiffPolynomial(self.parent(), super()._add_(x))
@@ -211,61 +218,6 @@ class DiffPolynomial (InfinitePolynomial_dense):
     def __pow__(self, n):
         return DiffPolynomial(self.parent(), super().__pow__(n))
 
-    # Differential methods
-    @cached_method
-    def derivative(self, times=1):
-        r'''
-            Compute the derivative of a differential polynomial.
-
-            Since the derivation for a differential polynomial is determined once 
-            we know the derivation in the ring of coefficients, the only extra argument
-            or this method is the amount of derivatives to compute.
-
-            This method relies on the method 
-            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense.derivation`.
-
-            INPUT:
-
-            * ``times``: amount of derivatives of ``self`` to be computed.
-            
-            OUTPUT:
-
-            The ``times``-th derivative of ``self``.
-
-            EXAMPLES::
-
-                sage: from dalgebra import DiffPolynomialRing 
-                sage: R.<y> = DiffPolynomialRing(QQ['x']); x = R.base().gens()[0]
-                sage: y[0].derivative()
-                y_1
-                sage: y[1].derivative(5)
-                y_6
-                sage: (y[0]^3).derivative(times=3)
-                3*y_3*y_0^2 + 18*y_2*y_1*y_0 + 6*y_1^3
-                sage: (x*y[10]).derivative()
-                x*y_11 + y_10
-                sage: (x^2*y[1]^2 - y[2]*y[1]).derivative()
-                -y_3*y_1 - y_2^2 + 2*x^2*y_2*y_1 + 2*x*y_1^2
-
-            This derivation also works naturally with several infinite variables::
-
-                sage: S = DiffPolynomialRing(R, 'a'); a,y = S.gens()
-                sage: (a[1] + y[0]*a[0]).derivative()
-                a_1*y_0 + a_0*y_1 + a_2
-                sage: (a[0]*y[0]).derivative(2)
-                a_2*y_0 + 2*a_1*y_1 + a_0*y_2
-                sage: (a[0]*y[0]).derivative(3)
-                a_3*y_0 + 3*a_2*y_1 + 3*a_1*y_2 + a_0*y_3
-        '''
-        if((not times in ZZ) or (times < 0)):
-            raise ValueError("A differential polynomial can not be differentiated %s times" %times)
-        elif(times == 0):
-            return self
-        elif(times > 1):
-            return self.derivative(times=times-1).derivative()
-        else:
-            return self.parent().derivation(self)
-
     def _derivative(self, *_):
         r'''
             Overridden method to implement properly the derivation in Fraction Field
@@ -273,4 +225,4 @@ class DiffPolynomial (InfinitePolynomial_dense):
             This method simply calls the method :func:`derivative`. See its documentation
             for further information on the input, output and examples.
         '''
-        return self.derivative(times=1)
+        return self.parent().derivation(self)
