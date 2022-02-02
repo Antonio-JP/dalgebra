@@ -1,6 +1,4 @@
 ## -*- encoding: utf-8 -*-
-import os
-import sys
 from setuptools import setup
 from codecs import open # To open the README file with proper encoding
 
@@ -20,7 +18,7 @@ setup(
     url='https://github.com/Antonio-JP/dalgebra',
     author = "Antonio Jimenez-Pastor",
     author_email = "ajpastor@risc.uni-linz.ac.at",
-    license = "GPLv3+", # See LICENCE file
+    license = "GPLv3+", # See LICENSE file
     classifiers=[
       # How mature is this project? Common values are
       #   3 - Alpha
