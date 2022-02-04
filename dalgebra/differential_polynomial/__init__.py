@@ -21,3 +21,4 @@ AUTHORS:
 # ****************************************************************************
 
 from .differential_polynomial_ring import DiffPolynomialRing, is_DiffPolynomialRing
+from .differential_polynomial_system import DifferentialSystem
