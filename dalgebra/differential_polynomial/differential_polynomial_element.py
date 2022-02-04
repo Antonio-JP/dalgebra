@@ -19,6 +19,7 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
+from sage.misc.cachefunc import cached_method
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialGen
 from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense, InfinitePolynomial_sparse
 
@@ -80,6 +81,9 @@ class DiffPolynomialGen (InfinitePolynomialGen):
         spl = name.split("_")
         first = "_".join(spl[:-1])
         return first == self._name
+
+    def __contains__(self, other):
+        return self.contains(other)
 
     def index(self, element):
         r'''
@@ -147,6 +151,192 @@ class DiffPolynomial (InfinitePolynomial_dense):
         if(is_InfinitePolynomial(polynomial)):
             polynomial = polynomial.polynomial()
         super().__init__(parent, polynomial)
+        
+    # Properties methods
+    @cached_method
+    def orders(self):
+        r'''
+            Method that gets the order of a differential polynomial in all its variables.
+
+            This method computes the order of a concrete differential polynomial in all the differential 
+            variables that appear in its parent. This method relies on the method 
+            :func:`~dalgebra.differenital_polynomial.differenital_polynomial_ring.DifferentialPolynomialRing_dense.gens`
+            and the method :func:`~DiffPolynomialGen.index`.
+
+            OUTPUT:
+
+            A tuple of integers where the index `i` is the order of ``self` with respect to the `i`-th variable
+            of ``self.parent()``. The value `-1` indicates thatvariable does not show up in the poynomial.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = x = R.base().gens()[0]
+                sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
+                sage: f1.orders()
+                (2, 0)
+                sage: f2 = v[1] - v[2] + u[1]
+                sage: f2.orders()
+                (1, 2)
+                sage: f3 = (x^3-x^2+1)*v[0] - (x^2 + 1)*v[10]
+                sage: f3.orders()
+                (-1, 10)
+                sage: R.one().orders()
+                (-1, -1)
+        '''
+        var = self.variables() # we get all variables
+        gens = self.parent().gens() # we get the generators of the parent
+
+        return tuple([max([g.index(el) for el in var if el in g], default=-1) for g in gens])
+
+    @cached_method
+    def order(self, gen=None):
+        r'''
+            Method to obtain the order of a differential polynomial w.r.t. a variable
+
+            This method computes the order of a differential polynomial with respect to 
+            a particular variable. Such variables has to be provided as a generator of 
+            the ring of differential polynomials (see :class:`DiffPolynomialGen`).
+
+            This method uses the method :func:`orders` as a basic definition of these orders.
+
+            In the case te differential polynomial only has one differential variable, the input ``gen``
+            can be not given and the only variable will be used instead.
+
+            INPUT:
+
+            * ``gen``: a :class:`DiffPolynomialGen` in the parent ring.
+
+            OUTPUT:
+
+            An integer representing the order of ``self`` with respect with the differential variable ``gen``
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = x = R.base().gens()[0]
+                sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
+                sage: f1.order(u)
+                2
+                sage: f1.order(v)
+                0
+                sage: f2 = v[1] - v[2] + u[1]
+                sage: f2.order(u)
+                1
+                sage: f2.order(v)
+                2
+                sage: f3 = (x^3-x^2+1)*v[0] - (x^2 + 1)*v[10]
+                sage: f3.order(u)
+                -1
+                sage: f3.order(v)
+                10
+                sage: R.one().order(u)
+                -1
+                sage: R.one().order(v)
+                -1
+        '''
+        gens = self.parent().gens()
+        if(gen is None and len(gens) == 1):
+            index = 0
+        elif(gen is None):
+            raise TypeError("A differential variable has to be provided")
+        else:
+            index = gens.index(gen)
+
+        return self.orders()[index]
+
+    @cached_method
+    def lorders(self):
+        r'''
+            Method that gets the order of a differential polynomial in all its variables.
+
+            This method computes the order of a concrete differential polynomial in all the differential 
+            variables that appear in its parent. This method relies on the method 
+            :func:`~dalgebra.differenital_polynomial.differenital_polynomial_ring.DifferentialPolynomialRing_dense.gens`
+            and the method :func:`~DiffPolynomialGen.index`.
+
+            OUTPUT:
+
+            A tuple of integers where the index `i` is the order of ``self` with respect to the `i`-th variable
+            of ``self.parent()``. The value `-1` indicates thatvariable does not show up in the poynomial.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = x = R.base().gens()[0]
+                sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
+                sage: f1.lorders()
+                (0, 0)
+                sage: f2 = v[1] - v[2] + u[1]
+                sage: f2.lorders()
+                (1, 1)
+                sage: f3 = (x^3-x^2+1)*v[0] - (x^2 + 1)*v[10]
+                sage: f3.lorders()
+                (-1, 0)
+                sage: R.one().lorders()
+                (-1, -1)
+        '''
+        var = self.variables() # we get all variables
+        gens = self.parent().gens() # we get the generators of the parent
+
+        return tuple([min([g.index(el) for el in var if el in g], default=-1) for g in gens])
+
+    @cached_method
+    def lorder(self, gen=None):
+        r'''
+            Method to obtain the minimal order of a differential polynomial w.r.t. a variable
+
+            This method computes the minimal order of a differential polynomial with respect to 
+            a particular variable. Such variables has to be provided as a generator of 
+            the ring of differential polynomials (see :class:`DiffPolynomialGen`).
+
+            This method uses the method :func:`lorders` as a basic definition of these orders.
+
+            In the case te differential polynomial only has one differential variable, the input ``gen``
+            can be not given and the only variable will be used instead.
+
+            INPUT:
+
+            * ``gen``: a :class:`DiffPolynomialGen` in the parent ring.
+
+            OUTPUT:
+
+            An integer representing the minimal order appearing in ``self`` with respect with the differential variable ``gen``
+            or `-1` if the variable does not appear.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = x = R.base().gens()[0]
+                sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
+                sage: f1.lorder(u)
+                0
+                sage: f1.lorder(v)
+                0
+                sage: f2 = v[1] - v[2] + u[1]
+                sage: f2.lorder(u)
+                1
+                sage: f2.lorder(v)
+                1
+                sage: f3 = (x^3-x^2+1)*v[0] - (x^2 + 1)*v[10]
+                sage: f3.lorder(u)
+                -1
+                sage: f3.lorder(v)
+                0
+                sage: R.one().lorder(u)
+                -1
+                sage: R.one().lorder(v)
+                -1
+        '''
+        gens = self.parent().gens()
+        if(gen is None and len(gens) == 1):
+            index = 0
+        elif(gen is None):
+            raise TypeError("A differential variable has to be provided")
+        else:
+            index = gens.index(gen)
+
+        return self.lorders()[index]
 
     # Magic methods
     def __call__(self, *args, **kwargs):
