@@ -206,17 +206,17 @@ class DiffPolynomial (InfinitePolynomial_dense):
 
     # Arithmetic methods
     def _add_(self, x):
-        return DiffPolynomial(self.parent(), super()._add_(x))
+        return self.parent().element_class(self.parent(), super()._add_(x))
     def _sub_(self, x):
-        return DiffPolynomial(self.parent(), super()._sub_(x))
+        return self.parent().element_class(self.parent(), super()._sub_(x))
     def _mul_(self, x):
-        return DiffPolynomial(self.parent(), super()._mul_(x))
+        return self.parent().element_class(self.parent(), super()._mul_(x))
     def _rmul_(self, x):
-        return DiffPolynomial(self.parent(), super()._rmul_(x))
+        return self.parent().element_class(self.parent(), super()._rmul_(x))
     def _lmul_(self, x):
-        return DiffPolynomial(self.parent(), super()._lmul_(x))
+        return self.parent().element_class(self.parent(), super()._lmul_(x))
     def __pow__(self, n):
-        return DiffPolynomial(self.parent(), super().__pow__(n))
+        return self.parent().element_class(self.parent(), super().__pow__(n))
 
     def _derivative(self, *_):
         r'''
