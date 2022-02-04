@@ -171,7 +171,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = x = R.base().gens()[0]
+                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
                 sage: f1.orders()
                 (2, 0)
@@ -214,7 +214,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = x = R.base().gens()[0]
+                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x =  R.base().gens()[0]
                 sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
                 sage: f1.order(u)
                 2
@@ -263,7 +263,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = x = R.base().gens()[0]
+                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x =  R.base().gens()[0]
                 sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
                 sage: f1.lorders()
                 (0, 0)
@@ -307,7 +307,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = x = R.base().gens()[0]
+                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x =  R.base().gens()[0]
                 sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
                 sage: f1.lorder(u)
                 0
