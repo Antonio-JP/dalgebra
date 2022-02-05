@@ -23,7 +23,7 @@ AUTHORS:
 
 from functools import reduce
 
-from sage.all import latex, ZZ, prod
+from sage.all import latex, ZZ, prod, PolynomialRing
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method
 
@@ -168,9 +168,9 @@ class DifferentialSystem:
                 sage: R.<u> = DiffPolynomialRing(QQ)
                 sage: system = DifferentialSystem([u[1]-u[0]])
                 sage: system.algebraic_equations()
-                (u_1 - u_0,)
+                (-u_0 + u_1,)
                 sage: system.build_sp1([1]).algebraic_equations()
-                (u_1 - u_0, u_2 - u_1)
+                (-u_0 + u_1, -u_1 + u_2)
                 
             We can check that the parent of all the equations is the same::
 
@@ -178,20 +178,20 @@ class DifferentialSystem:
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
-                Multivariate Polynomial Ring in u_2, u_1, u_0 over Rational Field
+                Multivariate Polynomial Ring in u_0, u_1, u_2 over Rational Field
 
             The same can be checked for a multivariate differential polynomial::
 
                 sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
                 sage: system.algebraic_equations()
-                (x^2*u_2 + x*u_0 + (x - 1)*v_0, u_1 - v_2 + v_1)
+                (x^2*v_0 + x*v_2 + (x - 1)*u_2, v_1 - u_0 + u_1)
                 sage: system.build_sp1([1,2]).algebraic_equations()
-                (x^2*u_2 + x*u_0 + (x - 1)*v_0,
-                x^2*u_3 + 2*x*u_2 + x*u_1 + u_0 + (x - 1)*v_1 + v_0,
-                u_1 - v_2 + v_1,
-                u_2 - v_3 + v_2,
-                u_3 - v_4 + v_3)
+                ((x - 1)*v_0 + x*u_0 + x^2*u_2,
+                v_0 + (x - 1)*v_1 + u_0 + x*u_1 + 2*x*u_2 + x^2*u_3,
+                v_1 - v_2 + u_1,
+                v_2 - v_3 + u_2,
+                v_3 - v_4 + u_3)
                 
             And the parents are again the same for all those equations::
 
@@ -199,16 +199,55 @@ class DifferentialSystem:
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
-                Multivariate Polynomial Ring in u_4, u_3, u_2, u_1, u_0, v_4, v_3, v_2, v_1, v_0 over Univariate Polynomial Ring in x over Rational Field
+                Multivariate Polynomial Ring in v_0, v_1, v_2, v_3, v_4, u_0, u_1, u_2, u_3 over Univariate Polynomial Ring in x over Rational Field
+
+            The output of this method depends actively in the set of active variables that defines the system::
+
+                sage: system_with_u = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables=[u])
+                sage: system_with_u.algebraic_equations()                                                                                                                                        
+                (x*u_0 + x^2*u_2 + (x - 1)*v_0, u_1 + v_1 - v_2)
+                sage: system_with_u.build_sp1([1,2]).algebraic_equations()
+                (x*u_0 + x^2*u_2 + (x - 1)*v_0,
+                u_0 + x*u_1 + 2*x*u_2 + x^2*u_3 + v_0 + (x - 1)*v_1,
+                u_1 + v_1 - v_2,
+                u_2 + v_2 - v_3,
+                u_3 + v_3 - v_4)
+
+            In this case, the parent prioritize the variables related with `u_*`::
+
+                sage: system_with_u.algebraic_equations()[0].parent()
+                Multivariate Polynomial Ring in u_0, u_1, u_2 over Multivariate Polynomial Ring in v_0, v_1, v_2 over Univariate Polynomial Ring in x over Rational Field
+                
+                sage: parents = [el.parent() for el in system_with_u.build_sp1([1,2]).algebraic_equations()]
+                sage: all(el == parents[0] for el in parents[1:])
+                True
+                sage: parents[0]
+                Multivariate Polynomial Ring in u_0, u_1, u_2, u_3 over Multivariate Polynomial Ring in v_0, v_1, v_2, v_3, v_4 over Univariate Polynomial Ring in x over Rational Field
+
         '''
         equations = [el.polynomial() for el in self.equations]
         ## Usual pushout leads to a CoercionException due to management of variables
         ## We do the pushout by ourselves by looking into the generators and creating the best 
         ## possible polynomial ring with the maximal possible derivatives
         max_orders = reduce(lambda p, q : [max(p[i],q[i]) for i in range(len(p))], [equ.orders() for equ in self.equations])
-        max_monomial = prod(self.parent().gens()[i][max_orders[i]] for i in range(len(max_orders)))
-        final_parent = max_monomial.polynomial().parent()
-        return tuple([final_parent(el) for el in equations])
+        base_ring = self.parent().base()
+        gens = self.parent().gens()
+        variables = []
+        parameters = []
+        for i in range(len(gens)):
+            if(gens[i] in self.variables):
+                variables += [gens[i][j] for j in range(max_orders[i]+1)]
+            else:
+                parameters += [gens[i][j] for j in range(max_orders[i]+1)]
+        variables.sort(); parameters.sort()
+
+        inner_ring = base_ring if len(parameters) == 0 else PolynomialRing(base_ring, parameters)
+        
+        final_parent = PolynomialRing(inner_ring, variables)
+        try:
+            return tuple([final_parent(el) for el in equations])
+        except TypeError:
+            return tuple([final_parent(str(el)) for el in equations])
 
     ## SP properties
     def build_sp1(self, Ls):
@@ -285,6 +324,32 @@ class DifferentialSystem:
             variables that appears in it before the differential relation. Namely, the result of method 
             :func:`~dalgebra.differentialpolynomial.differential_polynomial_element.DiffPolynomial.variables`
             provides the algebraic variables for a differential polynomial.
+
+            
+
+            OUTPUT:
+
+            ``True`` if the system satisfies the condition SP2, ``False`` otherwise.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
+                sage: system.is_sp2()
+                False
+                sage: system.build_sp1([1,2]).is_sp2()
+                True
+
+            WARNING: for this method it is crucial to know that the result depends directly on the set variables for 
+            the system. Namely, having different set of active variables change the output of this method for *the same* 
+            differential system::
+
+                sage: same_system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
+                sage: system.is_sp2()
+                False
+                sage: system.build_sp1([1,2]).is_sp2()
+                True
         '''
         return len(self.algebraic_variables()) == self.size() - 1
 
