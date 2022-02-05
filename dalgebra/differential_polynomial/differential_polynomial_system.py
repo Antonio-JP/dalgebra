@@ -169,12 +169,12 @@ class DifferentialSystem:
                 sage: system = DifferentialSystem([u[1]-u[0]])
                 sage: system.algebraic_equations()
                 (-u_0 + u_1,)
-                sage: system.build_sp1([1]).algebraic_equations()
+                sage: system.extend_by_derivation([1]).algebraic_equations()
                 (-u_0 + u_1, -u_1 + u_2)
                 
             We can check that the parent of all the equations is the same::
 
-                sage: parents = [el.parent() for el in system.build_sp1([1]).algebraic_equations()]
+                sage: parents = [el.parent() for el in system.extend_by_derivation([1]).algebraic_equations()]
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
@@ -186,7 +186,7 @@ class DifferentialSystem:
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
                 sage: system.algebraic_equations()
                 (x^2*v_0 + x*v_2 + (x - 1)*u_2, v_1 - u_0 + u_1)
-                sage: system.build_sp1([1,2]).algebraic_equations()
+                sage: system.extend_by_derivation([1,2]).algebraic_equations()
                 ((x - 1)*v_0 + x*u_0 + x^2*u_2,
                 v_0 + (x - 1)*v_1 + u_0 + x*u_1 + 2*x*u_2 + x^2*u_3,
                 v_1 - v_2 + u_1,
@@ -195,7 +195,7 @@ class DifferentialSystem:
                 
             And the parents are again the same for all those equations::
 
-                sage: parents = [el.parent() for el in system.build_sp1([1,2]).algebraic_equations()]
+                sage: parents = [el.parent() for el in system.extend_by_derivation([1,2]).algebraic_equations()]
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
@@ -206,7 +206,7 @@ class DifferentialSystem:
                 sage: system_with_u = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables=[u])
                 sage: system_with_u.algebraic_equations()                                                                                                                                        
                 (x*u_0 + x^2*u_2 + (x - 1)*v_0, u_1 + v_1 - v_2)
-                sage: system_with_u.build_sp1([1,2]).algebraic_equations()
+                sage: system_with_u.extend_by_derivation([1,2]).algebraic_equations()
                 (x*u_0 + x^2*u_2 + (x - 1)*v_0,
                 u_0 + x*u_1 + 2*x*u_2 + x^2*u_3 + v_0 + (x - 1)*v_1,
                 u_1 + v_1 - v_2,
@@ -218,7 +218,7 @@ class DifferentialSystem:
                 sage: system_with_u.algebraic_equations()[0].parent()
                 Multivariate Polynomial Ring in u_0, u_1, u_2 over Multivariate Polynomial Ring in v_0, v_1, v_2 over Univariate Polynomial Ring in x over Rational Field
                 
-                sage: parents = [el.parent() for el in system_with_u.build_sp1([1,2]).algebraic_equations()]
+                sage: parents = [el.parent() for el in system_with_u.extend_by_derivation([1,2]).algebraic_equations()]
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
@@ -250,7 +250,7 @@ class DifferentialSystem:
             return tuple([final_parent(str(el)) for el in equations])
 
     ## SP properties
-    def build_sp1(self, Ls):
+    def extend_by_derivation(self, Ls):
         r'''
             Method that build an extended system that satisfies SP1.
 
@@ -278,21 +278,21 @@ class DifferentialSystem:
                 sage: from dalgebra import *
                 sage: R.<u> = DiffPolynomialRing(QQ)
                 sage: system = DifferentialSystem([u[1]-u[0]])
-                sage: system.build_sp1([0]).equations
+                sage: system.extend_by_derivation([0]).equations
                 (u_1 - u_0,)
-                sage: system.build_sp1([1]).equations
+                sage: system.extend_by_derivation([1]).equations
                 (u_1 - u_0, u_2 - u_1)
-                sage: system.build_sp1([5]).equations
+                sage: system.extend_by_derivation([5]).equations
                 (u_1 - u_0, u_2 - u_1, u_3 - u_2, u_4 - u_3, u_5 - u_4, u_6 - u_5)
                 sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
-                sage: system.build_sp1([0,0]).equations
+                sage: system.extend_by_derivation([0,0]).equations
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0, u_1 - v_2 + v_1)
-                sage: system.build_sp1([1,0]).equations
+                sage: system.extend_by_derivation([1,0]).equations
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0,
                 x^2*u_3 + 2*x*u_2 + x*u_1 + u_0 + (x - 1)*v_1 + v_0,
                 u_1 - v_2 + v_1)
-                sage: system.build_sp1([1,1]).equations
+                sage: system.extend_by_derivation([1,1]).equations
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0,
                 x^2*u_3 + 2*x*u_2 + x*u_1 + u_0 + (x - 1)*v_1 + v_0,
                 u_1 - v_2 + v_1,
@@ -311,6 +311,8 @@ class DifferentialSystem:
 
         return self.__CACHED_SP1[Ls]
 
+    build_sp1 = extend_by_derivation
+    
     def is_sp2(self):
         r'''
             Method that checks the condition SP2.
@@ -338,7 +340,7 @@ class DifferentialSystem:
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
                 sage: system.is_sp2()
                 False
-                sage: system.build_sp1([1,2]).is_sp2()
+                sage: system.extend_by_derivation([1,2]).is_sp2()
                 True
 
             WARNING: for this method it is crucial to know that the result depends directly on the set variables for 
@@ -348,7 +350,7 @@ class DifferentialSystem:
                 sage: same_system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
                 sage: system.is_sp2()
                 False
-                sage: system.build_sp1([1,2]).is_sp2()
+                sage: system.extend_by_derivation([1,2]).is_sp2()
                 True
         '''
         return len(self.algebraic_variables()) == self.size() - 1
@@ -362,7 +364,7 @@ class DifferentialSystem:
 
             INPUT:
 
-            * ``bound_L``: bound for the values of ``Ls`` for method :func:`build_sp1`.
+            * ``bound_L``: bound for the values of ``Ls`` for method :func:`extend_by_derivation`.
             * ``alg_res``: method to compute the algebraic resultant once we extended a 
               system to a valid system (see :func:`is_sp2`). The valid values are, currently,
               ``"dixon"`` and ``"macaulay"``.
@@ -382,7 +384,7 @@ class DifferentialSystem:
         ## Extending the system
         L = None
         for _aux_L in cartesian_product(len(self.equations)*[range(bound_L+1)]):
-            if(self.build_sp1(tuple(_aux_L)).is_sp2()):
+            if(self.extend_by_derivation(tuple(_aux_L)).is_sp2()):
                 L = tuple(_aux_L)
                 break
         
@@ -397,7 +399,7 @@ class DifferentialSystem:
             ## the polynomial is already homogeneous? 
             ## The algorithm for macaulay will fail for not matching the number of 
             ## variables and the number of equations??
-            equs = [el.homogenize() for el in self.build_sp1(L).algebraic_equations()]
+            equs = [el.homogenize() for el in self.extend_by_derivation(L).algebraic_equations()]
             ring = equs[0].parent()
             return ring.macaulay_resultant(equs)
 
