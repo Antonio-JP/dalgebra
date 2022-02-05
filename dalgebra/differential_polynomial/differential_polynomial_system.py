@@ -23,7 +23,7 @@ AUTHORS:
 
 from functools import reduce
 
-from sage.all import latex, ZZ
+from sage.all import latex, ZZ, prod
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method
 
@@ -115,6 +115,101 @@ class DifferentialSystem:
         result += "\n" + r"\end{array}\right."
         return result
 
+    ## to algebraic methods
+    @cached_method
+    def algebraic_variables(self):
+        r'''
+            Method to retrieve the algebraic variables in the system.
+
+            This method computes the number of algebraic variables that appear on the system. This means,
+            gethering each appearance of the differential variables and filter them by the variables of the system.
+
+            OUTPUT:
+
+            A tuple containing the algebraic variables appearing in the system (as differential polynomials)
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u> = DiffPolynomialRing(QQ)
+                sage: system = DifferentialSystem([u[1]-u[0]])
+                sage: system.algebraic_variables()
+                (u_0, u_1)
+                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
+                sage: system.algebraic_variables()
+                (v_0, v_1, v_2, u_0, u_1, u_2)
+                sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
+                sage: system.algebraic_variables()
+                (u_0, u_1, u_2)
+        '''
+        all_vars = list(set(sum([[self.parent()(v) for v in equ.variables()] for equ in self.equations], [])))
+        filtered = [el for el in all_vars if any(el in g for g in self.variables)]
+        filtered.sort()
+        return tuple(filtered)
+
+    @cached_method
+    def algebraic_equations(self):
+        r'''
+            Method to get the equivalent algebraic equations.
+
+            Considering a differential polynomial algebraically means to sepparate semantically
+            the relation of different derivatives of a differential variable. This is mainly useful 
+            once all differential operations are completed.
+
+            OUTPUT:
+
+            A tuple of polynomials in a common parent that represent the equations of ``self`` 
+            in a purely algebraic context.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u> = DiffPolynomialRing(QQ)
+                sage: system = DifferentialSystem([u[1]-u[0]])
+                sage: system.algebraic_equations()
+                (u_1 - u_0,)
+                sage: system.build_sp1([1]).algebraic_equations()
+                (u_1 - u_0, u_2 - u_1)
+                
+            We can check that the parent of all the equations is the same::
+
+                sage: parents = [el.parent() for el in system.build_sp1([1]).algebraic_equations()]
+                sage: all(el == parents[0] for el in parents[1:])
+                True
+                sage: parents[0]
+                Multivariate Polynomial Ring in u_2, u_1, u_0 over Rational Field
+
+            The same can be checked for a multivariate differential polynomial::
+
+                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
+                sage: system.algebraic_equations()
+                (x^2*u_2 + x*u_0 + (x - 1)*v_0, u_1 - v_2 + v_1)
+                sage: system.build_sp1([1,2]).algebraic_equations()
+                (x^2*u_2 + x*u_0 + (x - 1)*v_0,
+                x^2*u_3 + 2*x*u_2 + x*u_1 + u_0 + (x - 1)*v_1 + v_0,
+                u_1 - v_2 + v_1,
+                u_2 - v_3 + v_2,
+                u_3 - v_4 + v_3)
+                
+            And the parents are again the same for all those equations::
+
+                sage: parents = [el.parent() for el in system.build_sp1([1,2]).algebraic_equations()]
+                sage: all(el == parents[0] for el in parents[1:])
+                True
+                sage: parents[0]
+                Multivariate Polynomial Ring in u_4, u_3, u_2, u_1, u_0, v_4, v_3, v_2, v_1, v_0 over Univariate Polynomial Ring in x over Rational Field
+        '''
+        equations = [el.polynomial() for el in self.equations]
+        ## Usual pushout leads to a CoercionException due to management of variables
+        ## We do the pushout by ourselves by looking into the generators and creating the best 
+        ## possible polynomial ring with the maximal possible derivatives
+        max_orders = reduce(lambda p, q : [max(p[i],q[i]) for i in range(len(p))], [equ.orders() for equ in self.equations])
+        max_monomial = prod(self.parent().gens()[i][max_orders[i]] for i in range(len(max_orders)))
+        final_parent = max_monomial.polynomial().parent()
+        return tuple([final_parent(el) for el in equations])
+
     ## SP properties
     def build_sp1(self, Ls):
         r'''
@@ -176,39 +271,6 @@ class DifferentialSystem:
             self.__CACHED_SP1[Ls] = DifferentialSystem(new_equations, self.parent(), self.variables)
 
         return self.__CACHED_SP1[Ls]
-
-    @cached_method
-    def algebraic_variables(self):
-        r'''
-            Method to retrieve the algebraic variables in the system.
-
-            This method computes the number of algebraic variables that appear on the system. This means,
-            gethering each appearance of the differential variables and filter them by the variables of the system.
-
-            OUTPUT:
-
-            A tuple containing the algebraic variables appearing in the system (as differential polynomials)
-
-            EXAMPLES::
-
-                sage: from dalgebra import *
-                sage: R.<u> = DiffPolynomialRing(QQ)
-                sage: system = DifferentialSystem([u[1]-u[0]])
-                sage: system.algebraic_variables()
-                (u_0, u_1)
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
-                sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
-                sage: system.algebraic_variables()
-                (v_0, v_1, v_2, u_0, u_1, u_2)
-                sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
-                sage: system.algebraic_variables()
-                (u_0, u_1, u_2)
-        '''
-        all_vars = list(set(sum([[self.parent()(v) for v in equ.variables()] for equ in self.equations], [])))
-        filtered = [el for el in all_vars if any(el in g for g in self.variables)]
-        filtered.sort()
-        return tuple(filtered)
-
 
     def is_sp2(self):
         r'''
