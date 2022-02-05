@@ -103,13 +103,13 @@ class DifferentialSystem:
         return DifferentialSystem(self.equations[index], self.parent(), self.variables)
 
     def __repr__(self):
-        return "Diferential system over [%s] with variables [%s]:\n{\n\t" %(self.parent(), self.variables) + "\n\t".join(["%s == 0" %el for el in self.equations]) + "\n}"
+        return "Differential system over [%s] with variables [%s]:\n{\n\t" %(self.parent(), self.variables) + "\n\t".join(["%s == 0" %el for el in self.equations]) + "\n}"
 
     def __str__(self):
         return repr(self)
 
     def _latex_(self):
-        result = r"\text{Diferential system over }" + latex(self.parent()) + r" \text{ with variables }" + ", ".join(latex(el) for el in self.variables) + ":\n\n"
+        result = r"\text{Differential system over }" + latex(self.parent()) + r" \text{ with variables }" + ", ".join(latex(el) for el in self.variables) + ":\n\n"
         result += r"\left\{\begin{array}{ll}"
         result += "\n".join(latex(el) + r" & = 0 \\" for el in self.equations)
         result += "\n" + r"\end{array}\right."
@@ -128,7 +128,7 @@ class DifferentialSystem:
 
                 PS = \left\{\partial^{k}(f_i) \mid k \in \{0,\ldots,L_i\}, i=1,\ldots,m\right\}
 
-            This method provides a way to buil an extended differential system from ``self`` that satisfies condition SP1 for 
+            This method provides a way to build an extended differential system from ``self`` that satisfies condition SP1 for 
             a fixed set of values of `L_1,\ldots,L_m`.
 
             INPUT:
@@ -180,9 +180,9 @@ class DifferentialSystem:
     @cached_method
     def algebraic_variables(self):
         r'''
-            Methdo to retrieve the algebraic variables in the system.
+            Method to retrieve the algebraic variables in the system.
 
-            This method computes the number of algebraic vaiables that appear on the system. This means,
+            This method computes the number of algebraic variables that appear on the system. This means,
             gethering each appearance of the differential variables and filter them by the variables of the system.
 
             OUTPUT:

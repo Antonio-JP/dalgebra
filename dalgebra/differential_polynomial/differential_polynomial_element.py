@@ -160,13 +160,13 @@ class DiffPolynomial (InfinitePolynomial_dense):
 
             This method computes the order of a concrete differential polynomial in all the differential 
             variables that appear in its parent. This method relies on the method 
-            :func:`~dalgebra.differenital_polynomial.differenital_polynomial_ring.DifferentialPolynomialRing_dense.gens`
+            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DifferentialPolynomialRing_dense.gens`
             and the method :func:`~DiffPolynomialGen.index`.
 
             OUTPUT:
 
             A tuple of integers where the index `i` is the order of ``self` with respect to the `i`-th variable
-            of ``self.parent()``. The value `-1` indicates thatvariable does not show up in the poynomial.
+            of ``self.parent()``. The value `-1` indicates thatvariable does not show up in the polynomial.
 
             EXAMPLES::
 
@@ -252,13 +252,13 @@ class DiffPolynomial (InfinitePolynomial_dense):
 
             This method computes the order of a concrete differential polynomial in all the differential 
             variables that appear in its parent. This method relies on the method 
-            :func:`~dalgebra.differenital_polynomial.differenital_polynomial_ring.DifferentialPolynomialRing_dense.gens`
+            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DifferentialPolynomialRing_dense.gens`
             and the method :func:`~DiffPolynomialGen.index`.
 
             OUTPUT:
 
             A tuple of integers where the index `i` is the order of ``self` with respect to the `i`-th variable
-            of ``self.parent()``. The value `-1` indicates thatvariable does not show up in the poynomial.
+            of ``self.parent()``. The value `-1` indicates thatvariable does not show up in the polynomial.
 
             EXAMPLES::
 
