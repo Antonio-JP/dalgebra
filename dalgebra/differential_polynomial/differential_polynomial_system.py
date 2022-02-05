@@ -23,7 +23,7 @@ AUTHORS:
 
 from functools import reduce
 
-from sage.all import latex, ZZ, prod, PolynomialRing
+from sage.all import latex, ZZ, PolynomialRing, cartesian_product
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method
 
@@ -353,6 +353,57 @@ class DifferentialSystem:
         '''
         return len(self.algebraic_variables()) == self.size() - 1
 
+    ## resultant methods
+    def differential_resultant(self, bound_L = 10, alg_res = "dixon"):
+        r'''
+            Method to compute the differential resultant of this system.
+
+            TODO: add explanation of resultant.
+
+            INPUT:
+
+            * ``bound_L``: bound for the values of ``Ls`` for method :func:`build_sp1`.
+            * ``alg_res``: method to compute the algebraic resultant once we extended a 
+              system to a valid system (see :func:`is_sp2`). The valid values are, currently,
+              ``"dixon"`` and ``"macaulay"``.
+
+            OUTPUT:
+
+            The differential resultant of this system.
+
+            TODO: add examples
+        '''
+        ## Checking arguments
+        if(not bound_L in ZZ or bound_L < 0):
+            raise ValueError("The bound for the L argument must be a non-negative integer")
+        if(not alg_res in ("dixon", "macaulay")):
+            raise ValueError("The algorithm for the algebraic resultant must be 'dixon' or 'macaulay'")
+
+        ## Extending the system
+        L = None
+        for _aux_L in cartesian_product(len(self.equations)*[range(bound_L+1)]):
+            if(self.build_sp1(tuple(_aux_L)).is_sp2()):
+                L = tuple(_aux_L)
+                break
+        
+        if(L is None):
+            raise TypeError("The system was not nicely extended with bound %d" %bound_L)
+
+        ## Computing the resultant
+        if(alg_res == "dixon"):
+            raise NotImplementedError("Dixon's resultant not yet implemented")
+        elif(alg_res == "macaulay"):
+            ## TODO: what happen if the homogenize method does nothing because 
+            ## the polynomial is already homogeneous? 
+            ## The algorithm for macaulay will fail for not matching the number of 
+            ## variables and the number of equations??
+            equs = [el.homogenize() for el in self.build_sp1(L).algebraic_equations()]
+            ring = equs[0].parent()
+            return ring.macaulay_resultant(equs)
+
+
+        
+        
 
 
 
