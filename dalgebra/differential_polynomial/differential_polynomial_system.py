@@ -313,6 +313,16 @@ class DifferentialSystem:
 
     build_sp1 = extend_by_derivation
     
+    @cached_method
+    def is_homogeneous(self):
+        r'''
+            This method checks whether the system is homogeneous in the indicated variables.
+
+            This method relies on the method :func:`algebraic_equations` and the method :func:`is_homogeneous`
+            from the polynomial class in Sage.
+        '''
+        return all(equ.is_homogeneous() for equ in self.algebraic_equations())
+
     def is_sp2(self):
         r'''
             Method that checks the condition SP2.
@@ -320,7 +330,10 @@ class DifferentialSystem:
             The condition SP2 is defined in the paper :doi:`10.1016/j.laa.2013.01.016` (Section 3) in regard with a 
             system of differential polynomial: let `\mathcal{P} = \{f_1,\ldots,f_m\}` be a system of differentially algebraic equations
             in the differential variables `\mathcal{U} = \{u_1,\ldots, u_n}`. We say that the system satisfies the condition SP2
-            if and only if the number of *algebraic* variables in the polynomials is exactly the number of polynomials minus 1.
+            if and only if the number of variables is valid to compute a resultant algebraically.
+
+            This quantity changing depending on whether the equations are homogeneous (same number of variables and equations)
+            or not (one more equations than variables).
 
             It is interesting to remark that the algebraic variables of a differential polynomial are the total amount of
             variables that appears in it before the differential relation. Namely, the result of method 
@@ -353,6 +366,8 @@ class DifferentialSystem:
                 sage: system.extend_by_derivation([1,2]).is_sp2()
                 True
         '''
+        if(self.is_homogeneous()):
+            return len(self.algebraic_variables()) == self.size()
         return len(self.algebraic_variables()) == self.size() - 1
 
     ## resultant methods
