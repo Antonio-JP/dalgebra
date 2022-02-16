@@ -14,7 +14,7 @@ EXAMPLES::
     sage: p = x^2*y[1]^2 - y[2]*y[1]; p
     -y_2*y_1 + x^2*y_1^2
     sage: R
-    Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field]
+    Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
 
 AUTHORS:
 
@@ -56,7 +56,7 @@ class DiffPolynomialRingFactory(UniqueFactory):
 
                 sage: from dalgebra import DiffPolynomialRing
                 sage: R.<y> = DiffPolynomialRing(QQ['x']); R
-                Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field]
+                Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
                 sage: S = DiffPolynomialRing(QQ['x'], 'y')
                 sage: R is DiffPolynomialRing(QQ['x'], 'y')
                 True
@@ -72,7 +72,7 @@ class DiffPolynomialRingFactory(UniqueFactory):
             We can also see the unique generation even with several variables::
 
                 sage: S = DiffPolynomialRing(QQ['x'], ('y','a')); S
-                Ring of differential polynomials in (a, y) over [Univariate Polynomial Ring in x over Rational Field]
+                Ring of differential polynomials in (a, y) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
                 sage: S is DiffPolynomialRing(QQ['x'], ['y','a'])
                 True
                 sage: S is DiffPolynomialRing(QQ['x'], ('y','a'))
@@ -100,7 +100,7 @@ class DiffPolynomialRingFactory(UniqueFactory):
         
         ## Extracting the input from args and kwds
         if(len(args) == 0):
-            base = kwds["base"]; names = kwds.get("names", []); derivation=kwds.get("derivation", diff)
+            base = kwds["base"]; names = kwds["names"]; derivation=kwds.get("derivation", diff)
         elif(len(args) == 1):
             base = args[0]
             if("base" in kwds):
@@ -136,6 +136,24 @@ class DiffPolynomialRingFactory(UniqueFactory):
 
         ## Sorting the variables
         names = list(names); names.sort(); names = tuple(names) # pylint: disable=no-member
+
+        ## Managing the derivation
+        try:
+            der_module = base.derivation_module()
+            if (not callable(derivation) and not derivation in der_module):
+                raise ValueError(f"The element {derivation} is not a derivation in {der_module}")
+            elif (not derivation in der_module):
+                if(der_module.dimension() == 0):
+                    if(any(derivation(el) != 0 for el in [base.one(), base.zero()] + list(base.gens()))):
+                        raise ValueError(f"The element {derivation} is not the zero derivation")
+                    derivation = der_module.zero()
+                else:
+                    derivation = sum(derivation(base.gens()[i])*der_module.basis()[i] for i in range(base.ngens()))
+            else:
+                derivation = der_module(derivation)
+        except NotImplementedError:
+            ## The ring has no derivation module, we keep the derivation given
+            pass
 
         return (base, names, derivation)
 
@@ -191,9 +209,9 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             sage: from dalgebra import DiffPolynomialRing
             sage: R.<y> = DiffPolynomialRing(QQ['x']); R
-            Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field]
+            Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
             sage: S.<a,b> = DiffPolynomialRing(ZZ); S
-            Ring of differential polynomials in (a, b) over [Integer Ring]
+            Ring of differential polynomials in (a, b) over [Integer Ring, 0]
 
         We can now create objects in those rings using the generators ``y``, ``a`` and ``b``::
 
@@ -204,7 +222,6 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
             sage: diff(a[1]*b[0]) #Leibniz Rule
             a_2*b_0 + a_1*b_1
     '''
-    
     Element = DiffPolynomial
 
     def __init__(self, base, names, derivation=diff):
@@ -215,7 +232,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
         ## Resetting the category to be the appropriate
         CommutativeRing.__init__(self, base, category=[DifferentialRings(), CommutativeAlgebras(base)])
         
-        # other variables
+        # checking derivation
         self.__inner_derivation = derivation
 
         # cache variables
@@ -283,7 +300,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
                 True
                 sage: S = DiffPolynomialRing(ZZ, ('a', 'b'))
                 sage: S
-                Ring of differential polynomials in (a, b) over [Integer Ring]
+                Ring of differential polynomials in (a, b) over [Integer Ring, 0]
                 sage: S.gen(0)
                 a_*
                 sage: S.gen(1)
@@ -329,7 +346,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
     ## Other magic methods   
     def __repr__(self):
-        return "Ring of differential polynomials in (%s) over [%s]" %(", ".join(self._names), self._base)
+        return "Ring of differential polynomials in (%s) over [%s, %s]" %(", ".join(self._names), self._base, self.__inner_derivation)
 
     def _latex_(self):
         return latex(self._base) + r"\{" + ", ".join(self._names) + r"\}"
@@ -498,7 +515,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: in_eval = S.eval(a[1] + y[0]*a[0], y=x); in_eval
                 a_1 + x*a_0
                 sage: parent(in_eval)
-                Ring of differential polynomials in (a) over [Univariate Polynomial Ring in x over Rational Field]
+                Ring of differential polynomials in (a) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
         '''
         if(not element in self):
             raise TypeError("Impossible to evaluate %s as an element of %s" %(element, self))

@@ -381,7 +381,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
                 sage: in_eval = (a[1] + y[0]*a[0])(y=x); in_eval
                 a_1 + x*a_0
                 sage: parent(in_eval)
-                Ring of differential polynomials in (a) over [Univariate Polynomial Ring in x over Rational Field]
+                Ring of differential polynomials in (a) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
         '''
         return self.parent().eval(self, *args, **kwargs)
 
