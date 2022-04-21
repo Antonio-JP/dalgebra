@@ -41,7 +41,8 @@ from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-mod
 
 from ore_algebra import OreAlgebra
 
-from .ring_w_operator import RingWithOperator_Wrapper, RingWithOperator_WrapperElement, RingsWithOperator, CallableMap
+from .ring_w_operator import (RingWithOperator_Wrapper, RingWithOperator_WrapperElement, 
+                                RingsWithOperator, CallableMap, RingWithOperatorFunctor)
 
 _RingsWithOperator = RingsWithOperator.__classcall__(RingsWithOperator)
 
@@ -157,13 +158,20 @@ class DifferentialRing_Wrapper(RingWithOperator_Wrapper):
         return super().operation(element)
 
     def operator_ring(self):
-        return OreAlgebra(self.wrapped, ('D', lambda p : p, lambda p : self.derivation(p).wrapped))
-
-    def __contains__(self, element):
-        if(element.parent() in DifferentialRings):
-            return element.parent() == self
-        return element in self.wrapped        
+        return OreAlgebra(self.wrapped, ('D', lambda p : p, lambda p : self.derivation(p).wrapped))     
 
     ## Representation methods
     def __repr__(self) -> str:
         return f"Differential Ring [{self.wrapped}] with derivation [{repr(self.operator)}]"
+
+
+class DifferentialRingFunctor(RingWithOperatorFunctor):
+    def __init__(self, derivation):
+        super().__init__(derivation)
+        
+    def _apply_functor(self, x):
+        return DifferentialRing(x,self.operator())
+        
+    def _repr_(self):
+        return "DifferentialRing(*,[%s])" %(repr(self.operator()))
+        
