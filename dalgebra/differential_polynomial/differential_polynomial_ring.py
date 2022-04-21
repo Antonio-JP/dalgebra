@@ -14,7 +14,9 @@ EXAMPLES::
     sage: p = x^2*y[1]^2 - y[2]*y[1]; p
     -y_2*y_1 + x^2*y_1^2
     sage: R
-    Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
+    Ring of differential polynomials in (y) over Differential Ring [Univariate 
+    Polynomial Ring in x over Rational Field] with derivation [Map from 
+    callable d/dx]
 
 AUTHORS:
 
@@ -56,7 +58,9 @@ class DiffPolynomialRingFactory(UniqueFactory):
 
                 sage: from dalgebra import DiffPolynomialRing
                 sage: R.<y> = DiffPolynomialRing(QQ['x']); R
-                Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
+                Ring of differential polynomials in (y) over Differential Ring [Univariate 
+                Polynomial Ring in x over Rational Field] with derivation [Map from 
+                callable d/dx]
                 sage: S = DiffPolynomialRing(QQ['x'], 'y')
                 sage: R is DiffPolynomialRing(QQ['x'], 'y')
                 True
@@ -72,7 +76,9 @@ class DiffPolynomialRingFactory(UniqueFactory):
             We can also see the unique generation even with several variables::
 
                 sage: S = DiffPolynomialRing(QQ['x'], ('y','a')); S
-                Ring of differential polynomials in (a, y) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
+                Ring of differential polynomials in (a, y) over Differential Ring [Univariate 
+                Polynomial Ring in x over Rational Field] with derivation [Map from callable 
+                d/dx]
                 sage: S is DiffPolynomialRing(QQ['x'], ['y','a'])
                 True
                 sage: S is DiffPolynomialRing(QQ['x'], ('y','a'))
@@ -154,12 +160,16 @@ class DiffPolynomialRingFactory(UniqueFactory):
         except NotImplementedError:
             ## The ring has no derivation module, we keep the derivation given
             pass
+        
+        # checking base
+        if not base in DifferentialRings:
+            base = DifferentialRing(base, derivation)
 
-        return (base, names, derivation)
+        return (base, names)
 
     def create_object(self, _, key):
-        base, names, derivation = key
-        result = DiffPolynomialRing_dense(base, names, derivation)
+        base, names = key
+        result = DiffPolynomialRing_dense(base, names)
         ## Checking the overlaping between previous variables and the new generators
         for v in base.gens():
             for g in result.gens():
@@ -209,9 +219,12 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             sage: from dalgebra import DiffPolynomialRing
             sage: R.<y> = DiffPolynomialRing(QQ['x']); R
-            Ring of differential polynomials in (y) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
+            Ring of differential polynomials in (y) over Differential Ring 
+            [Univariate Polynomial Ring in x over Rational Field] with derivation 
+            [Map from callable d/dx]
             sage: S.<a,b> = DiffPolynomialRing(ZZ); S
-            Ring of differential polynomials in (a, b) over [Integer Ring, 0]
+            Ring of differential polynomials in (a, b) over Differential Ring [Integer Ring] 
+            with derivation [Map from callable 0]
 
         We can now create objects in those rings using the generators ``y``, ``a`` and ``b``::
 
@@ -224,11 +237,9 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
     '''
     Element = DiffPolynomial
 
-    def __init__(self, base, names, derivation=diff):
-        # checking derivation
+    def __init__(self, base, names):
         if not base in DifferentialRings:
-            base = DifferentialRing(base, derivation)
-        self.__inner_derivation = base.derivation
+            raise TypeError("The base must be a differential ring")
 
         ## Line to set the appropriate parent class
         CommutativeRing.__init__(self, base, category=[DifferentialRings(), CommutativeAlgebras(base)])
@@ -237,6 +248,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
         ## Resetting the category to be the appropriate
         CommutativeRing.__init__(self, base, category=[DifferentialRings(), CommutativeAlgebras(base)])
         
+        self.__inner_derivation = base.derivation
 
         # cache variables
         self.__cache_derivatives = {}
@@ -380,7 +392,8 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
                 True
                 sage: S = DiffPolynomialRing(ZZ, ('a', 'b'))
                 sage: S
-                Ring of differential polynomials in (a, b) over [Integer Ring, 0]
+                Ring of differential polynomials in (a, b) over Differential Ring [Integer Ring] with 
+                derivation [Map from callable 0]
                 sage: S.gen(0)
                 a_*
                 sage: S.gen(1)
@@ -412,8 +425,8 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
                 True
                 sage: F
                 DiffPolynomialRing(*,('y',))
-                sage: S == QQ['x']
-                True
+                sage: S
+                Differential Ring [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from callable d/dx]
         '''
         return DPolyRingFunctor(self._names), self._base
     
@@ -426,7 +439,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
     ## Other magic methods   
     def __repr__(self):
-        return "Ring of differential polynomials in (%s) over [%s]" %(", ".join(self._names), self._base)
+        return "Ring of differential polynomials in (%s) over %s" %(", ".join(self._names), self._base)
 
     def _latex_(self):
         return latex(self._base) + r"\{" + ", ".join(self._names) + r"\}"
@@ -524,7 +537,8 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: in_eval = S.eval(a[1] + y[0]*a[0], y=x); in_eval
                 a_1 + x*a_0
                 sage: parent(in_eval)
-                Ring of differential polynomials in (a) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
+                Ring of differential polynomials in (a) over Differential Ring [Univariate Polynomial Ring in x over 
+                Rational Field] with derivation [Map from callable d/dx]
         '''
         if(not element in self):
             raise TypeError("Impossible to evaluate %s as an element of %s" %(element, self))
@@ -552,13 +566,13 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
         to_evaluate = {}
         for gen in max_derivation:
             for i in range(max_derivation[gen]+1):
-                to_evaluate[str(gen[i])] = diff(final_input[gen], i)
+                to_evaluate[str(gen[i])] = parent(final_input[gen])(diff(final_input[gen], i))
 
         ## Computing the final ring
         values = list(final_input.values())
-        R = parent(values[0])
-        for i in range(1, len(values)):
-            R = pushout(R, parent(values[i]))
+        R = self.base()
+        for value in values:
+            R = pushout(R, parent(value))
 
         poly = element.polynomial()
         ## Adding all the non-appearing variables on element
