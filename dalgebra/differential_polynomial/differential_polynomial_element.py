@@ -368,7 +368,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
                 sage: (y[0] + y[1])(y=x)
                 x + 1
 
-            This method commutes with the use of :func:`derivation`::
+            This method commutes with the use of :func:`derivative`::
 
                 sage: (x^2*y[1]^2 - y[2]*y[1]).derivative()(y=x) == (x^2*y[1]^2 - y[2]*y[1])(y=x).derivative()
                 True
@@ -381,7 +381,8 @@ class DiffPolynomial (InfinitePolynomial_dense):
                 sage: in_eval = (a[1] + y[0]*a[0])(y=x); in_eval
                 a_1 + x*a_0
                 sage: parent(in_eval)
-                Ring of differential polynomials in (a) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
+                Ring of differential polynomials in (a) over Differential Ring [Univariate Polynomial Ring 
+                in x over Rational Field] with derivation [Map from callable d/dx]
         '''
         return self.parent().eval(self, *args, **kwargs)
 
