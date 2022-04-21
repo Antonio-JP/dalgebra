@@ -18,6 +18,7 @@ from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.misc.abstract_method import abstract_method
 from sage.structure.element import parent, Element #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
+from sage.symbolic.ring import SR
 
 _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
 
@@ -224,8 +225,14 @@ class RingWithOperator_Wrapper(CommutativeRing):
         r'''
             Standard implementation for ``_has_coerce_map_from``
         '''
-        coer =  self._coerce_map_from_(S)
-        return (not(coer is False) and not(coer is None))
+        if S not in [str]:
+            R = pushout(self, S)
+            return (R is self)
+        return False
+
+    def _coerce_map_from_(self, S):
+        if self._has_coerce_map_from(S):
+            return CallableMap(lambda p : self.element_class(self, self.wrapped(p)), S, self)
 
     def _element_constructor_(self, x):
         r'''
@@ -234,6 +241,8 @@ class RingWithOperator_Wrapper(CommutativeRing):
             Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_dense`
             and then transforms the output into a :class:`~dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomial`.
         '''
+        if x in SR:
+            x = str(x)
         p = self.wrapped._element_constructor_(x)
         return self.element_class(self, p)
 
