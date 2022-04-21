@@ -41,7 +41,7 @@ from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 from .differential_polynomial_element import DiffPolynomial, DiffPolynomialGen
-from ..ring_w_operator.differential_ring import DifferentialRings 
+from ..ring_w_operator.differential_ring import DifferentialRing, DifferentialRings 
 
 _Rings = Rings.__classcall__(Rings)
 
@@ -225,6 +225,11 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
     Element = DiffPolynomial
 
     def __init__(self, base, names, derivation=diff):
+        # checking derivation
+        if not base in DifferentialRings:
+            base = DifferentialRing(base, derivation)
+        self.__inner_derivation = base.derivation
+
         ## Line to set the appropriate parent class
         CommutativeRing.__init__(self, base, category=[DifferentialRings(), CommutativeAlgebras(base)])
         ## Initializing the ring of infinitely many variables
@@ -232,8 +237,6 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
         ## Resetting the category to be the appropriate
         CommutativeRing.__init__(self, base, category=[DifferentialRings(), CommutativeAlgebras(base)])
         
-        # checking derivation
-        self.__inner_derivation = derivation
 
         # cache variables
         self.__cache_derivatives = {}
