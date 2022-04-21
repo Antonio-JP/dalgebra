@@ -178,14 +178,15 @@ class DifferentialSystem:
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
-                Multivariate Polynomial Ring in u_0, u_1, u_2 over Rational Field
+                Multivariate Polynomial Ring in u_0, u_1, u_2 over Differential 
+                Ring [Rational Field] with derivation [Map from callable 0]
 
             The same can be checked for a multivariate differential polynomial::
 
                 sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
                 sage: system.algebraic_equations()
-                (x^2*v_0 + x*v_2 + (x - 1)*u_2, v_1 - u_0 + u_1)
+                ((x - 1)*v_0 + x*u_0 + x^2*u_2, v_1 - v_2 + u_1)
                 sage: system.extend_by_derivation([1,2]).algebraic_equations()
                 ((x - 1)*v_0 + x*u_0 + x^2*u_2,
                 v_0 + (x - 1)*v_1 + u_0 + x*u_1 + 2*x*u_2 + x^2*u_3,
@@ -199,7 +200,9 @@ class DifferentialSystem:
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
-                Multivariate Polynomial Ring in v_0, v_1, v_2, v_3, v_4, u_0, u_1, u_2, u_3 over Univariate Polynomial Ring in x over Rational Field
+                Multivariate Polynomial Ring in v_0, v_1, v_2, v_3, v_4, u_0, u_1, u_2, u_3 over 
+                Differential Ring [Univariate Polynomial Ring in x over Rational Field] with 
+                derivation [Map from callable d/dx]
 
             The output of this method depends actively in the set of active variables that defines the system::
 
@@ -216,13 +219,16 @@ class DifferentialSystem:
             In this case, the parent prioritize the variables related with `u_*`::
 
                 sage: system_with_u.algebraic_equations()[0].parent()
-                Multivariate Polynomial Ring in u_0, u_1, u_2 over Multivariate Polynomial Ring in v_0, v_1, v_2 over Univariate Polynomial Ring in x over Rational Field
-                
+                Multivariate Polynomial Ring in u_0, u_1, u_2 over Multivariate Polynomial 
+                Ring in v_0, v_1, v_2 over Differential Ring [Univariate Polynomial Ring 
+                in x over Rational Field] with derivation [Map from callable d/dx]
                 sage: parents = [el.parent() for el in system_with_u.extend_by_derivation([1,2]).algebraic_equations()]
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
-                Multivariate Polynomial Ring in u_0, u_1, u_2, u_3 over Multivariate Polynomial Ring in v_0, v_1, v_2, v_3, v_4 over Univariate Polynomial Ring in x over Rational Field
+                Multivariate Polynomial Ring in u_0, u_1, u_2, u_3 over Multivariate Polynomial 
+                Ring in v_0, v_1, v_2, v_3, v_4 over Differential Ring [Univariate Polynomial 
+                Ring in x over Rational Field] with derivation [Map from callable d/dx]
 
         '''
         equations = [el.polynomial() for el in self.equations]
@@ -234,18 +240,24 @@ class DifferentialSystem:
         gens = self.parent().gens()
         variables = []
         parameters = []
+        subs_dict = {}
         for i in range(len(gens)):
             if(gens[i] in self.variables):
-                variables += [gens[i][j] for j in range(max_orders[i]+1)]
+                for j in range(max_orders[i]+1):
+                    variables.append(gens[i][j])
+                    subs_dict[str(gens[i][j])] = gens[i][j]
             else:
-                parameters += [gens[i][j] for j in range(max_orders[i]+1)]
+                for j in range(max_orders[i]+1):
+                    parameters.append(gens[i][j])
+                    subs_dict[str(gens[i][j])] = gens[i][j]
         variables.sort(); parameters.sort()
+        
 
         inner_ring = base_ring if len(parameters) == 0 else PolynomialRing(base_ring, parameters)
         
         final_parent = PolynomialRing(inner_ring, variables)
         try:
-            return tuple([final_parent(el) for el in equations])
+            return tuple([final_parent(el(**subs_dict)) for el in equations])
         except TypeError:
             return tuple([final_parent(str(el)) for el in equations])
 
