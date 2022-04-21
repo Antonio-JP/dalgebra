@@ -41,7 +41,7 @@ from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 from .differential_polynomial_element import DiffPolynomial, DiffPolynomialGen
-from ..differential_ring.differential_ring import DifferentialRings 
+from ..ring_w_operator.differential_ring import DifferentialRings 
 
 _Rings = Rings.__classcall__(Rings)
 
@@ -248,6 +248,83 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
             current.register_conversion(morph)
 
     #################################################
+    ### Methods from DifferentialRings
+    #################################################
+    def derivation(self, element):
+        r'''
+            Computes the derivation of an element.
+
+            This method catchs the essence of a :class:`DiffPolynomialRing`: the extension
+            of the derivation on the base ring (retrieved by ``self.base()``) to the 
+            infinite polynomial ring in such a way that the variables are linked linearly with the 
+            derivation.
+
+            For element in the base ring, this method relies on the Sage method :func:`diff`.
+
+            INPUT:
+
+            * ``element``: an object. Must be included in ``self``. 
+
+            OUTPUT:
+
+            An element in ``self`` that represents the derivative of ``element``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import DiffPolynomialRing
+                sage: R.<y> = DiffPolynomialRing(QQ['x']); x = R.base().gens()[0]
+                sage: R.derivation(y[0])
+                y_1
+                sage: R.derivation(x)
+                1
+                sage: R.derivation(x*y[10])
+                x*y_11 + y_10
+                sage: R.derivation(x^2*y[1]^2 - y[2]*y[1])
+                -y_3*y_1 - y_2^2 + 2*x^2*y_2*y_1 + 2*x*y_1^2
+
+            This derivation also works naturally with several infinite variables::
+
+                sage: S = DiffPolynomialRing(R, 'a'); a,y = S.gens()
+                sage: S.derivation(a[1] + y[0]*a[0])
+                a_1*y_0 + a_0*y_1 + a_2
+        '''
+        if(element in self):
+            element = self(element)
+        else:
+            element=self(str(element))
+            
+        if(element in self.base()):
+            return self.base()(self.__inner_derivation(self.base()(element)))
+        
+        if(not element in self.__cache_derivatives):
+            generators = self.gens()
+            if(element.is_monomial()):
+                c = element.coefficients()[0]
+                m = element.monomials()[0]
+                v = element.variables(); d = [element.degree(v[i]) for i in range(len(v))]
+                v = [self(str(el)) for el in v]
+                base = c*prod([v[i]**(d[i]-1) for i in range(len(v))], self.one())
+
+                first_term = self.derivation(c)*self(str(m))
+                second_term = self.zero()
+                for i in range(len(v)):
+                    to_add = d[i]*prod([v[j] for j in range(len(v)) if j != i], self.one())
+                    for g in generators:
+                        if(g.contains(v[i])):
+                            to_add *= g[g.index(v[i])+1]
+                            break
+                    second_term += to_add
+                self.__cache_derivatives[element] = first_term + base*second_term
+            else:
+                c = element.coefficients(); m = [self(str(el)) for el in element.monomials()]
+                self.__cache_derivatives[element] = sum(self.derivation(c[i])*m[i] + c[i]*self.derivation(m[i]) for i in range(len(m)))
+                
+        return self.__cache_derivatives[element]
+
+    def constants(self):
+        return self.base().constants()
+
+    #################################################
     ### Coercion methods
     #################################################
     def _has_coerce_map_from(self, S):
@@ -389,77 +466,6 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
         '''
         p = super().random_element(*args,**kwds)
         return self(p)
-
-    def derivation(self, element):
-        r'''
-            Computes the derivation of an element.
-
-            This method catchs the essence of a :class:`DiffPolynomialRing`: the extension
-            of the derivation on the base ring (retrieved by ``self.base()``) to the 
-            infinite polynomial ring in such a way that the variables are linked linearly with the 
-            derivation.
-
-            For element in the base ring, this method relies on the Sage method :func:`diff`.
-
-            INPUT:
-
-            * ``element``: an object. Must be included in ``self``. 
-
-            OUTPUT:
-
-            An element in ``self`` that represents the derivative of ``element``.
-
-            EXAMPLES::
-
-                sage: from dalgebra import DiffPolynomialRing
-                sage: R.<y> = DiffPolynomialRing(QQ['x']); x = R.base().gens()[0]
-                sage: R.derivation(y[0])
-                y_1
-                sage: R.derivation(x)
-                1
-                sage: R.derivation(x*y[10])
-                x*y_11 + y_10
-                sage: R.derivation(x^2*y[1]^2 - y[2]*y[1])
-                -y_3*y_1 - y_2^2 + 2*x^2*y_2*y_1 + 2*x*y_1^2
-
-            This derivation also works naturally with several infinite variables::
-
-                sage: S = DiffPolynomialRing(R, 'a'); a,y = S.gens()
-                sage: S.derivation(a[1] + y[0]*a[0])
-                a_1*y_0 + a_0*y_1 + a_2
-        '''
-        if(element in self):
-            element = self(element)
-        else:
-            element=self(str(element))
-            
-        if(element in self.base()):
-            return self.base()(self.__inner_derivation(self.base()(element)))
-        
-        if(not element in self.__cache_derivatives):
-            generators = self.gens()
-            if(element.is_monomial()):
-                c = element.coefficients()[0]
-                m = element.monomials()[0]
-                v = element.variables(); d = [element.degree(v[i]) for i in range(len(v))]
-                v = [self(str(el)) for el in v]
-                base = c*prod([v[i]**(d[i]-1) for i in range(len(v))], self.one())
-
-                first_term = self.derivation(c)*self(str(m))
-                second_term = self.zero()
-                for i in range(len(v)):
-                    to_add = d[i]*prod([v[j] for j in range(len(v)) if j != i], self.one())
-                    for g in generators:
-                        if(g.contains(v[i])):
-                            to_add *= g[g.index(v[i])+1]
-                            break
-                    second_term += to_add
-                self.__cache_derivatives[element] = first_term + base*second_term
-            else:
-                c = element.coefficients(); m = [self(str(el)) for el in element.monomials()]
-                self.__cache_derivatives[element] = sum(self.derivation(c[i])*m[i] + c[i]*self.derivation(m[i]) for i in range(len(m)))
-                
-        return self.__cache_derivatives[element]
 
     def eval(self, element, *args, **kwds):
         r'''
