@@ -315,7 +315,7 @@ class TestOperator:
     @lru_cache
     def compute_test(self):
         to_test = set()
-        if "derivative" in self.axioms:
+        if "derivation" in self.axioms:
             to_test.add(self.is_additive_homomorphism)
             to_test.add(self.is_leibniz)
         elif "homomorphism" in self.axioms:

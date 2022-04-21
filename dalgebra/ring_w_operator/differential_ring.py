@@ -54,11 +54,11 @@ class DifferentialRings(Category):
     class ParentMethods:
         # abstract methods from the super category, now implemented
         def operation(self, element):
-            return self.derivative(element)
+            return self.derivation(element)
 
         # new abstract methods for this category
         @abstract_method
-        def derivative(self, _):
+        def derivation(self, _):
             raise NotImplementedError
 
         @abstract_method
@@ -79,7 +79,7 @@ class DifferentialRings(Category):
             r'''
                 Method that actually computes the derivative of an element of a ring with operator.
             '''
-            return self.parent().derivative(self)
+            return self.parent().derivation(self)
 
     # methods that all morphisms involving differential rings must implement
     class MorphismMethods: 
@@ -92,44 +92,44 @@ class DifferentialRingFactory(UniqueFactory):
             args = args[0]
         
         if len(args) == 0:
-            base = kwds["base"]; derivative = kwds["derivative"]
+            base = kwds["base"]; derivation = kwds["derivation"]
         if len(args) == 1:
             if "base" in kwds:
                 raise TypeError("Duplicated value for the base ring")
-            base = args[0]; derivative = kwds["derivative"]
+            base = args[0]; derivation = kwds["derivation"]
         elif len(args) == 2:
             if "base" in kwds:
                 raise TypeError("Duplicated value for the base ring")
-            if "derivative" in kwds:
-                raise TypeError("Duplicated value for the derivative")
-            base = args[0]; derivative = args[1]
+            if "derivation" in kwds:
+                raise TypeError("Duplicated value for the derivation")
+            base = args[0]; derivation = args[1]
 
-        return (base, derivative)
+        return (base, derivation)
 
     def create_object(self, _, key):
-        base, derivative = key
+        base, derivation = key
 
         if base in DifferentialRings:
             # check equality of the operators?
             return base
 
-        if isinstance(derivative, Map):
+        if isinstance(derivation, Map):
             try:
-                domain_po = pushout(derivative.domain(), base)
-                codomain_po = pushout(derivative.codomain(), base) 
+                domain_po = pushout(derivation.domain(), base)
+                codomain_po = pushout(derivation.codomain(), base) 
                 if not domain_po == base:
-                    raise TypeError(f"The domain [{derivative.domain()}] must be something to be coerced into {base}")
+                    raise TypeError(f"The domain [{derivation.domain()}] must be something to be coerced into {base}")
                 if not codomain_po == base:
-                    raise TypeError(f"The codomain [{derivative.codomain()}] must be something to be coerced into {base}")
+                    raise TypeError(f"The codomain [{derivation.codomain()}] must be something to be coerced into {base}")
 
-                if domain_po != derivative.domain() or codomain_po != derivative.codomain():
-                    new_derivative = CallableMap(lambda p : derivative(p), base, base)
+                if domain_po != derivation.domain() or codomain_po != derivation.codomain():
+                    new_derivation = CallableMap(lambda p : derivation(p), base, base)
             except:
-                raise ValueError(f"{derivative.domain()} or {derivative.codomain()} could not be pushed into common parent with {base}")
-        elif callable(derivative):
-            new_derivative = CallableMap(derivative, base, base)
+                raise ValueError(f"{derivation.domain()} or {derivation.codomain()} could not be pushed into common parent with {base}")
+        elif callable(derivation):
+            new_derivation = CallableMap(derivation, base, base)
 
-        return DifferentialRing_Wrapper(base, new_derivative)
+        return DifferentialRing_Wrapper(base, new_derivation)
 
 DifferentialRing = DifferentialRingFactory("dalgebra.ring_w_operator.differential_ring.DifferentialRing")
 
@@ -145,19 +145,19 @@ class DifferentialRing_WrapperElement(RingWithOperator_WrapperElement):
 class DifferentialRing_Wrapper(RingWithOperator_Wrapper):
     Element = DifferentialRing_WrapperElement
 
-    def __init__(self, base, derivative, category=None):
+    def __init__(self, base, derivation, category=None):
         categories = [DifferentialRings()]
         if isinstance(category, (list, tuple)):
             categories += list(category)
         elif category != None:
             categories.append(category)
-        super().__init__(base, derivative, "derivative", tuple(categories))
+        super().__init__(base, derivation, "derivation", tuple(categories))
 
-    def derivative(self, element):
+    def derivation(self, element):
         return super().operation(element)
 
     def operator_ring(self):
-        return OreAlgebra(self.wrapped, ('D', lambda p : p, lambda p : self(p).derivative().wrapped))
+        return OreAlgebra(self.wrapped, ('D', lambda p : p, lambda p : self.derivation(p).wrapped))
 
     def __contains__(self, element):
         if(element.parent() in DifferentialRings):
@@ -166,4 +166,4 @@ class DifferentialRing_Wrapper(RingWithOperator_Wrapper):
 
     ## Representation methods
     def __repr__(self) -> str:
-        return f"Differential Ring [{self.wrapped}] with derivative [{repr(self.operator)}]"
+        return f"Differential Ring [{self.wrapped}] with derivation [{repr(self.operator)}]"
