@@ -21,5 +21,4 @@ AUTHORS::
 # ****************************************************************************
 
 from .differential_polynomial import *
-from .differential_ring import *
 from .ring_w_operator import *
