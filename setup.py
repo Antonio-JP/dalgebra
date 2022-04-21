@@ -34,7 +34,7 @@ setup(
     keywords = "SageMath differential algebra",
     packages = ["dalgebra",
                 "dalgebra.differential_polynomial",
-                "dalgebra.differential_ring"],
+                "dalgebra.ring_w_operator"],
     setup_requires   = [],
     install_requires = ['sphinx'],
 )
