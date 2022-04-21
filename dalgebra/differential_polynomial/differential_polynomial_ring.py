@@ -426,7 +426,7 @@ class DiffPolynomialRing_dense (InfinitePolynomialRing_dense):
 
     ## Other magic methods   
     def __repr__(self):
-        return "Ring of differential polynomials in (%s) over [%s, %s]" %(", ".join(self._names), self._base, self.__inner_derivation)
+        return "Ring of differential polynomials in (%s) over [%s]" %(", ".join(self._names), self._base)
 
     def _latex_(self):
         return latex(self._base) + r"\{" + ", ".join(self._names) + r"\}"
@@ -649,4 +649,4 @@ class DiffPolySimpleMorphism (Morphism):
         if(p.degree() == 0):
             return self.codomain()(p.coefficients()[0])
 
-        return self.codomain(str(p))
+        return self.codomain()(str(p))
