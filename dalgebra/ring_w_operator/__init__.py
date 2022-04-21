@@ -22,3 +22,4 @@ AUTHORS::
 
 from .ring_w_operator import RingsWithOperator, RingWithOperator
 from .differential_ring import DifferentialRings, DifferentialRing
+from .difference_ring import DifferenceRings, DifferenceRing
