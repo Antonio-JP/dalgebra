@@ -12,11 +12,11 @@ AUTHORS:
 
 from functools import lru_cache
 from sage.all import CommutativeRing, ZZ, latex
-from sage.categories.all import Category, CommutativeRings
+from sage.categories.all import Morphism, Category, CommutativeRings
 from sage.categories.map import Map
-from sage.categories.pushout import pushout
+from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.misc.abstract_method import abstract_method
-from sage.structure.element import Element #pylint: disable=no-name-in-module
+from sage.structure.element import parent, Element #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
@@ -137,6 +137,8 @@ class RingWithOperator_WrapperElement(Element):
         return self.parent().element_class(self.parent(), self.wrapped + x.wrapped)
     def _sub_(self, x):
         return self.parent().element_class(self.parent(), self.wrapped - x.wrapped)
+    def _neg_(self):
+        return self.parent().element_class(self.parent(), -self.wrapped)
     def _mul_(self, x):
         return self.parent().element_class(self.parent(), self.wrapped * x.wrapped)
     def _rmul_(self, x):
@@ -145,7 +147,26 @@ class RingWithOperator_WrapperElement(Element):
         return self.parent().element_class(self.parent(), self.wrapped * x.wrapped)
     def __pow__(self, n):
         return self.parent().element_class(self.parent(), self.wrapped ** n)
-    def __str__(self):
+
+    def __eq__(self, x):
+        if x is None: 
+            return False
+        r = pushout(self.parent(), parent(x))
+        s, x = r(self), r(x)
+        if isinstance(s.parent(), RingWithOperator_Wrapper):
+            return s.wrapped == x.wrapped
+        else:
+            return s == x
+
+    def is_zero(self):
+        return self.wrapped == 0
+    def is_one(self):
+        return self.wrapped == 1
+
+    ## Other magic methods
+    def __hash__(self) -> int:
+        return hash(self.wrapped)
+    def __str__(self) -> str:
         return str(self.wrapped)
     def __repr__(self) -> str:
         return repr(self.wrapped)
@@ -180,6 +201,15 @@ class RingWithOperator_Wrapper(CommutativeRing):
 
         CommutativeRing.__init__(self, base.base(), category=tuple(categories))
 
+        # registering conversion to simpler structures
+        current = self.base()
+        morph = RingWithOperatorPolySimpleMorphism(self, current)
+        current.register_conversion(morph)
+        while(not(current.base() == current)):
+            current = current.base()
+            morph = RingWithOperatorPolySimpleMorphism(self, current)
+            current.register_conversion(morph)
+
     @property
     def wrapped(self): return self.__base
 
@@ -207,21 +237,27 @@ class RingWithOperator_Wrapper(CommutativeRing):
         p = self.wrapped._element_constructor_(x)
         return self.element_class(self, p)
 
-    def __call__(self, *args, **kwds):
-        try:
-            res = self.wrapped(*args, **kwds)
-            return self.element_class(self, res)
-        except:
-            super().__call__(*args, **kwds)
-
     def __contains__(self, element):
-        if(element.parent() in RingsWithOperator):
-            return element.parent() == self
-        return element in self.wrapped        
+        if(parent(element) in self.category()):
+            return parent(element) == self
+        try:
+            self(element)
+            return True
+        except:
+            return element in self.wrapped        
+
+    def construction(self):
+        return RingWithOperatorFunctor(self.__operator), self.wrapped
 
     # Rings methods
     def characteristic(self):
         return self.wrapped.characteristic()
+
+    def gens(self):
+        return tuple([self(gen) for gen in self.wrapped.gens()])
+
+    def ngens(self):
+        return self.wrapped.ngens()
 
     ## Representation methods
     def __repr__(self) -> str:
@@ -276,6 +312,10 @@ class CallableMap(Map):
         if not callable(function):
             raise TypeError("The argument function must be callable")
         self.__method = function
+        try:
+            self.__name__ = function.__name__
+        except AttributeError:
+            self.__name__ = str(function)
 
     def _call_(self, element):
         return self.codomain()(self.__method(element))
@@ -286,9 +326,46 @@ class CallableMap(Map):
     def __repr__(self):
         return f"Map from callable {self.__name__}"
 
-    @property
-    def __name__(self):
-        return self.__method.__name__
+class RingWithOperatorFunctor(ConstructionFunctor):
+    def __init__(self, operator):
+        self.__operator = operator
+        super().__init__(RingsWithOperator(),RingsWithOperator())
+        
+    ### Methods to implement
+    def _coerce_into_domain(self, x):
+        if(x not in self.domain()):
+            raise TypeError("The object [%s] is not an element of [%s]" %(x, self.domain()))
+        return x
+        
+    def _apply_functor(self, x):
+        return RingWithOperator(x,self.__operator)
+        
+    def _repr_(self):
+        return "RingWithOperator(*,[%s])" %(repr(self.__operator))
+        
+    def __eq__(self, other):
+        if(other.__class__ == self.__class__):
+            return (other.__operator == self.__operator)
+
+    def merge(self, other):
+        pass
+
+    def operator(self):
+        return self.__operator
+
+class RingWithOperatorPolySimpleMorphism (Morphism):
+    r'''
+        Class representing maps to simpler rings.
+
+        This map allows the coercion system to detect that some elements in a 
+        :class:`RingWithOperator_Wrapper` are included in simpler rings.
+    '''
+    def __init__(self, domain, codomain):
+        super().__init__(domain, codomain)
+        
+    def _call_(self, p):
+        return self.codomain()(p.wrapped)
+
 
 class TestOperator:
     def __init__(self, operator, axioms, random = True, ntests = 10):
