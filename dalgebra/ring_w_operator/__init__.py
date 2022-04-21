@@ -1,12 +1,12 @@
 r"""
-Module ``differential_ring``
+Module ``ring_w_operator``
 
-This is the main entry package point for the functionalities of differential 
-structures.
+This is the main entry package point for the functionalities of rings with operators associated,
+such as difference and differential rings.
 
 AUTHORS::
 
-    - Antonio Jimenez-Pastor (2022-02-02): initial version
+    - Antonio Jimenez-Pastor (2022-04-20): initial version
 
 """
 
@@ -20,4 +20,5 @@ AUTHORS::
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
+from .ring_w_operator import RingsWithOperator, RingWithOperator
 from .differential_ring import DifferentialRings, DifferentialRing
