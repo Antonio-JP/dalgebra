@@ -44,7 +44,7 @@ from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-mod
 
 
 from .diff_polynomial_element import RWOPolynomial, RWOPolynomialGen
-from ..ring_w_operator.ring_w_operator import RingsWithOperator 
+from ..ring_w_operator.ring_w_operator import RingWithOperator, RingsWithOperator 
 from ..ring_w_operator.differential_ring import DifferentialRing, DifferentialRings 
 from ..ring_w_operator.difference_ring import DifferenceRing, DifferenceRings
 
@@ -63,6 +63,8 @@ class RWOPolynomialRingFactory(UniqueFactory):
         any example or test for this. See the tests for :class:`DifferentialPolynomialRingFactory`
         and :class:`DifferencePolynomialRingFactory` for more details.
     '''
+    def _default_operation(self): return lambda _ : 0
+
     def _read_arguments(self, *args, **kwds):
         ## Allowing the args input to not be unrolled
         if(len(args) == 1 and type(args[0]) in (list, tuple)):
@@ -70,28 +72,28 @@ class RWOPolynomialRingFactory(UniqueFactory):
         
         ## Extracting the input from args and kwds
         if(len(args) == 0):
-            base = kwds["base"]; names = kwds["names"]; operation=kwds.get("derivation", lambda p : 0)
+            base = kwds["base"]; names = kwds["names"]
         elif(len(args) == 1):
             base = args[0]
             if("base" in kwds):
                 raise TypeError("Duplicated value for the base ring")
             names = kwds.get("names", [])
-            operation=kwds.get("operation", lambda p : 0)
         elif(len(args) == 2):
             base = args[0]; names = args[1]
             if("base" in kwds):
                 raise TypeError("Duplicated value for the base ring")
             if("names" in kwds):
                 raise TypeError("Duplicated value for the generators")
-            operation=kwds.get("operation", lambda p : 0)
-        elif(len(args) == 2):
-            base = args[0]; names = args[1]; operation=args[2]
+        elif(len(args) > 2):
+            base = args[0]; names = args[1:]; 
             if("base" in kwds):
                 raise TypeError("Duplicated value for the base ring")
             if("names" in kwds):
                 raise TypeError("Duplicated value for the generators")
             if("operation" in kwds):
                 raise TypeError("Duplicated value for the operation")
+
+        operation=kwds.get("operation", self._default_operation())
 
         return base, names, operation
 
@@ -116,7 +118,7 @@ class RWOPolynomialRingFactory(UniqueFactory):
 
     def _adjust_base(self, base, operation):
         if not base in RingsWithOperator:
-            base = RingsWithOperator(base, operation)
+            base = RingWithOperator(base, operation)
         return base
 
     def create_key(self, *args, **kwds):
@@ -162,7 +164,6 @@ class DifferentialPolynomialRingFactory(RWOPolynomialRingFactory):
                 Ring of differential polynomials in (y) over Differential Ring [Univariate 
                 Polynomial Ring in x over Rational Field] with derivation [Map from 
                 callable d/dx]
-                sage: S = DifferentialPolynomialRing(QQ['x'], 'y')
                 sage: R is DifferentialPolynomialRing(QQ['x'], 'y')
                 True
                 sage: R is DifferentialPolynomialRing(QQ['x'], ['y'])
@@ -200,13 +201,13 @@ class DifferentialPolynomialRingFactory(RWOPolynomialRingFactory):
                 sage: a
                 y_*
     '''
+    def _default_operation(self):
+        return diff 
+
     def _read_arguments(self, *args, **kwds):
-        # we set the default value for operation from derivation:
-        if (not "operation" in kwds):
-            if ("derivation" in kwds):
-                kwds["operation"] = kwds["derivation"]
-            elif len(args) != 2:
-                kwds["operation"] = diff # derivation from Sage
+        if (not "operation" in kwds) and ("derivation" in kwds):
+            kwds["operation"] = kwds["derivation"]
+            
         return super()._read_arguments(*args, **kwds)
     
     def _adjust_operation(self, base, derivation):
@@ -247,10 +248,8 @@ class DifferencePolynomialRingFactory(RWOPolynomialRingFactory):
 
                 sage: from dalgebra import DifferencePolynomialRing
                 sage: R.<y> = DifferencePolynomialRing(QQ['x']); R
-                Ring of differential polynomials in (y) over Differential Ring [Univariate 
-                Polynomial Ring in x over Rational Field] with derivation [Map from 
-                callable d/dx]
-                sage: S = DifferencePolynomialRing(QQ['x'], 'y')
+                Ring of difference polynomials in (y) over Difference Ring [Univariate Polynomial 
+                Ring in x over Rational Field] with difference [Map from callable [x] |--> [x]]
                 sage: R is DifferencePolynomialRing(QQ['x'], 'y')
                 True
                 sage: R is DifferencePolynomialRing(QQ['x'], ['y'])
@@ -266,8 +265,7 @@ class DifferencePolynomialRingFactory(RWOPolynomialRingFactory):
 
                 sage: S = DifferencePolynomialRing(QQ['x'], ('y','a')); S
                 Ring of difference polynomials in (a, y) over Difference Ring [Univariate 
-                Polynomial Ring in x over Rational Field] with derivation [Map from callable 
-                d/dx]
+                Polynomial Ring in x over Rational Field] with difference [Map from callable [x] |--> [x]]
                 sage: S is DifferencePolynomialRing(QQ['x'], ['y','a'])
                 True
                 sage: S is DifferencePolynomialRing(QQ['x'], ('y','a'))
@@ -288,13 +286,14 @@ class DifferencePolynomialRingFactory(RWOPolynomialRingFactory):
                 sage: a
                 y_*
     '''
+    def _default_operation(self):
+        return lambda p : p
+
     def _read_arguments(self, *args, **kwds):
         # we set the default value for operation from derivation:
-        if (not "operation" in kwds):
-            if ("difference" in kwds):
-                kwds["operation"] = kwds["difference"]
-            elif len(args) != 2:
-                kwds["operation"] = lambda p : p #identity
+        if (not "operation" in kwds) and ("difference" in kwds):
+            kwds["operation"] = kwds["difference"]
+            
         return super()._read_arguments(*args, **kwds)
 
     def _adjust_operation(self, base, difference):
@@ -440,7 +439,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: S = RWOPolynomialRing(ZZ, ('a', 'b'))
                 sage: S
                 Ring of infinite polynomials in (a, b) over Ring [Integer Ring] with 
-                operator [Map from callable 0]
+                operator [Map from callable <lambda>]
                 sage: S.gen(0)
                 a_*
                 sage: S.gen(1)
@@ -847,12 +846,12 @@ class DifferencePolynomialRing_dense (RWOPolynomialRing_dense):
 
             sage: from dalgebra import DifferencePolynomialRing
             sage: R.<y> = DifferencePolynomialRing(QQ['x']); R
-            Ring of differential polynomials in (y) over Difference Ring 
-            [Univariate Polynomial Ring in x over Rational Field] with difference 
-            [Map from callable x --> x]
-            sage: S.<a,b> = DifferentialPolynomialRing(ZZ); S
-            Ring of differential polynomials in (a, b) over Differential Ring [Integer Ring] 
-            with derivation [Map from callable Identity map]
+            Ring of difference polynomials in (y) over Difference Ring [Univariate 
+            Polynomial Ring in x over Rational Field] with difference [Map from 
+            callable [x] |--> [x]]
+            sage: S.<a,b> = DifferencePolynomialRing(ZZ); S
+            Ring of difference polynomials in (a, b) over Difference Ring [Integer Ring] 
+            with difference [Map from callable [1] |--> [1]]
 
         We can now create objects in those rings using the generators ``y``, ``a`` and ``b``::
 
@@ -873,7 +872,7 @@ class DifferencePolynomialRing_dense (RWOPolynomialRing_dense):
         super().__init__(base, names)
 
     #################################################
-    ### Methods from DifferentialRings
+    ### Methods from DifferenceRings
     #################################################
     def difference(self, element):
         r'''
@@ -903,23 +902,24 @@ class DifferencePolynomialRing_dense (RWOPolynomialRing_dense):
                 sage: R.difference(x*y[10])
                 x*y_11
                 sage: R.difference(x^2*y[1]^2 - y[2]*y[1])
-                x^3*y[2]^2 - y[3]*y[2]
+                -y_3*y_2 + x^2*y_2^2
 
             This difference also works naturally with several infinite variables::
 
                 sage: S = DifferencePolynomialRing(R, 'a'); a,y = S.gens()
                 sage: S.difference(a[1] + y[0]*a[0])
-                a_2+ a_1*y_1
+                a_1*y_1 + a_2
 
             We can see other type of shifts or differences operators::
 
-                sage: T.<z> = DifferencePolynomialRing(QQ[x], difference=lambda p : p(x=x+1))
+                sage: X = QQ[x]('x')
+                sage: T.<z> = DifferencePolynomialRing(QQ[x], difference=lambda p : p(x=X+1)); x = T.base().gens()[0]
                 sage: T.difference(z[0])
-                z[1]
+                z_1
                 sage: T.difference(x)
                 x + 1
                 sage: T.difference(x^2*z[1]^2 - z[2]*z[1])
-                (x + 1)^2*z[2]^2 - z[3]*z[2]
+                -z_3*z_2 + (x^2 + 2*x + 1)*z_2^2
         '''
         if(element in self):
             element = self(element)
@@ -979,9 +979,9 @@ class DifferencePolynomialRing_dense (RWOPolynomialRing_dense):
                 sage: F
                 DifferencePolynomialRing(*,('y',))
                 sage: S
-                Difference Ring [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from callable d/dx]
+                Difference Ring [Univariate Polynomial Ring in x over Rational Field] with difference [Map from callable [x] |--> [x]]
         '''
-        return DifferentialPolyRingFunctor(self._names), self._base
+        return DifferencePolyRingFunctor(self._names), self._base
     
     #################################################
     ### Magic python methods
@@ -1085,7 +1085,7 @@ class DifferentialPolyRingFunctor (RWOPolyRingFunctor):
         return DifferentialPolynomialRing(x,self.variables())
         
     def _repr_(self):
-        return "DifferentialPolynomialRing(*,%s)" %(str(self.__variables))
+        return "DifferentialPolynomialRing(*,%s)" %(str(self.variables()))
 
 class DifferencePolyRingFunctor (RWOPolyRingFunctor):
     r'''
@@ -1119,10 +1119,10 @@ class DifferencePolyRingFunctor (RWOPolyRingFunctor):
         super().__init__(variables)
       
     def _apply_functor(self, x):
-        return DifferentialPolynomialRing(x,self.variables())
+        return DifferencePolynomialRing(x,self.variables())
         
     def _repr_(self):
-        return "DifferencePolynomialRing(*,%s)" %(str(self.__variables))
+        return "DifferencePolynomialRing(*,%s)" %(str(self.variables()))
          
 
 class RWOPolySimpleMorphism (Morphism):

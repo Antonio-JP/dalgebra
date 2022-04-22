@@ -190,7 +190,14 @@ class RingWithOperator_Wrapper(CommutativeRing):
 
         # assigning values
         self.__base = base
-        new_operator = lambda p : operator(p.wrapped); new_operator.__name__ = operator.__name__
+        new_operator = lambda p : operator(p.wrapped); 
+        try:
+            new_operator.__name__ = operator.__name__
+        except AttributeError:
+            try:
+                new_operator.__name__ = f"{list(base.gens())} |--> {operator.im_gens()}"
+            except AttributeError:
+                new_operator.__name__ = "<callable>"
         self.__operator = CallableMap(new_operator, self, self)
 
         # creating categories

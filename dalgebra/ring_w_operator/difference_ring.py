@@ -125,6 +125,8 @@ class DifferenceRingFactory(UniqueFactory):
 
                 if domain_po != difference.domain() or codomain_po != difference.codomain():
                     new_difference = CallableMap(lambda p : difference(p), base, base)
+                else:
+                    new_difference = difference
             except:
                 raise ValueError(f"{difference.domain()} or {difference.codomain()} could not be pushed into common parent with {base}")
         elif callable(difference):

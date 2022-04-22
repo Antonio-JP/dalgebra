@@ -125,6 +125,8 @@ class DifferentialRingFactory(UniqueFactory):
 
                 if domain_po != derivation.domain() or codomain_po != derivation.codomain():
                     new_derivation = CallableMap(lambda p : derivation(p), base, base)
+                else:
+                    new_derivation = derivation
             except:
                 raise ValueError(f"{derivation.domain()} or {derivation.codomain()} could not be pushed into common parent with {base}")
         elif callable(derivation):
