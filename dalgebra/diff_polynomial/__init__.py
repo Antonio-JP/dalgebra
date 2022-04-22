@@ -20,5 +20,6 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from .differential_polynomial_ring import DiffPolynomialRing, is_DiffPolynomialRing
-from .differential_polynomial_system import DifferentialSystem
+from .diff_polynomial_ring import (RWOPolynomialRing, DifferentialPolynomialRing, DifferencePolynomialRing,
+                                    is_DifferentialPolynomialRing, is_DifferencePolynomialRing)
+from .diff_polynomial_system import DifferentialSystem

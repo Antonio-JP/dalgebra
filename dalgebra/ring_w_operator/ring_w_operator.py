@@ -237,9 +237,6 @@ class RingWithOperator_Wrapper(CommutativeRing):
     def _element_constructor_(self, x):
         r'''
             Extended definition of :func:`_element_constructor_`.
-
-            Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_dense`
-            and then transforms the output into a :class:`~dalgebra.differential_polynomial.differential_polynomial_element.DiffPolynomial`.
         '''
         if x in SR:
             x = str(x)
@@ -298,8 +295,8 @@ class RingWithOperator_Wrapper(CommutativeRing):
 
             EXAMPLES::
 
-                sage: from dalgebra import DiffPolynomialRing
-                sage: R.<y> = DiffPolynomialRing(QQ['x'])
+                sage: from dalgebra import RingWithOperator
+                sage: R = RingWithOperator(QQ['x'], lambda p : diff(p))
                 sage: R.zero()
                 0
         '''

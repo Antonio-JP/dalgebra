@@ -27,7 +27,7 @@ from sage.all import latex, ZZ, PolynomialRing, cartesian_product
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method
 
-from .differential_polynomial_ring import is_DiffPolynomialRing
+from .diff_polynomial_ring import is_DifferentialPolynomialRing
 
 class DifferentialSystem:
     r'''
@@ -58,7 +58,7 @@ class DifferentialSystem:
             parents.insert(0,parent)
 
         pushed = reduce(lambda p, q : pushout(p,q), parents)
-        if(not is_DiffPolynomialRing(pushed)):
+        if(not is_DifferentialPolynomialRing(pushed)):
             raise TypeError("The common parent is nto a ring of differential polynomials. Not valid for a DifferentialSystem")
 
         self.__parent = pushed
@@ -131,11 +131,11 @@ class DifferentialSystem:
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u> = DiffPolynomialRing(QQ)
+                sage: R.<u> = DifferentialPolynomialRing(QQ)
                 sage: system = DifferentialSystem([u[1]-u[0]])
                 sage: system.algebraic_variables()
                 (u_0, u_1)
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
                 sage: system.algebraic_variables()
                 (v_0, v_1, v_2, u_0, u_1, u_2)
@@ -165,7 +165,7 @@ class DifferentialSystem:
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u> = DiffPolynomialRing(QQ)
+                sage: R.<u> = DifferentialPolynomialRing(QQ)
                 sage: system = DifferentialSystem([u[1]-u[0]])
                 sage: system.algebraic_equations()
                 (-u_0 + u_1,)
@@ -183,7 +183,7 @@ class DifferentialSystem:
 
             The same can be checked for a multivariate differential polynomial::
 
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
                 sage: system.algebraic_equations()
                 ((x - 1)*v_0 + x*u_0 + x^2*u_2, v_1 - v_2 + u_1)
@@ -288,7 +288,7 @@ class DifferentialSystem:
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u> = DiffPolynomialRing(QQ)
+                sage: R.<u> = DifferentialPolynomialRing(QQ)
                 sage: system = DifferentialSystem([u[1]-u[0]])
                 sage: system.extend_by_derivation([0]).equations
                 (u_1 - u_0,)
@@ -296,7 +296,7 @@ class DifferentialSystem:
                 (u_1 - u_0, u_2 - u_1)
                 sage: system.extend_by_derivation([5]).equations
                 (u_1 - u_0, u_2 - u_1, u_3 - u_2, u_4 - u_3, u_5 - u_4, u_6 - u_5)
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
                 sage: system.extend_by_derivation([0,0]).equations
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0, u_1 - v_2 + v_1)
@@ -361,7 +361,7 @@ class DifferentialSystem:
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
                 sage: system.is_sp2()
                 False
