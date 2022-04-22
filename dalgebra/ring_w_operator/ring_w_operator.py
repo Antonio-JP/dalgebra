@@ -243,6 +243,9 @@ class RingWithOperator_Wrapper(CommutativeRing):
         p = self.wrapped._element_constructor_(x)
         return self.element_class(self, p)
 
+    def _is_valid_homomorphism_(self, codomain, im_gens, base_map=None):
+        return self.wrapped._is_valid_homomorphism_(codomain, im_gens, base_map)
+
     def __contains__(self, element):
         if(parent(element) in self.category()):
             return parent(element) == self

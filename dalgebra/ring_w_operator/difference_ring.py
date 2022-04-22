@@ -93,11 +93,11 @@ class DifferenceRingFactory(UniqueFactory):
             args = args[0]
         
         if len(args) == 0:
-            base = kwds["base"]; difference = kwds["difference"]
+            base = kwds["base"]; difference = kwds.get("difference", lambda p : p)
         if len(args) == 1:
             if "base" in kwds:
                 raise TypeError("Duplicated value for the base ring")
-            base = args[0]; difference = kwds["difference"]
+            base = args[0]; difference = kwds.get("difference", lambda p : p)
         elif len(args) == 2:
             if "base" in kwds:
                 raise TypeError("Duplicated value for the base ring")
