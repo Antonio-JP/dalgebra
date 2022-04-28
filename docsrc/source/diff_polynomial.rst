@@ -13,6 +13,7 @@ Modules
 
    diff_polynomial/diff_polynomial_ring
    diff_polynomial/diff_polynomial_element
+   diff_polynomial/diff_polynomial_system
 
 
 Indices and Tables

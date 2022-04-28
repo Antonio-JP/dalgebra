@@ -87,6 +87,9 @@ class DifferenceRings(Category):
         pass
 
 class DifferenceRingFactory(UniqueFactory):
+    r'''
+        Factory to create uniquely Difference rings from usual rings Sage structures
+    '''
     def create_key(self, *args, **kwds):
         ## Allowing the args input to not be unrolled
         if(len(args) == 1 and type(args[0]) in (list, tuple)):

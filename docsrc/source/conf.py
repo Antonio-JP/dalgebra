@@ -45,7 +45,7 @@ release = readfile(str(path)).strip()
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.append(os.path.abspath(package_folder))
-sys.path.append(os.path.join(SAGE_SRC, "sage_setup", "docbuild", "ext"))
+sys.path.append(os.path.join(SAGE_SRC, "sage_docbuild", "ext"))
 
 # -- General configuration ------------------------------------------------
 
@@ -56,16 +56,12 @@ sys.path.append(os.path.join(SAGE_SRC, "sage_setup", "docbuild", "ext"))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    #'sphinx.ext.autodoc',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.autosummary',
-    #'autodocsum'
-    #'sage_autodoc',
-    #'sage_package.sphinx',
+    'sage_autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.extlinks',
 ]
+
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.

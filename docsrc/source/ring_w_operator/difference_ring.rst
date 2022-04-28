@@ -3,7 +3,12 @@
 Structure for Difference Rings 
 ==============================================================================================================================
 
-.. automodule:: dalgebra.ring_w_operator.difference_ring
+.. autoclass:: dalgebra.ring_w_operator.difference_ring.DifferenceRings
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. autoclass:: dalgebra.ring_w_operator.difference_ring.DifferenceRingFactory
    :members:
    :undoc-members:
    :show-inheritance:
