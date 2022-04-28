@@ -232,7 +232,7 @@ class RingWithOperator_Wrapper(CommutativeRing):
         r'''
             Standard implementation for ``_has_coerce_map_from``
         '''
-        if S not in [str]:
+        if S not in [str, list, tuple]:
             R = pushout(self, S)
             return (R is self)
         return False
