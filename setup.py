@@ -36,6 +36,7 @@ setup(
                 "dalgebra.diff_polynomial",
                 "dalgebra.ring_w_operator"],
     setup_requires   = [],
-    install_requires = ['sphinx'],
+    install_requires = ['ore_algebra @ git+https://github.com/mkauers/ore_algebra.git',
+                        'sphinx'],
 )
     
