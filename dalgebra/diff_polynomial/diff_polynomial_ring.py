@@ -402,8 +402,25 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_dense`
             and then transforms the output into the corresponding type for ``self``.
         '''
-        p = super()._element_constructor_(x)
-        return self.element_class(self, p)
+        ## Special case when x comes from a linear operator
+        try:
+            from ore_algebra.ore_operator import OreOperator
+            if isinstance(x, OreOperator) and self.ngens() == 1:
+                x = [x]
+            
+            if not isinstance(x, (list,tuple)) or any(not isinstance(el, OreOperator) for el in x):
+                raise TypeError("The format of the input does not allow the OreOperator approach")
+            if any(not el in self.base().operator_ring() for el in x):
+                raise TypeError("The operators in the input are not in the valid Ore ring")
+            if len(x) != self.ngens():
+                raise ValueError("The size of the input does not allow the OreOperator approach")
+
+            x = [[self.base()(coeff) for coeff in op.coefficients(sparse=False)] for op in x]
+            gens = self.gens()
+            return sum([sum(x[i][j]*gens[i][j] for j in range(len(x[i]))) for i in range(len(x))])
+        except: ## Falling back to standard construction
+            p = super()._element_constructor_(x)
+            return self.element_class(self, p)
 
     @cached_method
     def gen(self, i=None):
@@ -468,7 +485,9 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
     #################################################
     def __call__(self, *args, **kwds):
         res = super().__call__(*args, **kwds)
-        return self.element_class(self, res)
+        if not isinstance(res, self.element_class):
+            res = self.element_class(self, res)
+        return res
 
     ## Other magic methods   
     def __repr__(self):
