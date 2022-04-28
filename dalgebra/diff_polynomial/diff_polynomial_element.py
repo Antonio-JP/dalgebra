@@ -19,6 +19,7 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
+from sage.all import ZZ
 from sage.misc.cachefunc import cached_method
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialGen
 from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense, InfinitePolynomial_sparse
@@ -336,6 +337,94 @@ class RWOPolynomial (InfinitePolynomial_dense):
             index = gens.index(gen)
 
         return self.lorders()[index]
+
+    @cached_method
+    def degree(self, gen, order=None):
+        r'''
+            Method that computes the degree for an order of a variable in the infinite polynomial.
+
+            INPUT:
+
+            * ``gen``: a :class:`RWOPolynomialGen` contains in the parent of ``self``.
+            * ``order``: a non-negative integer indicating the order of the generator we want to compute 
+              the degree. If ``None`` is given, then a tuple with all the degrees existing in the polynomial
+              is returned.
+        '''
+        if (not isinstance(gen, RWOPolynomialGen)) or (not gen in self.parent().gens()):
+            raise ValueError(f"The generator {gen} must be valid for the parent of {self}")
+
+        # Case when order is not None
+        if not order is None:
+            if (not order in ZZ) or order < 0:
+                raise ValueError("The order must be `None` or a non-negative integer")
+            if order > self.order(gen):
+                return 0
+            return self.degree(gen)[order]
+        # Case when order is None
+        return tuple([self.polynomial().degree(gen[i].polynomial()) for i in range(self.order(gen)+1)])
+
+    @cached_method
+    def initial(self, gen=None):
+        r'''
+            Computes the leading term of an infinite polynomial.
+
+            This method computes the leading term of the infinite polynomial
+            when the generator given in ``gen`` is consider the *most important* 
+            variable of the polynomial and then it is ordered by its ordering.
+
+            INPUT:
+
+            * ``gen``: the generator we want to focus. May be omitted when there is only one generator.
+
+            EXAMPLES::
+
+            TODO add tests
+        '''
+        parent = self.parent()
+
+        if parent.ngens() == 1 and gen is None: gen = parent.gens()[0]
+
+        if (not isinstance(gen, RWOPolynomialGen)) or (not gen in parent.gens()):
+            raise TypeError(f"The generator must be a valid generator from {parent}")
+        
+        o = self.order(gen); d = self.degree(gen, o)
+        return parent(self.polynomial().coefficient((gen[o]**d).polynomial()))
+
+    lc = initial #: alias for initial (also called "leading coefficient")
+
+    @cached_method
+    def separant(self, gen=None):
+        r'''
+            Computes the separant with respect to one of the generators
+
+            This method computes the separant of a infinite polynomial with respect
+            to one of the generators of the polynomial ring. If the number of generators
+            is exactly one, the generator may be omitted.
+
+            The separant of a differential polynomial `p(y) \in R\{y\}` of order `n`
+            if the formal partial derivative of `p` w.r.t. `y^{(n)}`.
+
+            INPUT:
+
+            * ``element``: an element in ``self`` to get the separant.
+            * ``gen``: the generator we want to focus. May be omitted when there is only one generator.
+
+            OUTPUT:
+
+            A new polynomial that is the separant of ``self`` with respect to the variable ``gen``
+
+            TODO: add tests
+        '''
+        parent = self.parent()
+
+        if parent.ngens() == 1 and gen is None: gen = parent.gens()[0]
+
+        if (not isinstance(gen, RWOPolynomialGen)) or (not gen in parent.gens()):
+            raise TypeError(f"The generator must be a valid generator from {parent}")
+
+        o = self.order(gen)
+
+        return parent(self.polynomial().derivative(gen[o].polynomial()))
 
     # Magic methods
     def __call__(self, *args, **kwargs):
