@@ -152,7 +152,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
             polynomial = polynomial.polynomial()
         super().__init__(parent, polynomial)
 
-    # Properties methods
+    # Method for computing special values
     @cached_method
     def orders(self):
         r'''
@@ -339,17 +339,24 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return self.lorders()[index]
 
     @cached_method
-    def degree(self, gen, order=None):
+    def degree(self, gen=None, order=None):
         r'''
             Method that computes the degree for an order of a variable in the infinite polynomial.
 
             INPUT:
 
-            * ``gen``: a :class:`RWOPolynomialGen` contains in the parent of ``self``.
+            * ``gen``: a :class:`RWOPolynomialGen` contains in the parent of ``self``. If ``None`` is
+              given, then the total degree of the polynomial is returned
             * ``order``: a non-negative integer indicating the order of the generator we want to compute 
               the degree. If ``None`` is given, then a tuple with all the degrees existing in the polynomial
               is returned.
+
+            EXAMPLES::
+
+            TODO add tests
         '''
+        if gen is None: return self.polynomial().degree()
+
         if (not isinstance(gen, RWOPolynomialGen)) or (not gen in self.parent().gens()):
             raise ValueError(f"The generator {gen} must be valid for the parent of {self}")
 
@@ -425,6 +432,61 @@ class RWOPolynomial (InfinitePolynomial_dense):
         o = self.order(gen)
 
         return parent(self.polynomial().derivative(gen[o].polynomial()))
+
+    @cached_method
+    def to_operator(self):
+        r'''
+            Method that transforms the infinite polynomial into a linear operator.
+
+            This method returns a list of linear operators in the ring of operators of ``self.base()``
+            (see method :func:`~dalgebra.ring_w_operator.ring_w_operator.RingWithOperator.operator_ring`),
+            such that each operator applied to each of the generators of ``self.parent()`` is equal to ``self``. 
+
+            This method only works for linear polynomials.
+
+            OUTPUT:
+
+            The constant term of the polynomial and a list of operators.
+
+
+        '''
+        if not self.is_linear():
+            raise TypeError("Linear operators can only be computed for linear polynomials.")
+
+        gens = self.parent().gens()
+        operators = [[0 for _ in range(self.order(g)+1)] for g in gens]
+        mons = self.monomials()
+        coeffs = self.coefficients()
+
+        for i in range(len(mons)):
+            for j in range(len(gens)):
+                if mons[i] in gens[j]:
+                    operators[j][gens[j].index(mons[i])] = coeffs[i]
+                    break
+        
+        op_ring = self.parent().base().operator_ring()
+        for i in range(len(operators)):
+            operator = operators[i]
+            try:
+                operators[i] = op_ring([op_ring.base()(el) for el in operator])
+            except TypeError:
+                operators[i] = op_ring([op_ring.base()(str(el)) for el in operator])
+        return self.constant_coefficient(), operators
+
+    # Properties methods (is_...)
+    def is_linear(self):
+        r'''
+            Method that checks whether a infinite polynomial is linear (in terms of degree).
+
+            This method is a simple checker on the degree of the polynomial to be 
+            at most 1. These linear polynomials have extra properties and can be transformed
+            into linear differential operators (see method :func:`to_operator`).
+
+            EXAMPLES::
+
+            TODO add tests
+        '''    
+        return self.degree() == 1
 
     # Magic methods
     def __call__(self, *args, **kwargs):
