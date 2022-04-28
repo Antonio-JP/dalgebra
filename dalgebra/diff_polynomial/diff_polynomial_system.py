@@ -25,7 +25,7 @@ from functools import reduce
 
 from sage.all import latex, ZZ, PolynomialRing, cartesian_product
 from sage.categories.pushout import pushout
-from sage.misc.cachefunc import cached_method
+from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 
 from .diff_polynomial_ring import is_DifferencePolynomialRing, is_DifferentialPolynomialRing, is_RWOPolynomialRing
 
@@ -177,12 +177,12 @@ class RWOSystem:
                 sage: system = DifferentialSystem([u[1]-u[0]])
                 sage: system.algebraic_equations()
                 (-u_0 + u_1,)
-                sage: system.extend_by_derivation([1]).algebraic_equations()
+                sage: system.extend_by_operation([1]).algebraic_equations()
                 (-u_0 + u_1, -u_1 + u_2)
                 
             We can check that the parent of all the equations is the same::
 
-                sage: parents = [el.parent() for el in system.extend_by_derivation([1]).algebraic_equations()]
+                sage: parents = [el.parent() for el in system.extend_by_operation([1]).algebraic_equations()]
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
@@ -195,7 +195,7 @@ class RWOSystem:
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
                 sage: system.algebraic_equations()
                 ((x - 1)*v_0 + x*u_0 + x^2*u_2, v_1 - v_2 + u_1)
-                sage: system.extend_by_derivation([1,2]).algebraic_equations()
+                sage: system.extend_by_operation([1,2]).algebraic_equations()
                 ((x - 1)*v_0 + x*u_0 + x^2*u_2,
                 v_0 + (x - 1)*v_1 + u_0 + x*u_1 + 2*x*u_2 + x^2*u_3,
                 v_1 - v_2 + u_1,
@@ -204,7 +204,7 @@ class RWOSystem:
                 
             And the parents are again the same for all those equations::
 
-                sage: parents = [el.parent() for el in system.extend_by_derivation([1,2]).algebraic_equations()]
+                sage: parents = [el.parent() for el in system.extend_by_operation([1,2]).algebraic_equations()]
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
@@ -217,7 +217,7 @@ class RWOSystem:
                 sage: system_with_u = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables=[u])
                 sage: system_with_u.algebraic_equations()                                                                                                                                        
                 (x*u_0 + x^2*u_2 + (x - 1)*v_0, u_1 + v_1 - v_2)
-                sage: system_with_u.extend_by_derivation([1,2]).algebraic_equations()
+                sage: system_with_u.extend_by_operation([1,2]).algebraic_equations()
                 (x*u_0 + x^2*u_2 + (x - 1)*v_0,
                 u_0 + x*u_1 + 2*x*u_2 + x^2*u_3 + v_0 + (x - 1)*v_1,
                 u_1 + v_1 - v_2,
@@ -230,7 +230,7 @@ class RWOSystem:
                 Multivariate Polynomial Ring in u_0, u_1, u_2 over Multivariate Polynomial 
                 Ring in v_0, v_1, v_2 over Differential Ring [Univariate Polynomial Ring 
                 in x over Rational Field] with derivation [Map from callable d/dx]
-                sage: parents = [el.parent() for el in system_with_u.extend_by_derivation([1,2]).algebraic_equations()]
+                sage: parents = [el.parent() for el in system_with_u.extend_by_operation([1,2]).algebraic_equations()]
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
@@ -299,21 +299,21 @@ class RWOSystem:
                 sage: from dalgebra import *
                 sage: R.<u> = DifferentialPolynomialRing(QQ)
                 sage: system = DifferentialSystem([u[1]-u[0]])
-                sage: system.extend_by_derivation([0]).equations
+                sage: system.extend_by_operation([0]).equations
                 (u_1 - u_0,)
-                sage: system.extend_by_derivation([1]).equations
+                sage: system.extend_by_operation([1]).equations
                 (u_1 - u_0, u_2 - u_1)
-                sage: system.extend_by_derivation([5]).equations
+                sage: system.extend_by_operation([5]).equations
                 (u_1 - u_0, u_2 - u_1, u_3 - u_2, u_4 - u_3, u_5 - u_4, u_6 - u_5)
                 sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
-                sage: system.extend_by_derivation([0,0]).equations
+                sage: system.extend_by_operation([0,0]).equations
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0, u_1 - v_2 + v_1)
-                sage: system.extend_by_derivation([1,0]).equations
+                sage: system.extend_by_operation([1,0]).equations
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0,
                 x^2*u_3 + 2*x*u_2 + x*u_1 + u_0 + (x - 1)*v_1 + v_0,
                 u_1 - v_2 + v_1)
-                sage: system.extend_by_derivation([1,1]).equations
+                sage: system.extend_by_operation([1,1]).equations
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0,
                 x^2*u_3 + 2*x*u_2 + x*u_1 + u_0 + (x - 1)*v_1 + v_0,
                 u_1 - v_2 + v_1,
@@ -372,7 +372,7 @@ class RWOSystem:
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
                 sage: system.is_sp2()
                 False
-                sage: system.extend_by_derivation([1,2]).is_sp2()
+                sage: system.extend_by_operation([1,2]).is_sp2()
                 True
 
             WARNING: for this method it is crucial to know that the result depends directly on the set variables for 
@@ -382,7 +382,7 @@ class RWOSystem:
                 sage: same_system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
                 sage: system.is_sp2()
                 False
-                sage: system.extend_by_derivation([1,2]).is_sp2()
+                sage: system.extend_by_operation([1,2]).is_sp2()
                 True
         '''
         if(self.is_homogeneous()):
@@ -398,7 +398,7 @@ class RWOSystem:
 
             INPUT:
 
-            * ``bound_L``: bound for the values of ``Ls`` for method :func:`extend_by_derivation`.
+            * ``bound_L``: bound for the values of ``Ls`` for method :func:`extend_by_operation`.
             * ``alg_res``: method to compute the algebraic resultant once we extended a 
               system to a valid system (see :func:`is_sp2`). The valid values are, currently,
               ``"dixon"`` and ``"macaulay"``.
@@ -418,7 +418,7 @@ class RWOSystem:
         ## Extending the system
         L = None
         for _aux_L in cartesian_product(len(self.equations)*[range(bound_L+1)]):
-            if(self.extend_by_derivation(tuple(_aux_L)).is_sp2()):
+            if(self.extend_by_operation(tuple(_aux_L)).is_sp2()):
                 L = tuple(_aux_L)
                 break
         

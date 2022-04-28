@@ -34,7 +34,7 @@ AUTHORS:
 # ****************************************************************************
 
 from sage.categories.all import Category
-from sage.categories.map import Map
+from sage.categories.map import Map #pylint: disable=no-name-in-module
 from sage.categories.pushout import pushout
 from sage.misc.abstract_method import abstract_method
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
@@ -74,13 +74,13 @@ class DifferenceRings(Category):
 
         # new methods for this category
         def difference(self, times=1):
-            return self.operation(times)
+            return self.operation(times) #pylint: disable=no-member
 
         def _difference(self, *_):
             r'''
                 Method that actually computes the difference of an element of a ring with operator.
             '''
-            return self.parent().difference(self)
+            return self.parent().difference(self) #pylint: disable=no-member
 
     # methods that all morphisms involving difference rings must implement
     class MorphismMethods: 

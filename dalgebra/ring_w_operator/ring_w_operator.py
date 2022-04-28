@@ -13,12 +13,12 @@ AUTHORS:
 from functools import lru_cache
 from sage.all import CommutativeRing, ZZ, latex
 from sage.categories.all import Morphism, Category, CommutativeRings
-from sage.categories.map import Map
+from sage.categories.map import Map #pylint: disable=no-name-in-module
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.misc.abstract_method import abstract_method
 from sage.structure.element import parent, Element #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
-from sage.symbolic.ring import SR
+from sage.symbolic.ring import SR #pylint: disable=no-name-in-module
 
 _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
 
@@ -66,7 +66,7 @@ class RingsWithOperator(Category):
             r'''
                 Method that actually computes the operation of an element of a ring with operator.
             '''
-            return self.parent().operation(self)
+            return self.parent().operation(self) #pylint: disable=no-member
 
     # methods that all morphisms involving differential rings must implement
     class MorphismMethods: 
@@ -190,7 +190,7 @@ class RingWithOperator_Wrapper(CommutativeRing):
 
         # assigning values
         self.__base = base
-        new_operator = lambda p : operator(p.wrapped); 
+        new_operator = lambda p : operator(p.wrapped)
         try:
             new_operator.__name__ = operator.__name__
         except AttributeError:

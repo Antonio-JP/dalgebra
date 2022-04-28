@@ -85,7 +85,7 @@ class RWOPolynomialRingFactory(UniqueFactory):
             if("names" in kwds):
                 raise TypeError("Duplicated value for the generators")
         elif(len(args) > 2):
-            base = args[0]; names = args[1:]; 
+            base = args[0]; names = args[1:]
             if("base" in kwds):
                 raise TypeError("Duplicated value for the base ring")
             if("names" in kwds):
@@ -841,7 +841,7 @@ class DifferentialPolynomialRing_dense (RWOPolynomialRing_dense):
     #################################################
     def _apply_to_outside(self, element, times):
         try:
-            return super()._apply_to_outside(self, element, times)
+            return super()._apply_to_outside(element, times)
         except:
             return diff(element, times)
 
