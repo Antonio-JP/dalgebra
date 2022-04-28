@@ -1,9 +1,9 @@
 ====================================
-Package ``differential_polynomial``
+Package ``diff_polynomial``
 ====================================
 
 This package includes the main structures and built-in functions for working with rings of
-differential polynomials. 
+infinite polynomials with an associated operator. 
 
 Modules 
 ====================
@@ -11,8 +11,8 @@ Modules
 .. toctree::
    :maxdepth: 1
 
-   differential_polynomial/differential_polynomial_ring
-   differential_polynomial/differential_polynomial_element
+   diff_polynomial/diff_polynomial_ring
+   diff_polynomial/diff_polynomial_element
 
 
 Indices and Tables

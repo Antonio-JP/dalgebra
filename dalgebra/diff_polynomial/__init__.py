@@ -1,8 +1,8 @@
 r"""
-Package ``differential_polynomial``
+Package ``diff_polynomial``
 
 This is a package containing all the classes for creating and 
-manipulating differential polynomial ring over arbitrary ground rings.
+manipulating differential and difference polynomial ring over arbitrary ground rings.
 
 AUTHORS:
 

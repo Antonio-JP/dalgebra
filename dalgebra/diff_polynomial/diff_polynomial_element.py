@@ -351,8 +351,6 @@ class RWOPolynomial (InfinitePolynomial_dense):
               the degree. If ``None`` is given, then a tuple with all the degrees existing in the polynomial
               is returned.
 
-            EXAMPLES::
-
             TODO add tests
         '''
         if gen is None: return self.polynomial().degree()
@@ -382,8 +380,6 @@ class RWOPolynomial (InfinitePolynomial_dense):
             INPUT:
 
             * ``gen``: the generator we want to focus. May be omitted when there is only one generator.
-
-            EXAMPLES::
 
             TODO add tests
         '''
@@ -481,8 +477,6 @@ class RWOPolynomial (InfinitePolynomial_dense):
             This method is a simple checker on the degree of the polynomial to be 
             at most 1. These linear polynomials have extra properties and can be transformed
             into linear differential operators (see method :func:`to_operator`).
-
-            EXAMPLES::
 
             TODO add tests
         '''    

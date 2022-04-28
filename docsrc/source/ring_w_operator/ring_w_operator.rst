@@ -1,9 +1,9 @@
 .. nodoctest
 
-Element structures for Differential polynomials
+Structure for Rings with Associated Operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra.diff_polynomial.diff_polynomial_element
+.. automodule:: dalgebra.ring_w_operator.ring_w_operator
    :members:
    :undoc-members:
    :show-inheritance:

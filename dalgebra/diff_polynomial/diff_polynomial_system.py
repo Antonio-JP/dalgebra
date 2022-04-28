@@ -358,7 +358,7 @@ class RWOSystem:
 
             It is interesting to remark that the algebraic variables of a differential polynomial are the total amount of
             variables that appears in it before the differential relation. Namely, the result of method 
-            :func:`~dalgebra.differentialpolynomial.differential_polynomial_element.DiffPolynomial.variables`
+            :func:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.variables`
             provides the algebraic variables for a differential polynomial.
 
             OUTPUT:

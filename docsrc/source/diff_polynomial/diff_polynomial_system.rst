@@ -1,9 +1,9 @@
 .. nodoctest
 
-Parent structures for Differential polynomials
+Structures for systems of equation over rings with operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra.diff_polynomial.diff_polynomial_ring
+.. automodule:: dalgebra.diff_polynomial.diff_polynomial_system
    :members:
    :undoc-members:
    :show-inheritance:

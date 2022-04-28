@@ -56,15 +56,15 @@ sys.path.append(os.path.join(SAGE_SRC, "sage_setup", "docbuild", "ext"))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
+    #'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
-    'sphinx.ext.autosummary'
+    'sphinx.ext.autosummary',
     #'autodocsum'
     #'sage_autodoc',
     #'sage_package.sphinx',
-    #'sphinx.ext.doctest',
-    #'sphinx.ext.coverage',
-    #'sphinx.ext.extlinks',
+    'sphinx.ext.doctest',
+    'sphinx.ext.coverage',
+    'sphinx.ext.extlinks',
 ]
 
 # The reST default role (used for this markup: `text`) to use for all
