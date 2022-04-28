@@ -516,16 +516,20 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             INPUT:
 
-            * ``deg_bound``: degree bound for the resulting polynomial.
+            * ``deg_bound``: total degree bound for the resulting polynomial.
             * ``order_bound``: order bound for the resulting polynomial.
             * ``sparsity``: propability of a coefficient to be zero.
         '''
         deg_bound = 0 if ((not deg_bound in ZZ) or deg_bound < 0) else deg_bound
         order_bound = 0 if ((not order_bound in ZZ) or order_bound < 0) else order_bound
         gens = self.gens(); n = len(gens)
-        p = sum(
-            0 if random() < sparsity else (self.base().random_element(*args, **kwds) * prod(gens[i][el[i+n]]**el[i] for i in range(n))) 
-            for el in cartesian_product(n*[list(range(deg_bound+1))] + n*[list(range(order_bound+1))]))
+        p = 0
+        for degrees in cartesian_product(n*[list(range(deg_bound+1))]):
+            if sum(degrees) <= deg_bound:
+                for orders in cartesian_product(n*[list(range(order_bound+1))]):
+                    if random() > sparsity:
+                        p += self.base().random_element(*args, **kwds) * prod(gens[i][orders[i]]**degrees[i] for i in range(n))
+        
         return p
 
     def _apply_to_outside(self, element, times):
