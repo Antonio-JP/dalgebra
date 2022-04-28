@@ -34,7 +34,7 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from sage.all import cached_method, ZZ, latex, diff, prod, parent, CommutativeRing, Hom
+from sage.all import cached_method, ZZ, latex, diff, prod, parent, CommutativeRing, Hom, cartesian_product, random
 
 from sage.categories.all import Morphism, Rings, CommutativeAlgebras
 from sage.categories.pushout import ConstructionFunctor, pushout
@@ -506,15 +506,27 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         '''
         return self(0)
     
-    def random_element(self,*args,**kwds):
+    def random_element(self,deg_bound=0,order_bound=0,sparsity=0.75,*args,**kwds):
         r'''
             Creates a random element in this ring.
 
-            This method creates a random element in the base infinite polynomial ring and 
-            cast it into an element of ``self``.
+            This method receives a bound for the degree and order of all the variables
+            appearing in the ring and also a sparsity measure to avoid dense polynomials.
+            Extra arguments are passed to the random method of the base ring.
+
+            INPUT:
+
+            * ``deg_bound``: degree bound for the resulting polynomial.
+            * ``order_bound``: order bound for the resulting polynomial.
+            * ``sparsity``: propability of a coefficient to be zero.
         '''
-        p = super().random_element(*args,**kwds)
-        return self(p)
+        deg_bound = 0 if ((not deg_bound in ZZ) or deg_bound < 0) else deg_bound
+        order_bound = 0 if ((not order_bound in ZZ) or order_bound < 0) else order_bound
+        gens = self.gens(); n = len(gens)
+        p = sum(
+            0 if random() < sparsity else (self.base().random_element(*args, **kwds) * prod(gens[i][el[i+n]]**el[i] for i in range(n))) 
+            for el in cartesian_product(n*[list(range(deg_bound+1))] + n*[list(range(order_bound+1))]))
+        return p
 
     def _apply_to_outside(self, element, times):
         return self.base().operation(element, times=times)
