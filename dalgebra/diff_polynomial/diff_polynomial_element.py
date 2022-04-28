@@ -414,7 +414,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
 
             The constant term of the polynomial and a list of operators.
 
-
+            TODO add examples
         '''
         if not self.is_linear():
             raise TypeError("Linear operators can only be computed for linear polynomials.")
