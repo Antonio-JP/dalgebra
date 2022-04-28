@@ -339,36 +339,6 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return self.lorders()[index]
 
     @cached_method
-    def degree(self, gen=None, order=None):
-        r'''
-            Method that computes the degree for an order of a variable in the infinite polynomial.
-
-            INPUT:
-
-            * ``gen``: a :class:`RWOPolynomialGen` contains in the parent of ``self``. If ``None`` is
-              given, then the total degree of the polynomial is returned
-            * ``order``: a non-negative integer indicating the order of the generator we want to compute 
-              the degree. If ``None`` is given, then a tuple with all the degrees existing in the polynomial
-              is returned.
-
-            TODO add tests
-        '''
-        if gen is None: return self.polynomial().degree()
-
-        if (not isinstance(gen, RWOPolynomialGen)) or (not gen in self.parent().gens()):
-            raise ValueError(f"The generator {gen} must be valid for the parent of {self}")
-
-        # Case when order is not None
-        if not order is None:
-            if (not order in ZZ) or order < 0:
-                raise ValueError("The order must be `None` or a non-negative integer")
-            if order > self.order(gen):
-                return 0
-            return self.degree(gen)[order]
-        # Case when order is None
-        return tuple([self.polynomial().degree(gen[i].polynomial()) for i in range(self.order(gen)+1)])
-
-    @cached_method
     def initial(self, gen=None):
         r'''
             Computes the leading term of an infinite polynomial.
@@ -390,7 +360,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
         if (not isinstance(gen, RWOPolynomialGen)) or (not gen in parent.gens()):
             raise TypeError(f"The generator must be a valid generator from {parent}")
         
-        o = self.order(gen); d = self.degree(gen, o)
+        o = self.order(gen); d = self.degree(gen[o])
         return parent(self.polynomial().coefficient((gen[o]**d).polynomial()))
 
     lc = initial #: alias for initial (also called "leading coefficient")
