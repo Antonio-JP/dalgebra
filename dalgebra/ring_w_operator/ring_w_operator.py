@@ -171,6 +171,8 @@ class RingWithOperator_WrapperElement(Element):
         return str(self.wrapped)
     def __repr__(self) -> str:
         return repr(self.wrapped)
+    def _latex_(self) -> str:
+        return latex(self.wrapped)
 
 class RingWithOperator_Wrapper(CommutativeRing):
     Element = RingWithOperator_WrapperElement
@@ -341,6 +343,12 @@ class CallableMap(Map):
 
     def __repr__(self):
         return f"Map from callable {self.__name__}"
+
+    def _latex_(self):
+        out = r"\begin{array}{rcl}"
+        out += r"\\".join([latex(el) + r"\mapsto" + latex(self(el)) for el in self.domain().gens()])
+        out += r"\end{array}"
+        return out
 
 class RingWithOperatorFunctor(ConstructionFunctor):
     def __init__(self, operator):
