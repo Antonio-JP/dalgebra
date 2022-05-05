@@ -471,3 +471,5 @@ class TestOperator:
                 cases.append((a,b,res))
 
         return all(case[2] == self.operator(case[0]+case[1]) for case in cases)
+
+__all__ = ["RingsWithOperator", "RingWithOperator"]

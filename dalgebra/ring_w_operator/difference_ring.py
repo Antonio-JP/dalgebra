@@ -179,3 +179,4 @@ class DifferentialRingFunctor(RingWithOperatorFunctor):
     def _repr_(self):
         return "DifferenceRing(*,[%s])" %(repr(self.operator()))
         
+__all__ = ["DifferenceRings", "DifferenceRing"]

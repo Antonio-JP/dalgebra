@@ -492,3 +492,5 @@ class DifferenceSystem (RWOSystem):
             raise TypeError("The common parent is nto a ring of difference polynomials. Not valid for a DifferenceSystem")
 
     extend_by_difference = RWOSystem.extend_by_operation #: new alias for :func:`extend_by_operation`
+
+__all__ = ["DifferentialSystem", "DifferenceSystem"]
