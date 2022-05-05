@@ -1175,3 +1175,6 @@ class RWOPolySimpleMorphism (Morphism):
             return self.codomain()(p.coefficients()[0])
 
         return self.codomain()(str(p))
+
+__all__ = ["RWOPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing",
+            "is_DifferentialPolynomialRing", "is_DifferencePolynomialRing"]
