@@ -1,9 +1,9 @@
 .. nodoctest
 
-Element structures for Differential polynomials
+Structures for systems of equation over rings with operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra.differential_polynomial.differential_polynomial_element
+.. automodule:: dalgebra.diff_polynomial.diff_polynomial_system
    :members:
    :undoc-members:
    :show-inheritance:

@@ -19,7 +19,7 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from sage.misc.cachefunc import cached_method
+from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialGen
 from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense, InfinitePolynomial_sparse
 
@@ -32,11 +32,11 @@ def is_InfinitePolynomial(element):
     '''
     return (isinstance(element, InfinitePolynomial_dense) or isinstance(element, InfinitePolynomial_sparse))
 
-class DiffPolynomialGen (InfinitePolynomialGen):
+class RWOPolynomialGen (InfinitePolynomialGen):
     r'''
-        Class for generators of :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense`.
+        Class for generators of :class:`~dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense`.
 
-        A generator of a :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense` is 
+        A generator of a :class:`~dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense` is 
         an object that can create the infinitely many variables associated with a particular name. The variables it generates
         are of the form ``name_x`` where ``x`` is the index.
 
@@ -48,14 +48,14 @@ class DiffPolynomialGen (InfinitePolynomialGen):
 
         INPUT:
 
-        * ``parent``: a :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense` 
+        * ``parent``: a :class:`~dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense` 
           where ``self`` will generate its elements.
         * ``name``: main part of the name for the generated variales.
     '''
     def __init__(self, parent, name):
-        from .differential_polynomial_ring import is_DiffPolynomialRing
-        if(not is_DiffPolynomialRing(parent)):
-            raise TypeError("The DiffPolynomialGen must have a ring of differential polynomial as parent")
+        from .diff_polynomial_ring import is_RWOPolynomialRing
+        if(not is_RWOPolynomialRing(parent)):
+            raise TypeError("The RWOPolynomialGen must have a ring of polynomial with an operator as parent")
         super().__init__(parent, name)
 
     def __getitem__(self, i):
@@ -110,68 +110,67 @@ class DiffPolynomialGen (InfinitePolynomialGen):
     def __hash__(self):
         return hash(self._name)
 
-class DiffPolynomial (InfinitePolynomial_dense):
+class RWOPolynomial (InfinitePolynomial_dense):
     r'''
-        Class for representing differential polynomials.
+        Class for representing infinite polynomials associated with an operator.
 
-        Given a differential ring `R`, we can define the ring of differential polynomials
+        Given a ring `R` with an operator `d`, we can define the ring of infinite polynomials with an operator
         on `y` over `R` as the *infinite polynomial ring* 
 
         .. MATH::
 
             R[y_0, y_1,\ldots]
 
-        where the derivation `\partial` has been uniquely extended such that, for all `n \in \mathbb{N}`:
+        where the operation `d` has been uniquely extended such that, for all `n \in \mathbb{N}`:
 
         .. MATH::
 
-            \partial(y_n) = y_{n+1}.
+            d(y_n) = y_{n+1}.
 
-        The ring of differential polynomials on `y` over `R` is denoted by `R\{y\}`. We can iterate the 
-        process to define th ring of differential polynomials in several variables:
+        We can iterate the process to define th ring of differential polynomials in several variables:
 
         .. MATH::
 
             R\{y,z\} \simeq R\{y\}\{z\} \simeq R\{z\}\{y\}
 
-        This object of this class represents the polynomials of a ring of differential polynomials. They 
+        This object of this class represents the polynomials of cush a ring. They 
         are a natural extension of the class :class:`~sage.rings.polynomial.infinite_polynomial_element.InfinitePolynomial_dense`
-        including some extra functionality more specific of differential polynomials (such as the derivation and the evaluation).
+        including some extra functionality more specific of these polynomials (such as the the operation, evaluation and orders).
 
         INPUT:
 
-        * ``parent``: a :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense` 
+        * ``parent``: a :class:`~dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense` 
           where the new element will be contained.
         * ``polynomial``: a valid polynomial to be casted into an element of ``parent``.
 
         We recommend not to use this constructor, but instead build the polynomials using the generators of the 
-        corresponding :class:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense`.
+        corresponding :class:`~dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense`.
     '''
     def __init__(self, parent, polynomial):
         if(is_InfinitePolynomial(polynomial)):
             polynomial = polynomial.polynomial()
         super().__init__(parent, polynomial)
-        
-    # Properties methods
+
+    # Method for computing special values
     @cached_method
     def orders(self):
         r'''
-            Method that gets the order of a differential polynomial in all its variables.
+            Method that gets the order of a polynomial in all its variables.
 
-            This method computes the order of a concrete differential polynomial in all the differential 
+            This method computes the order of a concrete polynomial in all the 
             variables that appear in its parent. This method relies on the method 
-            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DifferentialPolynomialRing_dense.gens`
-            and the method :func:`~DiffPolynomialGen.index`.
+            :func:`~dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.gens`
+            and the method :func:`~RWOPolynomialGen.index`.
 
             OUTPUT:
 
             A tuple of integers where the index `i` is the order of ``self` with respect to the `i`-th variable
-            of ``self.parent()``. The value `-1` indicates thatvariable does not show up in the polynomial.
+            of ``self.parent()``. The value `-1` indicates that variable does not show up in the polynomial.
 
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
                 sage: f1.orders()
                 (2, 0)
@@ -192,20 +191,20 @@ class DiffPolynomial (InfinitePolynomial_dense):
     @cached_method
     def order(self, gen=None):
         r'''
-            Method to obtain the order of a differential polynomial w.r.t. a variable
+            Method to obtain the order of a polynomial w.r.t. a variable
 
-            This method computes the order of a differential polynomial with respect to 
-            a particular variable. Such variables has to be provided as a generator of 
-            the ring of differential polynomials (see :class:`DiffPolynomialGen`).
+            This method computes the order of a polynomial with respect to 
+            a particular variable. Such variable has to be provided as a generator of 
+            the ring of polynomials (see :class:`RWOPolynomialGen`).
 
             This method uses the method :func:`orders` as a basic definition of these orders.
 
-            In the case te differential polynomial only has one differential variable, the input ``gen``
+            In the case the polynomial only has one differential variable, the input ``gen``
             can be not given and the only variable will be used instead.
 
             INPUT:
 
-            * ``gen``: a :class:`DiffPolynomialGen` in the parent ring.
+            * ``gen``: a :class:`RWOPolynomialGen` in the parent ring.
 
             OUTPUT:
 
@@ -214,7 +213,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x =  R.base().gens()[0]
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x =  R.base().gens()[0]
                 sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
                 sage: f1.order(u)
                 2
@@ -239,7 +238,7 @@ class DiffPolynomial (InfinitePolynomial_dense):
         if(gen is None and len(gens) == 1):
             index = 0
         elif(gen is None):
-            raise TypeError("A differential variable has to be provided")
+            raise TypeError("The variable has to be provided")
         else:
             index = gens.index(gen)
 
@@ -248,22 +247,22 @@ class DiffPolynomial (InfinitePolynomial_dense):
     @cached_method
     def lorders(self):
         r'''
-            Method that gets the order of a differential polynomial in all its variables.
+            Method that gets the order of a polynomial in all its variables.
 
-            This method computes the order of a concrete differential polynomial in all the differential 
+            This method computes the order of a concrete polynomial in all the 
             variables that appear in its parent. This method relies on the method 
-            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DifferentialPolynomialRing_dense.gens`
-            and the method :func:`~DiffPolynomialGen.index`.
+            :func:`~dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.gens`
+            and the method :func:`~RWOPolynomialGen.index`.
 
             OUTPUT:
 
             A tuple of integers where the index `i` is the order of ``self` with respect to the `i`-th variable
-            of ``self.parent()``. The value `-1` indicates thatvariable does not show up in the polynomial.
+            of ``self.parent()``. The value `-1` indicates that variable does not show up in the polynomial.
 
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x =  R.base().gens()[0]
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x =  R.base().gens()[0]
                 sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
                 sage: f1.lorders()
                 (0, 0)
@@ -284,30 +283,30 @@ class DiffPolynomial (InfinitePolynomial_dense):
     @cached_method
     def lorder(self, gen=None):
         r'''
-            Method to obtain the minimal order of a differential polynomial w.r.t. a variable
+            Method to obtain the minimal order of a polynomial w.r.t. a variable
 
-            This method computes the minimal order of a differential polynomial with respect to 
-            a particular variable. Such variables has to be provided as a generator of 
-            the ring of differential polynomials (see :class:`DiffPolynomialGen`).
+            This method computes the minimal order of a polynomial with respect to 
+            a particular variable. Such variable has to be provided as a generator of 
+            the ring of polynomials (see :class:`RWOPolynomialGen`).
 
             This method uses the method :func:`lorders` as a basic definition of these orders.
 
-            In the case te differential polynomial only has one differential variable, the input ``gen``
-            can be not given and the only variable will be used instead.
+            In the case the polynomial only has one variable, the input ``gen``
+            may be not given and the only variable will be used instead.
 
             INPUT:
 
-            * ``gen``: a :class:`DiffPolynomialGen` in the parent ring.
+            * ``gen``: a :class:`RWOPolynomialGen` in the parent ring.
 
             OUTPUT:
 
-            An integer representing the minimal order appearing in ``self`` with respect with the differential variable ``gen``
+            An integer representing the minimal order appearing in ``self`` with respect with the variable ``gen``
             or `-1` if the variable does not appear.
 
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u,v> = DiffPolynomialRing(QQ[x]); x =  R.base().gens()[0]
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x =  R.base().gens()[0]
                 sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
                 sage: f1.lorder(u)
                 0
@@ -338,29 +337,143 @@ class DiffPolynomial (InfinitePolynomial_dense):
 
         return self.lorders()[index]
 
+    @cached_method
+    def initial(self, gen=None):
+        r'''
+            Computes the leading term of an infinite polynomial.
+
+            This method computes the leading term of the infinite polynomial
+            when the generator given in ``gen`` is consider the *most important* 
+            variable of the polynomial and then it is ordered by its ordering.
+
+            INPUT:
+
+            * ``gen``: the generator we want to focus. May be omitted when there is only one generator.
+
+            TODO add tests
+        '''
+        parent = self.parent()
+
+        if parent.ngens() == 1 and gen is None: gen = parent.gens()[0]
+
+        if (not isinstance(gen, RWOPolynomialGen)) or (not gen in parent.gens()):
+            raise TypeError(f"The generator must be a valid generator from {parent}")
+        
+        o = self.order(gen); d = self.degree(gen[o])
+        return parent(self.polynomial().coefficient((gen[o]**d).polynomial()))
+
+    lc = initial #: alias for initial (also called "leading coefficient")
+
+    @cached_method
+    def separant(self, gen=None):
+        r'''
+            Computes the separant with respect to one of the generators
+
+            This method computes the separant of a infinite polynomial with respect
+            to one of the generators of the polynomial ring. If the number of generators
+            is exactly one, the generator may be omitted.
+
+            The separant of a differential polynomial `p(y) \in R\{y\}` of order `n`
+            if the formal partial derivative of `p` w.r.t. `y^{(n)}`.
+
+            INPUT:
+
+            * ``element``: an element in ``self`` to get the separant.
+            * ``gen``: the generator we want to focus. May be omitted when there is only one generator.
+
+            OUTPUT:
+
+            A new polynomial that is the separant of ``self`` with respect to the variable ``gen``
+
+            TODO: add tests
+        '''
+        parent = self.parent()
+
+        if parent.ngens() == 1 and gen is None: gen = parent.gens()[0]
+
+        if (not isinstance(gen, RWOPolynomialGen)) or (not gen in parent.gens()):
+            raise TypeError(f"The generator must be a valid generator from {parent}")
+
+        o = self.order(gen)
+
+        return parent(self.polynomial().derivative(gen[o].polynomial()))
+
+    @cached_method
+    def to_operator(self):
+        r'''
+            Method that transforms the infinite polynomial into a linear operator.
+
+            This method returns a list of linear operators in the ring of operators of ``self.base()``
+            (see method :func:`~dalgebra.ring_w_operator.ring_w_operator.RingWithOperator.operator_ring`),
+            such that each operator applied to each of the generators of ``self.parent()`` is equal to ``self``. 
+
+            This method only works for linear polynomials.
+
+            OUTPUT:
+
+            The constant term of the polynomial and a list of operators.
+
+            TODO add examples
+        '''
+        if not self.is_linear():
+            raise TypeError("Linear operators can only be computed for linear polynomials.")
+
+        gens = self.parent().gens()
+        operators = [[0 for _ in range(self.order(g)+1)] for g in gens]
+        mons = self.monomials()
+        coeffs = self.coefficients()
+
+        for i in range(len(mons)):
+            for j in range(len(gens)):
+                if mons[i] in gens[j]:
+                    operators[j][gens[j].index(mons[i])] = coeffs[i]
+                    break
+        
+        op_ring = self.parent().base().operator_ring()
+        for i in range(len(operators)):
+            operator = operators[i]
+            try:
+                operators[i] = op_ring([op_ring.base()(el) for el in operator])
+            except TypeError:
+                operators[i] = op_ring([op_ring.base()(str(el)) for el in operator])
+        return self.constant_coefficient(), operators
+
+    # Properties methods (is_...)
+    def is_linear(self):
+        r'''
+            Method that checks whether a infinite polynomial is linear (in terms of degree).
+
+            This method is a simple checker on the degree of the polynomial to be 
+            at most 1. These linear polynomials have extra properties and can be transformed
+            into linear differential operators (see method :func:`to_operator`).
+
+            TODO add tests
+        '''    
+        return self.degree() == 1
+
     # Magic methods
     def __call__(self, *args, **kwargs):
         r'''
             Override of the __call__ method. 
 
-            Evaluating a differential polynomial has a different meaning than evaluating a polynomial
+            Evaluating a polynomial with an operator associated has a different meaning than evaluating a polynomial
             with infinitely many variables (see method 
-            :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense.eval`
+            :func:`~dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.eval`
             for further information)
 
             INPUT:
 
             * ``args`` and ``kwargs`` with the same format as in 
-              :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense.eval`
+              :func:`~dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.eval`
 
             OUTPUT:
 
-            The evaluate object as in :func:`~dalgebra.differential_polynomial.differential_polynomial_ring.DiffPolynomialRing_dense.eval`.
+            The evaluate object as in :func:`~dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.eval`.
 
             EXAMPLES::
 
-            sage: from dalgebra import DiffPolynomialRing 
-                sage: R.<y> = DiffPolynomialRing(QQ['x']); x = R.base().gens()[0]
+            sage: from dalgebra import DifferentialPolynomialRing 
+                sage: R.<y> = DifferentialPolynomialRing(QQ['x']); x = R.base().gens()[0]
                 sage: y[1](0)
                 0
                 sage: (y[0] + y[1])(x)
@@ -368,26 +481,27 @@ class DiffPolynomial (InfinitePolynomial_dense):
                 sage: (y[0] + y[1])(y=x)
                 x + 1
 
-            This method commutes with the use of :func:`derivation`::
+            In the case of a differential polynomial, this method commutes with the use of :func:`derivative`::
 
                 sage: (x^2*y[1]^2 - y[2]*y[1]).derivative()(y=x) == (x^2*y[1]^2 - y[2]*y[1])(y=x).derivative()
                 True
 
             This evaluation also works naturally with several infinite variables::
 
-                sage: S = DiffPolynomialRing(R, 'a'); a,y = S.gens()
+                sage: S = DifferentialPolynomialRing(R, 'a'); a,y = S.gens()
                 sage: (a[1] + y[0]*a[0])(a=x, y=x^2)
                 x^3 + 1
                 sage: in_eval = (a[1] + y[0]*a[0])(y=x); in_eval
                 a_1 + x*a_0
                 sage: parent(in_eval)
-                Ring of differential polynomials in (a) over [Univariate Polynomial Ring in x over Rational Field, d/dx]
+                Ring of differential polynomials in (a) over Differential Ring [Univariate Polynomial Ring 
+                in x over Rational Field] with derivation [Map from callable d/dx]
         '''
         return self.parent().eval(self, *args, **kwargs)
 
     def divides(self, other):
         r'''
-            Method that checks whether a differential polynomial divides ``other``.
+            Method that checks whether a polynomial divides ``other``.
 
             This method relies on the base polynomial structure behind the infinite polynomial ring.
         '''
@@ -407,12 +521,3 @@ class DiffPolynomial (InfinitePolynomial_dense):
         return self.parent().element_class(self.parent(), super()._lmul_(x))
     def __pow__(self, n):
         return self.parent().element_class(self.parent(), super().__pow__(n))
-
-    def _derivative(self, *_):
-        r'''
-            Overridden method to implement properly the derivation in Fraction Field
-
-            This method simply calls the method :func:`derivative`. See its documentation
-            for further information on the input, output and examples.
-        '''
-        return self.parent().derivation(self)

@@ -10,7 +10,7 @@ def readfile(filename):
 setup(
     name = "dalgebra",
     version = readfile("VERSION").strip(), # the VERSION file is shared with the documentation
-    description='A Sage package for Differential Algebra',
+    description='A Sage package for Difference/Differential Algebra',
     # long_description = readfile("README.txt"), # get the long description from the README
     # For a Markdown README replace the above line by the following two lines:
     long_description = readfile("README.md"),
@@ -29,13 +29,14 @@ setup(
       'Topic :: Software Development :: Build Tools',
       'Topic :: Scientific/Engineering :: Mathematics',
       'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
-      'Programming Language :: Python :: 3.8.5',
+      'Programming Language :: Python :: 3.9.2',
     ], # classifiers list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
-    keywords = "SageMath differential algebra",
+    keywords = "SageMath difference/differential algebra",
     packages = ["dalgebra",
-                "dalgebra.differential_polynomial",
-                "dalgebra.differential_ring"],
+                "dalgebra.diff_polynomial",
+                "dalgebra.ring_w_operator"],
     setup_requires   = [],
-    install_requires = ['sphinx'],
+    install_requires = ['ore_algebra @ git+https://github.com/mkauers/ore_algebra.git',
+                        'sphinx'],
 )
     

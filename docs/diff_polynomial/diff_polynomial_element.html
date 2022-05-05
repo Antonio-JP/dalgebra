@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Element structures for Infinite Polynomials over rings with operators &mdash; Differential Algebra in Sage 0.0.20220428.1815 documentation</title><link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Structures for systems of equation over rings with operators" href="diff_polynomial_system.html" />
+    <link rel="prev" title="Parent structures for Infinite Polynomials over rings with operators" href="diff_polynomial_ring.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Differential Algebra in Sage
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../ring_w_operator.html">Package <code class="docutils literal notranslate"><span class="pre">ring_w_operator</span></code></a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../diff_polynomial.html">Package <code class="docutils literal notranslate"><span class="pre">diff_polynomial</span></code></a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../diff_polynomial.html#modules">Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="diff_polynomial_ring.html">Parent structures for Infinite Polynomials over rings with operators</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Element structures for Infinite Polynomials over rings with operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="diff_polynomial_system.html">Structures for systems of equation over rings with operators</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../diff_polynomial.html#indices-and-tables">Indices and Tables</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Differential Algebra in Sage</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../diff_polynomial.html">Package <code class="docutils literal notranslate"><span class="pre">diff_polynomial</span></code></a> &raquo;</li>
+      <li>Element structures for Infinite Polynomials over rings with operators</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/diff_polynomial/diff_polynomial_element.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-dalgebra.diff_polynomial.diff_polynomial_element">
+<span id="element-structures-for-infinite-polynomials-over-rings-with-operators"></span><h1>Element structures for Infinite Polynomials over rings with operators<a class="headerlink" href="#module-dalgebra.diff_polynomial.diff_polynomial_element" title="Permalink to this headline">¶</a></h1>
+<p>File for the ring structure of Differential polynomials</p>
+<p>This file contains all the element structures for Differential polynomials.</p>
+<p>AUTHORS:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Antonio Jimenez-Pastor (2012-05-19): initial version</p></li>
+</ul>
+</div></blockquote>
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_element.</code><code class="sig-name descname">RWOPolynomial</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parent</span></em>, <em class="sig-param"><span class="n">polynomial</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.rings.polynomial.infinite_polynomial_element.InfinitePolynomial_dense</span></code></p>
+<p>Class for representing infinite polynomials associated with an operator.</p>
+<p>Given a ring <span class="math notranslate nohighlight">\(R\)</span> with an operator <span class="math notranslate nohighlight">\(d\)</span>, we can define the ring of infinite polynomials with an operator
+on <span class="math notranslate nohighlight">\(y\)</span> over <span class="math notranslate nohighlight">\(R\)</span> as the <em>infinite polynomial ring</em></p>
+<div class="math notranslate nohighlight">
+\[R[y_0, y_1,\ldots]\]</div>
+<p>where the operation <span class="math notranslate nohighlight">\(d\)</span> has been uniquely extended such that, for all <span class="math notranslate nohighlight">\(n \in \mathbb{N}\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[d(y_n) = y_{n+1}.\]</div>
+<p>We can iterate the process to define th ring of differential polynomials in several variables:</p>
+<div class="math notranslate nohighlight">
+\[R\{y,z\} \simeq R\{y\}\{z\} \simeq R\{z\}\{y\}\]</div>
+<p>This object of this class represents the polynomials of cush a ring. They 
+are a natural extension of the class <code class="xref py py-class docutils literal notranslate"><span class="pre">InfinitePolynomial_dense</span></code>
+including some extra functionality more specific of these polynomials (such as the the operation, evaluation and orders).</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">parent</span></code>: a <a class="reference internal" href="diff_polynomial_ring.html#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialRing_dense</span></code></a> 
+where the new element will be contained.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">polynomial</span></code>: a valid polynomial to be casted into an element of <code class="docutils literal notranslate"><span class="pre">parent</span></code>.</p></li>
+</ul>
+<p>We recommend not to use this constructor, but instead build the polynomials using the generators of the 
+corresponding <a class="reference internal" href="diff_polynomial_ring.html#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialRing_dense</span></code></a>.</p>
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.divides">
+<code class="sig-name descname">divides</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.divides" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that checks whether a polynomial divides <code class="docutils literal notranslate"><span class="pre">other</span></code>.</p>
+<p>This method relies on the base polynomial structure behind the infinite polynomial ring.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.initial">
+<code class="sig-name descname">initial</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">gen</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.initial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the leading term of an infinite polynomial.</p>
+<p>This method computes the leading term of the infinite polynomial
+when the generator given in <code class="docutils literal notranslate"><span class="pre">gen</span></code> is consider the <em>most important</em> 
+variable of the polynomial and then it is ordered by its ordering.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">gen</span></code>: the generator we want to focus. May be omitted when there is only one generator.</p></li>
+</ul>
+<p>TODO add tests</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.is_linear">
+<code class="sig-name descname">is_linear</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.is_linear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that checks whether a infinite polynomial is linear (in terms of degree).</p>
+<p>This method is a simple checker on the degree of the polynomial to be 
+at most 1. These linear polynomials have extra properties and can be transformed
+into linear differential operators (see method <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.to_operator" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.to_operator"><code class="xref py py-func docutils literal notranslate"><span class="pre">to_operator()</span></code></a>).</p>
+<p>TODO add tests</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.lc">
+<code class="sig-name descname">lc</code><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.lc" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias for initial (also called “leading coefficient”)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.lorder">
+<code class="sig-name descname">lorder</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">gen</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.lorder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to obtain the minimal order of a polynomial w.r.t. a variable</p>
+<p>This method computes the minimal order of a polynomial with respect to 
+a particular variable. Such variable has to be provided as a generator of 
+the ring of polynomials (see <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialGen</span></code></a>).</p>
+<p>This method uses the method <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.lorders" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.lorders"><code class="xref py py-func docutils literal notranslate"><span class="pre">lorders()</span></code></a> as a basic definition of these orders.</p>
+<p>In the case the polynomial only has one variable, the input <code class="docutils literal notranslate"><span class="pre">gen</span></code>
+may be not given and the only variable will be used instead.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">gen</span></code>: a <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialGen</span></code></a> in the parent ring.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>An integer representing the minimal order appearing in <code class="docutils literal notranslate"><span class="pre">self</span></code> with respect with the variable <code class="docutils literal notranslate"><span class="pre">gen</span></code>
+or <span class="math notranslate nohighlight">\(-1\)</span> if the variable does not appear.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span>  <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f1</span> <span class="o">=</span> <span class="n">x</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f1</span><span class="o">.</span><span class="n">lorder</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+<span class="mi">0</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f1</span><span class="o">.</span><span class="n">lorder</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+<span class="mi">0</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f2</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f2</span><span class="o">.</span><span class="n">lorder</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+<span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f2</span><span class="o">.</span><span class="n">lorder</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+<span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f3</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">3</span><span class="o">-</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f3</span><span class="o">.</span><span class="n">lorder</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+<span class="o">-</span><span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f3</span><span class="o">.</span><span class="n">lorder</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+<span class="mi">0</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">one</span><span class="p">()</span><span class="o">.</span><span class="n">lorder</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+<span class="o">-</span><span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">one</span><span class="p">()</span><span class="o">.</span><span class="n">lorder</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+<span class="o">-</span><span class="mi">1</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.lorders">
+<code class="sig-name descname">lorders</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.lorders" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that gets the order of a polynomial in all its variables.</p>
+<p>This method computes the order of a concrete polynomial in all the 
+variables that appear in its parent. This method relies on the method 
+<code class="xref py py-func docutils literal notranslate"><span class="pre">gens()</span></code>
+and the method <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen.index" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen.index"><code class="xref py py-func docutils literal notranslate"><span class="pre">index()</span></code></a>.</p>
+<p>OUTPUT:</p>
+<p>A tuple of integers where the index <span class="math notranslate nohighlight">\(i\)</span> is the order of <code class="docutils literal notranslate"><span class="pre">self`</span> <span class="pre">with</span> <span class="pre">respect</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">`i`-th</span> <span class="pre">variable</span>
+<span class="pre">of</span> <span class="pre">``self.parent()</span></code>. The value <span class="math notranslate nohighlight">\(-1\)</span> indicates that variable does not show up in the polynomial.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span>  <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f1</span> <span class="o">=</span> <span class="n">x</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f1</span><span class="o">.</span><span class="n">lorders</span><span class="p">()</span>
+<span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f2</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f2</span><span class="o">.</span><span class="n">lorders</span><span class="p">()</span>
+<span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f3</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">3</span><span class="o">-</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f3</span><span class="o">.</span><span class="n">lorders</span><span class="p">()</span>
+<span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">one</span><span class="p">()</span><span class="o">.</span><span class="n">lorders</span><span class="p">()</span>
+<span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.order">
+<code class="sig-name descname">order</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">gen</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.order" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to obtain the order of a polynomial w.r.t. a variable</p>
+<p>This method computes the order of a polynomial with respect to 
+a particular variable. Such variable has to be provided as a generator of 
+the ring of polynomials (see <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialGen</span></code></a>).</p>
+<p>This method uses the method <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.orders" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.orders"><code class="xref py py-func docutils literal notranslate"><span class="pre">orders()</span></code></a> as a basic definition of these orders.</p>
+<p>In the case the polynomial only has one differential variable, the input <code class="docutils literal notranslate"><span class="pre">gen</span></code>
+can be not given and the only variable will be used instead.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">gen</span></code>: a <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialGen</span></code></a> in the parent ring.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>An integer representing the order of <code class="docutils literal notranslate"><span class="pre">self</span></code> with respect with the differential variable <code class="docutils literal notranslate"><span class="pre">gen</span></code></p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span>  <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f1</span> <span class="o">=</span> <span class="n">x</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f1</span><span class="o">.</span><span class="n">order</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+<span class="mi">2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f1</span><span class="o">.</span><span class="n">order</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+<span class="mi">0</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f2</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f2</span><span class="o">.</span><span class="n">order</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+<span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f2</span><span class="o">.</span><span class="n">order</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+<span class="mi">2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f3</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">3</span><span class="o">-</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f3</span><span class="o">.</span><span class="n">order</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+<span class="o">-</span><span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f3</span><span class="o">.</span><span class="n">order</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+<span class="mi">10</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">one</span><span class="p">()</span><span class="o">.</span><span class="n">order</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+<span class="o">-</span><span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">one</span><span class="p">()</span><span class="o">.</span><span class="n">order</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+<span class="o">-</span><span class="mi">1</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.orders">
+<code class="sig-name descname">orders</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.orders" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that gets the order of a polynomial in all its variables.</p>
+<p>This method computes the order of a concrete polynomial in all the 
+variables that appear in its parent. This method relies on the method 
+<code class="xref py py-func docutils literal notranslate"><span class="pre">gens()</span></code>
+and the method <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen.index" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen.index"><code class="xref py py-func docutils literal notranslate"><span class="pre">index()</span></code></a>.</p>
+<p>OUTPUT:</p>
+<p>A tuple of integers where the index <span class="math notranslate nohighlight">\(i\)</span> is the order of <code class="docutils literal notranslate"><span class="pre">self`</span> <span class="pre">with</span> <span class="pre">respect</span> <span class="pre">to</span> <span class="pre">the</span> <span class="pre">`i`-th</span> <span class="pre">variable</span>
+<span class="pre">of</span> <span class="pre">``self.parent()</span></code>. The value <span class="math notranslate nohighlight">\(-1\)</span> indicates that variable does not show up in the polynomial.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f1</span> <span class="o">=</span> <span class="n">x</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f1</span><span class="o">.</span><span class="n">orders</span><span class="p">()</span>
+<span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f2</span> <span class="o">=</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f2</span><span class="o">.</span><span class="n">orders</span><span class="p">()</span>
+<span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f3</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">3</span><span class="o">-</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">f3</span><span class="o">.</span><span class="n">orders</span><span class="p">()</span>
+<span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">one</span><span class="p">()</span><span class="o">.</span><span class="n">orders</span><span class="p">()</span>
+<span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.separant">
+<code class="sig-name descname">separant</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">gen</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.separant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the separant with respect to one of the generators</p>
+<p>This method computes the separant of a infinite polynomial with respect
+to one of the generators of the polynomial ring. If the number of generators
+is exactly one, the generator may be omitted.</p>
+<p>The separant of a differential polynomial <span class="math notranslate nohighlight">\(p(y) \in R\{y\}\)</span> of order <span class="math notranslate nohighlight">\(n\)</span>
+if the formal partial derivative of <span class="math notranslate nohighlight">\(p\)</span> w.r.t. <span class="math notranslate nohighlight">\(y^{(n)}\)</span>.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">element</span></code>: an element in <code class="docutils literal notranslate"><span class="pre">self</span></code> to get the separant.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gen</span></code>: the generator we want to focus. May be omitted when there is only one generator.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>A new polynomial that is the separant of <code class="docutils literal notranslate"><span class="pre">self</span></code> with respect to the variable <code class="docutils literal notranslate"><span class="pre">gen</span></code></p>
+<p>TODO: add tests</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.to_operator">
+<code class="sig-name descname">to_operator</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.to_operator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that transforms the infinite polynomial into a linear operator.</p>
+<p>This method returns a list of linear operators in the ring of operators of <code class="docutils literal notranslate"><span class="pre">self.base()</span></code>
+(see method <code class="xref py py-func docutils literal notranslate"><span class="pre">operator_ring()</span></code>),
+such that each operator applied to each of the generators of <code class="docutils literal notranslate"><span class="pre">self.parent()</span></code> is equal to <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>This method only works for linear polynomials.</p>
+<p>OUTPUT:</p>
+<p>The constant term of the polynomial and a list of operators.</p>
+<p>TODO add examples</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_element.</code><code class="sig-name descname">RWOPolynomialGen</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">parent</span></em>, <em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialGen</span></code></p>
+<p>Class for generators of <a class="reference internal" href="diff_polynomial_ring.html#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRing_dense</span></code></a>.</p>
+<p>A generator of a <a class="reference internal" href="diff_polynomial_ring.html#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRing_dense</span></code></a> is 
+an object that can create the infinitely many variables associated with a particular name. The variables it generates
+are of the form <code class="docutils literal notranslate"><span class="pre">name_x</span></code> where <code class="docutils literal notranslate"><span class="pre">x</span></code> is the index.</p>
+<p>In the case of a ring of differential polynomials, <code class="docutils literal notranslate"><span class="pre">name_x</span></code> represents the x-th derivative of the variable with 
+given name.</p>
+<p>To allow more flexibility, this class provides methods to know if an object can be generated with this
+generator and to obtain the corresponding index.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">parent</span></code>: a <a class="reference internal" href="diff_polynomial_ring.html#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRing_dense</span></code></a> 
+where <code class="docutils literal notranslate"><span class="pre">self</span></code> will generate its elements.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: main part of the name for the generated variales.</p></li>
+</ul>
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen.contains">
+<code class="sig-name descname">contains</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen.contains" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to know if an object can be generated using <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>This method analyzes the string associated with <code class="docutils literal notranslate"><span class="pre">element</span></code> to determined
+if it is of the appropriate shape to be generated by <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">element</span></code>: the element to be checked.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p><code class="docutils literal notranslate"><span class="pre">True</span></code> if the string of the element is of the shape <code class="docutils literal notranslate"><span class="pre">X_Y</span></code> where <code class="docutils literal notranslate"><span class="pre">X</span></code> is the 
+value of <code class="docutils literal notranslate"><span class="pre">self._name</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen.index">
+<code class="sig-name descname">index</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to know the index to generate <code class="docutils literal notranslate"><span class="pre">element</span></code> using <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>This method analyzes the string associated with <code class="docutils literal notranslate"><span class="pre">element</span></code> to determined
+the appropriate index to generated <code class="docutils literal notranslate"><span class="pre">element</span></code> using <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">element</span></code>: the element to be checked.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>Assumed the string form of <code class="docutils literal notranslate"><span class="pre">X_Y</span></code> from <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen.contains" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen.contains"><code class="xref py py-func docutils literal notranslate"><span class="pre">contains()</span></code></a>, this method returns
+the numerical value of <code class="docutils literal notranslate"><span class="pre">Y</span></code> or an error if not possible.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_element.is_InfinitePolynomial">
+<code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_element.</code><code class="sig-name descname">is_InfinitePolynomial</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_element.is_InfinitePolynomial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to decide whether or not an element is a polynomial with infinite variables.</p>
+<p>This is a call to <code class="docutils literal notranslate"><span class="pre">isinstance</span></code> with the two main element classes of Infinite Polynomial
+Rings.</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="diff_polynomial_ring.html" class="btn btn-neutral float-left" title="Parent structures for Infinite Polynomials over rings with operators" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="diff_polynomial_system.html" class="btn btn-neutral float-right" title="Structures for systems of equation over rings with operators" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

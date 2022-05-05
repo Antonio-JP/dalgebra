@@ -20,5 +20,5 @@ AUTHORS::
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from .differential_polynomial import *
-from .differential_ring import *
+from .diff_polynomial import *
+from .ring_w_operator import *

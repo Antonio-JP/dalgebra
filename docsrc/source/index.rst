@@ -1,9 +1,9 @@
 ================================================
-Differential algebra in Sage
+Differential and Difference algebra in Sage
 ================================================
 
-Differential Algebra is a wide field of Mathematics that involve
-algorithms such as Symbolic Integration. The main idea of this field
+Differential and Difference Algebra is a wide field of Mathematics that involve
+algorithms such as Symbolic Integration and Summation. The main idea of this field
 is to add a derivative operator `\partial` to an algebraic structure
 that satisfies the following two properties:
 
@@ -43,7 +43,8 @@ List of Packages
 .. toctree::
    :maxdepth: 1
 
-   differential_polynomial
+   ring_w_operator
+   diff_polynomial
 
 
 Indices and Tables
