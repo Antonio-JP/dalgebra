@@ -9,7 +9,7 @@ def cayley_polynomial(p1, p2):
     R = pushout(p1.parent(), p2.parent())
 
     if(not (is_PolynomialRing(R) or (is_MPolynomialRing(R) and R.ngens()==1))):
-        raise TypeError("The Cayle method only work for univariate polynomials")
+        raise TypeError("The Cayley method only work for univariate polynomials")
 
     if(is_MPolynomialRing(R)):
         R = PolynomialRing(R.base(), R.gens()[0])
