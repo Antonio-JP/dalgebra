@@ -30,10 +30,12 @@ def verbose(logger):
             if verbose:
                 if STDOUT_HANDLER in logger.handlers:
                     # another function must has set this up, no need to remove at the end
-                    print("stdout already in --> avoiding verbose")
                     verbose = False
                 else:
-                    print("stdout not in --> using verbose")
+                    # We mimic the format of the current handlers
+                    old_format = STDOUT_HANDLER.formatter
+                    if len(logger.handlers) > 0: 
+                        STDOUT_HANDLER.setFormatter(logger.handlers[0].formatter)
                     logger.addHandler(STDOUT_HANDLER)
                     old_level = logger.level
                     logger.setLevel(logging.INFO)
@@ -43,6 +45,7 @@ def verbose(logger):
             if verbose:
                 logger.setLevel(old_level)
                 logger.removeHandler(STDOUT_HANDLER)
+                STDOUT_HANDLER.setFormatter(old_format)
 
             return out
         return wrap
