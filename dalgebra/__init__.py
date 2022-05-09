@@ -21,9 +21,8 @@ AUTHORS::
 # ****************************************************************************
 
 ## Configuring logger for this package
-import logging, sys
+import logging# , sys
 
-print(__name__)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
