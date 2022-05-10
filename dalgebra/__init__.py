@@ -20,5 +20,20 @@ AUTHORS::
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
+## Configuring logger for this package
+import logging# , sys
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
+formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+
+#### CREATING THE HANDLERS
+# first we strip the _init__p.py from __file, then we add the relative path
+path_to_logging = __file__[:-__file__[-1::-1].find('/')] + "logging/dalgebra.log" 
+fh = logging.FileHandler(path_to_logging)
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+logger.propagate = False
+
 from .diff_polynomial import *
 from .ring_w_operator import *

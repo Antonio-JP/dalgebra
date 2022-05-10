@@ -21,6 +21,8 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
+import logging
+
 from functools import reduce
 
 from sage.all import latex, ZZ, PolynomialRing, cartesian_product
@@ -28,6 +30,9 @@ from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 
 from .diff_polynomial_ring import is_DifferencePolynomialRing, is_DifferentialPolynomialRing, is_RWOPolynomialRing
+from ..logging.logging import verbose
+
+logger = logging.getLogger(__name__)
 
 class RWOSystem:
     r'''
@@ -390,6 +395,7 @@ class RWOSystem:
         return len(self.algebraic_variables()) == self.size() - 1
 
     ## resultant methods
+    @verbose(logger)
     def diff_resultant(self, bound_L = 10, alg_res = "dixon"):
         r'''
             Method to compute the operator resultant of this system.
@@ -417,8 +423,11 @@ class RWOSystem:
 
         ## Extending the system
         L = None
+        logger.info(f"We start by extending the system up to bound {bound_L}")
         for _aux_L in cartesian_product(len(self.equations)*[range(bound_L+1)]):
+            logger.info(f"Trying the extension {_aux_L}")
             if(self.extend_by_operation(tuple(_aux_L)).is_sp2()):
+                logger.info(f"Found the valid extension {_aux_L}")
                 L = tuple(_aux_L)
                 break
         
@@ -426,6 +435,7 @@ class RWOSystem:
             raise TypeError("The system was not nicely extended with bound %d" %bound_L)
 
         ## Computing the resultant
+        logging.info(f"We compute the resultant using the algorithm {alg_res}")
         if(alg_res == "dixon"):
             raise NotImplementedError("Dixon's resultant not yet implemented")
         elif(alg_res == "macaulay"):
