@@ -92,7 +92,7 @@ class RWOSystem:
 
     ## Getters for some properties
     @property
-    def equations(self): return self.__equations
+    def _equations(self): return self.__equations
     @property
     def variables(self): return self.__variables
     @property
@@ -102,7 +102,7 @@ class RWOSystem:
         return self.__parent
 
     def size(self):
-        return len(self.equations)
+        return len(self._equations)
 
     @cached_method
     def is_DifferentialSystem(self):
@@ -111,12 +111,122 @@ class RWOSystem:
     def is_DifferenceSystem(self):
         return is_DifferencePolynomialRing(self.parent())
 
+    def equation(self, index):
+        r'''
+            Method to get an equation from the system.
+
+            This method allows to obtain one equation from this system. This means, obtain a 
+            polynomial that is equal to zero, assuming the polynomials in ``self._equations`` are
+            all equal to zero.
+
+            This method allow to obtainthe equations in ``self._equations`` but also the derived
+            equations using the operation of the system.
+
+            INPUT:
+
+            * ``index``: the index for the equation desired. It can be a list/tuple with two elements
+              `(i, n)` or a simple index `i`.
+
+            OUTPUT:
+
+            A polynomial with the `i`-th equation of the system. If the input was a tuple, then we return
+            the `i`-th equation after applying the operation `n` times.
+
+            TODO: add examples
+        '''
+        if isinstance(index, (list,tuple)) and len(index) == 2:
+            return self._equations[index[0]].operation(times=index[1])
+        
+        try:
+            return self._equations[index]
+        except TypeError:
+            raise TypeError(f"The format for getting one equation is not valid. We got {index}")
+
+    def equations(self, indices=None):
+        r'''
+            Method to get a list of equations to the system.
+
+            This method allows to obtain a list of equations from the system, i.e., a list of polynomials
+            that are assumed to be equal to zero. This method can also be used to get equations
+            from extended systems.
+
+            INPUT:
+
+            * ``indices``: list or tuple of elements to be obtain. See method :func:`index` for further information.
+              If the input is a ``slice``, we convert it into a list. If the input is not a list or a tuple, we 
+              create  list with one element and try to get that element. If ``None`` is given, then 
+              we return all equations.
+
+            OUTPUT:
+            
+            A list of :class:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial` with the requested
+            equations from this system.
+
+            TODO: Add Examples
+        '''
+        if indices is None:
+            return self._equations
+        elif isinstance(indices, slice):
+            indices = [el for el in range(*indices.indices(self.size))]
+        
+        if not isinstance(indices, (list, tuple)):
+            indices = [indices]
+        
+        return [self.equation(index) for index in indices]
+
+    def subsystem(self, indices, variables=None):
+        r'''
+            Method that creates a subsystem for a given set of equations.
+
+            This method create a new :class:`RWOSystem` with the given variables in ``indices``
+            (see :func:`get_equations` to see the format of this input) and setting as 
+            main variables those given in ``variables`` (see in :class:`RWOSystem` the format for 
+            this input).
+
+            INPUT:
+
+            * ``indices``: list or tuple of indices to select the subsystem. (see :func:`get_equations` 
+              to see the format of this input).
+            * ``variables``: list of variables for the new system. If ``None`` is given, we use the 
+              variables of ``self``.
+
+            OUTPUT:
+
+            A new :class:`RWOSystem` with the new given equations and the variables stated in the input.
+
+            TODO: add examples
+        '''
+        variables = self.variables if variables is None else variables
+
+        return self.__class__(self.equations(indices), self.parent(), variables)
+
+    def change_variables(self, variables):
+        r'''
+            Method that creates a new system with new set of main variables.
+
+            This method returns an equivalent system as ``self``, i.e., with the same 
+            equations and with the same parent. Bu now we fix a different set of 
+            variables as main variables of the system.
+
+            INPUT:
+
+            * ``variables``: set of new variables for the system. See :class:`RWOSystem`
+              to see the format for this input.
+
+            OUTPUT:
+
+            A :class:`RWOSystem` with the same equations but main variables given by ``variables``.
+
+            TODO: add examples
+        '''
+        return self.subsystem(slice(None,None,None), variables)
+
     ## magic methods
     def __getitem__(self, index):
-        return self.__class__(self.equations[index], self.parent(), self.variables)
+        return self.__class__(self.equations(index), self.parent(), self.variables)
 
     def __repr__(self):
-        return "System over [%s] with variables [%s]:\n{\n\t" %(self.parent(), self.variables) + "\n\t".join(["%s == 0" %el for el in self.equations]) + "\n}"
+        return "System over [%s] with variables [%s]:\n{\n\t" %(self.parent(), self.variables) + "\n\t".join(["%s == 0" %el for el in self.equations()]) + "\n}"
 
     def __str__(self):
         return repr(self)
@@ -124,7 +234,7 @@ class RWOSystem:
     def _latex_(self):
         result = r"\text{System over }" + latex(self.parent()) + r" \text{ with variables }" + ", ".join(latex(el) for el in self.variables) + ":\n\n"
         result += r"\left\{\begin{array}{ll}"
-        result += "\n".join(latex(el) + r" & = 0 \\" for el in self.equations)
+        result += "\n".join(latex(el) + r" & = 0 \\" for el in self.equations())
         result += "\n" + r"\end{array}\right."
         return result
 
@@ -156,7 +266,7 @@ class RWOSystem:
                 sage: system.algebraic_variables()
                 (u_0, u_1, u_2)
         '''
-        all_vars = list(set(sum([[self.parent()(v) for v in equ.variables()] for equ in self.equations], [])))
+        all_vars = list(set(sum([[self.parent()(v) for v in equ.variables()] for equ in self.equations()], [])))
         filtered = [el for el in all_vars if any(el in g for g in self.variables)]
         filtered.sort()
         return tuple(filtered)
@@ -244,11 +354,11 @@ class RWOSystem:
                 Ring in x over Rational Field] with derivation [Map from callable d/dx]
 
         '''
-        equations = [el.polynomial() for el in self.equations]
+        equations = [el.polynomial() for el in self.equations()]
         ## Usual pushout leads to a CoercionException due to management of variables
         ## We do the pushout by ourselves by looking into the generators and creating the best 
         ## possible polynomial ring with the maximal possible derivatives
-        max_orders = reduce(lambda p, q : [max(p[i],q[i]) for i in range(len(p))], [equ.orders() for equ in self.equations])
+        max_orders = reduce(lambda p, q : [max(p[i],q[i]) for i in range(len(p))], [equ.orders() for equ in self.equations()])
         base_ring = self.parent().base()
         gens = self.parent().gens()
         variables = []
@@ -332,7 +442,7 @@ class RWOSystem:
         
         Ls = tuple(Ls)
         if(not Ls in self.__CACHED_SP1):
-            new_equations = sum([[self.equations[i].operation(times=k) for k in range(Ls[i]+1)] for i in range(self.size())], [])
+            new_equations = sum([[self.equation((i,k)) for k in range(Ls[i]+1)] for i in range(self.size())], [])
             self.__CACHED_SP1[Ls] = self.__class__(new_equations, self.parent(), self.variables)
 
         return self.__CACHED_SP1[Ls]
@@ -424,7 +534,7 @@ class RWOSystem:
         ## Extending the system
         L = None
         logger.info(f"We start by extending the system up to bound {bound_L}")
-        for _aux_L in cartesian_product(len(self.equations)*[range(bound_L+1)]):
+        for _aux_L in cartesian_product(self.size*[range(bound_L+1)]):
             logger.info(f"Trying the extension {_aux_L}")
             if(self.extend_by_operation(tuple(_aux_L)).is_sp2()):
                 logger.info(f"Found the valid extension {_aux_L}")
