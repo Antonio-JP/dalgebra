@@ -25,7 +25,7 @@ import logging
 
 from functools import reduce
 
-from sage.all import latex, ZZ, PolynomialRing, cartesian_product
+from sage.all import latex, ZZ, PolynomialRing, Compositions
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 
@@ -167,7 +167,7 @@ class RWOSystem:
         if indices is None:
             return self._equations
         elif isinstance(indices, slice):
-            indices = [el for el in range(*indices.indices(self.size))]
+            indices = [el for el in range(*indices.indices(self.size()))]
         
         if not isinstance(indices, (list, tuple)):
             indices = [indices]
@@ -532,18 +532,22 @@ class RWOSystem:
             raise ValueError("The algorithm for the algebraic resultant must be 'dixon' or 'macaulay'")
 
         ## Extending the system
-        L = None
         logger.info(f"We start by extending the system up to bound {bound_L}")
-        for _aux_L in cartesian_product(self.size*[range(bound_L+1)]):
-            logger.info(f"Trying the extension {_aux_L}")
-            if(self.extend_by_operation(tuple(_aux_L)).is_sp2()):
-                logger.info(f"Found the valid extension {_aux_L}")
-                L = tuple(_aux_L)
-                break
-        
-        if(L is None):
-            raise TypeError("The system was not nicely extended with bound %d" %bound_L)
+        ## auxiliar generator to iterate in a "balanced way"
+        def gen_cartesian(size, bound):
+            for i in range(bound*size):
+                for c in Compositions(i+size, length=size, max_part=bound): 
+                    yield tuple([el-1 for el in c])
 
+        for L in gen_cartesian(self.size(), bound_L):
+            logger.info(f"Trying the extension {L}")
+            if(self.extend_by_operation(L).is_sp2()):
+                logger.info(f"Found the valid extension {L}")
+                break
+        else: # if we don't break, we have found nothing --> error
+            raise TypeError("The system was not nicely extended with bound %d" %bound_L)
+        # if we break, then L contains the extension
+    
         ## Computing the resultant
         logging.info(f"We compute the resultant using the algorithm {alg_res}")
         if(alg_res == "dixon"):
