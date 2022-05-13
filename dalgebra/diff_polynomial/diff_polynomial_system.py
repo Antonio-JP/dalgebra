@@ -655,7 +655,7 @@ class RWOSystem:
         ## auxiliary generator to iterate in a "balanced way"
         def gen_cartesian(size, bound):
             for i in range(bound*size):
-                for c in Compositions(i+size, length=size, max_part=bound): 
+                for c in Compositions(i+size, length=size, max_part=bound): #pylint: disable=unexpected-keyword-arg
                     yield tuple([el-1 for el in c])
 
         for L in gen_cartesian(self.size(), bound_L):
