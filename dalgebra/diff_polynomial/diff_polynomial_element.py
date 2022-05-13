@@ -519,6 +519,10 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return self.parent().element_class(self.parent(), super()._rmul_(x))
     def _lmul_(self, x):
         return self.parent().element_class(self.parent(), super()._lmul_(x))
+    def _mod_(self, x):
+        return self.parent().element_class(self.parent(), self.polynomial() % x.polynomial())
+    def _truediv_(self, x):
+        return self.parent().element_class(self.parent(), self.polynomial() // x.polynomial())
     def __pow__(self, n):
         return self.parent().element_class(self.parent(), super().__pow__(n))
 
