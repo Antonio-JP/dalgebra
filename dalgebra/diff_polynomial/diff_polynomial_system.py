@@ -25,7 +25,7 @@ import logging
 
 from functools import reduce
 
-from sage.all import latex, ZZ, PolynomialRing, cartesian_product
+from sage.all import latex, ZZ, PolynomialRing, Compositions
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 
@@ -92,7 +92,7 @@ class RWOSystem:
 
     ## Getters for some properties
     @property
-    def equations(self): return self.__equations
+    def _equations(self): return self.__equations
     @property
     def variables(self): return self.__variables
     @property
@@ -102,7 +102,7 @@ class RWOSystem:
         return self.__parent
 
     def size(self):
-        return len(self.equations)
+        return len(self._equations)
 
     @cached_method
     def is_DifferentialSystem(self):
@@ -111,12 +111,238 @@ class RWOSystem:
     def is_DifferenceSystem(self):
         return is_DifferencePolynomialRing(self.parent())
 
+    def equation(self, index):
+        r'''
+            Method to get an equation from the system.
+
+            This method allows to obtain one equation from this system. This means, obtain a 
+            polynomial that is equal to zero, assuming the polynomials in ``self._equations`` are
+            all equal to zero.
+
+            This method allow to obtainthe equations in ``self._equations`` but also the derived
+            equations using the operation of the system.
+
+            INPUT:
+
+            * ``index``: the index for the equation desired. It can be a list/tuple with two elements
+              `(i, n)` or a simple index `i`.
+
+            OUTPUT:
+
+            A polynomial with the `i`-th equation of the system. If the input was a tuple, then we return
+            the `i`-th equation after applying the operation `n` times.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: bR = QQ[x]; x = bR('x')
+                sage: R.<u,v> = DifferentialPolynomialRing(bR)
+                sage: eq1 = u[0]*x - v[1]
+                sage: eq2 = u[1] - (x-1)*v[0]
+                sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
+                sage: system.equation(0)
+                x*u_0 - v_1
+                sage: system.equation(1)
+                u_1 + (-x + 1)*v_0
+
+            If the index given is not in range, we raise a :class:`IndexError`::
+
+                sage: system.equation(2)
+                Traceback (most recent call last):
+                ...
+                IndexError: tuple index out of range
+
+            And if the index is a tuple, we take the index rom th first element and the order as the second::
+
+                sage: system.equation((0,1)) == eq1.derivative()
+                True
+                sage: system.equation((0,5)) == eq1.derivative(times=5)
+                True
+        '''
+        if isinstance(index, (list,tuple)) and len(index) == 2:
+            return self._equations[index[0]].operation(times=index[1])
+        
+        try:
+            return self._equations[index]
+        except TypeError:
+            raise TypeError(f"The format for getting one equation is not valid. We got {index}")
+
+    def equations(self, indices=None):
+        r'''
+            Method to get a list of equations to the system.
+
+            This method allows to obtain a list of equations from the system, i.e., a list of polynomials
+            that are assumed to be equal to zero. This method can also be used to get equations
+            from extended systems.
+
+            INPUT:
+
+            * ``indices``: list or tuple of elements to be obtain. See method :func:`index` for further information.
+              If the input is a ``slice``, we convert it into a list. If the input is not a list or a tuple, we 
+              create  list with one element and try to get that element. If ``None`` is given, then 
+              we return all equations.
+
+            OUTPUT:
+            
+            A list of :class:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial` with the requested
+            equations from this system.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: bR = QQ[x]; x = bR('x')
+                sage: R.<u,v> = DifferentialPolynomialRing(bR)
+                sage: eq1 = u[0]*x - v[1]
+                sage: eq2 = u[1] - (x-1)*v[0]
+                sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
+
+            If nothing is given, we return all the equations::
+
+                sage: system.equations()
+                (x*u_0 - v_1, u_1 + (-x + 1)*v_0)
+
+            If only an element is given, then we return that particular element::
+
+                sage: system.equations(1)
+                (u_1 + (-x + 1)*v_0,)
+
+            Otherwise, we return the tuple with the equations required. This can be also 
+            used to obtained equations after applying the operation (see :func:`equation`)::
+
+                sage: system.equations([(0,0), (0,1), (1,3)])
+                (x*u_0 - v_1, x*u_1 + u_0 - v_2, u_4 + (-x + 1)*v_3 + (-3)*v_2)
+
+            This method also allows the use of :class:`slice` to provide the indices for equations::
+
+                sage: system.equations(slice(None,None,-1)) # reversing the equations
+                (u_1 + (-x + 1)*v_0, x*u_0 - v_1)
+        '''
+        if indices is None:
+            return self._equations
+        elif isinstance(indices, slice):
+            indices = [el for el in range(*indices.indices(self.size()))]
+        
+        if not isinstance(indices, (list, tuple)):
+            indices = [indices]
+        
+        return tuple([self.equation(index) for index in indices])
+
+    def subsystem(self, indices, variables=None):
+        r'''
+            Method that creates a subsystem for a given set of equations.
+
+            This method create a new :class:`RWOSystem` with the given variables in ``indices``
+            (see :func:`get_equations` to see the format of this input) and setting as 
+            main variables those given in ``variables`` (see in :class:`RWOSystem` the format for 
+            this input).
+
+            INPUT:
+
+            * ``indices``: list or tuple of indices to select the subsystem. (see :func:`get_equations` 
+              to see the format of this input).
+            * ``variables``: list of variables for the new system. If ``None`` is given, we use the 
+              variables of ``self``.
+
+            OUTPUT:
+
+            A new :class:`RWOSystem` with the new given equations and the variables stated in the input.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: bR = QQ[x]; x = bR('x')
+                sage: R.<u,v> = DifferentialPolynomialRing(bR)
+                sage: eq1 = u[0]*x - v[1]
+                sage: eq2 = u[1] - (x-1)*v[0]
+                sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
+                sage: system.subsystem([(0,0), (0,1), (1,3)])
+                System over [Ring of differential polynomials in (u, v) over Differential Ring 
+                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
+                callable d/dx]] with variables [(u_*, v_*)]:
+                {
+                    x*u_0 - v_1 == 0
+                    x*u_1 + u_0 - v_2 == 0
+                    u_4 + (-x + 1)*v_3 + (-3)*v_2 == 0
+                }
+
+            This method is used when using the ``__getitem__`` notation::
+
+                sage: system[::-1] # same system but with equations changed in order
+                System over [Ring of differential polynomials in (u, v) over Differential Ring 
+                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
+                callable d/dx]] with variables [(u_*, v_*)]:
+                {
+                    u_1 + (-x + 1)*v_0 == 0
+                    x*u_0 - v_1 == 0
+                }
+
+            Setting up the argument ``variables`` allows to change the variables considered for the system::
+
+                sage: system.subsystem(None, variables=[u])
+                System over [Ring of differential polynomials in (u, v) over Differential Ring 
+                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
+                callable d/dx]] with variables [(u_*,)]:
+                {
+                    x*u_0 - v_1 == 0
+                    u_1 + (-x + 1)*v_0 == 0
+                }
+        '''
+        variables = self.variables if variables is None else variables
+
+        return self.__class__(self.equations(indices), self.parent(), variables)
+
+    def change_variables(self, variables):
+        r'''
+            Method that creates a new system with new set of main variables.
+
+            This method returns an equivalent system as ``self``, i.e., with the same 
+            equations and with the same parent. Bu now we fix a different set of 
+            variables as main variables of the system.
+
+            INPUT:
+
+            * ``variables``: set of new variables for the system. See :class:`RWOSystem`
+              to see the format for this input.
+
+            OUTPUT:
+
+            A :class:`RWOSystem` with the same equations but main variables given by ``variables``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: bR = QQ[x]; x = bR('x')
+                sage: R.<u,v> = DifferentialPolynomialRing(bR)
+                sage: eq1 = u[0]*x - v[1]
+                sage: eq2 = u[1] - (x-1)*v[0]
+                sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
+                sage: system.change_variables(u)
+                System over [Ring of differential polynomials in (u, v) over Differential Ring 
+                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
+                callable d/dx]] with variables [(u_*,)]:
+                {
+                    x*u_0 - v_1 == 0
+                    u_1 + (-x + 1)*v_0 == 0
+                }
+                sage: system.change_variables([v])
+                System over [Ring of differential polynomials in (u, v) over Differential Ring 
+                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
+                callable d/dx]] with variables [(v_*,)]:
+                {
+                    x*u_0 - v_1 == 0
+                    u_1 + (-x + 1)*v_0 == 0
+                }
+        '''
+        if not isinstance(variables, (list, tuple)):
+            variables = [variables]
+        return self.subsystem(None, variables)
+
     ## magic methods
     def __getitem__(self, index):
-        return self.__class__(self.equations[index], self.parent(), self.variables)
+        return self.__class__(self.equations(index), self.parent(), self.variables)
 
     def __repr__(self):
-        return "System over [%s] with variables [%s]:\n{\n\t" %(self.parent(), self.variables) + "\n\t".join(["%s == 0" %el for el in self.equations]) + "\n}"
+        return "System over [%s] with variables [%s]:\n{\n\t" %(self.parent(), self.variables) + "\n\t".join(["%s == 0" %el for el in self.equations()]) + "\n}"
 
     def __str__(self):
         return repr(self)
@@ -124,7 +350,7 @@ class RWOSystem:
     def _latex_(self):
         result = r"\text{System over }" + latex(self.parent()) + r" \text{ with variables }" + ", ".join(latex(el) for el in self.variables) + ":\n\n"
         result += r"\left\{\begin{array}{ll}"
-        result += "\n".join(latex(el) + r" & = 0 \\" for el in self.equations)
+        result += "\n".join(latex(el) + r" & = 0 \\" for el in self.equations())
         result += "\n" + r"\end{array}\right."
         return result
 
@@ -156,7 +382,7 @@ class RWOSystem:
                 sage: system.algebraic_variables()
                 (u_0, u_1, u_2)
         '''
-        all_vars = list(set(sum([[self.parent()(v) for v in equ.variables()] for equ in self.equations], [])))
+        all_vars = list(set(sum([[self.parent()(v) for v in equ.variables()] for equ in self.equations()], [])))
         filtered = [el for el in all_vars if any(el in g for g in self.variables)]
         filtered.sort()
         return tuple(filtered)
@@ -244,11 +470,11 @@ class RWOSystem:
                 Ring in x over Rational Field] with derivation [Map from callable d/dx]
 
         '''
-        equations = [el.polynomial() for el in self.equations]
+        equations = [el.polynomial() for el in self.equations()]
         ## Usual pushout leads to a CoercionException due to management of variables
         ## We do the pushout by ourselves by looking into the generators and creating the best 
         ## possible polynomial ring with the maximal possible derivatives
-        max_orders = reduce(lambda p, q : [max(p[i],q[i]) for i in range(len(p))], [equ.orders() for equ in self.equations])
+        max_orders = reduce(lambda p, q : [max(p[i],q[i]) for i in range(len(p))], [equ.orders() for equ in self.equations()])
         base_ring = self.parent().base()
         gens = self.parent().gens()
         variables = []
@@ -304,21 +530,21 @@ class RWOSystem:
                 sage: from dalgebra import *
                 sage: R.<u> = DifferentialPolynomialRing(QQ)
                 sage: system = DifferentialSystem([u[1]-u[0]])
-                sage: system.extend_by_operation([0]).equations
+                sage: system.extend_by_operation([0]).equations()
                 (u_1 - u_0,)
-                sage: system.extend_by_operation([1]).equations
+                sage: system.extend_by_operation([1]).equations()
                 (u_1 - u_0, u_2 - u_1)
-                sage: system.extend_by_operation([5]).equations
+                sage: system.extend_by_operation([5]).equations()
                 (u_1 - u_0, u_2 - u_1, u_3 - u_2, u_4 - u_3, u_5 - u_4, u_6 - u_5)
                 sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
-                sage: system.extend_by_operation([0,0]).equations
+                sage: system.extend_by_operation([0,0]).equations()
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0, u_1 - v_2 + v_1)
-                sage: system.extend_by_operation([1,0]).equations
+                sage: system.extend_by_operation([1,0]).equations()
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0,
                 x^2*u_3 + 2*x*u_2 + x*u_1 + u_0 + (x - 1)*v_1 + v_0,
                 u_1 - v_2 + v_1)
-                sage: system.extend_by_operation([1,1]).equations
+                sage: system.extend_by_operation([1,1]).equations()
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0,
                 x^2*u_3 + 2*x*u_2 + x*u_1 + u_0 + (x - 1)*v_1 + v_0,
                 u_1 - v_2 + v_1,
@@ -332,7 +558,7 @@ class RWOSystem:
         
         Ls = tuple(Ls)
         if(not Ls in self.__CACHED_SP1):
-            new_equations = sum([[self.equations[i].operation(times=k) for k in range(Ls[i]+1)] for i in range(self.size())], [])
+            new_equations = sum([[self.equation((i,k)) for k in range(Ls[i]+1)] for i in range(self.size())], [])
             self.__CACHED_SP1[Ls] = self.__class__(new_equations, self.parent(), self.variables)
 
         return self.__CACHED_SP1[Ls]
@@ -402,6 +628,9 @@ class RWOSystem:
 
             TODO: add explanation of resultant.
 
+            This method has the optional argument ``verbose`` which, when given, 
+            will print the logging output in the console (``sys.stdout``)
+
             INPUT:
 
             * ``bound_L``: bound for the values of ``Ls`` for method :func:`extend_by_operation`.
@@ -422,18 +651,22 @@ class RWOSystem:
             raise ValueError("The algorithm for the algebraic resultant must be 'dixon' or 'macaulay'")
 
         ## Extending the system
-        L = None
         logger.info(f"We start by extending the system up to bound {bound_L}")
-        for _aux_L in cartesian_product(len(self.equations)*[range(bound_L+1)]):
-            logger.info(f"Trying the extension {_aux_L}")
-            if(self.extend_by_operation(tuple(_aux_L)).is_sp2()):
-                logger.info(f"Found the valid extension {_aux_L}")
-                L = tuple(_aux_L)
-                break
-        
-        if(L is None):
-            raise TypeError("The system was not nicely extended with bound %d" %bound_L)
+        ## auxiliary generator to iterate in a "balanced way"
+        def gen_cartesian(size, bound):
+            for i in range(bound*size):
+                for c in Compositions(i+size, length=size, max_part=bound): #pylint: disable=unexpected-keyword-arg
+                    yield tuple([el-1 for el in c])
 
+        for L in gen_cartesian(self.size(), bound_L):
+            logger.info(f"Trying the extension {L}")
+            if(self.extend_by_operation(L).is_sp2()):
+                logger.info(f"Found the valid extension {L}")
+                break
+        else: # if we don't break, we have found nothing --> error
+            raise TypeError("The system was not nicely extended with bound %d" %bound_L)
+        # if we break, then L contains the extension
+    
         ## Computing the resultant
         logging.info(f"We compute the resultant using the algorithm {alg_res}")
         if(alg_res == "dixon"):
