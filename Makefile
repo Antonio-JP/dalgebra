@@ -37,6 +37,9 @@ lint: install
 	E1302,E1303,E1304,E1305,E1306,E1310,E1700,E1701,unused-import,unused-argument \
 	--msg-template='{line},{column},{category},{symbol}:{msg}' --reports=n --output-format=text"
 
+prepare: lint test
+	@echo "Run everything for merging. If success, update VERSION, push and merge"
+
 coverage:
 	$(SAGE) -coverage $(PACKAGE)/*
 	
