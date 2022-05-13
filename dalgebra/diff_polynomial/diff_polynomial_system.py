@@ -247,7 +247,45 @@ class RWOSystem:
 
             A new :class:`RWOSystem` with the new given equations and the variables stated in the input.
 
-            TODO: add examples
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: bR = QQ[x]; x = bR('x')
+                sage: R.<u,v> = DifferentialPolynomialRing(bR)
+                sage: eq1 = u[0]*x - v[1]
+                sage: eq2 = u[1] - (x-1)*v[0]
+                sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
+                sage: system.subsystem([(0,0), (0,1), (1,3)])
+                System over [Ring of differential polynomials in (u, v) over Differential Ring 
+                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
+                callable d/dx]] with variables [(u_*, v_*)]:
+                {
+                    x*u_0 - v_1 == 0
+                    x*u_1 + u_0 - v_2 == 0
+                    u_4 + (-x + 1)*v_3 + (-3)*v_2 == 0
+                }
+
+            This method is used when using the ``__getitem__`` notation::
+
+                sage: system[::-1] # same system but with equations changed in order
+                System over [Ring of differential polynomials in (u, v) over Differential Ring 
+                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
+                callable d/dx]] with variables [(u_*, v_*)]:
+                {
+                    u_1 + (-x + 1)*v_0 == 0
+                    x*u_0 - v_1 == 0
+                }
+
+            Setting up the argument ``variables`` allows to change the variables considered for the system::
+
+                sage: system.subsystem(None, variables=[u])
+                System over [Ring of differential polynomials in (u, v) over Differential Ring 
+                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
+                callable d/dx]] with variables [(u_*,)]:
+                {
+                    x*u_0 - v_1 == 0
+                    u_1 + (-x + 1)*v_0 == 0
+                }
         '''
         variables = self.variables if variables is None else variables
 
@@ -270,9 +308,34 @@ class RWOSystem:
 
             A :class:`RWOSystem` with the same equations but main variables given by ``variables``.
 
-            TODO: add examples
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: bR = QQ[x]; x = bR('x')
+                sage: R.<u,v> = DifferentialPolynomialRing(bR)
+                sage: eq1 = u[0]*x - v[1]
+                sage: eq2 = u[1] - (x-1)*v[0]
+                sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
+                sage: system.change_variables(u)
+                System over [Ring of differential polynomials in (u, v) over Differential Ring 
+                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
+                callable d/dx]] with variables [(u_*,)]:
+                {
+                    x*u_0 - v_1 == 0
+                    u_1 + (-x + 1)*v_0 == 0
+                }
+                sage: system.change_variables([v])
+                System over [Ring of differential polynomials in (u, v) over Differential Ring 
+                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
+                callable d/dx]] with variables [(v_*,)]:
+                {
+                    x*u_0 - v_1 == 0
+                    u_1 + (-x + 1)*v_0 == 0
+                }
         '''
-        return self.subsystem(slice(None,None,None), variables)
+        if not isinstance(variables, (list, tuple)):
+            variables = [variables]
+        return self.subsystem(None, variables)
 
     ## magic methods
     def __getitem__(self, index):
@@ -565,6 +628,9 @@ class RWOSystem:
 
             TODO: add explanation of resultant.
 
+            This method has the optional argument ``verbose`` which, when given, 
+            will print the logging output in the console (``sys.stdout``)
+
             INPUT:
 
             * ``bound_L``: bound for the values of ``Ls`` for method :func:`extend_by_operation`.
@@ -586,7 +652,7 @@ class RWOSystem:
 
         ## Extending the system
         logger.info(f"We start by extending the system up to bound {bound_L}")
-        ## auxiliar generator to iterate in a "balanced way"
+        ## auxiliary generator to iterate in a "balanced way"
         def gen_cartesian(size, bound):
             for i in range(bound*size):
                 for c in Compositions(i+size, length=size, max_part=bound): 
