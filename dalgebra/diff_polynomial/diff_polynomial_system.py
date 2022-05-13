@@ -132,7 +132,32 @@ class RWOSystem:
             A polynomial with the `i`-th equation of the system. If the input was a tuple, then we return
             the `i`-th equation after applying the operation `n` times.
 
-            TODO: add examples
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: bR = QQ[x]; x = bR('x')
+                sage: R.<u,v> = DifferentialPolynomialRing(bR)
+                sage: eq1 = u[0]*x - v[1]
+                sage: eq2 = u[1] - (x-1)*v[0]
+                sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
+                sage: system.equation(0)
+                x*u_0 - v_1
+                sage: system.equation(1)
+                u_1 + (-x + 1)*v_0
+
+            If the index given is not in range, we raise a :class:`IndexError`::
+
+                sage: system.equation(2)
+                Traceback (most recent call last):
+                ...
+                IndexError: tuple index out of range
+
+            And if the index is a tuple, we take the index rom th first element and the order as the second::
+
+                sage: system.equation((0,1)) == eq1.derivative()
+                True
+                sage: system.equation((0,5)) == eq1.derivative(times=5)
+                True
         '''
         if isinstance(index, (list,tuple)) and len(index) == 2:
             return self._equations[index[0]].operation(times=index[1])
@@ -162,17 +187,45 @@ class RWOSystem:
             A list of :class:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial` with the requested
             equations from this system.
 
-            TODO: Add Examples
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: bR = QQ[x]; x = bR('x')
+                sage: R.<u,v> = DifferentialPolynomialRing(bR)
+                sage: eq1 = u[0]*x - v[1]
+                sage: eq2 = u[1] - (x-1)*v[0]
+                sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
+
+            If nothing is given, we return all the equations::
+
+                sage: system.equations()
+                (x*u_0 - v_1, u_1 + (-x + 1)*v_0)
+
+            If only an element is given, then we return that particular element::
+
+                sage: system.equations(1)
+                (u_1 + (-x + 1)*v_0,)
+
+            Otherwise, we return the tuple with the equations required. This can be also 
+            used to obtained equations after applying the operation (see :func:`equation`)::
+
+                sage: system.equations([(0,0), (0,1), (1,3)])
+                (x*u_0 - v_1, x*u_1 + u_0 - v_2, u_4 + (-x + 1)*v_3 + (-3)*v_2)
+
+            This method also allows the use of :class:`slice` to provide the indices for equations::
+
+                sage: system.equations(slice(None,None,-1)) # reversing the equations
+                (u_1 + (-x + 1)*v_0, x*u_0 - v_1)
         '''
         if indices is None:
             return self._equations
         elif isinstance(indices, slice):
-            indices = [el for el in range(*indices.indices(self.size))]
+            indices = [el for el in range(*indices.indices(self.size()))]
         
         if not isinstance(indices, (list, tuple)):
             indices = [indices]
         
-        return [self.equation(index) for index in indices]
+        return tuple([self.equation(index) for index in indices])
 
     def subsystem(self, indices, variables=None):
         r'''
@@ -414,21 +467,21 @@ class RWOSystem:
                 sage: from dalgebra import *
                 sage: R.<u> = DifferentialPolynomialRing(QQ)
                 sage: system = DifferentialSystem([u[1]-u[0]])
-                sage: system.extend_by_operation([0]).equations
+                sage: system.extend_by_operation([0]).equations()
                 (u_1 - u_0,)
-                sage: system.extend_by_operation([1]).equations
+                sage: system.extend_by_operation([1]).equations()
                 (u_1 - u_0, u_2 - u_1)
-                sage: system.extend_by_operation([5]).equations
+                sage: system.extend_by_operation([5]).equations()
                 (u_1 - u_0, u_2 - u_1, u_3 - u_2, u_4 - u_3, u_5 - u_4, u_6 - u_5)
                 sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
-                sage: system.extend_by_operation([0,0]).equations
+                sage: system.extend_by_operation([0,0]).equations()
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0, u_1 - v_2 + v_1)
-                sage: system.extend_by_operation([1,0]).equations
+                sage: system.extend_by_operation([1,0]).equations()
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0,
                 x^2*u_3 + 2*x*u_2 + x*u_1 + u_0 + (x - 1)*v_1 + v_0,
                 u_1 - v_2 + v_1)
-                sage: system.extend_by_operation([1,1]).equations
+                sage: system.extend_by_operation([1,1]).equations()
                 (x^2*u_2 + x*u_0 + (x - 1)*v_0,
                 x^2*u_3 + 2*x*u_2 + x*u_1 + u_0 + (x - 1)*v_1 + v_0,
                 u_1 - v_2 + v_1,
