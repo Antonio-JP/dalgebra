@@ -25,7 +25,7 @@ import logging
 
 from functools import reduce
 
-from sage.all import latex, ZZ, PolynomialRing, Compositions
+from sage.all import latex, ZZ, PolynomialRing, Compositions, Subsets
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 
@@ -585,6 +585,27 @@ class RWOSystem:
         variables = self.variables if variables is None else variables
 
         return all(equ.is_linear(variables) for equ in self.equations())
+
+    @cached_method
+    def maximal_linear_variables(self):
+        rejected = []
+        allowed = []
+
+        for s in Subsets(self.variables):
+            if s.is_empty(): pass
+            elif any(r.issubset(s) for r in rejected): pass
+            elif self.is_linear(list(s)):
+                allowed.append(s)
+            else:
+                rejected.append(s)
+
+        allowed = sorted(allowed, key=lambda p:len(p)) # bigger elements last
+        result = []
+        while len(allowed) > 0:
+            candidate = allowed.pop()
+            if all(not candidate.issubset(r) for r in result):
+                result.append(candidate)
+        return result
 
     def is_sp2(self):
         r'''
