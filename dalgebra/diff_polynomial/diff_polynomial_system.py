@@ -575,14 +575,16 @@ class RWOSystem:
         '''
         return all(equ.is_homogeneous() for equ in self.algebraic_equations())
 
-    def is_linear(self):
+    def is_linear(self, variables=None):
         r'''
             Method that checks whether a system is linear in its variables.
 
             See method :func:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.is_linear` for further
             information on how this is computed.
         '''
-        return all(equ.is_linear(self.variables) for equ in self.equations())
+        variables = self.variables if variables is None else variables
+
+        return all(equ.is_linear(variables) for equ in self.equations())
 
     def is_sp2(self):
         r'''
@@ -631,7 +633,7 @@ class RWOSystem:
 
     ## resultant methods
     @verbose(logger)
-    def diff_resultant(self, bound_L = 10, alg_res = "dixon"):
+    def diff_resultant(self, bound_L = 10, alg_res = "auto"):
         r'''
             Method to compute the operator resultant of this system.
 
@@ -643,9 +645,9 @@ class RWOSystem:
             INPUT:
 
             * ``bound_L``: bound for the values of ``Ls`` for method :func:`extend_by_operation`.
-            * ``alg_res``: method to compute the algebraic resultant once we extended a 
+            * ``alg_res``: (``"auto"`` by default) method to compute the algebraic resultant once we extended a 
               system to a valid system (see :func:`is_sp2`). The valid values are, currently,
-              ``"dixon"`` and ``"macaulay"``.
+              ``"dixon"``, ``"macaulay"`` and ``"iterative"``.
 
             OUTPUT:
 
@@ -654,36 +656,88 @@ class RWOSystem:
             TODO: add examples
         '''
         ## Checking arguments
-        if(not bound_L in ZZ or bound_L < 0):
-            raise ValueError("The bound for the L argument must be a non-negative integer")
-        if(not alg_res in ("dixon", "macaulay")):
-            raise ValueError("The algorithm for the algebraic resultant must be 'dixon' or 'macaulay'")
+        if(not alg_res in ("auto", "iterative", "dixon", "macaulay")):
+            raise ValueError("The algorithm for the algebraic resultant must be 'auto', 'dixon', 'macaulay' or 'iterative'")
+        if alg_res == "auto":
+            logging.info("Deciding automatically the algorithm for the resultant...")
+            alg_res = self.__decide_resultant_algorithm()
+        
+        ## Computing the resultant
+        logging.info(f"We compute the resultant using the algorithm {alg_res}")
+        if(alg_res == "dixon"):
+            return self.__dixon(bound_L)
+        elif(alg_res == "macaulay"):
+            return self.__macaulay(bound_L)
+        elif(alg_res == "iterative"):
+            return self.__iterative(bound_L)
 
-        ## Extending the system
-        logger.info(f"We start by extending the system up to bound {bound_L}")
+        raise RuntimeError("This part of the code should never be reached")
+
+    ###################################################################################################
+    ### Private methods concerning the resultan
+    def __decide_resultant_algorithm(self):
+        r'''
+            Method to decide the (hopefully) most optimal algorithm to compute the resultant.
+        '''
+        if self.is_linear():
+            return "macaulay"
+        else:
+            return "iterative"
+
+    def __get_extension(self, bound):
+        if(not bound in ZZ or bound < 0):
+            raise ValueError("The bound for the extension must be a non-negative integer")
+
         ## auxiliary generator to iterate in a "balanced way"
         def gen_cartesian(size, bound):
             for i in range(bound*size):
                 for c in Compositions(i+size, length=size, max_part=bound): #pylint: disable=unexpected-keyword-arg
                     yield tuple([el-1 for el in c])
 
-        for L in gen_cartesian(self.size(), bound_L):
+        for L in gen_cartesian(self.size(), bound):
             logger.info(f"Trying the extension {L}")
             if(self.extend_by_operation(L).is_sp2()):
                 logger.info(f"Found the valid extension {L}")
                 break
         else: # if we don't break, we have found nothing --> error
-            raise TypeError("The system was not nicely extended with bound %d" %bound_L)
-        # if we break, then L contains the extension
-    
-        ## Computing the resultant
-        logging.info(f"We compute the resultant using the algorithm {alg_res}")
-        if(alg_res == "dixon"):
-            raise NotImplementedError("Dixon's resultant not yet implemented")
-        elif(alg_res == "macaulay"):
-            equs = [el.homogenize() for el in self.extend_by_operation(L).algebraic_equations()]
-            ring = equs[0].parent()
-            return ring.macaulay_resultant(equs)
+            raise TypeError("The system was not nicely extended with bound %d" %bound)
+        return L
+
+    def __dixon(self, bound):
+        r'''
+            Method that computes the resultant of an extension of ``self` using Dixon resultant.
+
+            INPUT:
+
+            * ``bound``: bound the the extension to look for a system to get a resultant.
+        '''
+        raise NotImplementedError("Dixon resultant not yet implemented")
+  
+    def __macaulay(self, bound):
+        r'''
+            Method that computes the resultant of an extension of ``self` using Macaulay resultant.
+
+            INPUT:
+
+            * ``bound``: bound the the extension to look for a system to get a resultant.
+        '''
+        L = self.__get_extension(bound)
+
+        equs = [el.homogenize() for el in self.extend_by_operation(L).algebraic_equations()]
+        ring = equs[0].parent()
+        return ring.macaulay_resultant(equs)
+  
+    def __iterative(self, bound):
+        r'''
+            Method that computes the resultant of an extension of ``self` using an iterative elimination.
+
+            INPUT:
+
+            * ``bound``: bound the the extension to look for a system to get a resultant.
+        '''
+        raise NotImplementedError("Iterative elimination not yet implemented")
+
+    ###################################################################################################
 
 class DifferentialSystem (RWOSystem):
     r'''
