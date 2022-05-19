@@ -439,17 +439,69 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return self.constant_coefficient(), operators
 
     # Properties methods (is_...)
-    def is_linear(self):
+    def is_linear(self, variables=None):
         r'''
             Method that checks whether a infinite polynomial is linear (in terms of degree).
 
-            This method is a simple checker on the degree of the polynomial to be 
-            at most 1. These linear polynomials have extra properties and can be transformed
-            into linear differential operators (see method :func:`to_operator`).
+            This method checks whether an infinite polynomial is lienar or not w.r.t. the provided
+            variables. If ``None`` is given, then we will consider all variables.
 
-            TODO add tests
+            INPUT:
+
+            * ``variables``: (``None`` by default) variable or list of variables (see :class:`RWOPolynomialGen`)
+              for which we will consider if the polynomial is linear or not.
+
+            OUTPUT:
+
+            ``True`` if all the appearances of the variables in ``variables`` are linear.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<a,b> = DifferentialPolynomialRing(QQ[x]); x = R('x')
+                sage: p = x^2*a[1]*b[0] - a[0]*b[1]^2
+                sage: p.is_linear()
+                False
+                sage: p.is_linear(a)
+                True
+                sage: p.is_linear(b)
+                False
+                sage: p.is_linear([a])
+                True
+
+            If we provide several variables, then they have to be linear all together::
+
+                sage: S.<u,v,w> = DifferencePolynomialRing(QQ['n']); n = S('n')
+                sage: p = n*(n+1)*u[1]*w[0] - 3*n*v[1]*w[1] + 6*n^3*u[0]*w[2] - v[0]
+                sage: p.is_linear()
+                False
+                sage: p.is_linear(u)
+                True
+                sage: p.is_linear(v)
+                True
+                sage: p.is_linear(w)
+                True
+                sage: p.is_linear([u,v])
+                True
+                sage: p.is_linear([u,w])
+                False
+                sage: p.is_linear([v,w])
+                False
         '''    
-        return self.degree() == 1
+        if variables is None:
+            variables = self.parent().gens()
+        elif (not isinstance(variables, (list,tuple))):
+            variables = [variables]
+
+        if any(not el in self.parent().gens() for el in variables):
+            raise TypeError(f"The variables must be generators of {self.parent()}")
+        elif len(variables) == self.parent().ngens() or len(variables) == 0:
+            return self.degree() <= 1
+        elif len(variables) == 1:
+            return self.degree(variables[0]) <= 1
+        
+        ## This is the generic case when some (but more than one) variable appears in ``variables``
+        return all(sum(t.degree(v) for v in variables) <= 1 for t in self.monomials())
 
     # Magic methods
     def __call__(self, *args, **kwargs):

@@ -575,6 +575,15 @@ class RWOSystem:
         '''
         return all(equ.is_homogeneous() for equ in self.algebraic_equations())
 
+    def is_linear(self):
+        r'''
+            Method that checks whether a system is linear in its variables.
+
+            See method :func:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.is_linear` for further
+            information on how this is computed.
+        '''
+        return all(equ.is_linear(self.variables) for equ in self.equations())
+
     def is_sp2(self):
         r'''
             Method that checks the condition SP2.
