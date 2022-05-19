@@ -497,11 +497,15 @@ class RWOPolynomial (InfinitePolynomial_dense):
             raise TypeError(f"The variables must be generators of {self.parent()}")
         elif len(variables) == self.parent().ngens() or len(variables) == 0:
             return self.degree() <= 1
-        elif len(variables) == 1:
-            return self.degree(variables[0]) <= 1
         
         ## This is the generic case when some (but more than one) variable appears in ``variables``
-        return all(sum(t.degree(v) for v in variables) <= 1 for t in self.monomials())
+        return all(
+            sum(
+                t.degree(v) 
+                for v in t.variables() 
+                if any(v in var for var in variables)
+            ) <= 1 
+        for t in self.monomials())
 
     # Magic methods
     def __call__(self, *args, **kwargs):
