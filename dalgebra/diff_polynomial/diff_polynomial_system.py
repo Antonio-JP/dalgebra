@@ -89,6 +89,7 @@ class RWOSystem:
 
         # cached variables
         self.__CACHED_SP1 = {}
+        self.__CACHED_RES = None
 
     ## Getters for some properties
     @property
@@ -687,23 +688,25 @@ class RWOSystem:
 
             TODO: add examples
         '''
-        ## Checking arguments
-        if(not alg_res in ("auto", "iterative", "dixon", "macaulay")):
-            raise ValueError("The algorithm for the algebraic resultant must be 'auto', 'dixon', 'macaulay' or 'iterative'")
-        if alg_res == "auto":
-            logging.info("Deciding automatically the algorithm for the resultant...")
-            alg_res = self.__decide_resultant_algorithm()
-        
-        ## Computing the resultant
-        logging.info(f"We compute the resultant using the algorithm {alg_res}")
-        if(alg_res == "dixon"):
-            return self.__dixon(bound_L)
-        elif(alg_res == "macaulay"):
-            return self.__macaulay(bound_L)
-        elif(alg_res == "iterative"):
-            return self.__iterative(bound_L)
+        if self.__CACHED_RES is None:
+            ## Checking arguments
+            if(not alg_res in ("auto", "iterative", "dixon", "macaulay")):
+                raise ValueError("The algorithm for the algebraic resultant must be 'auto', 'dixon', 'macaulay' or 'iterative'")
+            if alg_res == "auto":
+                logging.info("Deciding automatically the algorithm for the resultant...")
+                alg_res = self.__decide_resultant_algorithm()
+            
+            ## Computing the resultant
+            logging.info(f"We compute the resultant using the algorithm {alg_res}")
+            if(alg_res == "dixon"):
+                output = self.__dixon(bound_L)
+            elif(alg_res == "macaulay"):
+                output = self.__macaulay(bound_L)
+            elif(alg_res == "iterative"):
+                output = self.__iterative(bound_L)
+            self.__CACHED_RES = self.parent()(output)
 
-        raise RuntimeError("This part of the code should never be reached")
+        return self.__CACHED_RES
 
     ###################################################################################################
     ### Private methods concerning the resultant
@@ -777,24 +780,26 @@ class RWOSystem:
         logger.info("Checking if there is any linear variable...")
         lin_vars = self.maximal_linear_variables()
         if len(lin_vars) > 0:
-            lin_vars = lin_vars[0] # we take the biggest subset
-            logger.info(f"Found linear variables {lin_vars}: we remove them first...")
+            lin_vars = list(lin_vars[0]) # we take the biggest subset
+            logger.info(f"Found linear variables {lin_vars}: we remove {'it' if len(lin_vars) == 1 else 'them'} first...")
+            logger.info("##########################################################")
             system = self.change_variables(lin_vars)
             # indices with the smallest equations
             smallest_equations = sorted(range(system.size()), key=lambda p:len(system.equation(p).monomials()))
             base_cases = smallest_equations[:len(lin_vars)]
             new_equations = [
-                self.parent(system.subsystem(base_cases + [i]).diff_resultant(bound))
+                self.parent()(system.subsystem(base_cases + [i]).diff_resultant(bound))
                 for i in smallest_equations[len(lin_vars):]
             ]
-            logger.info(f"Computed {len(new_equations)} for the remaining {len(variables)-len(lin_vars)} variables")
+            logger.info("##########################################################")
+            logger.info(f"Computed {len(new_equations)} equations for the remaining {len(variables)-len(lin_vars)} variables")
             rem_variables = [el for el in variables if (not el in lin_vars)]
             logger.info(f"We now remove {rem_variables}")
-            system = self.__class__(new_equations, rem_variables)
+            system = self.__class__(new_equations, self.parent(), rem_variables)
             return system.diff_resultant(bound)
         ## The remaining variables are not linear
         logger.info("No linear variable remain in the system. We proceed by univariate eliminations")
-        if len(self.variables > 1):
+        if len(self.variables) > 1:
             logger.info("Several eliminations are needed --> we use recursion")
             logger.info("Picking the best variable to start with...")
             v = self.__iterative_best_variable()
@@ -808,39 +813,44 @@ class RWOSystem:
                 for i in equs_by_order[1:]
             ]
             new_vars = [nv for nv in self.variables if nv != v]
-            system = self.__class__(new_equs, new_vars)
+            system = self.__class__(new_equs, self.parent(), new_vars)
             logger.info(f"Variable {v} eliminated. Proceeding with the remaining variables {new_vars}...")
             return system.diff_resultant(bound)
         else:
             logger.info("Only one variable remains. We proceed to eliminate it in an algebraic fashion")
-            logger.info(f"Extending the system to eliminate {self.variables[0]}...")
-            L = system.__get_extension(bound)
-            system = system.extend_by_operation(L) # now we can eliminate everything
-            alg_equs = system.algebraic_equations()
-            alg_vars = system.algebraic_variables()
+            logger.info(f"Extending the system to eliminate {repr(self.variables[0])}...")
+            L = self.__get_extension(bound)
+            system = self.extend_by_operation(L) # now we can eliminate everything
+            alg_equs = list(system.algebraic_equations())
+            alg_vars = [alg_equs[0].parent()(str(el)) for el in system.algebraic_variables()]
 
-            logger.info(f"Iterating to remove all the algebraic variables..")
+            logger.info(f"Iterating to remove all the algebraic variables...")
+            logger.info(f"--------------------------------------------------")
+            last_index = lambda l, value : len(l) - 1 - l[::-1].index(value)
             while(len(alg_equs) > 1 and len(alg_vars) > 0):
                 logger.info(f"\tRemaining variables: {alg_vars}")
                 logger.info(f"\tPicking best algebraic variable to eliminate...")
                 # getting th degrees of each variable in each equation
                 degrees = [[equ.degree(v) for equ in alg_equs] for v in alg_vars]
                 # the best variable to remove is the one that appears the least
-                num_appearances = [degrees[i].count(0) for i in range(len(alg_vars))]
-                iv = num_appearances.index(min(num_appearances))
+                num_appearances = [len(alg_equs)-degrees[i].count(0) for i in range(len(alg_vars))]
+                logger.info(f"Number of appearance for each variable: {num_appearances}")
+                iv = last_index(num_appearances,min(num_appearances))
                 v = alg_vars.pop(iv)
                 logger.info(f"\tPicked {v}")
 
                 # the "pivot" equation is the one with minimal degree in "v"
                 logger.info(f"\tPicking the best 'pivot' to eliminate {v}...")
-                pivot = alg_equs.pop(degrees[iv].index(min(degrees[iv])))
+                pivot = alg_equs.pop(degrees[iv].index(min([el for el in degrees[iv] if el > 0])))
                 R = pivot.parent()
+                logger.info(f"\t- Pivot --> {str(pivot)[:30]}")
                 logger.info(f"\tEliminating the variable {v} in each pair of equations...")
                 for i in range(len(alg_equs)):
                     if alg_equs[i].degree(v) > 0:
+                        logger.info(f"\tEliminating with {str(alg_equs[i])[:30]}...")
                         alg_equs[i] = R(pivot.polynomial(v).sylvester_matrix(alg_equs[i].polynomial(v)).determinant())
             ## Checking the result
-            
+            logger.info(f"--------------------------------------------------")
             logger.info(f"Elimination procedure finished. Checking that we have a result...")
             old_vars = self.algebraic_variables()
             new_vars = list(set(sum([list(set(el.variables())) for el in alg_equs],[])))
