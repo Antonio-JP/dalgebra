@@ -111,6 +111,17 @@ class RWOSystem:
     def is_DifferenceSystem(self):
         return is_DifferencePolynomialRing(self.parent())
 
+    def order(self, gen=None):
+        r'''
+            Method to return the order of the system.
+
+            The order of a system is defined as the maximal order of their equations. This 
+            method allows a generator to be given and then the order w.r.t. this variable will 
+            be computed. For further information, check 
+            :func:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.order`.
+        '''
+        return max(equ.order(gen) for equ in self.equations())
+
     def equation(self, index):
         r'''
             Method to get an equation from the system.
@@ -119,7 +130,7 @@ class RWOSystem:
             polynomial that is equal to zero, assuming the polynomials in ``self._equations`` are
             all equal to zero.
 
-            This method allow to obtainthe equations in ``self._equations`` but also the derived
+            This method allow to obtain the equations in ``self._equations`` but also the derived
             equations using the operation of the system.
 
             INPUT:
@@ -361,7 +372,7 @@ class RWOSystem:
             Method to retrieve the algebraic variables in the system.
 
             This method computes the number of algebraic variables that appear on the system. This means,
-            gethering each appearance of the differential variables and filter them by the variables of the system.
+            gathering each appearance of the differential variables and filter them by the variables of the system.
 
             OUTPUT:
 
@@ -392,7 +403,7 @@ class RWOSystem:
         r'''
             Method to get the equivalent algebraic equations.
 
-            Considering a differential polynomial algebraically means to sepparate semantically
+            Considering a differential polynomial algebraically means to separate semantically
             the relation of different derivatives of a differential variable. This is mainly useful 
             once all differential operations are completed.
 
@@ -695,14 +706,16 @@ class RWOSystem:
         raise RuntimeError("This part of the code should never be reached")
 
     ###################################################################################################
-    ### Private methods concerning the resultan
+    ### Private methods concerning the resultant
     def __decide_resultant_algorithm(self):
         r'''
             Method to decide the (hopefully) most optimal algorithm to compute the resultant.
         '''
         if self.is_linear():
+            logger.info("The system is linear: we use Macaulay")
             return "macaulay"
         else:
+            logger.info("We could not decide a better algorithm: using iterative elimination")
             return "iterative"
 
     def __get_extension(self, bound):
@@ -742,10 +755,13 @@ class RWOSystem:
 
             * ``bound``: bound the the extension to look for a system to get a resultant.
         '''
+        logger.info("Getting the appropriate extension for having a SP2 system...")
         L = self.__get_extension(bound)
 
+        logger.info("Getting the homogenize version of the equations...")
         equs = [el.homogenize() for el in self.extend_by_operation(L).algebraic_equations()]
         ring = equs[0].parent()
+        logger.info("Computing the Macaulay resultant...")
         return ring.macaulay_resultant(equs)
   
     def __iterative(self, bound):
@@ -756,7 +772,97 @@ class RWOSystem:
 
             * ``bound``: bound the the extension to look for a system to get a resultant.
         '''
-        raise NotImplementedError("Iterative elimination not yet implemented")
+        variables = [el for el in self.variables]
+        ## This method first eliminate the linear variables
+        logger.info("Checking if there is any linear variable...")
+        lin_vars = self.maximal_linear_variables()
+        if len(lin_vars) > 0:
+            lin_vars = lin_vars[0] # we take the biggest subset
+            logger.info(f"Found linear variables {lin_vars}: we remove them first...")
+            system = self.change_variables(lin_vars)
+            # indices with the smallest equations
+            smallest_equations = sorted(range(system.size()), key=lambda p:len(system.equation(p).monomials()))
+            base_cases = smallest_equations[:len(lin_vars)]
+            new_equations = [
+                self.parent(system.subsystem(base_cases + [i]).diff_resultant(bound))
+                for i in smallest_equations[len(lin_vars):]
+            ]
+            logger.info(f"Computed {len(new_equations)} for the remaining {len(variables)-len(lin_vars)} variables")
+            rem_variables = [el for el in variables if (not el in lin_vars)]
+            logger.info(f"We now remove {rem_variables}")
+            system = self.__class__(new_equations, rem_variables)
+            return system.diff_resultant(bound)
+        ## The remaining variables are not linear
+        logger.info("No linear variable remain in the system. We proceed by univariate eliminations")
+        if len(self.variables > 1):
+            logger.info("Several eliminations are needed --> we use recursion")
+            logger.info("Picking the best variable to start with...")
+            v = self.__iterative_best_variable()
+            ## Picking the best diff_pivot equation
+            equs_by_order = sorted(range(self.size()), key=lambda p:self.equation(p).order(v))
+            pivot = self.equation(equs_by_order[0])
+            logger.info(f"Picked the pivot {pivot} for differential elimination")
+            logger.info(f"Computing the elimination for all pair of equations...")
+            new_equs = [
+                self.subsystem([equs_by_order[0], i], variables=[v]).diff_resultant(bound) 
+                for i in equs_by_order[1:]
+            ]
+            new_vars = [nv for nv in self.variables if nv != v]
+            system = self.__class__(new_equs, new_vars)
+            logger.info(f"Variable {v} eliminated. Proceeding with the remaining variables {new_vars}...")
+            return system.diff_resultant(bound)
+        else:
+            logger.info("Only one variable remains. We proceed to eliminate it in an algebraic fashion")
+            logger.info(f"Extending the system to eliminate {self.variables[0]}...")
+            L = system.__get_extension(bound)
+            system = system.extend_by_operation(L) # now we can eliminate everything
+            alg_equs = system.algebraic_equations()
+            alg_vars = system.algebraic_variables()
+
+            logger.info(f"Iterating to remove all the algebraic variables..")
+            while(len(alg_equs) > 1 and len(alg_vars) > 0):
+                logger.info(f"\tRemaining variables: {alg_vars}")
+                logger.info(f"\tPicking best algebraic variable to eliminate...")
+                # getting th degrees of each variable in each equation
+                degrees = [[equ.degree(v) for equ in alg_equs] for v in alg_vars]
+                # the best variable to remove is the one that appears the least
+                num_appearances = [degrees[i].count(0) for i in range(len(alg_vars))]
+                iv = num_appearances.index(min(num_appearances))
+                v = alg_vars.pop(iv)
+                logger.info(f"\tPicked {v}")
+
+                # the "pivot" equation is the one with minimal degree in "v"
+                logger.info(f"\tPicking the best 'pivot' to eliminate {v}...")
+                pivot = alg_equs.pop(degrees[iv].index(min(degrees[iv])))
+                R = pivot.parent()
+                logger.info(f"\tEliminating the variable {v} in each pair of equations...")
+                for i in range(len(alg_equs)):
+                    if alg_equs[i].degree(v) > 0:
+                        alg_equs[i] = R(pivot.polynomial(v).sylvester_matrix(alg_equs[i].polynomial(v)).determinant())
+            ## Checking the result
+            
+            logger.info(f"Elimination procedure finished. Checking that we have a result...")
+            old_vars = self.algebraic_variables()
+            new_vars = list(set(sum([list(set(el.variables())) for el in alg_equs],[])))
+            if any(el in old_vars for el in new_vars):
+                raise ValueError(f"A variable that had to be eliminated remains!!\n\
+                    \t-Old vars: {old_vars}\n\
+                    \t-Got vars:{new_vars}")
+            
+            ## We pick the minimal equation remaining
+            logger.info(f"Return the smallest result obtained")
+            return sorted(alg_equs, key=lambda p: p.degree()**2 + len(p.monomials()))[0]
+
+    def __iterative_best_variable(self):
+        r'''
+            Method to choose the best variable to do univariate elimination.
+        '''
+        v = self.variables[0]
+
+        for nv in self.variables[1:]:
+            if self.order(nv) < self.order(v): v = nv
+                
+        return v
 
     ###################################################################################################
 
