@@ -694,16 +694,21 @@ class RWOSystem:
                 raise ValueError("The algorithm for the algebraic resultant must be 'auto', 'dixon', 'macaulay' or 'iterative'")
             if alg_res == "auto":
                 logging.info("Deciding automatically the algorithm for the resultant...")
-                alg_res = self.__decide_resultant_algorithm()
+                to_use_alg = self.__decide_resultant_algorithm()
+            else:
+                to_use_alg = alg_res
             
             ## Computing the resultant
-            logging.info(f"We compute the resultant using the algorithm {alg_res}")
-            if(alg_res == "dixon"):
+            logging.info(f"We compute the resultant using the algorithm {to_use_alg}")
+            if(to_use_alg == "dixon"):
                 output = self.__dixon(bound_L)
-            elif(alg_res == "macaulay"):
+            elif(to_use_alg == "macaulay"):
                 output = self.__macaulay(bound_L)
-            elif(alg_res == "iterative"):
-                output = self.__iterative(bound_L)
+            elif(to_use_alg == "iterative"):
+                output = self.__iterative(bound_L, alg_res)
+
+            if output == 0: # degenerate case
+                raise ValueError(f"We obtained a zero resultant --> this is a degenerate case (used {to_use_alg})")
             self.__CACHED_RES = self.parent()(output)
 
         return self.__CACHED_RES
@@ -767,7 +772,7 @@ class RWOSystem:
         logger.info("Computing the Macaulay resultant...")
         return ring.macaulay_resultant(equs)
   
-    def __iterative(self, bound):
+    def __iterative(self, bound, alg_res = "auto"):
         r'''
             Method that computes the resultant of an extension of ``self` using an iterative elimination.
 
@@ -779,7 +784,7 @@ class RWOSystem:
         ## This method first eliminate the linear variables
         logger.info("Checking if there is any linear variable...")
         lin_vars = self.maximal_linear_variables()
-        if len(lin_vars) > 0:
+        if len(lin_vars) > 0 and alg_res != "iterative":
             lin_vars = list(lin_vars[0]) # we take the biggest subset
             logger.info(f"Found linear variables {lin_vars}: we remove {'it' if len(lin_vars) == 1 else 'them'} first...")
             logger.info("##########################################################")
@@ -796,26 +801,27 @@ class RWOSystem:
             rem_variables = [el for el in variables if (not el in lin_vars)]
             logger.info(f"We now remove {rem_variables}")
             system = self.__class__(new_equations, self.parent(), rem_variables)
-            return system.diff_resultant(bound)
+            return system.diff_resultant(bound, alg_res)
         ## The remaining variables are not linear
         logger.info("No linear variable remain in the system. We proceed by univariate eliminations")
         if len(self.variables) > 1:
             logger.info("Several eliminations are needed --> we use recursion")
             logger.info("Picking the best variable to start with...")
             v = self.__iterative_best_variable()
+            logger.info(f"Picked differential variable {repr(v)}")
             ## Picking the best diff_pivot equation
             equs_by_order = sorted(range(self.size()), key=lambda p:self.equation(p).order(v))
             pivot = self.equation(equs_by_order[0])
             logger.info(f"Picked the pivot {pivot} for differential elimination")
             logger.info(f"Computing the elimination for all pair of equations...")
             new_equs = [
-                self.subsystem([equs_by_order[0], i], variables=[v]).diff_resultant(bound) 
+                self.subsystem([equs_by_order[0], i], variables=[v]).diff_resultant(bound, alg_res) 
                 for i in equs_by_order[1:]
             ]
             new_vars = [nv for nv in self.variables if nv != v]
             system = self.__class__(new_equs, self.parent(), new_vars)
             logger.info(f"Variable {v} eliminated. Proceeding with the remaining variables {new_vars}...")
-            return system.diff_resultant(bound)
+            return system.diff_resultant(bound, alg_res)
         else:
             logger.info("Only one variable remains. We proceed to eliminate it in an algebraic fashion")
             logger.info(f"Extending the system to eliminate {repr(self.variables[0])}...")
@@ -868,9 +874,19 @@ class RWOSystem:
             Method to choose the best variable to do univariate elimination.
         '''
         v = self.variables[0]
-
+        def measure(v):
+            c = 0
+            for equ in self.equations():
+                for t in equ.polynomial().variables():
+                    if t in v:
+                        c += v.index(t)**equ.polynomial().degree(t)
+            return c
+        m = measure(v)
         for nv in self.variables[1:]:
-            if self.order(nv) < self.order(v): v = nv
+            nm = measure(nv)
+            if nm < m: 
+                v = nv
+                m = nm
                 
         return v
 

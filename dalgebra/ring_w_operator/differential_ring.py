@@ -93,11 +93,11 @@ class DifferentialRingFactory(UniqueFactory):
             args = args[0]
         
         if len(args) == 0:
-            base = kwds["base"]; derivation = kwds["derivation"]
+            base = kwds["base"]; derivation = kwds.get("derivation", lambda p : 0)
         if len(args) == 1:
             if "base" in kwds:
                 raise TypeError("Duplicated value for the base ring")
-            base = args[0]; derivation = kwds["derivation"]
+            base = args[0]; derivation = kwds.get("derivation", lambda p : 0)
         elif len(args) == 2:
             if "base" in kwds:
                 raise TypeError("Duplicated value for the base ring")
