@@ -802,25 +802,42 @@ class RWOSystem:
             logger.info(f"We now remove {rem_variables}")
             system = self.__class__(new_equations, self.parent(), rem_variables)
             return system.diff_resultant(bound, alg_res)
+        
+        ## Logger printing
+        if alg_res != "iterative":
+            logger.info("No linear variable remain in the system. We proceed by univariate eliminations")
+        else:
+            logger.info("Forced iterative elimination. We do not look for linear variables")
         ## The remaining variables are not linear
-        logger.info("No linear variable remain in the system. We proceed by univariate eliminations")
         if len(self.variables) > 1:
             logger.info("Several eliminations are needed --> we use recursion")
             logger.info("Picking the best variable to start with...")
             v = self.__iterative_best_variable()
             logger.info(f"Picked differential variable {repr(v)}")
+            rem_vars = [nv for nv in self.variables if nv != v]
             ## Picking the best diff_pivot equation
-            equs_by_order = sorted(range(self.size()), key=lambda p:self.equation(p).order(v))
-            pivot = self.equation(equs_by_order[0])
-            logger.info(f"Picked the pivot {pivot} for differential elimination")
-            logger.info(f"Computing the elimination for all pair of equations...")
-            new_equs = [
-                self.subsystem([equs_by_order[0], i], variables=[v]).diff_resultant(bound, alg_res) 
-                for i in equs_by_order[1:]
-            ]
-            new_vars = [nv for nv in self.variables if nv != v]
-            system = self.__class__(new_equs, self.parent(), new_vars)
-            logger.info(f"Variable {v} eliminated. Proceeding with the remaining variables {new_vars}...")
+            if self.order(v) >= 0: # the variable appear in the system
+                equs_by_order = sorted(
+                    [i for i in range(self.size()) if self.equation(i).order(v) >= 0], 
+                    key=lambda p:self.equation(p).order(v)
+                )
+                others = [i for i in range(self.size()) if (not i in equs_by_order)]
+                if len(equs_by_order) < 2:
+                    raise ValueError(f"Not enough equations to eliminate {repr(v)}")
+                pivot = self.equation(equs_by_order[0])
+                logger.info(f"Picked the pivot [{str(pivot)[:30]}...] for differential elimination")
+                logger.info(f"Computing the elimination for all pair of equations...")
+                new_equs = [
+                    self.subsystem([equs_by_order[0], i], variables=[v]).diff_resultant(bound, alg_res) 
+                    for i in equs_by_order[1:]
+                ]
+                logger.info(f"Adding equations without {repr(v)}...")
+                new_equs += [self.equation(others[i]) for i in range(len(others))]
+                system = self.__class__(new_equs, self.parent(), rem_vars)
+                logger.info(f"Variable {repr(v)} eliminated. Proceeding with the remaining variables {rem_vars}...")
+            else:
+                logger.info(f"The variable {repr(v)} does not appear. Proceeding with the remaining variables {rem_vars}...")
+                system = self.subsystem(variables = rem_vars)
             return system.diff_resultant(bound, alg_res)
         else:
             logger.info("Only one variable remains. We proceed to eliminate it in an algebraic fashion")
@@ -840,7 +857,7 @@ class RWOSystem:
                 degrees = [[equ.degree(v) for equ in alg_equs] for v in alg_vars]
                 # the best variable to remove is the one that appears the least
                 num_appearances = [len(alg_equs)-degrees[i].count(0) for i in range(len(alg_vars))]
-                logger.info(f"Number of appearance for each variable: {num_appearances}")
+                logger.info(f"\tNumber of appearance for each variable: {num_appearances}. Number of equations: {len(alg_equs)}")
                 iv = last_index(num_appearances,min(num_appearances))
                 v = alg_vars.pop(iv)
                 logger.info(f"\tPicked {v}")
@@ -849,12 +866,15 @@ class RWOSystem:
                 logger.info(f"\tPicking the best 'pivot' to eliminate {v}...")
                 pivot = alg_equs.pop(degrees[iv].index(min([el for el in degrees[iv] if el > 0])))
                 R = pivot.parent()
-                logger.info(f"\t- Pivot --> {str(pivot)[:30]}")
+                logger.info(f"\t- Pivot --> {str(pivot)[:30]}... [with {len(pivot.monomials())} monomials and coefficients {max(len(str(c)) for c in pivot.coefficients())} long]")
                 logger.info(f"\tEliminating the variable {v} in each pair of equations...")
                 for i in range(len(alg_equs)):
                     if alg_equs[i].degree(v) > 0:
-                        logger.info(f"\tEliminating with {str(alg_equs[i])[:30]}...")
-                        alg_equs[i] = R(pivot.polynomial(v).sylvester_matrix(alg_equs[i].polynomial(v)).determinant())
+                        logger.info(f"\tEliminating with {str(alg_equs[i])[:30]}... [with {len(alg_equs[i].monomials())} monomials and coefficients {max(len(str(c)) for c in alg_equs[i].coefficients())} long]")
+                        alg_equs[i] = R(str(
+                            self.__iterative_to_univariate(pivot, v).sylvester_matrix(
+                                self.__iterative_to_univariate(alg_equs[i], v)
+                            ).determinant()))
             ## Checking the result
             logger.info(f"--------------------------------------------------")
             logger.info(f"Elimination procedure finished. Checking that we have a result...")
@@ -889,6 +909,12 @@ class RWOSystem:
                 m = nm
                 
         return v
+
+    def __iterative_to_univariate(self, polynomial, variable):
+        try:
+            return polynomial.polynomial(variable)
+        except:
+            return polynomial.parent().univariate_ring(variable)(str(polynomial))
 
     ###################################################################################################
 
