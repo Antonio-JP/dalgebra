@@ -25,7 +25,7 @@ import logging
 
 from functools import reduce
 
-from sage.all import latex, ZZ, PolynomialRing, Compositions, Subsets
+from sage.all import latex, ZZ, PolynomialRing, Compositions, Subsets, save
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 
@@ -866,15 +866,26 @@ class RWOSystem:
                 logger.info(f"\tPicking the best 'pivot' to eliminate {v}...")
                 pivot = alg_equs.pop(degrees[iv].index(min([el for el in degrees[iv] if el > 0])))
                 R = pivot.parent()
+                pivot = self.__iterative_to_univariate(pivot, v)
                 logger.info(f"\t- Pivot --> {str(pivot)[:30]}... [with {len(pivot.monomials())} monomials and coefficients {max(len(str(c)) for c in pivot.coefficients())} long]")
                 logger.info(f"\tEliminating the variable {v} in each pair of equations...")
                 for i in range(len(alg_equs)):
                     if alg_equs[i].degree(v) > 0:
-                        logger.info(f"\tEliminating with {str(alg_equs[i])[:30]}... [with {len(alg_equs[i].monomials())} monomials and coefficients {max(len(str(c)) for c in alg_equs[i].coefficients())} long]")
-                        alg_equs[i] = R(str(
-                            self.__iterative_to_univariate(pivot, v).sylvester_matrix(
-                                self.__iterative_to_univariate(alg_equs[i], v)
-                            ).determinant()))
+                        equ_to_eliminate = self.__iterative_to_univariate(alg_equs[i], v)
+                        logger.info(f"\tEliminating with {str(equ_to_eliminate)[:30]}... [with {len(equ_to_eliminate.monomials())} monomials and coefficients {max(len(str(c)) for c in equ_to_eliminate.coefficients())} long]")
+                        logger.info(f"\tComputing Sylvester matrix...")
+
+                        syl_mat = pivot.sylvester_matrix(equ_to_eliminate)
+                        if len(alg_vars) == 0:
+                            logger.info(f"\tStoring Sylvester matrix...")
+                            with open("./sylvester_matrix.txt", "w") as syl_file:
+                                syl_file.write(f"{syl_mat.nrows()},{syl_mat.ncols()}\n")
+                                for r in range(syl_mat.nrows()):
+                                    for c in range(syl_mat.ncols()):
+                                        syl_file.write(f"{r},{c};{str(syl_mat[r][c])}\n")
+
+                        logger.info(f"\tComputing Sylvester determinant...")
+                        alg_equs[i] = R(str(syl_mat.determinant()))
             ## Checking the result
             logger.info(f"--------------------------------------------------")
             logger.info(f"Elimination procedure finished. Checking that we have a result...")
