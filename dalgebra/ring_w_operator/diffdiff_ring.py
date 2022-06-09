@@ -42,57 +42,58 @@ from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-mod
 from ore_algebra import OreAlgebra
 
 from .ring_w_operator import (RingWithOperators_Wrapper, RingWithOperators_WrapperElement, 
-                                RingsWithOperators, CallableMap, RingWithOperatorsFunctor)
+                                CallableMap, RingWithOperatorsFunctor)
+from .difference_ring import DifferenceRings
+from .differential_ring import DifferentialRings
 
-_RingsWithOperators = RingsWithOperators.__classcall__(RingsWithOperators)
+_DifferenceRings = DifferenceRings.__classcall__(DifferenceRings)
+_DifferentialRings = DifferentialRings.__classcall__(DifferentialRings)
 
-class DifferenceRings(Category):
+class DiffDiffRings(Category):
     # methods of the category itself
     def super_categories(self):
-        return [_RingsWithOperators]
+        return [_DifferenceRings,_DifferentialRings]
 
     # methods that all difference structures must implement
     class ParentMethods:
         # abstract methods from the super category, now implemented
-        def operation(self, element, _):
+        def operation(self, element, operation=0):
+            return self.operators()[operation](element)
+
+        def difference(self, element):
+            return self.operators()[0](element)
+        
+        def shift(self, element):
             return self.difference(element)
 
-        # new abstract methods for this category
-        @abstract_method
-        def difference(self, _):
-            raise NotImplementedError
-
-        def shift(self,element):
-            return self.difference(element)
+        def derivative(self, element):
+            return self.operators()[1](element)
 
         @abstract_method
-        def constants(self):
+        def constants(self, _):
             raise NotImplementedError
 
     # methods that all difference elements must implement
     class ElementMethods:
         # abstract methods from the super category
-        def _operation(self, *_):
-            return self._difference()
+        def _operation(self, operation=0, *_):
+            return self.parent().operation(self,operation=operation) #pylint: disable=no-member
 
         # new methods for this category
         def difference(self, times=1):
-            return self.operation(times) #pylint: disable=no-member
+            return self.operation(times=times,operation=0) #pylint: disable=no-member
 
         def shift(self, times=1):
             return self.difference(times) #pylint: disable=no-member
 
-        def _difference(self, *_):
-            r'''
-                Method that actually computes the difference of an element of a ring with operator.
-            '''
-            return self.parent().difference(self) #pylint: disable=no-member
+        def derivative(self, times=1):
+            return self.operation(times=times,operation=1) #pylint: disable=no-member
 
     # methods that all morphisms involving difference rings must implement
     class MorphismMethods: 
         pass
 
-class DifferenceRingFactory(UniqueFactory):
+class DiffDiffRingFactory(UniqueFactory):
     r'''
         Factory to create uniquely Difference rings from usual rings Sage structures
     '''
@@ -102,22 +103,36 @@ class DifferenceRingFactory(UniqueFactory):
             args = args[0]
         
         if len(args) == 0:
-            base = kwds["base"]; difference = kwds.get("difference", lambda p : p)
+            base = kwds["base"]
+            difference = kwds.get("difference", lambda p : p)
+            derivation = kwds.get("derivation", lambda p : 0)
         if len(args) == 1:
             if "base" in kwds:
                 raise TypeError("Duplicated value for the base ring")
-            base = args[0]; difference = kwds.get("difference", lambda p : p)
+            base = args[0]
+            difference = kwds.get("difference", lambda p : p)
+            derivation = kwds.get("derivation", lambda p : 0)
         elif len(args) == 2:
             if "base" in kwds:
                 raise TypeError("Duplicated value for the base ring")
             if "difference" in kwds:
                 raise TypeError("Duplicated value for the difference")
             base = args[0]; difference = args[1]
+            derivation = kwds.get("derivation", lambda p : 0)
+        elif len(args) == 3:
+            if "base" in kwds:
+                raise TypeError("Duplicated value for the base ring")
+            if "difference" in kwds:
+                raise TypeError("Duplicated value for the difference")
+            if "derivation" in kwds:
+                raise TypeError("Duplicated value for the derivation")
+            base = args[0]; difference = args[1]
+            derivation = args[2]
 
-        return (base, difference)
+        return (base, difference, derivation)
 
     def create_object(self, _, key):
-        base, difference = key
+        base, difference, derivation = key
 
         if base in DifferenceRings:
             # check equality of the operators?
@@ -141,51 +156,64 @@ class DifferenceRingFactory(UniqueFactory):
         elif callable(difference):
             new_difference = CallableMap(difference, base, base)
 
-        return DifferenceRing_Wrapper(base, new_difference)
+        if isinstance(derivation, Map):
+            try:
+                domain_po = pushout(derivation.domain(), base)
+                codomain_po = pushout(derivation.codomain(), base) 
+                if not domain_po == base:
+                    raise TypeError(f"The domain [{derivation.domain()}] must be something to be coerced into {base}")
+                if not codomain_po == base:
+                    raise TypeError(f"The codomain [{derivation.codomain()}] must be something to be coerced into {base}")
 
-DifferenceRing = DifferenceRingFactory("dalgebra.ring_w_operator.difference_ring.DifferenceRing")
+                if domain_po != derivation.domain() or codomain_po != derivation.codomain():
+                    new_derivation = CallableMap(lambda p : derivation(p), base, base)
+                else:
+                    new_derivation = derivation
+            except:
+                raise ValueError(f"{derivation.domain()} or {derivation.codomain()} could not be pushed into common parent with {base}")
+        elif callable(derivation):
+            new_derivation = CallableMap(derivation, base, base)
 
-class DifferenceRing_WrapperElement(RingWithOperators_WrapperElement):
+        return DifferenceRing_Wrapper(base, new_difference, new_derivation)
+
+DiffDiffRing = DiffDiffRingFactory("dalgebra.ring_w_operator.difference_ring.DifferenceRing")
+
+class DiffDiffRing_WrapperElement(RingWithOperators_WrapperElement):
     def __init__(self, parent, element):
-        if(not isinstance(parent, DifferenceRing_Wrapper)):
+        if(not isinstance(parent, DiffDiffRing_Wrapper)):
             raise TypeError("An element created from a non-wrapper parent")
         elif(not element in parent.wrapped):
             raise TypeError("An element outside the parent [%s] is requested" %parent)
 
         super().__init__(parent, element)
 
-class DifferenceRing_Wrapper(RingWithOperators_Wrapper):
-    Element = DifferenceRing_WrapperElement
+class DiffDiffRing_Wrapper(RingWithOperators_Wrapper):
+    Element = DiffDiffRing_WrapperElement
 
-    def __init__(self, base, difference, category=None):
-        categories = [DifferenceRings()]
+    def __init__(self, base, difference, derivation, category=None):
+        categories = [DiffDiffRings()]
         if isinstance(category, (list, tuple)):
             categories += list(category)
         elif category != None:
             categories.append(category)
-        super().__init__(base, difference, "difference", tuple(categories))
-
-    def difference(self, element):
-        return super().operation(element)
-
-    def operator_ring(self):
-        return OreAlgebra(self.wrapped, ('S', lambda p : self(p).difference().wrapped, lambda _ : self.wrapped.zero()))
+        super().__init__(base, [difference, derivation], ["difference", "derivation"], tuple(categories))
 
     def construction(self):
-        return DifferenceRingFunctor(self.operators()[0]), self.wrapped
+        return DiffDiffRingFunctor(self.operators()[0], self.operators()[1]), self.wrapped
 
     ## Representation methods
     def __repr__(self) -> str:
-        return f"Difference Ring [{self.wrapped}] with difference [{repr(self.operator)}]"
+        return f"Difference-Differential Ring [{self.wrapped}] with difference [{repr(self.operators()[0])}] \
+            and derivation [{repr(self.operators()[1])}]"
 
-class DifferenceRingFunctor(RingWithOperatorsFunctor):
-    def __init__(self, difference):
-        super().__init__([difference])
+class DiffDiffRingFunctor(RingWithOperatorsFunctor):
+    def __init__(self, difference, derivation):
+        super().__init__([difference, derivation])
         
     def _apply_functor(self, x):
-        return DifferenceRing(x,self.operators()[0])
+        return DiffDiffRing(x,*self.operators())
         
     def _repr_(self):
-        return "DifferenceRing(*,[%s])" %(repr(self.operators()[0]))
+        return "DiffDiffRing(*,%s)" %(repr(self.operators()))
         
-__all__ = ["DifferenceRings", "DifferenceRing"]
+__all__ = ["DiffDiffRings", "DiffDiffRing"]

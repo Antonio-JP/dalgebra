@@ -22,15 +22,21 @@ from sage.symbolic.ring import SR #pylint: disable=no-name-in-module
 
 _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
 
-class RingsWithOperator(Category):
+class RingsWithOperators(Category):
     # methods of the category itself
     def super_categories(self):
         return [_CommutativeRings]
 
     # methods that all differential structures must implement
     class ParentMethods:
+        def operators(self):
+            raise NotImplementedError
+
+        def noperators(self):
+            return len(self.operators())
+
         @abstract_method
-        def operation(self, _):
+        def operation(self, element, operator=0):
             raise NotImplementedError
 
         @abstract_method
@@ -51,22 +57,22 @@ class RingsWithOperator(Category):
 
     # methods that all differential elements must implement
     class ElementMethods:
-        def operation(self, times=1):
+        def operation(self, times=1, operation=0):
             if(not times in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
 
             if(times == 0):
                 return self
             elif(times == 1):
-                return self._operation()
+                return self._operation(operation=operation)
             else:
-                return self.operation(times=times-1).operation()
+                return self.operation(times=times-1,operation=operation).operation(operation=operation)
 
-        def _operation(self, *_):
+        def _operation(self, operation=0, *_):
             r'''
                 Method that actually computes the operation of an element of a ring with operator.
             '''
-            return self.parent().operation(self) #pylint: disable=no-member
+            return self.parent().operation(self,operation=operation) #pylint: disable=no-member
 
     # methods that all morphisms involving differential rings must implement
     class MorphismMethods: 
@@ -74,55 +80,57 @@ class RingsWithOperator(Category):
 
 class RingWithOperatorFactory(UniqueFactory):
     def create_key(self, *args, **kwds):
-        ## Allowing the args input to not be unrolled
-        if(len(args) == 1 and type(args[0]) in (list, tuple)):
-            args = args[0]
+        if "base" in kwds:
+            base = kwds["base"]
+            operators = args
+        else:
+            base = args[0]
+            operators = args[1:]
         
-        if len(args) == 0:
-            base = kwds["base"]; operator = kwds["operator"]
-        if len(args) == 1:
-            if "base" in kwds:
-                raise TypeError("Duplicated value for the base ring")
-            base = args[0]; operator = kwds["operator"]
-        elif len(args) == 2:
-            if "base" in kwds:
-                raise TypeError("Duplicated value for the base ring")
-            if "operator" in kwds:
-                raise TypeError("Duplicated value for the operator")
-            base = args[0]; operator = args[1]
+        if operators is None:
+            raise TypeError("No operators were given")
+        elif not isinstance(operators,(list,tuple)):
+            operators = [operators]
 
-        return (base, operator)
+        if len(operators) == 0:
+            raise TypeError("No operators were given")
+
+        return (base, operators)
 
     def create_object(self, _, key):
-        base, operator = key
+        base, operators = key
 
-        if base in RingsWithOperator:
-            # check equality of the operators?
+        if base in RingsWithOperators:
+            if base.noperators() != len(operators):
+                raise ValueError("The number of operators does not match!")
             return base
 
-        if isinstance(operator, Map):
-            try:
-                domain_po = pushout(operator.domain(), base)
-                codomain_po = pushout(operator.codomain(), base) 
-                if not domain_po == base:
-                    raise TypeError(f"The domain [{operator.domain()}] must be something to be coerced into {base}")
-                if not codomain_po == base:
-                    raise TypeError(f"The codomain [{operator.codomain()}] must be something to be coerced into {base}")
+        new_operators = []
+        for operator in operators:
+            if isinstance(operator, Map):
+                try:
+                    domain_po = pushout(operator.domain(), base)
+                    codomain_po = pushout(operator.codomain(), base) 
+                    if not domain_po == base:
+                        raise TypeError(f"The domain [{operator.domain()}] must be something to be coerced into {base}")
+                    if not codomain_po == base:
+                        raise TypeError(f"The codomain [{operator.codomain()}] must be something to be coerced into {base}")
 
-                if domain_po != operator.domain() or codomain_po != operator.codomain():
-                    new_operator = CallableMap(lambda p : operator(p), base, base)
-            except:
-                raise ValueError(f"{operator.domain()} or {operator.codomain()} could not be pushed into common parent with {base}")
-        elif callable(operator):
-            new_operator = CallableMap(operator, base, base)
+                    if domain_po != operator.domain() or codomain_po != operator.codomain():
+                        new_operator = CallableMap(lambda p : operator(p), base, base)
+                except:
+                    raise ValueError(f"{operator.domain()} or {operator.codomain()} could not be pushed into common parent with {base}")
+            elif callable(operator):
+                new_operator = CallableMap(operator, base, base)
+            new_operators.append(new_operator)
+        
+        return RingWithOperators_Wrapper(base, new_operators)
 
-        return RingWithOperator_Wrapper(base, new_operator)
+RingWithOperators = RingWithOperatorFactory("dalgebra.ring_w_operator.ring_w_operator.RingWithOperator")
 
-RingWithOperator = RingWithOperatorFactory("dalgebra.ring_w_operator.ring_w_operator.RingWithOperator")
-
-class RingWithOperator_WrapperElement(Element):
+class RingWithOperators_WrapperElement(Element):
     def __init__(self, parent, element):
-        if(not isinstance(parent, RingWithOperator_Wrapper)):
+        if(not isinstance(parent, RingWithOperators_Wrapper)):
             raise TypeError("An element created from a non-wrapper parent")
         elif(not element in parent.wrapped):
             raise TypeError("An element outside the parent [%s] is requested" %parent)
@@ -154,7 +162,7 @@ class RingWithOperator_WrapperElement(Element):
             return False
         r = pushout(self.parent(), parent(x))
         s, x = r(self), r(x)
-        if isinstance(s.parent(), RingWithOperator_Wrapper):
+        if isinstance(s.parent(), RingWithOperators_Wrapper):
             return s.wrapped == x.wrapped
         else:
             return s == x
@@ -174,36 +182,57 @@ class RingWithOperator_WrapperElement(Element):
     def _latex_(self) -> str:
         return latex(self.wrapped)
 
-class RingWithOperator_Wrapper(CommutativeRing):
-    Element = RingWithOperator_WrapperElement
+class RingWithOperators_Wrapper(CommutativeRing):
+    Element = RingWithOperators_WrapperElement
 
-    def __init__(self, base, operator,axioms=None, category=None):
+    def __init__(self, base, operators, axioms=None, category=None):
+        if not isinstance(operators, (list, tuple)):
+            operators = [operators]
+        if axioms is None:
+            axioms = len(operators)*[None]
+        elif not isinstance(axioms, (list, tuple)):
+            axioms = len(operators)*[axioms]
+        elif all(not isinstance(axiom, (list, tuple))):
+            axioms = len(operators)*[axioms]
+        else:
+            if len(axioms) < len(operators):
+                axioms += (len(operators) - len(axioms))*[None]
+            for i in range(len(axioms)):
+                if axioms[i] != None and not isinstance(axioms[i], (list, tuple)):
+                    axioms[i] = [axioms[i]]
+
         # creating appropriate structure for operator
-        if not isinstance(operator, Map):
-            raise TypeError("The operator must be a map")
-        if not (operator.domain() == operator.codomain() == base):
-            raise ValueError("The map must be withing the base ring")
-        
-        # testing the operator
-        axioms = ["add_group_hom"] if axioms is None else axioms
-        test = TestOperator(operator, axioms)
-        if not test.test():
-            raise ValueError(f"The operator {operator} fo not satisfy the axioms {axioms}")
+        new_operators = []
+        for i in range(len(operators)):
+            operator = operators[i]
+            axiom = axioms[i]
+            if not isinstance(operator, Map):
+                raise TypeError("The operator must be a map")
+            if not (operator.domain() == operator.codomain() == base):
+                raise ValueError("The map must be withing the base ring")
+            
+            # testing the operator
+            axiom = ["add_group_hom"] if axiom is None else axiom
+            test = TestOperator(operator, axiom)
+            if not test.test():
+                raise ValueError(f"The operator {operator} do not satisfy the axioms {axiom}")
 
-        # assigning values
-        self.__base = base
-        new_operator = lambda p : operator(p.wrapped)
-        try:
-            new_operator.__name__ = operator.__name__
-        except AttributeError:
+            # assigning values
+            self.__base = base
+            new_operator = lambda p : operator(p.wrapped)
             try:
-                new_operator.__name__ = f"{list(base.gens())} |--> {operator.im_gens()}"
+                new_operator.__name__ = operator.__name__
             except AttributeError:
-                new_operator.__name__ = "<callable>"
-        self.__operator = CallableMap(new_operator, self, self)
+                try:
+                    new_operator.__name__ = f"{list(base.gens())} |--> {operator.im_gens()}"
+                except AttributeError:
+                    new_operator.__name__ = "<callable>"
+            new_operators.append(CallableMap(new_operator, self, self))
+            
+        self.__operators = new_operators
 
         # creating categories
-        categories = [RingsWithOperator(), base.category()]
+        categories = [RingsWithOperators(), base.category()]
         if(isinstance(category, (list, tuple))):
             categories += list(category)
         elif(category != None): 
@@ -213,21 +242,20 @@ class RingWithOperator_Wrapper(CommutativeRing):
 
         # registering conversion to simpler structures
         current = self.base()
-        morph = RingWithOperatorPolySimpleMorphism(self, current)
+        morph = RingWithOperatorsPolySimpleMorphism(self, current)
         current.register_conversion(morph)
         while(not(current.base() == current)):
             current = current.base()
-            morph = RingWithOperatorPolySimpleMorphism(self, current)
+            morph = RingWithOperatorsPolySimpleMorphism(self, current)
             current.register_conversion(morph)
 
     @property
     def wrapped(self): return self.__base
 
-    @property
-    def operator(self): return self.__operator
+    def operators(self): return self.__operators
 
-    def operation(self, element):
-        return self.operator(element)
+    def operation(self, element, operation=0):
+        return self.operators()[operation](element)
 
     ## Coercion methods
     def _has_coerce_map_from(self, S):
@@ -265,7 +293,7 @@ class RingWithOperator_Wrapper(CommutativeRing):
             return element in self.wrapped        
 
     def construction(self):
-        return RingWithOperatorFunctor(self.__operator), self.wrapped
+        return RingWithOperatorsFunctor(self.__operators), self.wrapped
 
     # Rings methods
     def characteristic(self):
@@ -279,13 +307,13 @@ class RingWithOperator_Wrapper(CommutativeRing):
 
     ## Representation methods
     def __repr__(self) -> str:
-        return f"Ring [{self.wrapped}] with operator [{repr(self.operator)}]"
+        return f"Ring [{self.wrapped}] with operator [{repr(self.operators())}]"
 
     def __str__(self):
         return repr(self)
 
     def _latex_(self):
-        return r"\left(" + latex(self.wrapped) + ", " + latex(self.operator) + r"\right)"
+        return r"\left(" + latex(self.wrapped) + ", " + latex(self.operators()) + r"\right)"
 
     ## Element generation
     def one(self):
@@ -316,7 +344,7 @@ class RingWithOperator_Wrapper(CommutativeRing):
     
     def random_element(self,*args,**kwds):
         r'''
-            Creates a randome element in this ring.
+            Creates a random element in this ring.
 
             This method creates a random element in the base infinite polynomial ring and 
             cast it into an element of ``self``.
@@ -350,10 +378,10 @@ class CallableMap(Map):
         out += r"\end{array}"
         return out
 
-class RingWithOperatorFunctor(ConstructionFunctor):
-    def __init__(self, operator):
-        self.__operator = operator
-        super().__init__(RingsWithOperator(),RingsWithOperator())
+class RingWithOperatorsFunctor(ConstructionFunctor):
+    def __init__(self, operators):
+        self.__operators = operators
+        super().__init__(RingsWithOperators(),RingsWithOperators())
         
     ### Methods to implement
     def _coerce_into_domain(self, x):
@@ -362,22 +390,22 @@ class RingWithOperatorFunctor(ConstructionFunctor):
         return x
         
     def _apply_functor(self, x):
-        return RingWithOperator(x,self.__operator)
+        return RingWithOperators(x,self.__operators)
         
     def _repr_(self):
-        return "RingWithOperator(*,[%s])" %(repr(self.__operator))
+        return "RingWithOperators(*,[%s])" %(repr(self.__operators))
         
     def __eq__(self, other):
         if(other.__class__ == self.__class__):
-            return (other.__operator == self.__operator)
+            return (other.__operators == self.__operators)
 
     def merge(self, other):
         pass
 
-    def operator(self):
-        return self.__operator
+    def operators(self):
+        return self.__operators
 
-class RingWithOperatorPolySimpleMorphism (Morphism):
+class RingWithOperatorsPolySimpleMorphism (Morphism):
     r'''
         Class representing maps to simpler rings.
 
@@ -480,4 +508,4 @@ class TestOperator:
 
         return all(case[2] == self.operator(case[0]+case[1]) for case in cases)
 
-__all__ = ["RingsWithOperator", "RingWithOperator"]
+__all__ = ["RingsWithOperators", "RingWithOperators"]

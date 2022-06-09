@@ -41,22 +41,18 @@ from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-mod
 
 from ore_algebra import OreAlgebra
 
-from .ring_w_operator import (RingWithOperator_Wrapper, RingWithOperator_WrapperElement, 
-                                RingsWithOperator, CallableMap, RingWithOperatorFunctor)
+from .ring_w_operator import (RingWithOperators_Wrapper, RingWithOperators_WrapperElement, 
+                                RingsWithOperators, CallableMap, RingWithOperatorsFunctor)
 
-_RingsWithOperator = RingsWithOperator.__classcall__(RingsWithOperator)
+_RingsWithOperators = RingsWithOperators.__classcall__(RingsWithOperators)
 
 class DifferentialRings(Category):
     # methods of the category itself
     def super_categories(self):
-        return [_RingsWithOperator]
+        return [_RingsWithOperators]
 
     # methods that all differential structures must implement
     class ParentMethods:
-        # abstract methods from the super category, now implemented
-        def operation(self, element):
-            return self.derivation(element)
-
         # new abstract methods for this category
         @abstract_method
         def derivation(self, _):
@@ -136,7 +132,7 @@ class DifferentialRingFactory(UniqueFactory):
 
 DifferentialRing = DifferentialRingFactory("dalgebra.ring_w_operator.differential_ring.DifferentialRing")
 
-class DifferentialRing_WrapperElement(RingWithOperator_WrapperElement):
+class DifferentialRing_WrapperElement(RingWithOperators_WrapperElement):
     def __init__(self, parent, element):
         if(not isinstance(parent, DifferentialRing_Wrapper)):
             raise TypeError("An element created from a non-wrapper parent")
@@ -145,7 +141,7 @@ class DifferentialRing_WrapperElement(RingWithOperator_WrapperElement):
 
         super().__init__(parent, element)
 
-class DifferentialRing_Wrapper(RingWithOperator_Wrapper):
+class DifferentialRing_Wrapper(RingWithOperators_Wrapper):
     Element = DifferentialRing_WrapperElement
 
     def __init__(self, base, derivation, category=None):
@@ -162,19 +158,22 @@ class DifferentialRing_Wrapper(RingWithOperator_Wrapper):
     def operator_ring(self):
         return OreAlgebra(self.wrapped, ('D', lambda p : p, lambda p : self.derivation(p).wrapped))     
 
+    def construction(self):
+        return DifferentialRingFunctor(self.operators()[0]), self.wrapped
+
     ## Representation methods
     def __repr__(self) -> str:
         return f"Differential Ring [{self.wrapped}] with derivation [{repr(self.operator)}]"
 
 
-class DifferentialRingFunctor(RingWithOperatorFunctor):
+class DifferentialRingFunctor(RingWithOperatorsFunctor):
     def __init__(self, derivation):
-        super().__init__(derivation)
+        super().__init__([derivation])
         
     def _apply_functor(self, x):
-        return DifferentialRing(x,self.operator())
+        return DifferentialRing(x,self.operators()[0])
         
     def _repr_(self):
-        return "DifferentialRing(*,[%s])" %(repr(self.operator()))
+        return "DifferentialRing(*,[%s])" %(repr(self.operators()[0]))
         
 __all__ = ["DifferentialRings", "DifferentialRing"]
