@@ -17,7 +17,7 @@ setup(
     long_description_content_type="text/markdown",
     url='https://github.com/Antonio-JP/dalgebra',
     author = "Antonio Jimenez-Pastor",
-    author_email = "ajpastor@risc.uni-linz.ac.at",
+    author_email = "ajpa@cs.aau.dk",
     license = "GPLv3+", # See LICENSE file
     classifiers=[
       # How mature is this project? Common values are
@@ -37,7 +37,6 @@ setup(
                 "dalgebra.ring_w_operator",
                 "dalgebra.logging"],
     setup_requires   = [],
-    install_requires = ['ore_algebra @ git+https://github.com/mkauers/ore_algebra.git',
-                        'sphinx'],
+    install_requires = [],
 )
     
