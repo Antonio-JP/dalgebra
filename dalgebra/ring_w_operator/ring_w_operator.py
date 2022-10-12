@@ -1,18 +1,53 @@
 r'''
-Module containing the basic definitions for ore rings.
+Module with all structures for defining rings with operators.
 
-EXAMPLES::
+Let `\sigma: R \rightarrow R` be an additive homomorphism, i.e., for all elements `r,s \in R`,
+the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the *ring `R` with operator
+`\sigma`* as the pair `(R, \sigma)`. 
 
-    TODO
+Similarly, if we have a set of additive maps `\sigma_1,\ldots,\sigma_n : R \rightarrow R` that 
+commute among themselves (i.e., for all `i,j`, `\sigma_i \circ \sigma_j = \sigma_j \circ \sigma_i`).
+Then we define the *ring `R` with operators `(\sigma_1,\ldots,\sigma_n)`* as the tuple 
+`(R, (\sigma_1,\ldots,\sigma_n))`.
+
+This module provides the framework to define this type of rings with as many operators as 
+the user wants and we also provide a Wrapper class so we can extend existing ring structures that 
+already exist in SageMath. 
+
+The factory :func:`RingWithOperator` allows the creation of these rings with operators and will determine 
+automatically in which specified category a ring will belong. For example, we can create the differential
+ring `(\mathbb{Q}[x], \partial_x)` or the difference ring `(\mathbb{Q}[x], x \mapsto x + 1)` with this module::
+
+    sage: from dalgebra.ring_w_operator.ring_w_operator import RingWithOperators
+    sage: dQx = RingWithOperators(QQ[x], lambda p : p.derivative())
+    sage: sQx = RingWithOperators(QQ[x], lambda p : p(x=QQ[x].gens()[0] + 1))
+
+Once the rings are created, we can create elements within the ring and apply the corresponding operator::
+
+    sage: x = dQx(x)
+    sage: x.operation()
+    1
+    sage: x = sQx(x)
+    sage: x.operation()
+    x + 1
+
+We can also create the same ring with both operators together::
+
+    sage: dsQx = RingWithOperator(QQ[x], [lambda p : p.derivative(), lambda p : p(x=QQ[x].gens()[0] + 1)])
+    sage: x = dsQx(x)
+    sage: x.operation(0)
+    1
+    sage: x.operation(1)
+    x + 1
 
 AUTHORS:
 
-    - Antonio Jimenez-Pastor (2022-04-20): initial version
+    - Antonio Jimenez-Pastor [GitHub](https://github.com/Antonio-JP)
 '''
 
 from functools import lru_cache
 from sage.all import CommutativeRing, ZZ, latex
-from sage.categories.all import Morphism, Category, CommutativeRings
+from sage.categories.all import Morphism, Category, Rings
 from sage.categories.map import Map #pylint: disable=no-name-in-module
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.misc.abstract_method import abstract_method
@@ -20,12 +55,26 @@ from sage.structure.element import parent, Element #pylint: disable=no-name-in-m
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 from sage.symbolic.ring import SR #pylint: disable=no-name-in-module
 
-_CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
+_Rings = Rings.__classcall__(Rings)
 
 class RingsWithOperators(Category):
+    r'''
+        Category for representing the Rings with Operators.
+
+        This category provide the main methods for Parent, Element and Morphism
+        structures that any Ring `R` with operators `(\sigma_1,\ldots,\sigma_n)` 
+        must have.
+
+        This category will be used to created enhanced and extended objects.
+
+        This objects in this category (i.e., the "Parents") are defined as rings 
+        (hence, ``self`` is a subcategory of )
+    '''
+    ## we set up the base category and we define the axioms
+    _base_category_class_and_axiom = (_Rings, )
     # methods of the category itself
     def super_categories(self):
-        return [_CommutativeRings]
+        return [_Rings]
 
     # methods that all differential structures must implement
     class ParentMethods:
