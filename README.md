@@ -86,7 +86,7 @@ Moreover, any requested feature can be post in the [issues page](https://github.
 
 ### **Acknowledgements**
 
-This package has been developed with the finaltial support of the following insitutions:
+This package has been developed with the financial support of the following institutions:
 * The Austrian Science Fund (FWF): by W1214-N15, project DK15.
 * The Oberösterreich region: by the Innovatives OÖ-2010 plus program.
 * The Île-de-France region: by the project "XOR".
