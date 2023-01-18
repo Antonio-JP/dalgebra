@@ -46,9 +46,7 @@ AUTHORS:
 '''
 from __future__ import annotations
 
-from functools import lru_cache
-from itertools import product
-from typing import Callable, Collection
+from typing import Collection
 from sage.all import ZZ, latex
 from sage.categories.all import Morphism, Category, Rings, CommutativeRings, CommutativeAdditiveGroups
 from sage.categories.map import Map #pylint: disable=no-name-in-module
@@ -209,20 +207,17 @@ class RingsWithOperators(Category):
 ###
 ####################################################################################################
 class RingWithOperatorFactory(UniqueFactory):
-#     r'''
-#         Factory to create wrappers around exising rings.
+    r'''
+        Factory to create wrappers around exising rings.
 
-#         The :class:`RingsWithOperatorFactory` allows to create wrapper around existing rings
-#         with a predefined set of operators. For doing so, we have two possibilities:
+        The :class:`RingsWithOperatorFactory` allows to create wrapper around existing rings
+        with a predefined set of operators. For doing so, we have two possibilities:
 
-#         1. The base ring is given as a named argument and the operators are in the ``*args`` part of the input.
-#         2. The base ring is the FIRST part of the unnamed arguments of the input and the rest are the operators.
+        1. The base ring is given as a named argument and the operators are in the ``*args`` part of the input.
+        2. The base ring is the FIRST part of the unnamed arguments of the input and the rest are the operators.
 
-#         **Important**: there must be always at least one operator. Otherwise a :class:`TypeError` is returned.
-
-#         **Important**: the operators must commute among themselves. This checking is not performed on creation
-#         but the class :`TestOperators` allows to check it on randomly generated elements of the domain.
-#     '''
+        **Important**: there must be always at least one operator. Otherwise a :class:`TypeError` is returned.
+    '''
 #     def create_key(self, *args, **kwds):
 #         r'''
 #             Method to create a key from the input of the factory.
