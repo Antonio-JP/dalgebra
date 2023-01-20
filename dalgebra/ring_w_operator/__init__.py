@@ -20,6 +20,6 @@ AUTHORS::
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from .ring_w_operator import *
-from .differential_ring import *
-from .difference_ring import *
+# from .ring_w_operator import *
+# from .differential_ring import *
+# from .difference_ring import *
