@@ -34,7 +34,6 @@ setup(
     keywords = "SageMath difference/differential algebra",
     packages = ["dalgebra",
                 "dalgebra.diff_polynomial",
-                "dalgebra.ring_w_operator",
                 "dalgebra.logging"],
     setup_requires   = [],
     install_requires = [],

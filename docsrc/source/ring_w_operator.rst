@@ -1,24 +1,14 @@
-====================================
-Package ``ring_w_operator``
-====================================
+.. nodoctest
 
-This package includes the main structures and built-in functions for working with rings of
-with associated operator. This includes the classes for differential and difference rings. 
+Structure for Rings with Associated Operators
+==============================================================================================================================
 
-Modules 
-====================
+.. autoclass:: dalgebra.ring_w_operator.RingsWithOperator
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-.. toctree::
-   :maxdepth: 1
-
-   ring_w_operator/ring_w_operator
-   ring_w_operator/differential_ring
-   ring_w_operator/difference_ring
-
-
-Indices and Tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. autoclass:: dalgebra.ring_w_operator.RingWithOperatorFactory
+   :members:
+   :undoc-members:
+   :show-inheritance:

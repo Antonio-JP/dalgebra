@@ -62,7 +62,7 @@ from sage.all import ZZ, latex, Parent
 from sage.categories.all import Morphism, Category, Rings, CommutativeRings, CommutativeAdditiveGroups
 from sage.categories.morphism import SetMorphism # pylint: disable=no-name-in-module
 from sage.categories.pushout import ConstructionFunctor, pushout
-from sage.misc.abstract_method import abstract_method
+from sage.misc.all import abstract_method, cached_method
 from sage.rings.ring import Ring, CommutativeRing
 from sage.rings.derivation import RingDerivationModule
 from sage.structure.element import parent, Element #pylint: disable=no-name-in-module
@@ -177,6 +177,96 @@ class RingsWithOperators(Category):
             '''
             raise NotImplementedError("Method 'operator_types' need to be implemented")
 
+        @cached_method
+        def derivations(self) -> Collection[DerivationMap]:
+            r'''
+                Method to filter the derivations out of a ring with operators.
+
+                Derivations are a particular type of operators. With this method we 
+                provide a similar interface as with the generic operators but just with
+                derivation.
+
+                Similarly, this class offers access to homomorphisms and skew derivations.
+
+                When no derivation is declared for a ring, an empty tuple is returned.
+            '''
+            return tuple([operator for (operator, ttype) in zip(self.operators(), self.operator_types()) if ttype == "derivation"])
+
+        def nderivations(self) -> int:
+            r'''
+                Method to get the number of derivations defined over a ring
+            '''
+            return len(self.derivations())
+
+        def has_derivations(self) -> bool:
+            r'''
+                Method to know if there are derivations defined over the ring.
+            '''
+            return self.nderivations() > 0
+
+        def is_differential(self) -> bool:
+            r'''
+                Method to check whether a ring is differential, i.e, all operators are derivations.
+            '''
+            return self.noperators() == self.nderivations()
+
+        def derivation(self, element: Element, derivation: int = 0) -> Element:
+            r'''
+                Method to apply a derivation over an element.
+
+                This method applies a derivation over a given element in the same way an operator
+                is applied by the method :func:`~RingsWithOperators.ParentMethods.operation`.
+            '''
+            return self.derivations()[derivation](element)
+
+        @cached_method
+        def differences(self) -> Collection[Morphism]:
+            r'''
+                Method to filter the differences out of a ring with operators.
+
+                Differences are a particular type of operators. With this method we 
+                provide a similar interface as with the generic operators but just with
+                difference.
+
+                Similarly, this class offers access to derivations and skew derivations.
+
+                When no difference is declared for a ring, an empty tuple is returned.
+            '''
+            return tuple([operator for (operator, ttype) in zip(self.operators(), self.operator_types()) if ttype == "homomorphism"])
+
+        def ndifferences(self) -> int:
+            r'''
+                Method to get the number of differences defined over a ring
+            '''
+            return len(self.differences())
+
+        def has_differences(self) -> bool:
+            r'''
+                Method to know if there are differences defined over the ring.
+            '''
+            return self.ndifferences() > 0
+
+        def is_difference(self) -> bool:
+            r'''
+                Method to check whether a ring is difference, i.e, all operators are homomorphisms.
+            '''
+            return self.noperators() == self.ndifferences()
+
+        def difference(self, element: Element, difference: int = 0) -> Element:
+            r'''
+                Method to apply a difference over an element.
+
+                This method applies a difference over a given element in the same way an operator
+                is applied by the method :func:`~RingsWithOperators.ParentMethods.operation`.
+            '''
+            return self.differences()[difference](element)
+        
+        def shift(self, element: Element, shift: int = 0) -> Element:
+            r'''
+                Alias for :func:`~RingsWithOperators.ParentMethods.difference`.
+            '''
+            return self.difference(element, shift)
+
         @abstract_method
         def operator_ring(self) -> Ring:
             r'''
@@ -208,6 +298,46 @@ class RingsWithOperators(Category):
                 return self.parent().operation(self, operation)
             else:
                 return self.operation(times=times-1,operation=operation).operation(operation=operation)
+
+        def derivative(self, times: int = 1, derivation: int = 0) -> Element:
+            r'''
+                Apply a derivation to ``self`` a given amount of times.
+
+                This method applies repeatedly a derivation defined in the parent of ``self``.
+                See :func:`~RingsWithOperators.ParentMethods.derivation` for further information.
+            '''
+            if(not times in ZZ or times < 0):
+                raise ValueError("The argument ``times`` must be a non-negative integer")
+
+            if(times == 0):
+                return self
+            elif(times == 1):
+                return self.parent().derivation(self, derivation)
+            else:
+                return self.derivation(times=times-1,derivation=derivation).operation(derivation=derivation)
+
+        def difference(self, times: int = 1, difference: int = 0) -> Element:
+            r'''
+                Apply a difference to ``self`` a given amount of times.
+
+                This method applies repeatedly a difference defined in the parent of ``self``.
+                See :func:`~RingsWithOperators.ParentMethods.difference` for further information.
+            '''
+            if(not times in ZZ or times < 0):
+                raise ValueError("The argument ``times`` must be a non-negative integer")
+
+            if(times == 0):
+                return self
+            elif(times == 1):
+                return self.parent().difference(self, difference)
+            else:
+                return self.difference(times=times-1,difference=difference).operation(difference=difference)
+                
+        def shift(self, times: int = 1, shift: int = 0) -> Element:
+            r'''
+                Alias for :func:`~RingsWithOperators.ElementMethods.difference`.
+            '''
+            return self.difference(times, shift)
 
     # methods that all morphisms involving differential rings must implement
     class MorphismMethods: 
@@ -315,9 +445,35 @@ class RingWithOperatorFactory(UniqueFactory):
         base, operators, types = key
 
         return RingWithOperators_Wrapper(base, operators, types)
-
 RingWithOperators = RingWithOperatorFactory("dalgebra.ring_w_operator.ring_w_operator.RingWithOperator")
 
+class DifferentialRingFactory(RingWithOperatorFactory):
+    r'''
+        Factory to create differential wrappers around existing rings.
+    '''
+    def create_key(self, base : CommutativeRing, *operators : Callable):
+        # checking the arguments
+        if len(operators) < 1:
+            raise ValueError("At least one operator must be given.")
+        elif len(operators) == 1 and isinstance(operators[0], Collection):
+            operators = operators[0]
+
+        super().create_key(base, operators, len(operators)*["derivation"])
+DifferentialRing = DifferentialRingFactory("dalgebra.ring_w_operator.ring_w_operator.DifferentialRingFactory")
+
+class DifferenceRingFactory(RingWithOperatorFactory):
+    r'''
+        Factory to create differential wrappers around existing rings.
+    '''
+    def create_key(self, base : CommutativeRing, *operators : Callable):
+        # checking the arguments
+        if len(operators) < 1:
+            raise ValueError("At least one operator must be given.")
+        elif len(operators) == 1 and isinstance(operators[0], Collection):
+            operators = operators[0]
+
+        super().create_key(base, operators, len(operators)*["homomorphism"])
+DifferenceRing = DifferenceRingFactory("dalgebra.ring_w_operator.ring_w_operator.DifferenceRingFactory")
 ####################################################################################################
 ###
 ### DEFINING THE ELEMENT AND PARENT FOR WRAPPED RINGS
@@ -517,7 +673,8 @@ class RingWithOperators_Wrapper(CommutativeRing):
 
     ## Representation methods
     def __repr__(self) -> str:
-        return f"Ring [{self.wrapped}] with operators {repr(self.operators())}"
+        begin = "Differential" if self.is_differential() else "Difference" if self.is_difference() else ""
+        return f"{begin} Ring [[{self.wrapped}], {repr(self.operators())}]"
 
     def __str__(self) -> str:
         return repr(self)
@@ -677,4 +834,4 @@ class WrappedMap(AdditiveMap):
     def __str__(self) -> str:
         return f"Wrapped [{repr(self)}] over (({self.domain()}))"
 
-__all__ = ["RingsWithOperators", "RingWithOperators"]
+__all__ = ["RingsWithOperators", "RingWithOperators", "DifferentialRing", "DifferenceRing"]
