@@ -39,7 +39,7 @@ class RWOSystem:
         Class for representing a system over a ring with an operator.
 
         This class allows the user to represent a system of equations 
-        over a ring with an operator (see :class:`~dalgebra.ring_w_operator.ring_w_operator.RingsWithOperator`)
+        over a ring with an operator (see :class:`~dalgebra.ring_w_operator.RingsWithOperator`)
         as a list of infinite polynomials in one or several variables.
 
         This class will offer a set of methods and properties to extract the main

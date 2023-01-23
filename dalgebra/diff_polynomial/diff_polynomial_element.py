@@ -19,9 +19,12 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
+from sage.all import cartesian_product, binomial, UniqueRepresentation
+from sage.categories.morphism import Morphism # pylint: disable=no-name-in-module
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialGen
 from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense, InfinitePolynomial_sparse
+from sage.rings.semirings.non_negative_integer_semiring import NN
 
 def is_InfinitePolynomial(element):
     r'''
@@ -404,7 +407,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
             Method that transforms the infinite polynomial into a linear operator.
 
             This method returns a list of linear operators in the ring of operators of ``self.base()``
-            (see method :func:`~dalgebra.ring_w_operator.ring_w_operator.RingWithOperator.operator_ring`),
+            (see method :func:`~dalgebra.ring_w_operator.RingWithOperator.operator_ring`),
             such that each operator applied to each of the generators of ``self.parent()`` is equal to ``self``. 
 
             This method only works for linear polynomials.
@@ -581,5 +584,52 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return self.parent().element_class(self.parent(), self.polynomial() // x.polynomial())
     def __pow__(self, n):
         return self.parent().element_class(self.parent(), super().__pow__(n))
+
+class IndexBijection (Morphism):
+    def __init__(self, size):
+        Morphism.__init__(self, NN, cartesian_product(size*[NN]))
+        self.dim = size
+
+    @staticmethod
+    def elements_summing(n, l):
+        r'''Number of elements summing `n` in `l` elements'''
+        return binomial(n+l-1, n)
+
+    @staticmethod
+    def tuple_summing(index, n, l):
+        r'''Tuple in position ``index`` summing `n` in `l` elements'''
+        if index < 0 or index >= IndexBijection.elements_summing(n,l):
+            raise ValueError
+        if l == 1:
+            return tuple([n])
+        elif n == 0:
+            return tuple(l*[0])
+        first = 0
+        while index >= IndexBijection.elements_summing(n-first, l-1):
+            index -= IndexBijection.elements_summing(n-first, l-1); first += 1
+        return tuple([first] + list(IndexBijection.tuple_summing(index, n-first, l-1)))
+
+    @cached_method
+    def _call_(self, index):
+        if self.dim == 1:
+            return index
+        sum_of_elements = 0
+        while index >= IndexBijection.elements_summing(sum_of_elements, self.dim):
+            index -= IndexBijection.elements_summing(sum_of_elements, self.dim)
+            sum_of_elements += 1
+        return self.codomain()(IndexBijection.tuple_summing(index, sum_of_elements, self.dim))
+
+    @cached_method
+    def inverse(self, image):
+        if self.dim == 1:
+            return image
+        if not len(image) == self.dim:
+            raise TypeError
+        sum_of_elements = sum(image)
+        result = IndexBijection.elements_summing(sum_of_elements-1, self.dim+1) # elements summing less than "sum_of_elements"
+        for i in range(len(image)-1):
+            result += sum(IndexBijection.elements_summing(sum_of_elements - j, self.dim - i-1) for j in range(image[i]))
+            sum_of_elements -= image[i]
+        return self.domain()(result)
 
 __all__ = []
