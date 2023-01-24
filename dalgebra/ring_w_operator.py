@@ -438,13 +438,12 @@ class RingWithOperatorFactory(UniqueFactory):
 
             if new_operator != operator:
                 operators[i] = new_operator
-
-        return (base, tuple(operators), tuple(types))
+        return tuple([base, tuple(operators), tuple(types)])
             
     def create_object(self, _, key):
         base, operators, types = key
 
-        return RingWithOperators_Wrapper(base, operators, types)
+        return RingWithOperators_Wrapper(base, *operators, types=types)
 RingWithOperators = RingWithOperatorFactory("dalgebra.ring_w_operator.ring_w_operator.RingWithOperator")
 
 class DifferentialRingFactory(RingWithOperatorFactory):
@@ -458,7 +457,7 @@ class DifferentialRingFactory(RingWithOperatorFactory):
         elif len(operators) == 1 and isinstance(operators[0], Collection):
             operators = operators[0]
 
-        super().create_key(base, operators, len(operators)*["derivation"])
+        return super().create_key(base, *operators, types=len(operators)*["derivation"])
 DifferentialRing = DifferentialRingFactory("dalgebra.ring_w_operator.ring_w_operator.DifferentialRingFactory")
 
 class DifferenceRingFactory(RingWithOperatorFactory):
@@ -472,7 +471,7 @@ class DifferenceRingFactory(RingWithOperatorFactory):
         elif len(operators) == 1 and isinstance(operators[0], Collection):
             operators = operators[0]
 
-        super().create_key(base, operators, len(operators)*["homomorphism"])
+        return super().create_key(base, *operators, types=len(operators)*["homomorphism"])
 DifferenceRing = DifferenceRingFactory("dalgebra.ring_w_operator.ring_w_operator.DifferenceRingFactory")
 ####################################################################################################
 ###
@@ -552,7 +551,7 @@ class RingWithOperators_Wrapper(CommutativeRing):
 
     def __init__(self, 
         base : CommutativeRing, 
-        operators : Morphism | Collection[Morphism], 
+        *operators : Morphism | Collection[Morphism],
         types : Collection[str] = None, 
         category = None
     ):
@@ -563,8 +562,8 @@ class RingWithOperators_Wrapper(CommutativeRing):
             raise TypeError("Only commutative rings can be wrapped as RingWithOperators")
 
         ### 'operators'
-        if not isinstance(operators, (list,tuple)):
-            operators = [operators]
+        if len(operators) == 1 and isinstance(operators[0], (list,tuple)):
+            operators = operators[0]
         if any(not isinstance(operator, Morphism) for operator in operators):
             raise TypeError("All the given operators must be Maps")
         if any(operator.domain() != operator.codomain() or operator.domain() != base for operator in operators):
