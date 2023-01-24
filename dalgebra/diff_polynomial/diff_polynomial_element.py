@@ -107,16 +107,16 @@ class IndexBijection_Object (Morphism):
     @staticmethod
     def tuple_summing(index: int, n: int, l: int) -> tuple[int]:
         r'''Tuple in position ``index`` summing `n` in `l` elements'''
-        if index < 0 or index >= IndexBijection.elements_summing(n,l):
+        if index < 0 or index >= IndexBijection_Object.elements_summing(n,l):
             raise ValueError
         if l == 1:
             return tuple([n])
         elif n == 0:
             return tuple(l*[0])
         first = 0
-        while index >= IndexBijection.elements_summing(n-first, l-1):
-            index -= IndexBijection.elements_summing(n-first, l-1); first += 1
-        return tuple([first] + list(IndexBijection.tuple_summing(index, n-first, l-1)))
+        while index >= IndexBijection_Object.elements_summing(n-first, l-1):
+            index -= IndexBijection_Object.elements_summing(n-first, l-1); first += 1
+        return tuple([first] + list(IndexBijection_Object.tuple_summing(index, n-first, l-1)))
 
     @cached_method
     def _call_(self, index: int) -> Element:
@@ -124,10 +124,10 @@ class IndexBijection_Object (Morphism):
         if self.dim == 1:
             return index
         sum_of_elements = 0
-        while index >= IndexBijection.elements_summing(sum_of_elements, self.dim):
-            index -= IndexBijection.elements_summing(sum_of_elements, self.dim)
+        while index >= IndexBijection_Object.elements_summing(sum_of_elements, self.dim):
+            index -= IndexBijection_Object.elements_summing(sum_of_elements, self.dim)
             sum_of_elements += 1
-        return self.codomain()(IndexBijection.tuple_summing(index, sum_of_elements, self.dim))
+        return self.codomain()(IndexBijection_Object.tuple_summing(index, sum_of_elements, self.dim))
 
     @cached_method
     def inverse(self, image: Element) -> int:
@@ -137,12 +137,15 @@ class IndexBijection_Object (Morphism):
         if not len(image) == self.dim:
             raise TypeError("Given element has innapropriate length")
         sum_of_elements = sum(image)
-        result = IndexBijection.elements_summing(sum_of_elements-1, self.dim+1) # elements summing less than "sum_of_elements"
+        result = IndexBijection_Object.elements_summing(sum_of_elements-1, self.dim+1) # elements summing less than "sum_of_elements"
         for i in range(len(image)-1):
-            result += sum(IndexBijection.elements_summing(sum_of_elements - j, self.dim - i-1) for j in range(image[i]))
+            result += sum(IndexBijection_Object.elements_summing(sum_of_elements - j, self.dim - i-1) for j in range(image[i]))
             sum_of_elements -= image[i]
         return self.domain()(result)
 
+    def iter(self, sum_bound : int):
+        quantity = IndexBijection_Object.elements_summing(sum_bound, self.dim + 1)
+        for i in range(quantity): yield self(i) 
 #######################################################################################
 ###
 ### MAIN CLASS FOR THE GENERATORS
