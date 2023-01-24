@@ -36,7 +36,7 @@ logger.addHandler(fh)
 logger.propagate = False
 
 from .ring_w_operator import * # basic ring structures
-from .diff_polynomial import * # ring of difference/differential polynomials
+from .rwo_polynomial import * # ring of difference/differential polynomials
 
 def dalgebra_version():
     import pkg_resources

@@ -29,7 +29,7 @@ from sage.all import latex, ZZ, PolynomialRing, Compositions, Subsets, save
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 
-from .diff_polynomial_ring import is_DifferencePolynomialRing, is_DifferentialPolynomialRing, is_RWOPolynomialRing
+from .rwo_polynomial_ring import is_DifferencePolynomialRing, is_DifferentialPolynomialRing, is_RWOPolynomialRing
 from ..logging.logging import verbose
 
 logger = logging.getLogger(__name__)

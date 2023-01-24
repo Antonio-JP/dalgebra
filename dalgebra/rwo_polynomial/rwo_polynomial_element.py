@@ -173,7 +173,7 @@ class RWOPolynomialGen (InfinitePolynomialGen):
         * ``name``: main part of the name for the generated variales.
     '''
     def __init__(self, parent: Parent, name: str):
-        from .diff_polynomial_ring import is_RWOPolynomialRing
+        from .rwo_polynomial_ring import is_RWOPolynomialRing
         if(not is_RWOPolynomialRing(parent)):
             raise TypeError("The RWOPolynomialGen must have a ring of polynomial with an operator as parent")
 

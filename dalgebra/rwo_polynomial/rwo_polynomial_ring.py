@@ -38,19 +38,17 @@ from __future__ import annotations
 
 from itertools import product
 
-from sage.all import cached_method, ZZ, latex, diff, prod, parent, CommutativeRing, Hom, random, Parent
-from sage.categories.all import Morphism, Category, Rings, CommutativeAlgebras
-from sage.categories.pushout import ConstructionFunctor, pushout
+from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent
+from sage.categories.all import Morphism, Category, CommutativeAlgebras
+from sage.categories.pushout import ConstructionFunctor
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
-from sage.rings.polynomial.infinite_polynomial_element import InfinitePolynomial_dense
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 from typing import Collection
 
-from .diff_polynomial_element import RWOPolynomial, RWOPolynomialGen, IndexBijection
+from .rwo_polynomial_element import RWOPolynomial, RWOPolynomialGen, IndexBijection
 from ..ring_w_operator import RingsWithOperators, AdditiveMap, DifferentialRing, DifferenceRing
 
-_Rings = Rings.__classcall__(Rings)
 _RingsWithOperators = RingsWithOperators.__classcall__(RingsWithOperators)
 
 ## Factories for all structures
