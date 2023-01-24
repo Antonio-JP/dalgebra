@@ -20,6 +20,6 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-# from .diff_polynomial_element import *
+from .diff_polynomial_element import *
 # from .diff_polynomial_ring import *
 # from .diff_polynomial_system import *
