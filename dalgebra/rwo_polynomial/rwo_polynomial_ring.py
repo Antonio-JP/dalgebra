@@ -8,15 +8,16 @@ a ring of differential polynomials.
 
 EXAMPLES::
 
-    sage: from dalgebra import DifferentialPolynomialRing
+    sage: from dalgebra import *
     sage: R.<y> = DifferentialPolynomialRing(QQ['x']) 
     sage: x = R.base().gens()[0] 
     sage: p = x^2*y[1]^2 - y[2]*y[1]; p
     -y_2*y_1 + x^2*y_1^2
     sage: R
-    Ring of differential polynomials in (y) over Differential Ring [Univariate 
-    Polynomial Ring in x over Rational Field] with derivation [Map from 
-    callable d/dx]
+    Ring of operator polynomials in (y) over Differential Ring [[Univariate Polynomial Ring 
+    in x over Rational Field], (d/dx,)]
+    sage: p.derivative()
+    -y_3*y_1 - y_2^2 + 2*x^2*y_2*y_1 + 2*x*y_1^2
 
 AUTHORS:
 
@@ -77,40 +78,30 @@ class RWOPolynomialRingFactory(UniqueFactory):
             raise ValueError("Repeated names given: impossible to create the ring")
 
         # We check now whether the base ring is valid or not
-        base = self._check_base_ring(base)
+        if not base in _RingsWithOperators:
+            raise TypeError("The base ring must have operators attached")
 
         # Now the names are appropriate and the base is correct
         return (base, names)
-
-    def _check_base_ring(self, base):
-        if not base in _RingsWithOperators:
-            raise TypeError("The base ring must have operators attached")
-        return base
 
     def create_object(self, _, key):
         base, names = key
 
         return RWOPolynomialRing_dense(base, names)
 
-class DifferentialPolynomialRingFactory(RWOPolynomialRingFactory):
-    def _check_base_ring(self, base):
-        if not base in _RingsWithOperators:
-            return DifferentialRing(base, diff)
-        if not base.is_differential():
-            raise TypeError("The base ring must be a differential ring")
-        return super()._check_base_ring(base)
-
-class DifferencePolynomialRingFactory(RWOPolynomialRingFactory):
-    def _check_base_ring(self, base):
-        if not base in _RingsWithOperators:
-            return DifferenceRing(base, base.Hom(base).one())
-        if not base.is_difference():
-            raise TypeError("The base ring must be a difference ring")
-        return super()._check_base_ring(base)
-
 RWOPolynomialRing = RWOPolynomialRingFactory("dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing")
-DifferentialPolynomialRing = DifferentialPolynomialRingFactory("dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing")
-DifferencePolynomialRing = DifferencePolynomialRingFactory("dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing")
+def DifferentialPolynomialRing(base, *names : str, **kwds):
+    if not base in _RingsWithOperators:
+        base = DifferentialRing(base, diff)
+    if not base.is_differential():
+        raise TypeError("The base ring must be a differential ring")
+    return RWOPolynomialRing(base, *names, **kwds)
+def DifferencePolynomialRing(base, *names : str, **kwds):
+    if not base in _RingsWithOperators:
+        base = DifferenceRing(base, base.Hom(base).one())
+    if not base.is_difference():
+        raise TypeError("The base ring must be a difference ring")
+    return RWOPolynomialRing(base, *names, **kwds)
 
 class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
     r'''
@@ -145,16 +136,13 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         all be ''homomorphism'', ''derivation'' or ''skew''). See documentation of :mod:`dalgebra.ring_w_operator`
         for further information.
 
-        EXAMPLES (FROM DIFFERENTIAL_POLYNOMIAL_RING)::
+        EXAMPLES::
 
-            sage: from dalgebra import DifferentialPolynomialRing
-            sage: R.<y> = DifferentialPolynomialRing(QQ['x']); R
-            Ring of differential polynomials in (y) over Differential Ring 
-            [Univariate Polynomial Ring in x over Rational Field] with derivation 
-            [Map from callable d/dx]
+            sage: from dalgebra import *
+            sage: R.<y> = DifferentialPolynomialRing(QQ['x']); x = R.base().gens()[0]; R
+            Ring of operator polynomials in (y) over Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
             sage: S.<a,b> = DifferentialPolynomialRing(ZZ); S
-            Ring of differential polynomials in (a, b) over Differential Ring [Integer Ring] 
-            with derivation [Map from callable 0]
+            Ring of operator polynomials in (a, b) over Differential Ring [[Integer Ring], (0,)]
 
         We can now create objects in those rings using the generators ``y``, ``a`` and ``b``::
 
@@ -165,51 +153,46 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             sage: diff(a[1]*b[0]) #Leibniz Rule
             a_2*b_0 + a_1*b_1
 
-        EXAMPLES (FROM DERIVATIVE METHOD)::
+        Althoug the use of diff can work in these rings, it is not fully recommended because we may require more 
+        information for the ``diff`` method to work properly. We recommend the use of the ``derivative`` methods 
+        of the elements or the method ``derivative`` of the Rings (as indicated in the category 
+        :class:`dalgebra.ring_w_operators.RingsWithOperators`)::
 
-            sage: from dalgebra import DifferentialPolynomialRing
-            sage: R.<y> = DifferentialPolynomialRing(QQ['x']); x = R.base().gens()[0]
-            sage: R.derivation(y[0])
+            sage: R.derivative(y[0])
             y_1
-            sage: R.derivation(x)
+            sage: R.derivative(x)
             1
-            sage: R.derivation(x*y[10])
+            sage: R.derivative(x*y[10])
             x*y_11 + y_10
-            sage: R.derivation(x^2*y[1]^2 - y[2]*y[1])
+            sage: R.derivative(x^2*y[1]^2 - y[2]*y[1])
             -y_3*y_1 - y_2^2 + 2*x^2*y_2*y_1 + 2*x*y_1^2
+            sage: (x*y[10]).derivative()
+            x*y_11 + y_10
 
         This derivation also works naturally with several infinite variables::
 
-            sage: S = DifferentialPolynomialRing(R, 'a'); a,y = S.gens()
-            sage: S.derivation(a[1] + y[0]*a[0])
-            a_1*y_0 + a_0*y_1 + a_2
+            sage: S.derivative(a[1] + b[0]*a[0])
+            a_1*b_0 + a_0*b_1 + a_2
+            sage: (a[3]*a[1]*b[0] - b[2]).derivative()
+            a_4*a_1*b_0 + a_3*a_2*b_0 + a_3*a_1*b_1 - b_3
 
-        EXAMPLES (FROM DIFFERENCE_POLYNOMIAL_RING)::
+        At the same time, these rings also work with difference operators. This can be easily built
+        using the method :func:`DifferencePolynomialRing` using a shift operator as the main 
+        operator to extend the ring::
 
-            sage: from dalgebra import DifferencePolynomialRing
-            sage: R.<y> = DifferencePolynomialRing(QQ['x']); R
-            Ring of difference polynomials in (y) over Difference Ring [Univariate 
-            Polynomial Ring in x over Rational Field] with difference [Map from 
-            callable [x] |--> [x]]
+            sage: R.<y> = DifferencePolynomialRing(QQ['x']); x = R.base().gens()[0]; R
+            Ring of operator polynomials in (y) over Difference Ring [[Univariate Polynomial Ring in x over 
+            Rational Field], (Identity endomorphism of Univariate Polynomial Ring in x over Rational Field,)]
             sage: S.<a,b> = DifferencePolynomialRing(ZZ); S
-            Ring of difference polynomials in (a, b) over Difference Ring [Integer Ring] 
-            with difference [Map from callable [1] |--> [1]]
+            Ring of operator polynomials in (a, b) over Difference Ring [[Integer Ring], (Identity endomorphism of Integer Ring,)]
 
-        We can now create objects in those rings using the generators ``y``, ``a`` and ``b``::
+        And after this code we can start creating polynomials using the generators ``y``, ``a`` and ``b`` and, then 
+        compute their ``shift`` or ``difference`` as we did with the derivation::
 
             sage: y[1]
             y_1
             sage: y[1].difference()
             y_2
-            sage: (a[1]*b[0]).difference() #Homomorphism rule
-            a_2*b_1
-
-        EXAMPLES (FROM DIFFERENCE METHOD)::
-
-            sage: from dalgebra import DifferencePolynomialRing
-            sage: R.<y> = DifferencePolynomialRing(QQ['x']); x = R.base().gens()[0]
-            sage: R.difference(y[0])
-            y_1
             sage: R.difference(x)
             x
             sage: R.difference(x*y[10])
@@ -219,20 +202,74 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         This difference also works naturally with several infinite variables::
 
-            sage: S = DifferencePolynomialRing(R, 'a'); a,y = S.gens()
-            sage: S.difference(a[1] + y[0]*a[0])
-            a_1*y_1 + a_2
+            sage: (a[1]*b[0]).difference() 
+            a_2*b_1
+            sage: S.difference(a[1] + b[0]*a[0])
+            a_1*b_1 + a_2
 
         We can see other type of shifts or differences operators::
 
-            sage: X = QQ[x]('x')
-            sage: T.<z> = DifferencePolynomialRing(QQ[x], difference=lambda p : p(x=X+1)); x = T.base().gens()[0]
+            sage: X = QQ[x]('x'); shift = QQ[x].Hom(QQ[x])(X+1)
+            sage: T.<z> = DifferencePolynomialRing(DifferenceRing(QQ[x], shift)); x = T.base().gens()[0]
             sage: T.difference(z[0])
             z_1
             sage: T.difference(x)
             x + 1
             sage: T.difference(x^2*z[1]^2 - z[2]*z[1])
             -z_3*z_2 + (x^2 + 2*x + 1)*z_2^2
+
+        One of the main features of the category :class:`dalgebra.ring_w_operators.RingsWithOperators` is that
+        several operators can be included in the ring. This class of operator rings also have such feature, 
+        extending all operators at once. 
+
+        In this case, the variables are display with a tuple as a sub-index, indicating how many times each
+        operators has been applied to each of the infinite variables of the ring::
+
+            sage: R.<x,y> = QQ[] # base ring
+            sage: dx, dy = R.derivation_module().gens() # creating derivations
+            sage: s = R.Hom(R)([x+1,y-1]) # creating the shift operator
+            sage: dsR = DifferenceRing(DifferentialRing(R, dx, dy), s); dsR
+            Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (d/dx, d/dy, Ring endomorphism of Multivariate Polynomial Ring in x, y over Rational Field
+                Defn: x |--> x + 1
+                        y |--> y - 1
+                        with map of base ring)]
+
+        We can see that these three operators all commute::
+
+            sage: dsR.all_commute()
+            True
+
+        Hence, we can create the ring of operator polynomials with as many variables as we want::
+
+            sage: OR.<u,v> = RWOPolynomialRing(dsR); OR
+            Ring of operator polynomials in (u, v) over Ring [[Multivariate Polynomial Ring in x, y over 
+            Rational Field], (d/dx, d/dy, Ring endomorphism of Multivariate Polynomial Ring in x, y over Rational Field
+                Defn: x |--> x + 1
+                        y |--> y - 1
+                        with map of base ring)]
+            
+        When we have several operators, we can create elements on the variables in two ways:
+
+        * Using an index (as usual): then the corresponding variable will be created but following the order
+          that is given by :class:`dalgebra.rwo_polynomial.rwo_polynomial_element.IndexBijection`.
+        * Using a tuple: have the standard meaning that each of the operators has been applied that amount of times.
+
+        We can see these two approaches in place::
+
+            sage: u[5]
+            u_(0, 1, 1)
+            sage: v[0,3,2]
+            v_(0, 3, 2)
+            sage: u[5].derivative(0)
+            u_(1, 1, 1)
+            sage: u[5].derivative(1, times=3)
+            u_(0, 4, 1)
+            sage: u[5].derivative(1, times=3).derivative(0, times=2).difference(times=1)
+            u_(2, 4, 2)
+            sage: (u[5]*v[0,1,0]).derivative(1)
+            u_(0, 2, 1)*v_(0, 1, 0) + u_(0, 1, 1)*v_(0, 2, 0)
+            sage: (u[5]*v[0,1,0]).derivative(1) - u[0,1,0].shift()*v[0,2,0]
+            u_(0, 2, 1)*v_(0, 1, 0)
     '''
     Element = RWOPolynomial
 
@@ -243,6 +280,8 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
     def __init__(self, base : Parent, names : Collection[str]):
         if not base in _RingsWithOperators:
             raise TypeError("The base must be a ring with operators")
+        if not base.all_commute():
+            raise TypeError("Detected operators that do NOT commute. Impossible to build the RWOPolynomialRing")
 
         if any(ttype == "none" for ttype in base.operator_types()):
             raise TypeError(f"All operators in {base} must be typed")
@@ -267,7 +306,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             self._create_operator(operation, ttype) 
             for operation, ttype in enumerate(self.base().operator_types())
         ])
-        self.__cache : list[dict[RWOPolynomial, RWOPolynomial]] = len(self.__operators)*[dict()]
+        self.__cache : list[dict[RWOPolynomial, RWOPolynomial]] = [dict() for _ in range(len(self.__operators))]
 
     #################################################
     ### Coercion methods
@@ -311,19 +350,18 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             EXAMPLES::
 
-                sage: from dalgebra import RWOPolynomialRing
-                sage: from dalgebra.diff_polynomial.diff_polynomial_element import RWOPolynomialGen
-                sage: R.<y> = RWOPolynomialRing(QQ['x'])
+                sage: from dalgebra import *
+                sage: from dalgebra.rwo_polynomial.rwo_polynomial_element import RWOPolynomialGen
+                sage: R.<y> = RWOPolynomialRing(DifferentialRing(QQ['x'], diff))
                 sage: R.gen(0)
                 y_*
                 sage: R.gen(0) is y
                 True
                 sage: isinstance(R.gen(0), RWOPolynomialGen)
                 True
-                sage: S = RWOPolynomialRing(ZZ, ('a', 'b'))
+                sage: S = RWOPolynomialRing(DifferentialRing(ZZ, lambda z : 0), ('a', 'b'))
                 sage: S
-                Ring of infinite polynomials in (a, b) over Ring [Integer Ring] with 
-                operator [Map from callable <lambda>]
+                Ring of operator polynomials in (a, b) over Differential Ring [[Integer Ring], (0,)]
                 sage: S.gen(0)
                 a_*
                 sage: S.gen(1)
@@ -372,7 +410,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             EXAMPLES::
 
-                sage: from dalgebra import RWOPolynomialRing, DifferentialRing
+                sage: from dalgebra import *
                 sage: R.<y> = RWOPolynomialRing(DifferentialRing(QQ['x'], diff))
                 sage: R.one()
                 1
@@ -385,7 +423,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             EXAMPLES::
 
-                sage: from dalgebra import RWOPolynomialRing, DifferentialRing
+                sage: from dalgebra import *
                 sage: R.<y> = RWOPolynomialRing(DifferentialRing(QQ['x'], diff))
                 sage: R.zero()
                 0
@@ -566,11 +604,10 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                         for i in range(len(v)):
                             for g in generators:
                                 if g.contains(v[i]):
-                                    index = list(g.index(v[i])); index[operation] += 1
-                                    result *= g[tuple(index)]**d[i]
+                                    result *= g.next(v[i], operation)**d[i]
                                     break
                         
-                        self.__cache[element] = result
+                        self.__cache[operation][element] = result
                     else:
                         c = element.coefficients(); m = [self(str(el)) for el in element.monomials()]
                         self.__cache[operation][element] = sum(operator(c[i])*__extended_homomorphism(m[i]) for i in range(len(m)))
@@ -602,8 +639,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                             to_add = d[i]*prod([v[j] for j in range(len(v)) if j != i], self.one())
                             for g in generators:
                                 if(g.contains(v[i])):
-                                    index = list(g.index(v[i])); index[operation] += 1
-                                    to_add *= g[tuple(index)] # we create the next generator for this operation
+                                    to_add *= g.next(v[i], operation) # we create the next generator for this operation
                                     break
                             second_term += to_add
                         self.__cache[operation][element] = first_term + base*second_term
@@ -692,5 +728,4 @@ class RWOPolySimpleMorphism (Morphism):
 
         return self.codomain()(str(p))
 
-__all__ = ["RWOPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing",
-            "is_RWOPolynomialRing"]
+__all__ = ["RWOPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_RWOPolynomialRing"]
