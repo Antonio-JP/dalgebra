@@ -195,7 +195,7 @@ class RingsWithOperators(Category):
             '''
             return len(self.operators())
 
-        def operation(self, element : Element, operator : int = 0) -> Element:
+        def operation(self, element : Element, operator : int = None) -> Element:
             r'''
                 Method to apply an operator over an element.
 
@@ -225,6 +225,10 @@ class RingsWithOperators(Category):
                     sage: sQx.operation(p)
                     x^3
                     sage: sdQx.operation(p)
+                    Traceback (most recent call last):
+                    ...
+                    IndexError: An index for the operation must be provided when having several operations
+                    sage: sdQx.operation(p, 0)
                     x^3
                     sage: sdQx.operation(p, 1)
                     3*x^2 - 6*x + 3
@@ -233,6 +237,8 @@ class RingsWithOperators(Category):
                     ...
                     IndexError: ... index out of range
             '''
+            if operator is None and self.noperators() == 1: operator = 0
+            elif operator is None: raise IndexError("An index for the operation must be provided when having several operations")
             return self.operators()[operator](element)
 
         @abstract_method
@@ -291,13 +297,15 @@ class RingsWithOperators(Category):
             '''
             return self.noperators() == self.nderivations()
 
-        def derivative(self, element: Element, derivation: int = 0) -> Element:
+        def derivative(self, element: Element, derivation: int = None) -> Element:
             r'''
                 Method to apply a derivation over an element.
 
                 This method applies a derivation over a given element in the same way an operator
                 is applied by the method :func:`~RingsWithOperators.ParentMethods.operation`.
             '''
+            if derivation is None and self.nderivations() == 1: derivation = 0
+            elif derivation is None: raise IndexError("An index for the derivation must be provided when having several derivations")
             return self.derivations()[derivation](element)
 
         ### 'difference'
@@ -334,16 +342,18 @@ class RingsWithOperators(Category):
             '''
             return self.noperators() == self.ndifferences()
 
-        def difference(self, element: Element, difference: int = 0) -> Element:
+        def difference(self, element: Element, difference: int = None) -> Element:
             r'''
                 Method to apply a difference over an element.
 
                 This method applies a difference over a given element in the same way an operator
                 is applied by the method :func:`~RingsWithOperators.ParentMethods.operation`.
             '''
+            if difference is None and self.ndifferences() == 1: difference = 0
+            elif difference is None: raise IndexError("An index for the difference must be provided when having several differences")
             return self.differences()[difference](element)
         
-        def shift(self, element: Element, shift: int = 0) -> Element:
+        def shift(self, element: Element, shift: int = None) -> Element:
             r'''
                 Alias for :func:`~RingsWithOperators.ParentMethods.difference`.
             '''
@@ -383,13 +393,15 @@ class RingsWithOperators(Category):
             '''
             return self.noperators() == self.nskews()
 
-        def skew(self, element: Element, skew: int = 0) -> Element:
+        def skew(self, element: Element, skew: int = None) -> Element:
             r'''
                 Method to apply a skew-derivation over an element.
 
                 This method applies a skew-derivation over a given element in the same way an operator
                 is applied by the method :func:`~RingsWithOperators.ParentMethods.operation`.
             '''
+            if skew is None and self.nskews() == 1: skew = 0
+            elif skew is None: raise IndexError("An index for the skew must be provided when having several skews")
             return self.skews()[skew](element)
         
         ##########################################################
@@ -502,7 +514,7 @@ class RingsWithOperators(Category):
         ##########################################################
         ### APPLICATION METHODS
         ##########################################################
-        def operation(self, times : int = 1, operation : int = 0) -> Element:
+        def operation(self, operation : int = None, times : int = 1) -> Element:
             r'''
                 Apply an operation to ``self`` a given amount of times.
 
@@ -517,9 +529,9 @@ class RingsWithOperators(Category):
             elif(times == 1):
                 return self.parent().operation(self, operation)
             else:
-                return self.parent().operation(self.operation(times=times-1,operation=operation), operation)
+                return self.parent().operation(self.operation(operation=operation, times=times-1), operation)
 
-        def derivative(self, times: int = 1, derivation: int = 0) -> Element:
+        def derivative(self, derivation: int = None, times: int = 1) -> Element:
             r'''
                 Apply a derivation to ``self`` a given amount of times.
 
@@ -534,9 +546,9 @@ class RingsWithOperators(Category):
             elif(times == 1):
                 return self.parent().derivative(self, derivation)
             else:
-                self.parent().derivative(self.derivative(times=times-1,derivation=derivation), derivation)
+                return self.parent().derivative(self.derivative(derivation=derivation, times=times-1), derivation)
 
-        def difference(self, times: int = 1, difference: int = 0) -> Element:
+        def difference(self, difference: int = None, times: int = 1) -> Element:
             r'''
                 Apply a difference to ``self`` a given amount of times.
 
@@ -551,15 +563,15 @@ class RingsWithOperators(Category):
             elif(times == 1):
                 return self.parent().difference(self, difference)
             else:
-                self.parent().difference(self.difference(times=times-1,difference=difference), difference)
+                return self.parent().difference(self.difference(difference=difference, times=times-1), difference)
                 
-        def shift(self, times: int = 1, shift: int = 0) -> Element:
+        def shift(self, shift: int = None, times: int = 1) -> Element:
             r'''
                 Alias for :func:`~RingsWithOperators.ElementMethods.difference`.
             '''
-            return self.difference(times, shift)
+            return self.difference(shift, times)
 
-        def skew(self, times: int = 1, skew: int = 0) -> Element:
+        def skew(self, skew: int = None, times: int = 1) -> Element:
             r'''
                 Apply a difference to ``self`` a given amount of times.
 
@@ -574,7 +586,7 @@ class RingsWithOperators(Category):
             elif(times == 1):
                 return self.parent().skew(self, skew)
             else:
-                self.parent().skew(self.skew(times=times-1,difskewference=skew), skew)
+                return self.parent().skew(self.skew(skew=skew, times=times-1), skew)
 
         ##########################################################
         ### BOOLEAN METHODS
