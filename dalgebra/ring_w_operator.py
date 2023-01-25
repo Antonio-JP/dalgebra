@@ -90,11 +90,11 @@ r'''
         sage: DSR.noperators()
         2
         sage: DSR.operator_types()
-        ("derivation", "homomorphism")
+        ('derivation', 'homomorphism')
 
     We can see that these operator **do not commute**::
 
-        sage: x = DSR(x)
+        sage: x = DSR(x); y = DSR(y)
         sage: x.difference().derivative()
         2*x
         sage: x.derivative().difference()
@@ -470,7 +470,7 @@ class RingsWithOperators(Category):
                     sage: dsR.all_commute()
                     True
                     sage: R.<x,y> = QQ[]
-                    sage; dx,dy = R.derivation_module().gens(); d = dx + y*dy
+                    sage: dx,dy = R.derivation_module().gens(); d = dx + y*dy
                     sage: s = R.Hom(R)([x + 1, y^2])
                     sage: dsR = DifferenceRing(DifferentialRing(R, d), s)
                     sage: dsR.all_commute()
@@ -996,7 +996,7 @@ class RingWithOperators_Wrapper(CommutativeRing):
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R = RingWithOperator(QQ['x'], diff)
+                sage: R = RingWithOperators(QQ['x'], diff)
                 sage: R.one()
                 1
         '''
@@ -1008,8 +1008,8 @@ class RingWithOperators_Wrapper(CommutativeRing):
 
             EXAMPLES::
 
-                sage: from dalgebra import RingWithOperator
-                sage: R = RingWithOperator(QQ['x'], diff)
+                sage: from dalgebra import *
+                sage: R = RingWithOperators(QQ['x'], diff)
                 sage: R.zero()
                 0
         '''

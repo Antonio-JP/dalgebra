@@ -11,16 +11,16 @@ PACKAGE=dalgebra
 all: install doc test
 		
 # Installing commands
-install:
+install: clean_build
 	$(SAGE) -pip install --upgrade .
 
-no-deps:
+no-deps: clean_build
 	$(SAGE) -pip install --upgrade --no-deps .
 
 uninstall:
 	$(SAGE) -pip uninstall $(PACKAGE)
 
-develop:
+develop: clean_build
 	$(SAGE) -pip install --upgrade -e .
 
 test: install
@@ -52,6 +52,10 @@ doc-github: doc
 		
 # Cleaning commands
 clean: clean_doc clean_pyc
+
+clean_build:
+	@echo "Cleaning previous build files"
+	@rm -rf ./build ./dalgebra.egg-info
 
 clean_doc:
 	@echo "Cleaning documentation"
