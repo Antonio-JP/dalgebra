@@ -175,6 +175,10 @@ class RingsWithOperators(Category):
 
     ## Defining methods for the Parent structures of this category
     class ParentMethods:
+        ##########################################################
+        ### METHODS RELATED WITH THE OPERATORS
+        ##########################################################
+        ### 'generic'
         @abstract_method
         def operators(self) -> Collection[Morphism]:
             r'''
@@ -253,6 +257,7 @@ class RingsWithOperators(Category):
             '''
             raise NotImplementedError("Method 'operator_types' need to be implemented")
 
+        ### 'derivation'
         @cached_method
         def derivations(self) -> Collection[DerivationMap]:
             r'''
@@ -295,6 +300,7 @@ class RingsWithOperators(Category):
             '''
             return self.derivations()[derivation](element)
 
+        ### 'difference'
         @cached_method
         def differences(self) -> Collection[Morphism]:
             r'''
@@ -343,6 +349,7 @@ class RingsWithOperators(Category):
             '''
             return self.difference(element, shift)
 
+        ### 'skews'
         @cached_method
         def skews(self) -> Collection[Morphism]:
             r'''
@@ -385,6 +392,9 @@ class RingsWithOperators(Category):
             '''
             return self.skews()[skew](element)
         
+        ##########################################################
+        ### OTHER METHODS
+        ##########################################################
         @abstract_method
         def operator_ring(self) -> Ring:
             r'''
@@ -472,8 +482,26 @@ class RingsWithOperators(Category):
                 for j in range(i+1, self.noperators()) 
             )
 
+        @abstract_method
+        def constant_ring(self, operation: int = 0) -> Parent:
+            r'''
+                Method to obtain the constant ring of a given operation.
+
+                The meaning of a ring of constants depends on the type of operator that 
+                we are considering:
+
+                * "homomorphism": the elements that are fixed by the operator.
+                * "derivation": the elements that goes to zero with the operator.
+                * "skew": the elements that goes to zero with the operator.
+                * "none": it makes no sense to talk about constant for these operators.
+            '''
+            raise NotImplementedError("Method 'constant_ring' not implemented")
+            
     ## Defining methods for the Element structures of this category
     class ElementMethods:
+        ##########################################################
+        ### APPLICATION METHODS
+        ##########################################################
         def operation(self, times : int = 1, operation : int = 0) -> Element:
             r'''
                 Apply an operation to ``self`` a given amount of times.
@@ -548,6 +576,60 @@ class RingsWithOperators(Category):
             else:
                 self.parent().skew(self.skew(times=times-1,difskewference=skew), skew)
 
+        ##########################################################
+        ### BOOLEAN METHODS
+        ##########################################################
+        def is_constant(self, operation: int = 0):
+            r'''
+                Method to check whether an element is a constant with respect to one operator.
+
+                INPUT:
+
+                * ``operation``: index defining the operation we want to check.
+
+                OUTPUT:
+
+                A boolean value with ``True`` is the element is a constant (see 
+                :func:`RingsWithOperators.ParentMethods.constant_ring` for further information
+                on what is a constant depending on the type of operator).
+
+                REMARK: this method do not require the implementation on :func:`RingsWithOperators.ParentMethods.constant_ring`
+                on its parent structure.
+
+                EXAMPLES::
+
+                    sage: from dalgebra import *
+                    sage: R = DifferentialRing(QQ[x], diff)
+                    sage: p = R(3)
+                    sage: p.is_constant()
+                    True
+                    sage: p = R(x^3 - 3*x + 1)
+                    sage: p.is_constant()
+                    False
+
+                Some interesting constants may arise unexpectedly when adding other derivations::
+
+                    sage: R.<x,y> = QQ[]
+                    sage: dx, dy = R.derivation_module().gens(); d = y*dx - x*dy
+                    sage: dR = DifferentialRing(R, d)
+                    sage: x,y = dR.gens()
+                    sage: x.is_constant()
+                    False
+                    sage: y.is_constant()
+                    False
+                    sage: (x^2 + y^2).is_constant()
+                    True
+            '''
+            ttype = self.parent().operator_types()[operation]
+            if ttype == "homomorphism":
+                result = self.operation(operation=operation) == self
+            elif ttype in ("derivation", "skew"):
+                result = self.operation(operation=operation) == self.parent().zero()
+            else:
+                raise ValueError(f"The operation {operation} has not a good type defined")
+
+            return result
+            
     # methods that all morphisms involving differential rings must implement
     class MorphismMethods: 
         pass
