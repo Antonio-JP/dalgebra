@@ -5,8 +5,7 @@ r'''
     the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the *ring `R` with operator
     `\sigma`* as the pair `(R, \sigma)`. 
 
-    Similarly, if we have a set of additive maps `\sigma_1,\ldots,\sigma_n : R \rightarrow R` that 
-    commute among themselves (i.e., for all `i,j`, `\sigma_i \circ \sigma_j = \sigma_j \circ \sigma_i`).
+    Similarly, if we have a set of additive maps `\sigma_1,\ldots,\sigma_n : R \rightarrow R`.
     Then we define the *ring `R` with operators `(\sigma_1,\ldots,\sigma_n)`* as the tuple 
     `(R, (\sigma_1,\ldots,\sigma_n))`.
 
@@ -105,6 +104,19 @@ r'''
         sage: y.derivative().difference()
         y^2
 
+    Finally, this module also allows the definition of skew-derivations for any ring. This requires the use 
+    of derivation modules with twist (see :mod:`sage.rings.derivation`)::
+
+        sage: R.<x,y> = QQ[]
+        sage: s = R.Hom(R)([x-y, x+y])
+        sage: td = R.derivation_module(twist=s)(x-y)
+        sage: tR = RingWithOperators(R, s, td, types=["homomorphism", "skew"])
+        sage: x,y = tR.gens()
+        sage: (x*y).skew() == x.skew()*y + x.shift()*y.skew()
+        True
+        sage: (x*y).skew() == x.skew()*y.shift() + x*y.skew()
+        True
+
     AUTHORS:
 
         - Antonio Jimenez-Pastor ([GitHub](https://github.com/Antonio-JP))
@@ -151,8 +163,7 @@ class RingsWithOperators(Category):
         the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the *ring `R` with operator
         `\sigma`* as the pair `(R, \sigma)`. 
 
-        Similarly, if we have a set of additive maps `\sigma_1,\ldots,\sigma_n : R \rightarrow R` that 
-        commute among themselves (i.e., for all `i,j`, `\sigma_i \circ \sigma_j = \sigma_j \circ \sigma_i`).
+        Similarly, if we have a set of additive maps `\sigma_1,\ldots,\sigma_n : R \rightarrow R`.
         Then we define the *ring `R` with operators `(\sigma_1,\ldots,\sigma_n)`* as the tuple 
         `(R, (\sigma_1,\ldots,\sigma_n))`.
 
@@ -332,6 +343,48 @@ class RingsWithOperators(Category):
             '''
             return self.difference(element, shift)
 
+        @cached_method
+        def skews(self) -> Collection[Morphism]:
+            r'''
+                Method to filter the skew-derivations out of a ring with operators.
+
+                Differences are a particular type of operators. With this method we 
+                provide a similar interface as with the generic operators but just with
+                difference.
+
+                Similarly, this class offers access to homomorphisms and derivations.
+
+                When no skew-derivation is declared for a ring, an empty tuple is returned.
+            '''
+            return tuple([operator for (operator, ttype) in zip(self.operators(), self.operator_types()) if ttype == "skew"])
+
+        def nskews(self) -> int:
+            r'''
+                Method to get the number of skew-derivations defined over a ring
+            '''
+            return len(self.skews())
+
+        def has_skews(self) -> bool:
+            r'''
+                Method to know if there are skew-derivations defined over the ring.
+            '''
+            return self.ndifferences() > 0
+
+        def is_skew(self) -> bool:
+            r'''
+                Method to check whether a ring is skewed, i.e, all operators are skew-derivations.
+            '''
+            return self.noperators() == self.nskews()
+
+        def skew(self, element: Element, skew: int = 0) -> Element:
+            r'''
+                Method to apply a skew-derivation over an element.
+
+                This method applies a skew-derivation over a given element in the same way an operator
+                is applied by the method :func:`~RingsWithOperators.ParentMethods.operation`.
+            '''
+            return self.skews()[skew](element)
+        
         @abstract_method
         def operator_ring(self) -> Ring:
             r'''
@@ -478,6 +531,23 @@ class RingsWithOperators(Category):
             '''
             return self.difference(times, shift)
 
+        def skew(self, times: int = 1, skew: int = 0) -> Element:
+            r'''
+                Apply a difference to ``self`` a given amount of times.
+
+                This method applies repeatedly a difference defined in the parent of ``self``.
+                See :func:`~RingsWithOperators.ParentMethods.difference` for further information.
+            '''
+            if(not times in ZZ or times < 0):
+                raise ValueError("The argument ``times`` must be a non-negative integer")
+
+            if(times == 0):
+                return self
+            elif(times == 1):
+                return self.parent().skew(self, skew)
+            else:
+                self.parent().skew(self.skew(times=times-1,difskewference=skew), skew)
+
     # methods that all morphisms involving differential rings must implement
     class MorphismMethods: 
         pass
@@ -574,7 +644,11 @@ class RingWithOperatorFactory(UniqueFactory):
                     sum((operator(base_gen)*der_gen for (base_gen,der_gen) in zip(base.gens(),der_module.gens())), der_module.zero())
                 )
             elif ttype == "skew":
-                raise NotImplementedError("Building skew-derivation from callable not implemented")
+                if not isinstance(parent(operator), RingDerivationModule):
+                    raise NotImplementedError("Building skew-derivation from callable not implemented")
+                twist = operator.parent().twisting_morphism()
+                twist = base.Hom(base).one() if twist is None else twist
+                new_operator = SkewMap(base, twist, operator)
 
             if new_operator != operator:
                 operators[i] = new_operator
