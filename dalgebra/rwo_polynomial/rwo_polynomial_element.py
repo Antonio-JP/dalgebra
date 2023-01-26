@@ -131,11 +131,11 @@ class IndexBijection_Object (Morphism):
 
     @cached_method
     def inverse(self, image: Element) -> int:
-        r'''Computes the preimage of a tuple of ``self.dim`` natural numbers'''
+        r'''Computes the pre-image of a tuple of ``self.dim`` natural numbers'''
         if self.dim == 1:
             return image
         if not len(image) == self.dim:
-            raise TypeError("Given element has innapropriate length")
+            raise TypeError("Given element has inappropriate length")
         sum_of_elements = sum(image)
         result = IndexBijection_Object.elements_summing(sum_of_elements-1, self.dim+1) # elements summing less than "sum_of_elements"
         for i in range(len(image)-1):
@@ -170,7 +170,7 @@ class RWOPolynomialGen (InfinitePolynomialGen):
 
         * ``parent``: a :class:`.rwo_polynomial_ring.DifferentialPolynomialRing_dense` where ``self`` will generate its elements.
           This will indicate also the amount of indices allow to generate a variable.
-        * ``name``: main part of the name for the generated variales.
+        * ``name``: main part of the name for the generated variables.
     '''
     def __init__(self, parent: Parent, name: str):
         from .rwo_polynomial_ring import is_RWOPolynomialRing
@@ -236,10 +236,13 @@ class RWOPolynomialGen (InfinitePolynomialGen):
             index = str(element).split("_")[-1]
             if self._parent.noperators() == 1:
                 index = int(index)
-            else:
+            elif index[0] == "(": # given by tuple
                 index = tuple(int(num) for num in index.replace("(","").replace(")","").split(",")) 
-                
-            if self._parent.noperators() == 1 and not as_tuple:
+            else: # given by its value
+                index = self.index_map(int(index))
+
+            # here ''index'' contains a number if noperators == 1 or a tuple                
+            if self._parent.noperators() > 1 and not as_tuple: # if we want the number instead of the tuple
                 index = self.index_map.inverse(index)
             return index
 
@@ -566,7 +569,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
         r'''
             Method that checks whether a infinite polynomial is linear (in terms of degree).
 
-            This method checks whether an infinite polynomial is lienar or not w.r.t. the provided
+            This method checks whether an infinite polynomial is linear or not w.r.t. the provided
             variables. If ``None`` is given, then we will consider all variables.
 
             INPUT:
@@ -650,7 +653,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
 
             EXAMPLES::
 
-                sage: from dalgebra import DifferentialPolynomialRing 
+                sage: from dalgebra import * 
                 sage: R.<y> = DifferentialPolynomialRing(QQ['x']); x = R.base().gens()[0]
                 sage: y[1](0)
                 0
@@ -672,8 +675,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
                 sage: in_eval = (a[1] + y[0]*a[0])(y=x); in_eval
                 a_1 + x*a_0
                 sage: parent(in_eval)
-                Ring of differential polynomials in (a) over Differential Ring [Univariate Polynomial Ring 
-                in x over Rational Field] with derivation [Map from callable d/dx]
+                Ring of operator polynomials in (a) over Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
         '''
         return self.parent().eval(self, *args, **kwargs)
 

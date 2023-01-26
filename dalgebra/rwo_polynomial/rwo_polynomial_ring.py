@@ -39,10 +39,11 @@ from __future__ import annotations
 
 from itertools import product
 
-from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent
+from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent, parent
 from sage.categories.all import Morphism, Category, CommutativeAlgebras
-from sage.categories.pushout import ConstructionFunctor
+from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
+from sage.structure.element import Element #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 from typing import Collection
@@ -76,6 +77,7 @@ class RWOPolynomialRingFactory(UniqueFactory):
             raise ValueError("No variables given: impossible to create a ring")
         if len(set(names)) < len(names):
             raise ValueError("Repeated names given: impossible to create the ring")
+        names = tuple(sorted(names))
 
         # We check now whether the base ring is valid or not
         if not base in _RingsWithOperators:
@@ -153,7 +155,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             sage: diff(a[1]*b[0]) #Leibniz Rule
             a_2*b_0 + a_1*b_1
 
-        Althoug the use of diff can work in these rings, it is not fully recommended because we may require more 
+        Although the use of diff can work in these rings, it is not fully recommended because we may require more 
         information for the ``diff`` method to work properly. We recommend the use of the ``derivative`` methods 
         of the elements or the method ``derivative`` of the Rings (as indicated in the category 
         :class:`dalgebra.ring_w_operators.RingsWithOperators`)::
@@ -485,12 +487,12 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             OUTPUT:
 
-            The resulting element after evaluating the variable `\alpha_n = d^n(\alpha)`,
+            The resulting element after evaluating the variable `\alpha_{(i_1,...,i_n)} = (d_1^{i_1} \circ ... \circ d_n^{i_n})(\alpha)`,
             where `\alpha` is the name of the generator.
 
             EXAMPLES::
 
-                sage: from dalgebra import DifferentialPolynomialRing
+                sage: from dalgebra import *
                 sage: R.<y> = DifferentialPolynomialRing(QQ['x']); x = R.base().gens()[0]
                 sage: R.eval(y[1], 0)
                 0
@@ -499,9 +501,9 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: R.eval(y[0] + y[1], y=x)
                 x + 1
 
-            This method commutes with the use of :func:`derivation`::
+            This method always commutes with the use of :func:`operation`::
 
-                sage: R.eval(R.derivation(x^2*y[1]^2 - y[2]*y[1]), y=x) == R.derivation(R.eval(x^2*y[1]^2 - y[2]*y[1], y=x))
+                sage: R.eval(R.derivative(x^2*y[1]^2 - y[2]*y[1]), y=x) == R.derivative(R.eval(x^2*y[1]^2 - y[2]*y[1], y=x))
                 True
 
             This evaluation also works naturally with several infinite variables::
@@ -512,59 +514,56 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: in_eval = S.eval(a[1] + y[0]*a[0], y=x); in_eval
                 a_1 + x*a_0
                 sage: parent(in_eval)
-                Ring of differential polynomials in (a) over Differential Ring [Univariate Polynomial Ring in x over 
-                Rational Field] with derivation [Map from callable d/dx]
+                Ring of operator polynomials in (a) over Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
         '''
-        # if(not element in self):
-        #     raise TypeError("Impossible to evaluate %s as an element of %s" %(element, self))
-        # g = self.gens(); final_input = {}
-        # names = [el._name for el in g]
-        # if(len(args) > self.ngens()):
-        #     raise ValueError("Too many argument for evaluation: given %d, expected (at most) %d" %(len(args), self.ngens()))
-        # for i in range(len(args)):
-        #     final_input[g[i]] = args[i]
-        # for key in kwds:
-        #     if(not key in names):
-        #         raise TypeError("Invalid name for argument %s" %key)
-        #     gen = g[names.index(key)]
-        #     if(gen in final_input):
-        #         raise TypeError("Duplicated value for generator %s" %gen)
-        #     final_input[gen] = kwds[key]
+        ### Checking the element is in self
+        if(not element in self):
+            raise TypeError("Impossible to evaluate %s as an element of %s" %(element, self))
+        element = self(element) # making sure the structure is the appropriate
 
-        # max_application = {gen: 0 for gen in final_input}
-        # for v in element.variables():
-        #     for gen in max_application:
-        #         if(gen.contains(v)):
-        #             max_application[gen] = max(max_application[gen], gen.index(v))
-        #             break
+        ### Checking the input that needs to be evaluated
+        gens : tuple[RWOPolynomialGen] = self.gens()
+        names : list[str] = [el._name for el in gens]
+        if(len(args) > self.ngens()):
+            raise ValueError(f"Too many argument for evaluation: given {len(args)}, expected (at most) {self.ngens()}")
+
+        final_input : dict[RWOPolynomialGen, Element] = {gens[i] : args[i] for i in range(len(args))}
+        for key in kwds:
+            if(not key in names):
+                raise TypeError(f"Invalid name for argument {key}")
+            gen = gens[names.index(key)]
+            if(gen in final_input):
+                raise TypeError(f"Duplicated value for generator {gen}")
+            final_input[gen] = kwds[key]
+
+        ### Deciding final parent
+        rem_names = [name for (name,gen) in zip(names,gens) if gen not in final_input]
+        R = RWOPolynomialRing(self.base(), rem_names) if len(rem_names) > 0 else self.base()
+        for value in final_input.values():
+            R = pushout(R, parent(value))
         
-        # to_evaluate = {}
-        # for gen in max_application:
-        #     for i in range(max_application[gen]+1):
-        #         to_evaluate[str(gen[i])] = parent(final_input[gen])(self._apply_to_outside(final_input[gen], i))
+        final_input = {key : R(value) for key,value in final_input.items()} # updating input to the output ring
 
-        # ## Computing the final ring
-        # values = list(final_input.values())
-        # R = self.base()
-        # for value in values:
-        #     R = pushout(R, parent(value))
-
-        # poly = element.polynomial()
-        # ## Adding all the non-appearing variables on element
-        # if(len(final_input) == len(g)):
-        #     for v in poly.parent().gens():
-        #         if (v not in poly.variables()) and (not str(v) in to_evaluate):
-        #             to_evaluate[str(v)] = 0
-        # else:
-        #     left_gens = [gen for gen in g if gen not in final_input]
-        #     R = self.construction()[0].__class__([el._name for el in left_gens])(R)
-        #     for v in poly.parent().gens():
-        #         if (not any(gen.contains(v) for gen in left_gens)) and (not str(v) in to_evaluate):
-        #             to_evaluate[str(v)] = 0
-
-        # return R(poly(**to_evaluate))
-        raise NotImplementedError("Evaluation not yet implemented") # TODO
-
+        ### Building the elements to be used in evaluation
+        evaluation_dict = {}
+        for variable in element.variables():
+            for gen in gens:
+                if variable in gen: # we found the generator of this variable
+                    operations = gen.index(variable)
+                    if gen in final_input:
+                        if self.noperators() == 1:
+                            value = final_input[gen].operation(times=operations)
+                        else:
+                            value = final_input[gen]
+                            for (i, times) in enumerate(operations):
+                                value = value.operation(operation=i, times=times)
+                        evaluation_dict[str(variable)] = R(value)
+                    else:
+                        evaluation_dict[str(variable)] = R(gen[operations])
+                    break
+    
+        return R(element.polynomial()(**evaluation_dict))
+        
     #################################################
     ### Method from RingWithOperators category
     #################################################
@@ -706,7 +705,7 @@ class RWOPolyRingFunctor (ConstructionFunctor):
         if(other.__class__ == self.__class__):
             return (other.variables() == self.variables())
 
-    def merge(self, other):
+    def merge(self, _):
         pass # TODO
 
     def variables(self):
