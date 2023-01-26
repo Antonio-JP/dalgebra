@@ -83,9 +83,9 @@ class RWOSystem:
         self.__equations : tuple[RWOPolynomial] = tuple([pushed(el) for el in equations])
         
         # Checking the argument `variables`
+        gens = self.parent().gens()
         if(variables != None):
             str_vars = [str(v) for v in variables]
-            gens = self.parent().gens()
             dvars = []
             for var in str_vars:
                 for gen in gens:
@@ -749,8 +749,8 @@ class RWOSystem:
         '''
         if self.__CACHED_RES is None:
             ## Checking arguments
-            to_use_alg = self.__decide_resultant_algorithm(alg_res)
-            output = to_use_alg(bound_L)
+            to_use_alg = self.__decide_resultant_algorithm(operation, alg_res)
+            output = to_use_alg(bound_L, operation)
 
             if output == 0: # degenerate case
                 raise ValueError(f"We obtained a zero resultant --> this is a degenerate case (used {to_use_alg})")
@@ -760,7 +760,7 @@ class RWOSystem:
 
     ###################################################################################################
     ### Private methods concerning the resultant
-    def __decide_resultant_algorithm(self, alg_res: str = "auto") -> Callable[[int,*Any], RWOPolynomial]:
+    def __decide_resultant_algorithm(self, operation: int = None, alg_res: str = "auto") -> Callable[[int,int,*Any], RWOPolynomial]:
         r'''
             Method to decide the (hopefully) most optimal algorithm to compute the resultant.
         '''
@@ -784,7 +784,7 @@ class RWOSystem:
         else:
             raise ValueError("The algorithm for the algebraic resultant must be 'auto', 'dixon', 'macaulay' or 'iterative'")
             
-    def __get_extension(self, bound: int) -> tuple[int]:
+    def __get_extension(self, bound: int, operation: int) -> tuple[int]:
         if(not bound in ZZ or bound < 0):
             raise ValueError("The bound for the extension must be a non-negative integer")
 
@@ -796,14 +796,14 @@ class RWOSystem:
 
         for L in gen_cartesian(self.size(), bound):
             logger.info(f"Trying the extension {L}")
-            if(self.extend_by_operation(L).is_sp2()):
+            if(self.extend_by_operation(L, operation).is_sp2()):
                 logger.info(f"Found the valid extension {L}")
                 break
         else: # if we don't break, we have found nothing --> error
             raise TypeError("The system was not nicely extended with bound %d" %bound)
         return L
 
-    def __dixon(self, _ : int) -> RWOPolynomial:
+    def __dixon(self, _ : int, __: int) -> RWOPolynomial:
         r'''
             Method that computes the resultant of an extension of ``self` using Dixon resultant.
 
@@ -813,7 +813,7 @@ class RWOSystem:
         '''
         raise NotImplementedError("Dixon resultant not yet implemented")
   
-    def __macaulay(self, bound: int) -> RWOPolynomial:
+    def __macaulay(self, bound: int, operation: int) -> RWOPolynomial:
         r'''
             Method that computes the resultant of an extension of ``self` using Macaulay resultant.
 
@@ -822,15 +822,15 @@ class RWOSystem:
             * ``bound``: bound the the extension to look for a system to get a resultant.
         '''
         logger.info("Getting the appropriate extension for having a SP2 system...")
-        L = self.__get_extension(bound)
+        L = self.__get_extension(bound, operation)
 
         logger.info("Getting the homogenize version of the equations...")
-        equs = [el.homogenize() for el in self.extend_by_operation(L).algebraic_equations()]
+        equs = [el.homogenize() for el in self.extend_by_operation(L, operation).algebraic_equations()]
         ring = equs[0].parent()
         logger.info("Computing the Macaulay resultant...")
         return ring.macaulay_resultant(equs)
   
-    def __iterative(self, bound: int, alg_res: str = "auto") -> RWOPolynomial:
+    def __iterative(self, bound: int, operation: int, alg_res: str = "auto") -> RWOPolynomial:
         r'''
             Method that computes the resultant of an extension of ``self` using an iterative elimination.
 
@@ -851,7 +851,7 @@ class RWOSystem:
             smallest_equations = sorted(range(system.size()), key=lambda p:len(system.equation(p).monomials()))
             base_cases = smallest_equations[:len(lin_vars)]
             new_equations = [
-                self.parent()(system.subsystem(base_cases + [i]).diff_resultant(bound))
+                self.parent()(system.subsystem(base_cases + [i]).diff_resultant(bound, operation))
                 for i in smallest_equations[len(lin_vars):]
             ]
             logger.info("##########################################################")
@@ -859,7 +859,7 @@ class RWOSystem:
             rem_variables = [el for el in variables if (not el in lin_vars)]
             logger.info(f"We now remove {rem_variables}")
             system = self.__class__(new_equations, self.parent(), rem_variables)
-            return system.diff_resultant(bound, alg_res)
+            return system.diff_resultant(bound, operation, alg_res)
         
         ## Logger printing
         if alg_res != "iterative":
@@ -886,7 +886,7 @@ class RWOSystem:
                 logger.info(f"Picked the pivot [{str(pivot)[:30]}...] for differential elimination")
                 logger.info(f"Computing the elimination for all pair of equations...")
                 new_equs = [
-                    self.subsystem([equs_by_order[0], i], variables=[v]).diff_resultant(bound, alg_res) 
+                    self.subsystem([equs_by_order[0], i], variables=[v]).diff_resultant(bound, operation, alg_res) 
                     for i in equs_by_order[1:]
                 ]
                 logger.info(f"Adding equations without {repr(v)}...")
@@ -896,12 +896,12 @@ class RWOSystem:
             else:
                 logger.info(f"The variable {repr(v)} does not appear. Proceeding with the remaining variables {rem_vars}...")
                 system = self.subsystem(variables = rem_vars)
-            return system.diff_resultant(bound, alg_res)
+            return system.diff_resultant(bound, operation, alg_res)
         else:
             logger.info("Only one variable remains. We proceed to eliminate it in an algebraic fashion")
             logger.info(f"Extending the system to eliminate {repr(self.variables[0])}...")
-            L = self.__get_extension(bound)
-            system = self.extend_by_operation(L) # now we can eliminate everything
+            L = self.__get_extension(bound, operation)
+            system = self.extend_by_operation(L, operation) # now we can eliminate everything
             alg_equs = list(system.algebraic_equations())
             alg_vars = [alg_equs[0].parent()(str(el)) for el in system.algebraic_variables()]
 
