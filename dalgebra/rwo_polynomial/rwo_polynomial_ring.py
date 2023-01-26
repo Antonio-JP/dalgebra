@@ -231,10 +231,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             sage: dx, dy = R.derivation_module().gens() # creating derivations
             sage: s = R.Hom(R)([x+1,y-1]) # creating the shift operator
             sage: dsR = DifferenceRing(DifferentialRing(R, dx, dy), s); dsR
-            Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (d/dx, d/dy, Ring endomorphism of Multivariate Polynomial Ring in x, y over Rational Field
-                Defn: x |--> x + 1
-                        y |--> y - 1
-                        with map of base ring)]
+            Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (d/dx, d/dy, Hom({x: x + 1, y: y - 1}))]
 
         We can see that these three operators all commute::
 
@@ -244,11 +241,8 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         Hence, we can create the ring of operator polynomials with as many variables as we want::
 
             sage: OR.<u,v> = RWOPolynomialRing(dsR); OR
-            Ring of operator polynomials in (u, v) over Ring [[Multivariate Polynomial Ring in x, y over 
-            Rational Field], (d/dx, d/dy, Ring endomorphism of Multivariate Polynomial Ring in x, y over Rational Field
-                Defn: x |--> x + 1
-                        y |--> y - 1
-                        with map of base ring)]
+            Ring of operator polynomials in (u, v) over Ring [[Multivariate Polynomial Ring in 
+            x, y over Rational Field], (d/dx, d/dy, Hom({x: x + 1, y: y - 1}))]
             
         When we have several operators, we can create elements on the variables in two ways:
 

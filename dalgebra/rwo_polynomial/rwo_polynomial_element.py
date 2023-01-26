@@ -21,7 +21,7 @@ AUTHORS:
 
 from __future__ import annotations
 
-from sage.all import cartesian_product, binomial, Parent
+from sage.all import cartesian_product, binomial, Parent, latex
 from sage.categories.morphism import Morphism # pylint: disable=no-name-in-module
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialGen
@@ -720,7 +720,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return original
     
     def _latex_(self) -> str:
-        original = super()._latex_()
+        original = latex(self.polynomial())
         if self.parent().noperators() > 1:
             import re
             sub_match = lambda match : "_{" + str(IndexBijection(self.parent().noperators())(int(match.groups()[0]))) + "}"

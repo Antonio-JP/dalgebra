@@ -140,6 +140,7 @@ from sage.categories.all import Morphism, Category, Rings, CommutativeRings, Com
 from sage.categories.morphism import SetMorphism # pylint: disable=no-name-in-module
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.misc.all import abstract_method, cached_method
+from sage.rings.morphism import RingHomomorphism_im_gens # pylint: disable=no-name-in-module
 from sage.rings.ring import Ring, CommutativeRing #pylint: disable=no-name-in-module
 from sage.rings.derivation import RingDerivationModule
 from sage.structure.element import parent, Element #pylint: disable=no-name-in-module
@@ -998,7 +999,13 @@ class RingWithOperators_Wrapper(CommutativeRing):
         return repr(self)
 
     def _latex_(self) -> str:
-        return r"\left(" + latex(self.wrapped) + ", " + latex(self.operators()) + r"\right)"
+        return "".join((
+            r"\left(",
+            latex(self.wrapped),
+            ", ",
+            latex(self.operators()) if self.noperators() > 1 else latex(self.operators()[0]),
+            r"\right)"
+        ))
 
     ## Element generation
     def one(self) -> RingWithOperators_WrapperElement:
@@ -1107,6 +1114,9 @@ class AdditiveMap(SetMorphism):
     def __repr__(self) -> str:
         return f"{repr(self.function)}"
 
+    def _latex_(self) -> str:
+        return latex(self.function)
+
     def __eq__(self, other) -> bool:
         return isinstance(other, AdditiveMap) and self.domain() == other.domain() and self.function == other.function
 
@@ -1145,7 +1155,20 @@ class WrappedMap(AdditiveMap):
         super().__init__(domain, lambda p : domain(function(domain(p).wrapped)))
         self.function = function
 
+    def __repr__(self) -> str:
+        if isinstance(self.function, RingHomomorphism_im_gens):
+            im_gens = {v: im for (v,im) in zip(self.function.domain().gens(), self.function.im_gens())}
+            return f"Hom({im_gens})"
+        else:
+            return super().__repr__()
+
     def __str__(self) -> str:
         return f"Wrapped [{repr(self)}] over (({self.domain()}))"
+
+    def _latex_(self) -> str:
+        if isinstance(self.function, RingHomomorphism_im_gens):
+            im_gens = {v: im for (v,im) in zip(self.function.domain().gens(), self.function.im_gens())}
+            return r"\sigma\left(" + r", ".join(f"{latex(v)} \\mapsto {latex(im)}" for (v,im) in im_gens.items()) + r"\right)"
+        return super()._latex_()
 
 __all__ = ["RingsWithOperators", "RingWithOperators", "DifferentialRing", "DifferenceRing"]
