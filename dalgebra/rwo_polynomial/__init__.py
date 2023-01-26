@@ -22,4 +22,4 @@ AUTHORS:
 
 from .rwo_polynomial_element import *
 from .rwo_polynomial_ring import *
-# from .rwo_polynomial_system import *
+from .rwo_polynomial_system import *
