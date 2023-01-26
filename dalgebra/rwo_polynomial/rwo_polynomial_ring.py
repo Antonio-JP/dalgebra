@@ -397,10 +397,10 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         return res
 
     ## Other magic methods   
-    def __repr__(self) -> str:
-        return f"Ring of infinite polynomials in {self._names}) over {self.base()}"
+    def __repr__(self):
+        return f"Ring of operator polynomials in ({', '.join(self._names)}) over {self._base}"
 
-    def _latex_(self) -> str:
+    def _latex_(self):
         return latex(self._base) + r"\{" + ", ".join(self._names) + r"\}"
             
     #################################################
@@ -656,15 +656,6 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         return AdditiveMap(self, func) 
     
-    #################################################
-    ### Magic python methods
-    #################################################
-    def __repr__(self):
-        return f"Ring of operator polynomials in ({', '.join(self._names)}) over {self._base}"
-
-    def _latex_(self):
-        return latex(self._base) + r"\{" + ", ".join(self._names) + r"\}"
-
 def is_RWOPolynomialRing(element):
     r'''
         Method to check whether an object is a ring of infinite polynomial with an operator.

@@ -140,7 +140,7 @@ from sage.categories.all import Morphism, Category, Rings, CommutativeRings, Com
 from sage.categories.morphism import SetMorphism # pylint: disable=no-name-in-module
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.misc.all import abstract_method, cached_method
-from sage.rings.ring import Ring, CommutativeRing
+from sage.rings.ring import Ring, CommutativeRing #pylint: disable=no-name-in-module
 from sage.rings.derivation import RingDerivationModule
 from sage.structure.element import parent, Element #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
@@ -174,7 +174,7 @@ class RingsWithOperators(Category):
         return [_Rings]
 
     ## Defining methods for the Parent structures of this category
-    class ParentMethods:
+    class ParentMethods: #pylint: disable=no-member
         ##########################################################
         ### METHODS RELATED WITH THE OPERATORS
         ##########################################################
@@ -510,7 +510,7 @@ class RingsWithOperators(Category):
             raise NotImplementedError("Method 'constant_ring' not implemented")
             
     ## Defining methods for the Element structures of this category
-    class ElementMethods:
+    class ElementMethods: #pylint: disable=no-member
         ##########################################################
         ### APPLICATION METHODS
         ##########################################################
