@@ -799,25 +799,25 @@ class RingWithOperators_WrapperElement(Element):
 
     # Arithmetic methods
     def _add_(self, x) -> RingWithOperators_WrapperElement:
-        if parent(x) != self.parent(): # this should not happend
+        if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped + x.wrapped)
     def _sub_(self, x) -> RingWithOperators_WrapperElement:
-        if parent(x) != self.parent(): # this should not happend
+        if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped - x.wrapped)
     def _neg_(self) -> RingWithOperators_WrapperElement:
         return self.parent().element_class(self.parent(), -self.wrapped)
     def _mul_(self, x) -> RingWithOperators_WrapperElement:
-        if parent(x) != self.parent(): # this should not happend
+        if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped * x.wrapped)
     def _rmul_(self, x) -> RingWithOperators_WrapperElement:
-        if parent(x) != self.parent(): # this should not happend
+        if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped * x.wrapped)
     def _lmul_(self, x) -> RingWithOperators_WrapperElement:
-        if parent(x) != self.parent(): # this should not happend
+        if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped * x.wrapped)
     def __pow__(self, n) -> RingWithOperators_WrapperElement:
