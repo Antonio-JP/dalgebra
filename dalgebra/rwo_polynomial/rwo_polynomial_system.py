@@ -751,12 +751,6 @@ class RWOSystem:
             ## Checking arguments
             to_use_alg = self.__decide_resultant_algorithm(alg_res)
             output = to_use_alg(bound_L)
-            if(to_use_alg == "dixon"):
-                output = self.__dixon(bound_L)
-            elif(to_use_alg == "macaulay"):
-                output = self.__macaulay(bound_L)
-            elif(to_use_alg == "iterative"):
-                output = self.__iterative(bound_L, alg_res)
 
             if output == 0: # degenerate case
                 raise ValueError(f"We obtained a zero resultant --> this is a degenerate case (used {to_use_alg})")
@@ -766,17 +760,30 @@ class RWOSystem:
 
     ###################################################################################################
     ### Private methods concerning the resultant
-    def __decide_resultant_algorithm(self) -> Callable[[int,*Any], RWOPolynomial]:
+    def __decide_resultant_algorithm(self, alg_res: str = "auto") -> Callable[[int,*Any], RWOPolynomial]:
         r'''
             Method to decide the (hopefully) most optimal algorithm to compute the resultant.
         '''
-        if self.is_linear():
-            logger.info("The system is linear: we use Macaulay")
-            return self.__macaulay
-        else:
-            logger.info("We could not decide a better algorithm: using iterative elimination")
+        if alg_res == "iterative":
+            logging.info(f"We compute the resultant using iterative algorithm")
             return self.__iterative
-
+        elif alg_res == "dixon":
+            logging.info(f"We compute the resultant using Dixon resultant")
+            return self.__dixon
+        elif alg_res == "macaulay":
+            logging.info(f"We compute the resultant using Macaulay resultant")
+            return self.__macaulay
+        elif alg_res == "auto":
+            logging.info("Deciding automatically the algorithm for the resultant...")
+            if self.is_linear():
+                logger.info("The system is linear: we use Macaulay resultant")
+                return self.__macaulay
+            else:
+                logger.info("We could not decide a better algorithm: using iterative elimination")
+                return self.__iterative
+        else:
+            raise ValueError("The algorithm for the algebraic resultant must be 'auto', 'dixon', 'macaulay' or 'iterative'")
+            
     def __get_extension(self, bound: int) -> tuple[int]:
         if(not bound in ZZ or bound < 0):
             raise ValueError("The bound for the extension must be a non-negative integer")
