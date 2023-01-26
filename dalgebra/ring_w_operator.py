@@ -137,7 +137,7 @@ from __future__ import annotations
 from typing import Callable, Collection
 from sage.all import ZZ, latex, Parent
 from sage.categories.all import Morphism, Category, Rings, CommutativeRings, CommutativeAdditiveGroups
-from sage.categories.morphism import SetMorphism # pylint: disable=no-name-in-module
+from sage.categories.morphism import IdentityMorphism, SetMorphism # pylint: disable=no-name-in-module
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.misc.all import abstract_method, cached_method
 from sage.rings.morphism import RingHomomorphism_im_gens # pylint: disable=no-name-in-module
@@ -1159,6 +1159,8 @@ class WrappedMap(AdditiveMap):
         if isinstance(self.function, RingHomomorphism_im_gens):
             im_gens = {v: im for (v,im) in zip(self.function.domain().gens(), self.function.im_gens())}
             return f"Hom({im_gens})"
+        elif isinstance(self.function, IdentityMorphism):
+            return "Id"
         else:
             return super().__repr__()
 
@@ -1169,6 +1171,8 @@ class WrappedMap(AdditiveMap):
         if isinstance(self.function, RingHomomorphism_im_gens):
             im_gens = {v: im for (v,im) in zip(self.function.domain().gens(), self.function.im_gens())}
             return r"\sigma\left(" + r", ".join(f"{latex(v)} \\mapsto {latex(im)}" for (v,im) in im_gens.items()) + r"\right)"
+        elif isinstance(self.function, IdentityMorphism):
+            return r"\text{id}"
         return super()._latex_()
 
 __all__ = ["RingsWithOperators", "RingWithOperators", "DifferentialRing", "DifferenceRing"]
