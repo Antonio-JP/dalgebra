@@ -1,14 +1,9 @@
 .. nodoctest
 
-Structure for Rings with Associated Operators
+Rings with Operators: a Category, a Factory and a Wrapper
 ==============================================================================================================================
 
-.. autoclass:: dalgebra.ring_w_operator.RingsWithOperator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. autoclass:: dalgebra.ring_w_operator.RingWithOperatorFactory
+.. automodule:: dalgebra.ring_w_operator
    :members:
    :undoc-members:
    :show-inheritance:
