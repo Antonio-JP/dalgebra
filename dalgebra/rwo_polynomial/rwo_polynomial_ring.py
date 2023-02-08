@@ -235,7 +235,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         We can see that these three operators all commute::
 
-            sage: dsR.all_commute()
+            sage: dsR.all_operators_commute()
             True
 
         Hence, we can create the ring of operator polynomials with as many variables as we want::
@@ -276,7 +276,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
     def __init__(self, base : Parent, names : Collection[str]):
         if not base in _RingsWithOperators:
             raise TypeError("The base must be a ring with operators")
-        if not base.all_commute():
+        if not base.all_operators_commute():
             raise TypeError("Detected operators that do NOT commute. Impossible to build the RWOPolynomialRing")
 
         if any(ttype == "none" for ttype in base.operator_types()):

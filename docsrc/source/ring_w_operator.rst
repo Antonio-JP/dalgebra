@@ -1,6 +1,6 @@
 .. nodoctest
 
-Rings with Operators: a Category, a Factory and a Wrapper
+Rings with Operators: Category, Factory and Wrapper
 ==============================================================================================================================
 
 .. automodule:: dalgebra.ring_w_operator

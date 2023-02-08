@@ -2,20 +2,21 @@ r'''
     Module with all structures for defining rings with operators.
 
     Let `\sigma: R \rightarrow R` be an additive homomorphism, i.e., for all elements `r,s \in R`,
-    the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the *ring `R` with operator
-    `\sigma`* as the pair `(R, \sigma)`. 
+    the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the *ring* `R` *with operator*
+    `\sigma` as the pair `(R, \sigma)`. 
 
     Similarly, if we have a set of additive maps `\sigma_1,\ldots,\sigma_n : R \rightarrow R`.
-    Then we define the *ring `R` with operators `(\sigma_1,\ldots,\sigma_n)`* as the tuple 
+    Then we define the *ring* `R` *with operators* `(\sigma_1,\ldots,\sigma_n)` as the tuple 
     `(R, (\sigma_1,\ldots,\sigma_n))`.
 
     This module provides the framework to define this type of rings with as many operators as 
     the user wants and we also provide a Wrapper class so we can extend existing ring structures that 
-    already exist in SageMath. 
+    already exist in `SageMath <https://www.sagemath.org>`_. 
 
     The factory :func:`RingWithOperator` allows the creation of these rings with operators and will determine 
     automatically in which specified category a ring will belong. For example, we can create the differential
-    ring `(\mathbb{Q}[x], \partial_x)` or the difference ring `(\mathbb{Q}[x], x \mapsto x + 1)` with this module::
+    ring `(\mathbb{Q}[x], \partial_x)` or the difference ring `(\mathbb{Q}[x], x \mapsto x + 1)` with the 
+    following code::
 
         sage: from dalgebra import *
         sage: dQx = RingWithOperators(QQ[x], lambda p : p.derivative())
@@ -39,7 +40,7 @@ r'''
         sage: x.operation(operation=1)
         x + 1
 
-    However, these operators have no structure by themselves: SageMath is not able to distinguish the type 
+    However, these operators have no structure by themselves: `SageMath`_ is not able to distinguish the type 
     of the operators if they are defined using lambda expressions or callables. This can be seen by the fact that
     the factory can not detect the equality on two identical rings::
 
@@ -68,7 +69,11 @@ r'''
 
     Also, we can detect this equality when adding operators sequentially instead of at once::
 
-        sage: dsQx = RingWithOperators(QQ[x], lambda p : p.derivative(), lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1), types = ["derivation", "homomorphism"])
+        sage: dsQx = RingWithOperators(QQ[x], 
+        ....:     lambda p : p.derivative(), 
+        ....:     lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1), 
+        ....:     types = ["derivation", "homomorphism"]
+        ....: )
         sage: dsQx is RingWithOperators(dQx, lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1), types=["homomorphism"])
         True
 
@@ -82,7 +87,7 @@ r'''
 
     We can also have more complexes structures with different types of operators::
 
-        sage: R.<x,y> = QQ[] # x is the usual variable, y is a exponential
+        sage: R.<x,y> = QQ[] # x is the usual variable, y is an exponential
         sage: dx, dy = R.derivation_module().gens(); d = dx + y*dy
         sage: DR = DifferentialRing(R, d)
         sage: # We add a special homomorphism where the two generators are squared but QQ is fixed
@@ -105,7 +110,7 @@ r'''
         y^2
 
     Finally, this module also allows the definition of skew-derivations for any ring. This requires the use 
-    of derivation modules with twist (see :mod:`sage.rings.derivation`)::
+    of derivation modules with twist (see :sageref:`sage.rings.derivations <rings/sage/rings/derivation>`)::
 
         sage: R.<x,y> = QQ[]
         sage: s = R.Hom(R)([x-y, x+y])
@@ -119,7 +124,7 @@ r'''
 
     AUTHORS:
 
-        - Antonio Jimenez-Pastor ([GitHub](https://github.com/Antonio-JP))
+    - Antonio Jimenez-Pastor (:git:`GitHub <Antonio-JP>`)
 '''
 
 # ****************************************************************************
@@ -161,14 +166,14 @@ class RingsWithOperators(Category):
         Category for representing rings with operators.
 
         Let `\sigma: R \rightarrow R` be an additive homomorphism, i.e., for all elements `r,s \in R`,
-        the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the *ring `R` with operator
-        `\sigma`* as the pair `(R, \sigma)`. 
+        the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the *ring* `R` *with operator*
+        `\sigma` as the pair `(R, \sigma)`. 
 
         Similarly, if we have a set of additive maps `\sigma_1,\ldots,\sigma_n : R \rightarrow R`.
-        Then we define the *ring `R` with operators `(\sigma_1,\ldots,\sigma_n)`* as the tuple 
+        Then we define the *ring* `R` *with operators* `(\sigma_1,\ldots,\sigma_n)` as the tuple 
         `(R, (\sigma_1,\ldots,\sigma_n))`.
 
-        This category defines the basic methods for these rings.
+        This category defines the basic methods for these rings and their elements
     '''
     ## Defining a super-category
     def super_categories(self):
@@ -453,7 +458,7 @@ class RingsWithOperators(Category):
 
             return all(op1(op2(element)) == op2(op1(element)) for element in to_check)
 
-        def all_commute(self, points: int = 10, *args, **kwds):
+        def all_operators_commute(self, points: int = 10, *args, **kwds):
             r'''
                 Method to check whether all operators of the ring commute. 
 
@@ -480,13 +485,13 @@ class RingsWithOperators(Category):
                     sage: from dalgebra import *
                     sage: R.<x> = QQ[]; d = diff; s = R.Hom(R)(x+1)
                     sage: dsR = DifferenceRing(DifferentialRing(R, d), s)
-                    sage: dsR.all_commute()
+                    sage: dsR.all_operators_commute()
                     True
                     sage: R.<x,y> = QQ[]
                     sage: dx,dy = R.derivation_module().gens(); d = dx + y*dy
                     sage: s = R.Hom(R)([x + 1, y^2])
                     sage: dsR = DifferenceRing(DifferentialRing(R, d), s)
-                    sage: dsR.all_commute()
+                    sage: dsR.all_operators_commute()
                     False
             '''
             return all(
@@ -537,7 +542,7 @@ class RingsWithOperators(Category):
                 Apply a derivation to ``self`` a given amount of times.
 
                 This method applies repeatedly a derivation defined in the parent of ``self``.
-                See :func:`~RingsWithOperators.ParentMethods.derivation` for further information.
+                See :func:`~RingsWithOperators.ParentMethods.derivative` for further information.
             '''
             if(not times in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
@@ -574,10 +579,10 @@ class RingsWithOperators(Category):
 
         def skew(self, skew: int = None, times: int = 1) -> Element:
             r'''
-                Apply a difference to ``self`` a given amount of times.
+                Apply a skew-derivation to ``self`` a given amount of times.
 
                 This method applies repeatedly a difference defined in the parent of ``self``.
-                See :func:`~RingsWithOperators.ParentMethods.difference` for further information.
+                See :func:`~RingsWithOperators.ParentMethods.skew` for further information.
             '''
             if(not times in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
@@ -603,10 +608,10 @@ class RingsWithOperators(Category):
                 OUTPUT:
 
                 A boolean value with ``True`` is the element is a constant (see 
-                :func:`RingsWithOperators.ParentMethods.constant_ring` for further information
+                :func:`~RingsWithOperators.ParentMethods.constant_ring` for further information
                 on what is a constant depending on the type of operator).
 
-                REMARK: this method do not require the implementation on :func:`RingsWithOperators.ParentMethods.constant_ring`
+                REMARK: this method do not require the implementation on :func:`~RingsWithOperators.ParentMethods.constant_ring`
                 on its parent structure.
 
                 EXAMPLES::
