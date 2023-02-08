@@ -44,7 +44,7 @@ coverage:
 	$(SAGE) -coverage $(PACKAGE)/*
 	
 # Documentation commands
-doc: no-deps
+doc:
 	cd docsrc && $(SAGE) -sh -c "make html"
 
 doc-github: doc
