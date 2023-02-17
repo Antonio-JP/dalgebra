@@ -1,9 +1,9 @@
 .. nodoctest
 
-Element structures for Infinite Polynomials over rings with operators
+Parent structures for Infinite Polynomials over rings with operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra.diff_polynomial.diff_polynomial_element
+.. automodule:: dalgebra.rwo_polynomial.rwo_polynomial_ring
    :members:
    :undoc-members:
    :show-inheritance:

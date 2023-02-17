@@ -1,0 +1,9 @@
+K_se*K_sc
+-K_se^2*K_rb + K_se*K_cp*K_sc + K_se*K_rb*K_sc - K_se*K_sc
+-K_se
+-I_0*K_se^2 + K_se
+-I_0*K_se^2*K_cp + I_0*K_se^2 - I_0*K_se*K_sc
+I_0*K_se^2*K_rb - I_0*K_se*K_cp*K_sc - I_0*K_se*K_rb*K_sc + I_0*K_se*K_sc
+I_0*K_se
+I_0^2*K_se^2 + I_0*K_se*K_cp + I_0*K_se*K_rb - 2*I_0*K_se
+I_0^2*K_se^2*K_cp - I_0^2*K_se^2 - I_0*K_se*K_cp - I_0*K_se*K_rb + I_0*K_se

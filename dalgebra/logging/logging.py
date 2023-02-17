@@ -50,3 +50,5 @@ def verbose(logger):
             return out
         return wrap
     return inner
+
+__all__ = ["verbose"]

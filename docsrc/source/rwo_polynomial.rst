@@ -1,21 +1,22 @@
 .. nodoctest
 
-``dalgebra``: Difference and Differential Algebra
+Infinite Polynomials of Rings with Operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra
+.. automodule:: dalgebra.rwo_polynomial
    :members:
    :undoc-members:
    :show-inheritance:
 
-List of Packages 
+List of Modules 
 =================
 
 .. toctree::
    :maxdepth: 1
 
-   ring_w_operator
-   rwo_polynomial
+   rwo_polynomial/rwo_polynomial_ring
+   rwo_polynomial/rwo_polynomial_element
+   rwo_polynomial/rwo_polynomial_system
 
 
 Indices and Tables

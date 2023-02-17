@@ -1,17 +1,17 @@
 r"""
-Module ``differential_ring``
+Package ``diff_polynomial``
 
-This is the main entry package point for the functionalities of differential 
-structures.
+This is a package containing all the classes for creating and 
+manipulating differential and difference polynomial ring over arbitrary ground rings.
 
-AUTHORS::
+AUTHORS:
 
-    - Antonio Jimenez-Pastor (2022-02-02): initial version
+    - Antonio Jimenez-Pastor (2012-05-19): initial version
 
 """
 
 # ****************************************************************************
-#  Copyright (C) 2022 Antonio Jimenez-Pastor <jimenezpastor@lix.polytechnique.fr>
+#  Copyright (C) 2021 Antonio Jimenez-Pastor <ajpastor@risc.uni-linz.ac.at>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,4 +20,6 @@ AUTHORS::
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from .differential_ring import DifferentialRings, DifferentialRing
+from .rwo_polynomial_element import *
+from .rwo_polynomial_ring import *
+from .rwo_polynomial_system import *

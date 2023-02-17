@@ -21,15 +21,22 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
+from __future__ import annotations
+
 import logging
 
 from functools import reduce
 
-from sage.all import latex, ZZ, PolynomialRing, Compositions, Subsets, save
+from sage.all import latex, ZZ, Compositions, Subsets, Parent
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
+from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
+from sage.structure.element import Element #pylint: disable=no-name-in-module
 
-from .diff_polynomial_ring import is_DifferencePolynomialRing, is_DifferentialPolynomialRing, is_RWOPolynomialRing
+from typing import Collection, Callable, Any
+
+from .rwo_polynomial_ring import is_RWOPolynomialRing
+from .rwo_polynomial_element import RWOPolynomial, RWOPolynomialGen
 from ..logging.logging import verbose
 
 logger = logging.getLogger(__name__)
@@ -39,7 +46,7 @@ class RWOSystem:
         Class for representing a system over a ring with an operator.
 
         This class allows the user to represent a system of equations 
-        over a ring with an operator (see :class:`~dalgebra.ring_w_operator.ring_w_operator.RingsWithOperator`)
+        over a ring with operators (see the category :class:`~dalgebra.ring_w_operator.RingsWithOperators`)
         as a list of infinite polynomials in one or several variables.
 
         This class will offer a set of methods and properties to extract the main
@@ -48,8 +55,9 @@ class RWOSystem:
 
         INPUT:
 
-        * ``equations``: list or tuple of polynomials (see :class:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial`). 
-          The system will be the one defined by `eq = 0` for all `eq` in the input ``equations``.
+        * ``equations``: list or tuple of *operator polynomials* (see 
+          :class:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial`). The system will 
+          be the one defined by `eq = 0` for all `eq` in the input ``equations``.
         * ``parent``: the common parent to transform the input. The final parent of all
           the elements will a common structure (if possible) that will be the 
           pushout of all the parents of ``elements`` and this structure.
@@ -57,7 +65,11 @@ class RWOSystem:
           the variables of the system. If it is not given, we will consider all the 
           differential variables as main variables.
     '''
-    def __init__(self, equations, parent=None, variables=None):
+    def __init__(self, 
+        equations : Collection[RWOPolynomial], 
+        parent : Parent = None, 
+        variables : Collection[str|RWOPolynomialGen]=None
+    ):
         # Building the common parent
         parents = [el.parent() for el in equations]
         if(parent != None):
@@ -65,27 +77,28 @@ class RWOSystem:
 
         pushed = reduce(lambda p, q : pushout(p,q), parents)
         if(not is_RWOPolynomialRing(pushed)):
-            raise TypeError("The common parent is nto a ring of differential polynomials. Not valid for a DifferentialSystem")
+            raise TypeError("The common parent is not a ring of differential polynomials. Not valid for a RWOSystem")
 
-        self.__parent = pushed
+        self.__parent : Parent = pushed
         # Building the equations
-        self.__equations = tuple([pushed(el) for el in equations])
+        self.__equations : tuple[RWOPolynomial] = tuple([pushed(el) for el in equations])
         
         # Checking the argument `variables`
+        gens = self.parent().gens()
         if(variables != None):
             str_vars = [str(v) for v in variables]
-            gens = [str(g) for g in self.parent().gens()]
             dvars = []
             for var in str_vars:
-                if(not var in gens):
-                    raise ValueError("The variable %s is not valid for a system in [%s]" %(var, self.parent()))
-                dvars.append(self.parent().gens()[gens.index(var)])
+                for gen in gens:
+                    if var == str(gen) or var == gen._name:
+                        dvars.append(gen)
+                        break
         else:
             dvars = self.parent().gens()
         
         # setting up the differential variables
-        self.__variables = tuple(dvars)
-        self.__parameters = tuple([el for el in self.parent().gens() if (not el in dvars)])
+        self.__variables : tuple[RWOPolynomialGen] = tuple(dvars)
+        self.__parameters : tuple[RWOPolynomialGen] = tuple([gen for el in gens if el not in dvars])
 
         # cached variables
         self.__CACHED_SP1 = {}
@@ -99,20 +112,23 @@ class RWOSystem:
     @property
     def parameters(self): return self.__parameters
 
-    def parent(self):
+    def parent(self) -> Parent:
         return self.__parent
 
-    def size(self):
+    def size(self) -> int:
         return len(self._equations)
 
     @cached_method
-    def is_DifferentialSystem(self):
-        return is_DifferentialPolynomialRing(self.parent())
+    def is_DifferentialSystem(self) -> bool:
+        return self.parent().is_differential()
     @cached_method
-    def is_DifferenceSystem(self):
-        return is_DifferencePolynomialRing(self.parent())
+    def is_DifferenceSystem(self) -> bool:
+        return self.parent().is_difference()
 
-    def order(self, gen=None):
+    def is_differential(self) -> bool: return self.is_DifferentialSystem() #: alias of is_DifferentialSystem
+    def is_difference(self) -> bool: return self.is_DifferenceSystem() #: alias of is_DifferentialSystem
+
+    def order(self, gen: RWOPolynomialGen = None, operation: int = -1) -> int:
         r'''
             Method to return the order of the system.
 
@@ -121,9 +137,9 @@ class RWOSystem:
             be computed. For further information, check 
             :func:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial.order`.
         '''
-        return max(equ.order(gen) for equ in self.equations())
+        return max(equ.order(gen, operation) for equ in self.equations())
 
-    def equation(self, index):
+    def equation(self, index: int, *apply : int | tuple[int,int]) -> RWOPolynomial:
         r'''
             Method to get an equation from the system.
 
@@ -136,19 +152,20 @@ class RWOSystem:
 
             INPUT:
 
-            * ``index``: the index for the equation desired. It can be a list/tuple with two elements
-              `(i, n)` or a simple index `i`.
+            * ``index``: the index for the equation desired. 
+            * ``apply``: a collection of tuples `(a,n)` indicating which operations to apply to the equation.
+              In case there is only one operator, an integer means how many times to apply the only operator. 
+              Otherwise, an integer means the application of that operation once.
 
             OUTPUT:
 
-            A polynomial with the `i`-th equation of the system. If the input was a tuple, then we return
-            the `i`-th equation after applying the operation `n` times.
+            A polynomial with the `i`-th equation of the system. If ``apply`` was given, then we return
+            the `i`-th equation after applying the operations as many times as requested.
 
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: bR = QQ[x]; x = bR('x')
-                sage: R.<u,v> = DifferentialPolynomialRing(bR)
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base()(x)
                 sage: eq1 = u[0]*x - v[1]
                 sage: eq2 = u[1] - (x-1)*v[0]
                 sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
@@ -164,22 +181,55 @@ class RWOSystem:
                 ...
                 IndexError: tuple index out of range
 
-            And if the index is a tuple, we take the index rom th first element and the order as the second::
+            And if we provide the ``apply`` information, we take the corresponding equation and
+            apply all the given operations::
 
-                sage: system.equation((0,1)) == eq1.derivative()
+                sage: system.equation(0,1) == eq1.derivative()
                 True
-                sage: system.equation((0,5)) == eq1.derivative(times=5)
+                sage: system.equation(0,5) == eq1.derivative(times=5)
+                True
+
+            This is specially useful when having several operators::
+
+                sage: A = DifferenceRing(DifferentialRing(QQ["x"], diff), QQ["x"].Hom(QQ["x"])("x+1")); x = A("x")
+                sage: R.<u,v> = RWOPolynomialRing(A)
+                sage: eq1 = u[0,0]*x - v[1,0]
+                sage: eq2 = u[0,1] - (x-1)*v[0,0]
+                sage: system = RWOSystem([eq1,eq2])
+                sage: system.equation(0)
+                x*u_0_0 - v_1_0
+                sage: system.equation(1)
+                u_0_1 + (-x + 1)*v_0_0
+
+            And now, we can use the ``apply`` argument for each operator::
+
+                sage: system.equation(0, (0, 1)) # we apply the derivative
+                x*u_1_0 + u_0_0 - v_2_0
+                sage: system.equation(0, (1, 1)) # we apply the shift
+                (x + 1)*u_0_1 - v_1_1
+                sage: system.equation(0, (0, 2), (1, 3)) == system.equation(0).derivative(times=2).shift(times=3)
+                True
+                sage: system.equation(0,0,0,1,1,1) == system.equation(0, (0,2), (1,3))
                 True
         '''
-        if isinstance(index, (list,tuple)) and len(index) == 2:
-            return self._equations[index[0]].operation(times=index[1])
-        
-        try:
-            return self._equations[index]
-        except TypeError:
-            raise TypeError(f"The format for getting one equation is not valid. We got {index}")
+        # we get the equation using the index provided
+        equation = self._equations[index]
 
-    def equations(self, indices=None):
+        # we check the "apply" argument
+        if self.parent().noperators() == 1:
+            # if one operator, the integers indicate number of times
+            apply = [tuple([0, el]) if not isinstance(el, Collection) else el for el in apply] 
+        # in general, integers indicate the operation to apply once
+        apply = [tuple([el, 1]) if not isinstance(el, Collection) else el for el in apply]
+        if any(len(el) != 2 for el in apply):
+            raise ValueError("Invalid format on the apply argument for method 'element'")
+
+        for (operation, times) in apply:
+            equation = equation.operation(operation, times=times)
+        
+        return equation
+
+    def equations(self, indices: slice | int | Collection[tuple[int, int | tuple[int,int]]] = None) -> tuple[RWOPolynomial]:
         r'''
             Method to get a list of equations to the system.
 
@@ -189,9 +239,9 @@ class RWOSystem:
 
             INPUT:
 
-            * ``indices``: list or tuple of elements to be obtain. See method :func:`index` for further information.
+            * ``indices``: collection of elements to be obtain. See method :func:`index` for further information.
               If the input is a ``slice``, we convert it into a list. If the input is not a list or a tuple, we 
-              create  list with one element and try to get that element. If ``None`` is given, then 
+              create a list with one element and try to get that element. If ``None`` is given, then 
               we return all equations.
 
             OUTPUT:
@@ -202,8 +252,7 @@ class RWOSystem:
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: bR = QQ[x]; x = bR('x')
-                sage: R.<u,v> = DifferentialPolynomialRing(bR)
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base()(x)
                 sage: eq1 = u[0]*x - v[1]
                 sage: eq2 = u[1] - (x-1)*v[0]
                 sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
@@ -232,25 +281,29 @@ class RWOSystem:
         if indices is None:
             return self._equations
         elif isinstance(indices, slice):
-            indices = [el for el in range(*indices.indices(self.size()))]
+            indices = [[el] for el in range(*indices.indices(self.size()))]
         
         if not isinstance(indices, (list, tuple)):
-            indices = [indices]
+            indices = [[indices]]
+        indices = [[index] if not isinstance(index, Collection) else index for index in indices]
         
-        return tuple([self.equation(index) for index in indices])
+        return tuple([self.equation(*index) for index in indices])
 
-    def subsystem(self, indices, variables=None):
+    def subsystem(self, 
+        indices: slice | int | Collection[tuple[int, int | tuple[int,int]]]=None, 
+        variables : Collection[str|RWOPolynomialGen]=None
+    ) -> RWOSystem:
         r'''
             Method that creates a subsystem for a given set of equations.
 
             This method create a new :class:`RWOSystem` with the given variables in ``indices``
-            (see :func:`get_equations` to see the format of this input) and setting as 
+            (see :func:`equations` to see the format of this input) and setting as 
             main variables those given in ``variables`` (see in :class:`RWOSystem` the format for 
             this input).
 
             INPUT:
 
-            * ``indices``: list or tuple of indices to select the subsystem. (see :func:`get_equations` 
+            * ``indices``: list or tuple of indices to select the subsystem. (see :func:`equations` 
               to see the format of this input).
             * ``variables``: list of variables for the new system. If ``None`` is given, we use the 
               variables of ``self``.
@@ -268,9 +321,8 @@ class RWOSystem:
                 sage: eq2 = u[1] - (x-1)*v[0]
                 sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
                 sage: system.subsystem([(0,0), (0,1), (1,3)])
-                System over [Ring of differential polynomials in (u, v) over Differential Ring 
-                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
-                callable d/dx]] with variables [(u_*, v_*)]:
+                System over [Ring of operator polynomials in (u, v) over Differential Ring 
+                [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*, v_*)]:
                 {
                     x*u_0 - v_1 == 0
                     x*u_1 + u_0 - v_2 == 0
@@ -280,9 +332,8 @@ class RWOSystem:
             This method is used when using the ``__getitem__`` notation::
 
                 sage: system[::-1] # same system but with equations changed in order
-                System over [Ring of differential polynomials in (u, v) over Differential Ring 
-                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
-                callable d/dx]] with variables [(u_*, v_*)]:
+                System over [Ring of operator polynomials in (u, v) over Differential Ring 
+                [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*, v_*)]:
                 {
                     u_1 + (-x + 1)*v_0 == 0
                     x*u_0 - v_1 == 0
@@ -291,9 +342,8 @@ class RWOSystem:
             Setting up the argument ``variables`` allows to change the variables considered for the system::
 
                 sage: system.subsystem(None, variables=[u])
-                System over [Ring of differential polynomials in (u, v) over Differential Ring 
-                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
-                callable d/dx]] with variables [(u_*,)]:
+                System over [Ring of operator polynomials in (u, v) over Differential Ring 
+                [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*,)]:
                 {
                     x*u_0 - v_1 == 0
                     u_1 + (-x + 1)*v_0 == 0
@@ -303,7 +353,7 @@ class RWOSystem:
 
         return self.__class__(self.equations(indices), self.parent(), variables)
 
-    def change_variables(self, variables):
+    def change_variables(self, variables: Collection[str|RWOPolynomialGen]) -> RWOSystem:
         r'''
             Method that creates a new system with new set of main variables.
 
@@ -329,17 +379,15 @@ class RWOSystem:
                 sage: eq2 = u[1] - (x-1)*v[0]
                 sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
                 sage: system.change_variables(u)
-                System over [Ring of differential polynomials in (u, v) over Differential Ring 
-                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
-                callable d/dx]] with variables [(u_*,)]:
+                System over [Ring of operator polynomials in (u, v) over Differential Ring 
+                [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*,)]:
                 {
                     x*u_0 - v_1 == 0
                     u_1 + (-x + 1)*v_0 == 0
                 }
                 sage: system.change_variables([v])
-                System over [Ring of differential polynomials in (u, v) over Differential Ring 
-                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
-                callable d/dx]] with variables [(v_*,)]:
+                System over [Ring of operator polynomials in (u, v) over Differential Ring 
+                [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(v_*,)]:
                 {
                     x*u_0 - v_1 == 0
                     u_1 + (-x + 1)*v_0 == 0
@@ -350,16 +398,16 @@ class RWOSystem:
         return self.subsystem(None, variables)
 
     ## magic methods
-    def __getitem__(self, index):
-        return self.__class__(self.equations(index), self.parent(), self.variables)
+    def __getitem__(self, index) -> RWOSystem:
+        return self.subsystem(index)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "System over [%s] with variables [%s]:\n{\n\t" %(self.parent(), self.variables) + "\n\t".join(["%s == 0" %el for el in self.equations()]) + "\n}"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)
 
-    def _latex_(self):
+    def _latex_(self) -> str:
         result = r"\text{System over }" + latex(self.parent()) + r" \text{ with variables }" + ", ".join(latex(el) for el in self.variables) + ":\n\n"
         result += r"\left\{\begin{array}{ll}"
         result += "\n".join(latex(el) + r" & = 0 \\" for el in self.equations())
@@ -368,7 +416,7 @@ class RWOSystem:
 
     ## to algebraic methods
     @cached_method
-    def algebraic_variables(self):
+    def algebraic_variables(self) -> Collection[RWOPolynomial]:
         r'''
             Method to retrieve the algebraic variables in the system.
 
@@ -430,7 +478,7 @@ class RWOSystem:
                 True
                 sage: parents[0]
                 Multivariate Polynomial Ring in u_0, u_1, u_2 over Differential 
-                Ring [Rational Field] with derivation [Map from callable 0]
+                Ring [[Rational Field], (0,)]
 
             The same can be checked for a multivariate differential polynomial::
 
@@ -452,8 +500,7 @@ class RWOSystem:
                 True
                 sage: parents[0]
                 Multivariate Polynomial Ring in v_0, v_1, v_2, v_3, v_4, u_0, u_1, u_2, u_3 over 
-                Differential Ring [Univariate Polynomial Ring in x over Rational Field] with 
-                derivation [Map from callable d/dx]
+                Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
 
             The output of this method depends actively in the set of active variables that defines the system::
 
@@ -471,15 +518,15 @@ class RWOSystem:
 
                 sage: system_with_u.algebraic_equations()[0].parent()
                 Multivariate Polynomial Ring in u_0, u_1, u_2 over Multivariate Polynomial 
-                Ring in v_0, v_1, v_2 over Differential Ring [Univariate Polynomial Ring 
-                in x over Rational Field] with derivation [Map from callable d/dx]
+                Ring in v_0, v_1, v_2 over Differential Ring [[Univariate Polynomial Ring 
+                in x over Rational Field], (d/dx,)]
                 sage: parents = [el.parent() for el in system_with_u.extend_by_operation([1,2]).algebraic_equations()]
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
                 Multivariate Polynomial Ring in u_0, u_1, u_2, u_3 over Multivariate Polynomial 
-                Ring in v_0, v_1, v_2, v_3, v_4 over Differential Ring [Univariate Polynomial 
-                Ring in x over Rational Field] with derivation [Map from callable d/dx]
+                Ring in v_0, v_1, v_2, v_3, v_4 over Differential Ring [[Univariate Polynomial 
+                Ring in x over Rational Field], (d/dx,)]
 
         '''
         equations = [el.polynomial() for el in self.equations()]
@@ -513,7 +560,7 @@ class RWOSystem:
             return tuple([final_parent(str(el)) for el in equations])
 
     ## SP properties
-    def extend_by_operation(self, Ls):
+    def extend_by_operation(self, Ls : Collection[int], operation : int = None) -> RWOSystem:
         r'''
             Method that build an extended system that satisfies SP1.
 
@@ -530,7 +577,8 @@ class RWOSystem:
 
             INPUT:
 
-            * `Ls`: list or tuple of non-negative integers of length ``self.size()``.
+            * ``Ls``: list or tuple of non-negative integers of length ``self.size()``.
+            * ``operation``: index of the operation with respect to which we want to extend the system.
 
             OUTPUT:
 
@@ -568,17 +616,22 @@ class RWOSystem:
         if(any(not el in ZZ or el < 0 for el in Ls)):
             raise ValueError("The argument must be a list or tuple of non-negative integers")
         
-        Ls = tuple(Ls)
-        if(not Ls in self.__CACHED_SP1):
-            new_equations = sum([[self.equation((i,k)) for k in range(Ls[i]+1)] for i in range(self.size())], [])
-            self.__CACHED_SP1[Ls] = self.__class__(new_equations, self.parent(), self.variables)
+        if self.parent().noperators() == 1 and operation is None:
+            operation = 0
+        elif self.parent().noperators() > 1 and operation is None:
+            raise ValueError("An operation must be provided when having several operations")
 
-        return self.__CACHED_SP1[Ls]
+        Ls = tuple(Ls)
+        if(not (Ls,operation) in self.__CACHED_SP1):
+            new_equations = [self.equation(i, (operation, k)) for i in range(self.size()) for k in range(Ls[i] + 1)]
+            self.__CACHED_SP1[(Ls,operation)] = self.__class__(new_equations, self.parent(), self.variables)
+
+        return self.__CACHED_SP1[(Ls,operation)]
 
     build_sp1 = extend_by_operation #: alias for method :func:`extend_by_operation`
     
     @cached_method
-    def is_homogeneous(self):
+    def is_homogeneous(self) -> bool:
         r'''
             This method checks whether the system is homogeneous in the indicated variables.
 
@@ -587,7 +640,7 @@ class RWOSystem:
         '''
         return all(equ.is_homogeneous() for equ in self.algebraic_equations())
 
-    def is_linear(self, variables=None):
+    def is_linear(self, variables : Collection[RWOPolynomialGen] = None) -> bool:
         r'''
             Method that checks whether a system is linear in its variables.
 
@@ -599,7 +652,7 @@ class RWOSystem:
         return all(equ.is_linear(variables) for equ in self.equations())
 
     @cached_method
-    def maximal_linear_variables(self):
+    def maximal_linear_variables(self) -> Collection[tuple[RWOPolynomialGen]]:
         rejected = []
         allowed = []
 
@@ -619,7 +672,7 @@ class RWOSystem:
                 result.append(candidate)
         return result
 
-    def is_sp2(self):
+    def is_sp2(self) -> bool:
         r'''
             Method that checks the condition SP2.
 
@@ -666,7 +719,7 @@ class RWOSystem:
 
     ## resultant methods
     @verbose(logger)
-    def diff_resultant(self, bound_L = 10, alg_res = "auto"):
+    def diff_resultant(self, bound_L: int = 10, operation: int = None, alg_res: str = "auto") -> RWOPolynomial:
         r'''
             Method to compute the operator resultant of this system.
 
@@ -678,6 +731,7 @@ class RWOSystem:
             INPUT:
 
             * ``bound_L``: bound for the values of ``Ls`` for method :func:`extend_by_operation`.
+            * ``operation``: index for the operation for which we want to compute the resultant.
             * ``alg_res``: (``"auto"`` by default) method to compute the algebraic resultant once we extended a 
               system to a valid system (see :func:`is_sp2`). The valid values are, currently,
               ``"dixon"``, ``"macaulay"`` and ``"iterative"``.
@@ -690,22 +744,8 @@ class RWOSystem:
         '''
         if self.__CACHED_RES is None:
             ## Checking arguments
-            if(not alg_res in ("auto", "iterative", "dixon", "macaulay")):
-                raise ValueError("The algorithm for the algebraic resultant must be 'auto', 'dixon', 'macaulay' or 'iterative'")
-            if alg_res == "auto":
-                logging.info("Deciding automatically the algorithm for the resultant...")
-                to_use_alg = self.__decide_resultant_algorithm()
-            else:
-                to_use_alg = alg_res
-            
-            ## Computing the resultant
-            logging.info(f"We compute the resultant using the algorithm {to_use_alg}")
-            if(to_use_alg == "dixon"):
-                output = self.__dixon(bound_L)
-            elif(to_use_alg == "macaulay"):
-                output = self.__macaulay(bound_L)
-            elif(to_use_alg == "iterative"):
-                output = self.__iterative(bound_L, alg_res)
+            to_use_alg = self.__decide_resultant_algorithm(operation, alg_res)
+            output = to_use_alg(bound_L, operation)
 
             if output == 0: # degenerate case
                 raise ValueError(f"We obtained a zero resultant --> this is a degenerate case (used {to_use_alg})")
@@ -715,18 +755,32 @@ class RWOSystem:
 
     ###################################################################################################
     ### Private methods concerning the resultant
-    def __decide_resultant_algorithm(self):
+    def __decide_resultant_algorithm(self, operation: int = None, alg_res: str = "auto") -> Callable[[int,int,*Any], RWOPolynomial]:
         r'''
             Method to decide the (hopefully) most optimal algorithm to compute the resultant.
         '''
-        if self.is_linear():
-            logger.info("The system is linear: we use Macaulay")
-            return "macaulay"
+        operation = 0 if operation is None else operation
+        if alg_res == "iterative":
+            logging.info(f"We compute the resultant using iterative algorithm")
+            return self.__iterative
+        elif alg_res == "dixon":
+            logging.info(f"We compute the resultant using Dixon resultant")
+            return self.__dixon
+        elif alg_res == "macaulay":
+            logging.info(f"We compute the resultant using Macaulay resultant")
+            return self.__macaulay
+        elif alg_res == "auto":
+            logging.info("Deciding automatically the algorithm for the resultant...")
+            if self.is_linear():
+                logger.info("The system is linear: we use Macaulay resultant")
+                return self.__macaulay
+            else:
+                logger.info("We could not decide a better algorithm: using iterative elimination")
+                return self.__iterative
         else:
-            logger.info("We could not decide a better algorithm: using iterative elimination")
-            return "iterative"
-
-    def __get_extension(self, bound):
+            raise ValueError("The algorithm for the algebraic resultant must be 'auto', 'dixon', 'macaulay' or 'iterative'")
+            
+    def __get_extension(self, bound: int, operation: int) -> tuple[int]:
         if(not bound in ZZ or bound < 0):
             raise ValueError("The bound for the extension must be a non-negative integer")
 
@@ -738,14 +792,14 @@ class RWOSystem:
 
         for L in gen_cartesian(self.size(), bound):
             logger.info(f"Trying the extension {L}")
-            if(self.extend_by_operation(L).is_sp2()):
+            if(self.extend_by_operation(L, operation).is_sp2()):
                 logger.info(f"Found the valid extension {L}")
                 break
         else: # if we don't break, we have found nothing --> error
             raise TypeError("The system was not nicely extended with bound %d" %bound)
         return L
 
-    def __dixon(self, bound):
+    def __dixon(self, _ : int, __: int) -> RWOPolynomial:
         r'''
             Method that computes the resultant of an extension of ``self` using Dixon resultant.
 
@@ -755,7 +809,7 @@ class RWOSystem:
         '''
         raise NotImplementedError("Dixon resultant not yet implemented")
   
-    def __macaulay(self, bound):
+    def __macaulay(self, bound: int, operation: int) -> RWOPolynomial:
         r'''
             Method that computes the resultant of an extension of ``self` using Macaulay resultant.
 
@@ -764,15 +818,15 @@ class RWOSystem:
             * ``bound``: bound the the extension to look for a system to get a resultant.
         '''
         logger.info("Getting the appropriate extension for having a SP2 system...")
-        L = self.__get_extension(bound)
+        L = self.__get_extension(bound, operation)
 
         logger.info("Getting the homogenize version of the equations...")
-        equs = [el.homogenize() for el in self.extend_by_operation(L).algebraic_equations()]
+        equs = [el.homogenize() for el in self.extend_by_operation(L, operation).algebraic_equations()]
         ring = equs[0].parent()
         logger.info("Computing the Macaulay resultant...")
         return ring.macaulay_resultant(equs)
   
-    def __iterative(self, bound, alg_res = "auto"):
+    def __iterative(self, bound: int, operation: int, alg_res: str = "auto") -> RWOPolynomial:
         r'''
             Method that computes the resultant of an extension of ``self` using an iterative elimination.
 
@@ -793,7 +847,7 @@ class RWOSystem:
             smallest_equations = sorted(range(system.size()), key=lambda p:len(system.equation(p).monomials()))
             base_cases = smallest_equations[:len(lin_vars)]
             new_equations = [
-                self.parent()(system.subsystem(base_cases + [i]).diff_resultant(bound))
+                self.parent()(system.subsystem(base_cases + [i]).diff_resultant(bound, operation))
                 for i in smallest_equations[len(lin_vars):]
             ]
             logger.info("##########################################################")
@@ -801,7 +855,7 @@ class RWOSystem:
             rem_variables = [el for el in variables if (not el in lin_vars)]
             logger.info(f"We now remove {rem_variables}")
             system = self.__class__(new_equations, self.parent(), rem_variables)
-            return system.diff_resultant(bound, alg_res)
+            return system.diff_resultant(bound, operation, alg_res)
         
         ## Logger printing
         if alg_res != "iterative":
@@ -828,7 +882,7 @@ class RWOSystem:
                 logger.info(f"Picked the pivot [{str(pivot)[:30]}...] for differential elimination")
                 logger.info(f"Computing the elimination for all pair of equations...")
                 new_equs = [
-                    self.subsystem([equs_by_order[0], i], variables=[v]).diff_resultant(bound, alg_res) 
+                    self.subsystem([equs_by_order[0], i], variables=[v]).diff_resultant(bound, operation, alg_res) 
                     for i in equs_by_order[1:]
                 ]
                 logger.info(f"Adding equations without {repr(v)}...")
@@ -838,12 +892,12 @@ class RWOSystem:
             else:
                 logger.info(f"The variable {repr(v)} does not appear. Proceeding with the remaining variables {rem_vars}...")
                 system = self.subsystem(variables = rem_vars)
-            return system.diff_resultant(bound, alg_res)
+            return system.diff_resultant(bound, operation, alg_res)
         else:
             logger.info("Only one variable remains. We proceed to eliminate it in an algebraic fashion")
             logger.info(f"Extending the system to eliminate {repr(self.variables[0])}...")
-            L = self.__get_extension(bound)
-            system = self.extend_by_operation(L) # now we can eliminate everything
+            L = self.__get_extension(bound, operation)
+            system = self.extend_by_operation(L, operation) # now we can eliminate everything
             alg_equs = list(system.algebraic_equations())
             alg_vars = [alg_equs[0].parent()(str(el)) for el in system.algebraic_variables()]
 
@@ -900,7 +954,7 @@ class RWOSystem:
             logger.info(f"Return the smallest result obtained")
             return sorted(alg_equs, key=lambda p: p.degree()**2 + len(p.monomials()))[0]
 
-    def __iterative_best_variable(self):
+    def __iterative_best_variable(self) -> RWOPolynomialGen:
         r'''
             Method to choose the best variable to do univariate elimination.
         '''
@@ -921,7 +975,7 @@ class RWOSystem:
                 
         return v
 
-    def __iterative_to_univariate(self, polynomial, variable):
+    def __iterative_to_univariate(self, polynomial : Element, variable: Element) -> Element:
         try:
             return polynomial.polynomial(variable)
         except:
@@ -932,29 +986,15 @@ class RWOSystem:
 class DifferentialSystem (RWOSystem):
     r'''
         Class representing a differential system.
-
-        This class allows the user to represent a system of differential equations 
-        as a list of differential polynomials in one or several variables.
-
-        This class will offer a set of methods and properties to extract the main
-        information of the differential system and also the main algorithms and methods
-        to study or manipulate these systems.
-
-        INPUT:
-
-        * ``equations``: list or tuple of differential polynomials. The system will
-          be the one defined by `eq = 0` for all `eq` in the input ``equations``.
-        * ``parent``: the common parent to transform the input. The final parent of all
-          the elements will a common structure (if possible) that will be the 
-          pushout of all the parents of ``elements`` and this structure.
-        * ``variables``: list of names or differential variables that will fix 
-          the variables of the system. If it is not given, we will consider all the 
-          differential variables as main variables.
     '''
-    def __init__(self, equations, parent=None, variables=None):
+    def __init__(self, 
+        equations : Collection[RWOPolynomial], 
+        parent : Parent = None, 
+        variables : Collection[str|RWOPolynomialGen]=None
+    ):
         super().__init__(equations, parent, variables)
 
-        if not is_DifferentialPolynomialRing(self.parent()):
+        if not self.parent().is_differential():
             raise TypeError("The common parent is nto a ring of differential polynomials. Not valid for a DifferentialSystem")
 
     extend_by_derivation = RWOSystem.extend_by_operation #: new alias for :func:`extend_by_operation`
@@ -962,31 +1002,17 @@ class DifferentialSystem (RWOSystem):
 class DifferenceSystem (RWOSystem):
     r'''
         Class representing a difference system.
-
-        This class allows the user to represent a system of difference equations 
-        as a list of difference polynomials in one or several variables.
-
-        This class will offer a set of methods and properties to extract the main
-        information of the difference system and also the main algorithms and methods
-        to study or manipulate these systems.
-
-        INPUT:
-
-        * ``equations``: list or tuple of difference polynomials. The system will
-          be the one defined by `eq = 0` for all `eq` in the input ``equations``.
-        * ``parent``: the common parent to transform the input. The final parent of all
-          the elements will a common structure (if possible) that will be the 
-          pushout of all the parents of ``elements`` and this structure.
-        * ``variables``: list of names or difference variables that will fix 
-          the variables of the system. If it is not given, we will consider all the 
-          difference variables as main variables.
     '''
-    def __init__(self, equations, parent=None, variables=None):
+    def __init__(self, 
+        equations : Collection[RWOPolynomial], 
+        parent : Parent = None, 
+        variables : Collection[str|RWOPolynomialGen]=None
+    ):
         super().__init__(equations, parent, variables)
 
-        if not is_DifferencePolynomialRing(self.parent()):
+        if not self.parent().is_difference():
             raise TypeError("The common parent is nto a ring of difference polynomials. Not valid for a DifferenceSystem")
 
     extend_by_difference = RWOSystem.extend_by_operation #: new alias for :func:`extend_by_operation`
 
-__all__ = ["DifferentialSystem", "DifferenceSystem"]
+__all__ = ["RWOSystem", "DifferentialSystem", "DifferenceSystem"]

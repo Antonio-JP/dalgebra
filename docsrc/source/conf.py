@@ -33,7 +33,7 @@ def readfile(filename):
 project = "Differential Algebra in Sage"
 copyright = '2021'
 package_name = 'dalgebra'
-package_folder = "../../dalgebra"
+package_folder = "../../"
 authors = "Antonio Jimenez-Pastor"
 
 # The full version, including alpha/beta/rc tags
@@ -44,7 +44,7 @@ release = readfile(str(path)).strip()
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.append(os.path.abspath(package_folder))
+sys.path.insert(0, os.path.abspath(package_folder)) # we add the version in repository to be documented
 sys.path.append(os.path.join(SAGE_SRC, "sage_docbuild", "ext"))
 
 # -- General configuration ------------------------------------------------
@@ -128,20 +128,31 @@ extlinks = {
     'mathscinet': ('http://www.ams.org/mathscinet-getitem?mr=%s', 'MathSciNet '),
     'dlmf': ('https://dlmf.nist.gov/%s', 'DLMF Chapter '),
     'wolf': ('https://mathworld.wolfram.com/%s.html', 'Wolfram MathWorld: '),
-    'sageref': ('https://doc.sagemath.org/html/en/reference/%s', 'Sage doc: '),
-    'git': ('https://github.com/%s', 'GitHub: ')
+    'sagemod': ('https://doc.sagemath.org/html/en/reference/%s', 'Sage doc: '),
+    'sageref': ('https://doc.sagemath.org/html/en/reference/%s.html', 'Sage doc: '),
+    'git': ('https://github.com/%s', 'GitHub: '),
+    'issue': ('https://github.com/Antonio-JP/pseries_basis/issues/%s', 'Issue:'),
+    'tag': ('https://github.com/Antonio-JP/dalgebra/tree/%s', 'Tag:'),
+    'home': ('https://github.com/Antonio-JP/dalgebra%s', 'Git:dalgebra'),
+    'hdoc': ('https://antonio-jp.github.io/dalgebra%s', 'Doc:dalgebra')
     }
+
+extlinks_detect_hardcoded_links = False
 
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'classic'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {}
+html_theme_options = {
+    # "repository_url": "https://github.com/Antonio-JP/dalgebra",
+    # "repository_branch": "master",
+    # "path_to_docs": "https://antonio-jp.github.io/dalgebra/",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 #html_theme_path = []

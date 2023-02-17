@@ -11,22 +11,22 @@ PACKAGE=dalgebra
 all: install doc test
 		
 # Installing commands
-install:
+install: clean_build
 	$(SAGE) -pip install --upgrade .
 
-no-deps:
+no-deps: clean_build
 	$(SAGE) -pip install --upgrade --no-deps .
 
 uninstall:
 	$(SAGE) -pip uninstall $(PACKAGE)
 
-develop:
+develop: clean_build
 	$(SAGE) -pip install --upgrade -e .
 
-test: install
+test: no-deps
 	$(SAGE) -t --force-lib ./dalgebra
 
-lint: install
+lint: no-deps
 	$(SAGE) -sh -c "pylint ./dalgebra --disable=all --enable=F,unreachable,duplicate-key,unnecessary-semicolon,\
 	global-variable-not-assigned,unused-variable,unused-wildcard-import,binary-op-exception,bad-format-string,\
 	anomalous-backslash-in-string,bad-open-mode,E0001,E0011,E0012,E0100,E0101,E0102,E0103,E0104,E0105,E0107,\
@@ -44,7 +44,7 @@ coverage:
 	$(SAGE) -coverage $(PACKAGE)/*
 	
 # Documentation commands
-doc: no-deps
+doc:
 	cd docsrc && $(SAGE) -sh -c "make html"
 
 doc-github: doc
@@ -52,6 +52,10 @@ doc-github: doc
 		
 # Cleaning commands
 clean: clean_doc clean_pyc
+
+clean_build:
+	@echo "Cleaning previous build files"
+	@rm -rf ./build ./dalgebra.egg-info
 
 clean_doc:
 	@echo "Cleaning documentation"
