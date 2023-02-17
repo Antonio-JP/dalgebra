@@ -5,7 +5,6 @@
 
 .. automodule:: dalgebra
    :members:
-   :undoc-members:
    :show-inheritance:
 
 List of Packages 
