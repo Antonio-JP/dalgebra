@@ -15,7 +15,7 @@ r'''
 **Main use-case**
 -----------------------------------------
 
-Let `R` be a ring and `\sigma: R \rightarrow R` a map such that `\sigma(r+s) = \sigma(r) + \sigma(r)`. The package `dalgebra` allows to create the combined structure `(R,\sigma)` and 
+Let `R` be a ring and `\sigma: R \rightarrow R` a map such that `\sigma(r+s) = \sigma(r) + \sigma(r)`. The package ``dalgebra`` allows to create the combined structure `(R,\sigma)` and 
 their elements will know about this operation over themselves. The main cases for this `\sigma` are the *shifts* and the *derivations*, which defines the behavior of `\sigma` with respect
 to the multiplication of `R`:
 
@@ -129,8 +129,10 @@ Moreover, any requested feature can be post in the :home:`issues page </issues>`
 -----------------------------------------
 This package is based on the work of the following research articles and books:
 
-* *E.R. Kolchin*: **Differential Algebra & Algebraic Groups**. `ISBN:9780080873695 <https://www.elsevier.com/books/differential-algebra-and-algebraic-groups/kolchin/978-0-12-417650-8>`_
-* *M. Bronstein*: **Symbolic Integration I**. `ISBN:978-3-662-03386-9 <https://link.springer.com/book/10.1007/978-3-662-03386-9>`_
+- *E.R. Kolchin*: **Differential Algebra & Algebraic Groups**. `ISBN:9780080873695 <https://www.elsevier.com/books/differential-algebra-and-algebraic-groups/kolchin/978-0-12-417650-8>`_
+- *M. Bronstein*: **Symbolic Integration I**. `ISBN:978-3-662-03386-9 <https://link.springer.com/book/10.1007/978-3-662-03386-9>`_
+
+- J.J.Morales-Ruiz, S.L. Rueda, M.A. Zurro, *Factorization of KdV Schrödinger operators using differential subresultants*, Advances in Applied Mathematics, vol. 120 (**2020**). :doi:`10.1016/j.aam.2020.102065`.
 
 **Acknowledgements**
 -----------------------------------------
