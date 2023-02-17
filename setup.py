@@ -1,4 +1,5 @@
 ## -*- encoding: utf-8 -*-
+import sys
 from setuptools import setup
 from codecs import open # To open the README file with proper encoding
 
@@ -29,13 +30,13 @@ setup(
       'Topic :: Software Development :: Build Tools',
       'Topic :: Scientific/Engineering :: Mathematics',
       'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
-      'Programming Language :: Python :: 3.9.2',
+      f'Programming Language :: Python :: {sys.version}',
     ], # classifiers list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
     keywords = "SageMath difference/differential algebra",
     packages = ["dalgebra",
                 "dalgebra.rwo_polynomial",
                 "dalgebra.logging"],
     setup_requires   = [],
-    install_requires = [],
+    install_requires = readfile("requirements.txt").split("\n"),
 )
     

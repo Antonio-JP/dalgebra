@@ -1,0 +1,3 @@
+ore_algebra @ git+https://github.com/mkauers/ore_algebra.git
+dd_functions @ git+https://github.com/Antonio-JP/dd_functions.git
+timeoutcontext >= 1.2.0
