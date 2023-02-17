@@ -9,7 +9,7 @@ r'''
 - *Main Author*: Antonio Jiménez-Pastor
 - *License*: GNU Public License v3.0
 - *Home page*: :home:`/`
-- *Documenation*: :hdoc:`/`
+- *Documentation*: :hdoc:`/`
 - *Online demo*: `Binder (not working) <https://mybinder.org/v2/gh/Antonio-JP/dalgebra/master?labpath=notebooks%2F.ipynb>`_
 
 **Main use-case**
@@ -24,7 +24,7 @@ to the multiplication of `R`:
 - *Skew-Derivations*: given an homomorphism `\tau: R \rightarrow R`, `\sigma(rs) = \sigma(r) s + \tau(r) \sigma(s)`.
 
 From these structures there is plenty of theory about how to perform symbolic integration or summation, how to manipulate difference/differential polynomials, study monomial extension, etc.
-This software will allow to create these structures and perform some of the algorithms described in the references mentioned above to study these structures.rger algorithm will succeed. 
+This software will allow to create these structures and perform some of the algorithms described in the references mentioned above to study these structures.
 
 Using ``dalgebra`` is a straight-forward process to work with these type of operators over a ring::
 
@@ -62,7 +62,7 @@ This package can be installed, used, modified and distributed freely under the c
 
 There are two different ways of installing the package into your `SageMath`_ distribution:
 
-*Install from souce code*
+*Install from source code*
 =========================
 
 The package can be obtained from the public git repository on GitHub:
@@ -71,15 +71,15 @@ The package can be obtained from the public git repository on GitHub:
 * or by cloning the repository by :home:`https <.git>`,
 * or downloading the latest version in :home:`zip </archive/master.zip>` format.
 
-After cloning or downloading the source cose, you may install it by running the following command line from the main folder of the repository::
+After cloning or downloading the source code, you may install it by running the following command line from the main folder of the repository::
 
     >> make install
 
 *Install via pip*
 =========================
 
-Another option to install this package is to use the ``pip`` functionality within `SageMath`_. This will install the latest stable version of the package and will take care of any 
-dependencies that may be required.
+Another option to install this package is to use the ``pip`` functionality within `SageMath`_. This will install the latest stable version 
+of the package and will take care of any dependencies that may be required.
 
 To install it via ``pip``, run the following in a terminal where ``sage`` can be executed::
 
@@ -101,7 +101,7 @@ can be obtained using the same procedures as described above but with small diff
 *Loading the package*
 =========================
 
-Once installed, the full functionality of the pacakge can be used after importing it with the command::
+Once installed, the full functionality of the package can be used after importing it with the command::
 
     sage: from dalgebra import *
 
@@ -115,10 +115,10 @@ available online that will be connected in future versions:
 * :git:`mkauers/ore_algebra`: developed by `M. Kauers <http://www.kauers.de/>`_ and `M. Mezzarobba <http://marc.mezzarobba.net/>`_.
 * :git:`Antonio-JP/dd_functions`: developed by `A. Jiménez-Pastor <https://scholar.google.com/citations?user=1gq-jy4AAAAJ&hl=es>`_.
 
-**Package under active developement**
+**Package under active development**
 -----------------------------------------
 
-This package is still under an active developement and further features will be included in future version of the code. This means that several bugs may exist or appear. 
+This package is still under an active development and further features will be included in future version of the code. This means that several bugs may exist or appear. 
 We would thank anyone that, after detecting any error, would post it in the :home:`issues page </issues>` of the repository using 
 the label :git:`bug <github/docs/labels/bug>`.
 
@@ -135,7 +135,7 @@ This package is based on the work of the following research articles and books:
 **Acknowledgements**
 -----------------------------------------
 
-This package has been developed with the finaltial support of the following insitutions:
+This package has been developed with the financial support of the following institutions:
 
 * The Austrian Science Fund (FWF): by W1214-N15, project DK15.
 * The Oberösterreich region: by the Innovatives OÖ-2010 plus program.
