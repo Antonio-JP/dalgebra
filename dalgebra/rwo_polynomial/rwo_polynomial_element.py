@@ -210,8 +210,9 @@ class RWOPolynomialGen (InfinitePolynomialGen):
 
         name = str(element)
         spl = name.split("_")
-        first = "_".join(spl[:-1])
-        return first == self._name
+        first = "_".join(spl[:-self._parent.noperators()]) # giving all indices
+        second = "_".join(spl[:-1]) # giving the global index
+        return self._name in (first, second)
 
     def __contains__(self, other) -> bool:
         return self.contains(other)
@@ -233,14 +234,12 @@ class RWOPolynomialGen (InfinitePolynomialGen):
             the numerical value of ``Y`` or an error if not possible.
         '''
         if(self.contains(element)):
-            index = str(element).split("_")[-1]
-            if self._parent.noperators() == 1:
-                index = int(index)
-            elif index[0] == "(": # given by tuple
-                index = tuple(int(num) for num in index.replace("(","").replace(")","").split(",")) 
-            else: # given by its value
-                index = self.index_map(int(index))
-
+            str_element = str(element).split("_")
+            if self._name == "_".join(str_element[:-1]): # pure index given
+                index = self.index_map(int(str_element[-1])) if self._parent.noperators() > 1 else int(str_element[-1])
+            else:
+                index = tuple(int(el) for el in str_element[-self._parent.noperators():])
+            
             # here ''index'' contains a number if noperators == 1 or a tuple                
             if self._parent.noperators() > 1 and not as_tuple: # if we want the number instead of the tuple
                 index = self.index_map.inverse(index)
@@ -715,7 +714,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
         original = super().__repr__()
         if self.parent().noperators() > 1:
             import re
-            sub_match = lambda match : "_" + str(IndexBijection(self.parent().noperators())(int(match.groups()[0]))) + match.groups()[1]
+            sub_match = lambda match : "_" + "_".join([str(e) for e in IndexBijection(self.parent().noperators())(int(match.groups()[0]))]) + match.groups()[1]
             original = re.sub(r"_(\d+)( |\^|\*|$)", sub_match, original)
         return original
     
