@@ -63,7 +63,7 @@ This package can be installed, used, modified and distributed freely under the c
 There are two different ways of installing the package into your `SageMath`_ distribution:
 
 *Install from source code*
-=========================
+==========================
 
 The package can be obtained from the public git repository on GitHub:
 

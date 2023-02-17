@@ -1,148 +1,290 @@
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Differential and Difference algebra in Sage &mdash; Differential Algebra in Sage 0.0.20220428.1815 documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <script src="_static/js/theme.js"></script>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>dalgebra: Difference and Differential Algebra &#8212; Differential Algebra in Sage 0.0.4 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css" />
+    
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Package ring_w_operator" href="ring_w_operator.html" /> 
-</head>
+    <link rel="next" title="Rings with Operators: Category, Factory and Wrapper" href="ring_w_operator.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ring_w_operator.html" title="Rings with Operators: Category, Factory and Wrapper"
+             accesskey="N">next</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">dalgebra</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href=""><code class="docutils literal notranslate"><span class="pre">dalgebra</span></code>: Difference and Differential Algebra</a></li> 
+      </ul>
+    </div>  
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
-            <a href="#" class="icon icon-home"> Differential Algebra in Sage
-          </a>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <ul>
-<li class="toctree-l1"><a class="reference internal" href="ring_w_operator.html">Package <code class="docutils literal notranslate"><span class="pre">ring_w_operator</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="diff_polynomial.html">Package <code class="docutils literal notranslate"><span class="pre">diff_polynomial</span></code></a></li>
-</ul>
-
-        </div>
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="#">Differential Algebra in Sage</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
-      <li>Differential and Difference algebra in Sage</li>
-      <li class="wy-breadcrumbs-aside">
-            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
-      </li>
-  </ul>
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
-  <div class="section" id="differential-and-difference-algebra-in-sage">
-<h1>Differential and Difference algebra in Sage<a class="headerlink" href="#differential-and-difference-algebra-in-sage" title="Permalink to this headline">¶</a></h1>
-<p>Differential and Difference Algebra is a wide field of Mathematics that involve
-algorithms such as Symbolic Integration and Summation. The main idea of this field
-is to add a derivative operator <span class="math notranslate nohighlight">\(\partial\)</span> to an algebraic structure
-that satisfies the following two properties:</p>
-<div class="math notranslate nohighlight">
-\[\begin{split}\begin{array}{c}
-    \partial(a+b) = \partial(a) + \partial(b)\\
-    \partial(ab) = \partial(a)b + a\partial(b)
-\end{array}\end{split}\]</div>
-<p>This setting can be used in commutative and non-commutative algebra, with rings, fields,
-modules, vector spaces, etc.</p>
-<p>This package provides a unified interface to create these algebraic structures, manipulate
-its elements and, in last instance, provide the specialized algorithms of Differential
-Algebra.</p>
-<p>For some references, the reader can follow the following texts:</p>
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-dalgebra">
+<span id="dalgebra-difference-and-differential-algebra"></span><h1><code class="docutils literal notranslate"><span class="pre">dalgebra</span></code>: Difference and Differential Algebra<a class="headerlink" href="#module-dalgebra" title="Permalink to this headline">¶</a></h1>
+<section id="difference-and-differential-algebra">
+<h2><strong>Difference and Differential Algebra</strong><a class="headerlink" href="#difference-and-differential-algebra" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">dalgebra</span></code> is a <a class="reference external" href="https://www.sagemath.org">SageMath</a> package that allow to create, manipulate, and study <em>differential</em> and <em>difference</em> structures.</p>
+<section id="some-information-about-the-repository">
+<h3><strong>Some information about the repository</strong><a class="headerlink" href="#some-information-about-the-repository" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li><p><a class="reference external" href="https://www.springer.com/gp/book/9783662033869">Symbolic Integration I</a></p></li>
-<li><p><a class="reference external" href="https://bookstore.ams.org/coll-33">Differential Algebra</a></p></li>
+<li><p><em>Main Author</em>: Antonio Jiménez-Pastor</p></li>
+<li><p><em>License</em>: GNU Public License v3.0</p></li>
+<li><p><em>Home page</em>: <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/">Git:dalgebra/</a></p></li>
+<li><p><em>Documentation</em>: <a class="reference external" href="https://antonio-jp.github.io/dalgebra/">Doc:dalgebra/</a></p></li>
+<li><p><em>Online demo</em>: <a class="reference external" href="https://mybinder.org/v2/gh/Antonio-JP/dalgebra/master?labpath=notebooks%2F.ipynb">Binder (not working)</a></p></li>
 </ul>
-<p>To use this module, it is enough to import it with the following Sage line:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="o">*</span>
+</section>
+<section id="main-use-case">
+<h3><strong>Main use-case</strong><a class="headerlink" href="#main-use-case" title="Permalink to this headline">¶</a></h3>
+<p>Let <span class="math notranslate nohighlight">\(R\)</span> be a ring and <span class="math notranslate nohighlight">\(\sigma: R \rightarrow R\)</span> a map such that <span class="math notranslate nohighlight">\(\sigma(r+s) = \sigma(r) + \sigma(r)\)</span>. The package <code class="docutils literal notranslate"><span class="pre">dalgebra</span></code> allows to create the combined structure <span class="math notranslate nohighlight">\((R,\sigma)\)</span> and 
+their elements will know about this operation over themselves. The main cases for this <span class="math notranslate nohighlight">\(\sigma\)</span> are the <em>shifts</em> and the <em>derivations</em>, which defines the behavior of <span class="math notranslate nohighlight">\(\sigma\)</span> with respect
+to the multiplication of <span class="math notranslate nohighlight">\(R\)</span>:</p>
+<ul class="simple">
+<li><p><em>Shifts</em>: <span class="math notranslate nohighlight">\(\sigma(rs) = \sigma(r) \sigma(s)\)</span>.</p></li>
+<li><p><em>Derivations</em>: <span class="math notranslate nohighlight">\(\sigma(rs) = \sigma(r) s + r \sigma(s)\)</span>.</p></li>
+<li><p><em>Skew-Derivations</em>: given an homomorphism <span class="math notranslate nohighlight">\(\tau: R \rightarrow R\)</span>, <span class="math notranslate nohighlight">\(\sigma(rs) = \sigma(r) s + \tau(r) \sigma(s)\)</span>.</p></li>
+</ul>
+<p>From these structures there is plenty of theory about how to perform symbolic integration or summation, how to manipulate difference/differential polynomials, study monomial extension, etc.
+This software will allow to create these structures and perform some of the algorithms described in the references mentioned above to study these structures.</p>
+<p>Using <code class="docutils literal notranslate"><span class="pre">dalgebra</span></code> is a straight-forward process to work with these type of operators over a ring:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span> <span class="o">=</span> <span class="n">DifferentialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="n">diff</span><span class="p">);</span> <span class="n">R</span>
+<span class="n">Differential</span> <span class="n">Ring</span> <span class="p">[[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">],</span> <span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">,)]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">p</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">3</span> <span class="o">+</span> <span class="mi">3</span><span class="o">*</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="mi">3</span><span class="o">*</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">3</span>
 </pre></div>
 </div>
-<p>From this site, you can explore all the documentation (which contains several examples of usage) for all
-the modules included in this package.</p>
-<p>For a live demo (with no need of installation), got to (not available)</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>the demo is currently not available</p>
+<p>We can also define more elaborated derivations or differences. For example, we can create a Differential ring with the exponential function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">R</span> <span class="o">=</span> <span class="n">DifferentialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;ex&#39;</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;ex&#39;</span><span class="p">](</span><span class="s1">&#39;ex&#39;</span><span class="p">)</span><span class="o">*</span><span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">())</span> <span class="c1"># ex is the exponential</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">ex</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">ex</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="n">ex</span>
+</pre></div>
 </div>
-<div class="section" id="list-of-packages">
-<h2>List of Packages<a class="headerlink" href="#list-of-packages" title="Permalink to this headline">¶</a></h2>
+<p>Or we can create a differential ring with two elements that mimic the behavior of the sine and cosine functions:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">s</span><span class="p">,</span><span class="n">c</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">QQ</span><span class="p">[];</span> <span class="n">ds</span><span class="p">,</span><span class="n">dc</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">derivation_module</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">DR</span> <span class="o">=</span> <span class="n">DifferentialRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">c</span><span class="o">*</span><span class="n">ds</span> <span class="o">-</span> <span class="n">s</span><span class="o">*</span><span class="n">dc</span><span class="p">);</span> <span class="n">s</span><span class="p">,</span><span class="n">c</span> <span class="o">=</span> <span class="n">DR</span><span class="o">.</span><span class="n">gens</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="n">c</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="o">-</span><span class="n">s</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">(</span><span class="n">s</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="n">c</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+<section id="installation">
+<h3><strong>Installation</strong><a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h3>
+<p>This package can be installed, used, modified and distributed freely under the conditions of the 
+<a class="reference external" href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License v3</a> (see the file <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/blob/master/LICENSE">LICENSE</a>).</p>
+<p>There are two different ways of installing the package into your <a class="reference external" href="https://www.sagemath.org">SageMath</a> distribution:</p>
+<section id="install-from-source-code">
+<h4><em>Install from source code</em><a class="headerlink" href="#install-from-source-code" title="Permalink to this headline">¶</a></h4>
+<p>The package can be obtained from the public git repository on GitHub:</p>
+<ul class="simple">
+<li><p>by clicking <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/">here</a> for the webpage view,</p></li>
+<li><p>or by cloning the repository by <a class="reference external" href="https://github.com/Antonio-JP/dalgebra.git">https</a>,</p></li>
+<li><p>or downloading the latest version in <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/archive/master.zip">zip</a> format.</p></li>
+</ul>
+<p>After cloning or downloading the source code, you may install it by running the following command line from the main folder of the repository:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;&gt;</span> <span class="n">make</span> <span class="n">install</span>
+</pre></div>
+</div>
+</section>
+<section id="install-via-pip">
+<h4><em>Install via pip</em><a class="headerlink" href="#install-via-pip" title="Permalink to this headline">¶</a></h4>
+<p>Another option to install this package is to use the <code class="docutils literal notranslate"><span class="pre">pip</span></code> functionality within <a class="reference external" href="https://www.sagemath.org">SageMath</a>. This will install the latest stable version 
+of the package and will take care of any dependencies that may be required.</p>
+<p>To install it via <code class="docutils literal notranslate"><span class="pre">pip</span></code>, run the following in a terminal where <code class="docutils literal notranslate"><span class="pre">sage</span></code> can be executed:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;&gt;</span> <span class="n">sage</span> <span class="o">-</span><span class="n">pip</span> <span class="n">install</span> <span class="p">[</span><span class="o">--</span><span class="n">user</span><span class="p">]</span> <span class="n">git</span><span class="o">+</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">Antonio</span><span class="o">-</span><span class="n">JP</span><span class="o">/</span><span class="n">dalgebra</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+<p>The optional argument <em>–user</em> allows to install the package just for the current user instead of a global installation.</p>
+</section>
+<section id="pre-refactor-version">
+<h4><em>Pre-refactor version</em><a class="headerlink" href="#pre-refactor-version" title="Permalink to this headline">¶</a></h4>
+<p>This repository has suffered a big refactor and has lost some of its functionalities (temporary). The version fo the code before this refactoring can be obtained
+from the tag <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/tree/v0.0.3.pre-refactor">Tag:v0.0.3.pre-refactor</a>. This version of the software (<span class="math notranslate nohighlight">\(v0.0.20220513.1339\)</span>)
+can be obtained using the same procedures as described above but with small differences:</p>
+<ul class="simple">
+<li><p>From source code: <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/archive/refs/tags/v0.0.3.pre-refactor.zip">use this .zip file</a>.</p></li>
+<li><p>From pip: <code class="docutils literal notranslate"><span class="pre">sage</span> <span class="pre">-pip</span> <span class="pre">install</span> <span class="pre">[--user]</span> <span class="pre">git+https://github.com/Antonio-JP/dalgebra.git&#64;v0.0.3.pre-refactor</span></code>.</p></li>
+</ul>
+</section>
+<section id="loading-the-package">
+<h4><em>Loading the package</em><a class="headerlink" href="#loading-the-package" title="Permalink to this headline">¶</a></h4>
+<p>Once installed, the full functionality of the package can be used after importing it with the command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="dependencies">
+<h3><strong>Dependencies</strong><a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h3>
+<p>This package has been developed on top of <a class="reference external" href="https://www.sagemath.org">SageMath</a> and currently has no other dependency. However, there are related packages 
+available online that will be connected in future versions:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/mkauers/ore_algebra">GitHub: mkauers/ore_algebra</a>: developed by <a class="reference external" href="http://www.kauers.de/">M. Kauers</a> and <a class="reference external" href="http://marc.mezzarobba.net/">M. Mezzarobba</a>.</p></li>
+<li><p><a class="reference external" href="https://github.com/Antonio-JP/dd_functions">GitHub: Antonio-JP/dd_functions</a>: developed by <a class="reference external" href="https://scholar.google.com/citations?user=1gq-jy4AAAAJ&amp;hl=es">A. Jiménez-Pastor</a>.</p></li>
+</ul>
+</section>
+<section id="package-under-active-development">
+<h3><strong>Package under active development</strong><a class="headerlink" href="#package-under-active-development" title="Permalink to this headline">¶</a></h3>
+<p>This package is still under an active development and further features will be included in future version of the code. This means that several bugs may exist or appear. 
+We would thank anyone that, after detecting any error, would post it in the <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/issues">issues page</a> of the repository using 
+the label <a class="reference external" href="https://github.com/github/docs/labels/bug">bug</a>.</p>
+<p>Moreover, any requested feature can be post in the <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/issues">issues page</a> of the repository using the label 
+<a class="reference external" href="https://github.com/github/docs/labels/enhancement">enhancement</a>.</p>
+</section>
+<section id="references">
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h3>
+<p>This package is based on the work of the following research articles and books:</p>
+<ul class="simple">
+<li><p><em>E.R. Kolchin</em>: <strong>Differential Algebra &amp; Algebraic Groups</strong>. <a class="reference external" href="https://www.elsevier.com/books/differential-algebra-and-algebraic-groups/kolchin/978-0-12-417650-8">ISBN:9780080873695</a></p></li>
+<li><p><em>M. Bronstein</em>: <strong>Symbolic Integration I</strong>. <a class="reference external" href="https://link.springer.com/book/10.1007/978-3-662-03386-9">ISBN:978-3-662-03386-9</a></p></li>
+<li><p>J.J.Morales-Ruiz, S.L. Rueda, M.A. Zurro, <em>Factorization of KdV Schrödinger operators using differential subresultants</em>, Advances in Applied Mathematics, vol. 120 (<strong>2020</strong>). <a class="reference external" href="https://dx.doi.org/10.1016/j.aam.2020.102065">doi:10.1016/j.aam.2020.102065</a>.</p></li>
+</ul>
+</section>
+<section id="acknowledgements">
+<h3><strong>Acknowledgements</strong><a class="headerlink" href="#acknowledgements" title="Permalink to this headline">¶</a></h3>
+<p>This package has been developed with the financial support of the following institutions:</p>
+<ul class="simple">
+<li><p>The Austrian Science Fund (FWF): by W1214-N15, project DK15.</p></li>
+<li><p>The Oberösterreich region: by the Innovatives OÖ-2010 plus program.</p></li>
+<li><p>The Île-de-France region: by the project “XOR”.</p></li>
+<li><p>The Spanish Ministry of Science and Innovation (MICINN): by the grant PID2021-124473NB-I00, “Algorithmic Differential Algebra and Integrability” (ADAI)</p></li>
+</ul>
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.dalgebra_version">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.</span></span><span class="sig-name descname"><span class="pre">dalgebra_version</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dalgebra_version" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+</section>
+<section id="list-of-packages">
+<h1>List of Packages<a class="headerlink" href="#list-of-packages" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="ring_w_operator.html">Package <code class="docutils literal notranslate"><span class="pre">ring_w_operator</span></code></a></li>
-<li class="toctree-l1"><a class="reference internal" href="diff_polynomial.html">Package <code class="docutils literal notranslate"><span class="pre">diff_polynomial</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="ring_w_operator.html">Rings with Operators: Category, Factory and Wrapper</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rwo_polynomial.html">Infinite Polynomials of Rings with Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rwo_polynomial.html#list-of-modules">List of Modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rwo_polynomial.html#indices-and-tables">Indices and Tables</a></li>
 </ul>
 </div>
-</div>
-<div class="section" id="indices-and-tables">
-<h2>Indices and Tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and Tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
 <li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
 </ul>
-</div>
-</div>
+</section>
 
 
-           </div>
+            <div class="clearer"></div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="ring_w_operator.html" class="btn btn-neutral float-right" title="Package ring_w_operator" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2021.</p>
-  </div>
-
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
         </div>
       </div>
-    </section>
-  </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="#">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">dalgebra</span></code>: Difference and Differential Algebra</a><ul>
+<li><a class="reference internal" href="#difference-and-differential-algebra"><strong>Difference and Differential Algebra</strong></a><ul>
+<li><a class="reference internal" href="#some-information-about-the-repository"><strong>Some information about the repository</strong></a></li>
+<li><a class="reference internal" href="#main-use-case"><strong>Main use-case</strong></a></li>
+<li><a class="reference internal" href="#installation"><strong>Installation</strong></a><ul>
+<li><a class="reference internal" href="#install-from-source-code"><em>Install from source code</em></a></li>
+<li><a class="reference internal" href="#install-via-pip"><em>Install via pip</em></a></li>
+<li><a class="reference internal" href="#pre-refactor-version"><em>Pre-refactor version</em></a></li>
+<li><a class="reference internal" href="#loading-the-package"><em>Loading the package</em></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#dependencies"><strong>Dependencies</strong></a></li>
+<li><a class="reference internal" href="#package-under-active-development"><strong>Package under active development</strong></a></li>
+<li><a class="reference internal" href="#references"><strong>References</strong></a></li>
+<li><a class="reference internal" href="#acknowledgements"><strong>Acknowledgements</strong></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#list-of-packages">List of Packages</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and Tables</a></li>
+</ul>
 
-</body>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="ring_w_operator.html"
+                          title="next chapter">Rings with Operators: Category, Factory and Wrapper</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ring_w_operator.html" title="Rings with Operators: Category, Factory and Wrapper"
+             >next</a> |</li>
+        <li class="nav-item nav-item-0"><a href="#">dalgebra</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href=""><code class="docutils literal notranslate"><span class="pre">dalgebra</span></code>: Difference and Differential Algebra</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+    </div>
+  </body>
 </html>
