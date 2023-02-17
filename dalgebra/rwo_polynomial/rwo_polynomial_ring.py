@@ -183,10 +183,9 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         operator to extend the ring::
 
             sage: R.<y> = DifferencePolynomialRing(QQ['x']); x = R.base().gens()[0]; R
-            Ring of operator polynomials in (y) over Difference Ring [[Univariate Polynomial Ring in x over 
-            Rational Field], (Identity endomorphism of Univariate Polynomial Ring in x over Rational Field,)]
+            Ring of operator polynomials in (y) over Difference Ring [[Univariate Polynomial Ring in x over Rational Field], (Id,)]
             sage: S.<a,b> = DifferencePolynomialRing(ZZ); S
-            Ring of operator polynomials in (a, b) over Difference Ring [[Integer Ring], (Identity endomorphism of Integer Ring,)]
+            Ring of operator polynomials in (a, b) over Difference Ring [[Integer Ring], (Id,)]
 
         And after this code we can start creating polynomials using the generators ``y``, ``a`` and ``b`` and, then 
         compute their ``shift`` or ``difference`` as we did with the derivation::
@@ -253,19 +252,19 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         We can see these two approaches in place::
 
             sage: u[5]
-            u_(0, 1, 1)
+            u_0_1_1
             sage: v[0,3,2]
-            v_(0, 3, 2)
+            v_0_3_2
             sage: u[5].derivative(0)
-            u_(1, 1, 1)
+            u_1_1_1
             sage: u[5].derivative(1, times=3)
-            u_(0, 4, 1)
+            u_0_4_1
             sage: u[5].derivative(1, times=3).derivative(0, times=2).difference(times=1)
-            u_(2, 4, 2)
+            u_2_4_2
             sage: (u[5]*v[0,1,0]).derivative(1)
-            u_(0, 2, 1)*v_(0, 1, 0) + u_(0, 1, 1)*v_(0, 2, 0)
+            u_0_2_1*v_0_1_0 + u_0_1_1*v_0_2_0
             sage: (u[5]*v[0,1,0]).derivative(1) - u[0,1,0].shift()*v[0,2,0]
-            u_(0, 2, 1)*v_(0, 1, 0)
+            u_0_2_1*v_0_1_0
     '''
     Element = RWOPolynomial
 

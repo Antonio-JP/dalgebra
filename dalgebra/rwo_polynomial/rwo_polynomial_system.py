@@ -27,9 +27,10 @@ import logging
 
 from functools import reduce
 
-from sage.all import latex, ZZ, PolynomialRing, Compositions, Subsets, Parent
+from sage.all import latex, ZZ, Compositions, Subsets, Parent
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
+from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.structure.element import Element #pylint: disable=no-name-in-module
 
 from typing import Collection, Callable, Any
@@ -194,21 +195,21 @@ class RWOSystem:
                 sage: R.<u,v> = RWOPolynomialRing(A)
                 sage: eq1 = u[0,0]*x - v[1,0]
                 sage: eq2 = u[0,1] - (x-1)*v[0,0]
-                sage: system = DifferentialSystem([eq1,eq2])
+                sage: system = RWOSystem([eq1,eq2])
                 sage: system.equation(0)
-                x*u_(0, 0) - v_(1, 0)
+                x*u_0_0 - v_1_0
                 sage: system.equation(1)
-                u_(0, 1) + (-x + 1)*v_(0, 0)
+                u_0_1 + (-x + 1)*v_0_0
 
             And now, we can use the ``apply`` argument for each operator::
 
                 sage: system.equation(0, (0, 1)) # we apply the derivative
-                x*u_(1, 0) + u_(0, 0) - v_(2, 0)
+                x*u_1_0 + u_0_0 - v_2_0
                 sage: system.equation(0, (1, 1)) # we apply the shift
-                (x + 1)*u_(0, 1) - v(1, 1)
+                (x + 1)*u_0_1 - v_1_1
                 sage: system.equation(0, (0, 2), (1, 3)) == system.equation(0).derivative(times=2).shift(times=3)
                 True
-                sage: system.equation(0, 0,0,1,1,1) == system.equation(0, (0,2), (1,3))
+                sage: system.equation(0,0,0,1,1,1) == system.equation(0, (0,2), (1,3))
                 True
         '''
         # we get the equation using the index provided
@@ -289,7 +290,7 @@ class RWOSystem:
         return tuple([self.equation(*index) for index in indices])
 
     def subsystem(self, 
-        indices: slice | int | Collection[tuple[int, int | tuple[int,int]]], 
+        indices: slice | int | Collection[tuple[int, int | tuple[int,int]]]=None, 
         variables : Collection[str|RWOPolynomialGen]=None
     ) -> RWOSystem:
         r'''
@@ -320,9 +321,8 @@ class RWOSystem:
                 sage: eq2 = u[1] - (x-1)*v[0]
                 sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
                 sage: system.subsystem([(0,0), (0,1), (1,3)])
-                System over [Ring of differential polynomials in (u, v) over Differential Ring 
-                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
-                callable d/dx]] with variables [(u_*, v_*)]:
+                System over [Ring of operator polynomials in (u, v) over Differential Ring 
+                [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*, v_*)]:
                 {
                     x*u_0 - v_1 == 0
                     x*u_1 + u_0 - v_2 == 0
@@ -332,9 +332,8 @@ class RWOSystem:
             This method is used when using the ``__getitem__`` notation::
 
                 sage: system[::-1] # same system but with equations changed in order
-                System over [Ring of differential polynomials in (u, v) over Differential Ring 
-                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
-                callable d/dx]] with variables [(u_*, v_*)]:
+                System over [Ring of operator polynomials in (u, v) over Differential Ring 
+                [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*, v_*)]:
                 {
                     u_1 + (-x + 1)*v_0 == 0
                     x*u_0 - v_1 == 0
@@ -343,9 +342,8 @@ class RWOSystem:
             Setting up the argument ``variables`` allows to change the variables considered for the system::
 
                 sage: system.subsystem(None, variables=[u])
-                System over [Ring of differential polynomials in (u, v) over Differential Ring 
-                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
-                callable d/dx]] with variables [(u_*,)]:
+                System over [Ring of operator polynomials in (u, v) over Differential Ring 
+                [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*,)]:
                 {
                     x*u_0 - v_1 == 0
                     u_1 + (-x + 1)*v_0 == 0
@@ -381,17 +379,15 @@ class RWOSystem:
                 sage: eq2 = u[1] - (x-1)*v[0]
                 sage: system = DifferentialSystem([eq1,eq2], variables=[u,v])
                 sage: system.change_variables(u)
-                System over [Ring of differential polynomials in (u, v) over Differential Ring 
-                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
-                callable d/dx]] with variables [(u_*,)]:
+                System over [Ring of operator polynomials in (u, v) over Differential Ring 
+                [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*,)]:
                 {
                     x*u_0 - v_1 == 0
                     u_1 + (-x + 1)*v_0 == 0
                 }
                 sage: system.change_variables([v])
-                System over [Ring of differential polynomials in (u, v) over Differential Ring 
-                [Univariate Polynomial Ring in x over Rational Field] with derivation [Map from 
-                callable d/dx]] with variables [(v_*,)]:
+                System over [Ring of operator polynomials in (u, v) over Differential Ring 
+                [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(v_*,)]:
                 {
                     x*u_0 - v_1 == 0
                     u_1 + (-x + 1)*v_0 == 0
@@ -482,7 +478,7 @@ class RWOSystem:
                 True
                 sage: parents[0]
                 Multivariate Polynomial Ring in u_0, u_1, u_2 over Differential 
-                Ring [Rational Field] with derivation [Map from callable 0]
+                Ring [[Rational Field], (0,)]
 
             The same can be checked for a multivariate differential polynomial::
 
@@ -504,8 +500,7 @@ class RWOSystem:
                 True
                 sage: parents[0]
                 Multivariate Polynomial Ring in v_0, v_1, v_2, v_3, v_4, u_0, u_1, u_2, u_3 over 
-                Differential Ring [Univariate Polynomial Ring in x over Rational Field] with 
-                derivation [Map from callable d/dx]
+                Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
 
             The output of this method depends actively in the set of active variables that defines the system::
 
@@ -523,15 +518,15 @@ class RWOSystem:
 
                 sage: system_with_u.algebraic_equations()[0].parent()
                 Multivariate Polynomial Ring in u_0, u_1, u_2 over Multivariate Polynomial 
-                Ring in v_0, v_1, v_2 over Differential Ring [Univariate Polynomial Ring 
-                in x over Rational Field] with derivation [Map from callable d/dx]
+                Ring in v_0, v_1, v_2 over Differential Ring [[Univariate Polynomial Ring 
+                in x over Rational Field], (d/dx,)]
                 sage: parents = [el.parent() for el in system_with_u.extend_by_operation([1,2]).algebraic_equations()]
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
                 Multivariate Polynomial Ring in u_0, u_1, u_2, u_3 over Multivariate Polynomial 
-                Ring in v_0, v_1, v_2, v_3, v_4 over Differential Ring [Univariate Polynomial 
-                Ring in x over Rational Field] with derivation [Map from callable d/dx]
+                Ring in v_0, v_1, v_2, v_3, v_4 over Differential Ring [[Univariate Polynomial 
+                Ring in x over Rational Field], (d/dx,)]
 
         '''
         equations = [el.polynomial() for el in self.equations()]
@@ -764,6 +759,7 @@ class RWOSystem:
         r'''
             Method to decide the (hopefully) most optimal algorithm to compute the resultant.
         '''
+        operation = 0 if operation is None else operation
         if alg_res == "iterative":
             logging.info(f"We compute the resultant using iterative algorithm")
             return self.__iterative
