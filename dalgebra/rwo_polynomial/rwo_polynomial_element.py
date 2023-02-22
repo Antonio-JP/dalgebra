@@ -562,6 +562,18 @@ class RWOPolynomial (InfinitePolynomial_dense):
     lc = initial #: alias for initial (also called "leading coefficient")
 
     #######################################################################################
+    ### Flattening methods
+    #######################################################################################
+    def flatten(self) -> Element:
+        r'''
+            Method to obtain the flattened version of a polynomial.
+
+            Check :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.flatten` for further information and 
+            examples.
+        '''
+        return self.parent().flatten(self)
+
+    #######################################################################################
     ### Properties methods (is_...)
     #######################################################################################
     def is_linear(self, variables : RWOPolynomialGen | Collection[RWOPolynomialGen]=None) -> bool:
