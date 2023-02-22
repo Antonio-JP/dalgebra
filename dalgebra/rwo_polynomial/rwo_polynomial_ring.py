@@ -432,6 +432,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 ex*u_5 + ex*u_2 + (x*l - x)*v_4 + (l - 1)*v_1
                 sage: R.flatten(f1.derivative())
                 v_4*x*l - v_4*x + u_5*ex + u_2*ex + v_1*l - v_1
+                sage: R.flatten(f1.derivative()).parent()
                 Multivariate Polynomial Ring in u_5, u_4, u_3, u_2, u_1, u_0, v_5, v_4, v_3, v_2, v_1, v_0, x, ex, l, m, e over Rational Field
 
             We remark that we can reconstruct the original polynomial from the flattened version::
