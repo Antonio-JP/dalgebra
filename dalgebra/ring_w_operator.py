@@ -139,7 +139,7 @@ r'''
 
 from __future__ import annotations
 
-from typing import Callable, Collection
+from ore_algebra.ore_algebra import OreAlgebra, OreAlgebra_generic
 from sage.all import ZZ, latex, Parent
 from sage.categories.all import Morphism, Category, Rings, CommutativeRings, CommutativeAdditiveGroups
 from sage.categories.morphism import IdentityMorphism, SetMorphism # pylint: disable=no-name-in-module
@@ -151,6 +151,7 @@ from sage.rings.derivation import RingDerivationModule
 from sage.structure.element import parent, Element #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 from sage.symbolic.ring import SR #pylint: disable=no-name-in-module
+from typing import Callable, Collection
 
 _Rings = Rings.__classcall__(Rings)
 _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
@@ -414,13 +415,15 @@ class RingsWithOperators(Category):
         ### OTHER METHODS
         ##########################################################
         @abstract_method
-        def operator_ring(self) -> Ring:
+        def linear_operator_ring(self) -> Ring:
             r'''
                 Method to get the operator ring of ``self``.
 
                 When we consider a ring with operators, we can always consider a new (usually non-commutative)
                 ring where we extend ``self`` polynomially with all the operators and its elements represent
                 new operators created from the operators defined over ``self``.
+
+                This ring is the ring of linear operators over the ground ring.
 
                 This method return this new structure.
             '''
@@ -945,9 +948,21 @@ class RingWithOperators_Wrapper(CommutativeRing):
             morph = RingWithOperators_Wrapper_SimpleMorphism(self, current)
             current.register_conversion(morph)
 
+        # registering coercion into its ring of linear operators
+        try:
+            operator_ring = self.linear_operator_ring()
+            morph = RingWithOperators_Wrapper_SimpleMorphism(self, operator_ring)
+            operator_ring.register_conversion(morph)
+        except:
+            pass
+
         #########################################################################################################
         ### CREATING THE NEW OPERATORS FOR THE CORRECT STRUCTURE
         self.__operators : tuple[WrappedMap] = tuple([WrappedMap(self, operator) for operator in operators])
+
+        #########################################################################################################
+        ### CREATING CACHED VARIABLES
+        self.__linear_operator_ring : OreAlgebra_generic = None
 
     @property
     def wrapped(self) -> CommutativeRing: return self.__wrapped
@@ -956,6 +971,39 @@ class RingWithOperators_Wrapper(CommutativeRing):
 
     def operator_types(self) -> tuple[str]: return self.__types
 
+    def linear_operator_ring(self) -> OreAlgebra_generic:
+        r'''
+            Overriden method from :func:`~RingsWithOperators.ParentMethods.linear_operator_ring`.
+
+            This method builds the ring of linear operators using :mod:`ore_algebra`. It raises an error
+            if this can not be done for any reason.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R = DifferentialRing(QQ[x], diff)
+                sage: R.linear_operator_ring()
+        '''
+        if self.__linear_operator_ring == None:
+            ## We need the operators to commute
+            if not self.all_operators_commute():
+                raise TypeError("Ore Algebra can only be created with commuting operators.")
+
+            base_ring = self.wrapped
+
+            operators = []
+            def zero(_): return 0
+            for operator, ttype in zip(self.operators(), self.operator_types()):
+                if ttype == "homomorphism":
+                    operators.append((f"S{f'_{self.differences().index(operator)}' if self.ndifferences() > 1 else ''}", operator.function, zero))
+                elif ttype == "derivation":
+                    operators.append((f"D{f'_{self.derivations().index(operator)}' if self.nderivations() > 1 else ''}", base_ring.Hom(base_ring).one(), operator.function))
+                elif ttype == "skew":
+                    operators.append((f"K{f'_{self.skews().index(operator)}' if self.nskews() > 1 else ''}", operator.function.twist, operator.function))
+
+            self.__linear_operator_ring = OreAlgebra(self.wrapped, *operators)
+        return self.__linear_operator_ring
+        
     ## Coercion methods
     def _has_coerce_map_from(self, S) -> bool:
         r'''
