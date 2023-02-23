@@ -632,6 +632,12 @@ class RWOPolynomial (InfinitePolynomial_dense):
             ) <= 1 
         for t in self.monomials())
 
+    def as_linear_operator(self):
+        r'''
+            Method to convert this operator to a linear operator. See method :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.as_linear_operator`.
+        '''
+        return self.parent().as_linear_operator(self)
+
     # Magic methods
     def __call__(self, *args, **kwargs) -> RWOPolynomial:
         r'''

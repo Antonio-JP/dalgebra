@@ -43,6 +43,7 @@ from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, rand
 from sage.categories.all import Morphism, Category, CommutativeAlgebras
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
+from sage.rings.ring import Ring #pylint: disable=no-name-in-module
 from sage.structure.element import Element #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
@@ -296,6 +297,13 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             current = current.base()
             morph = RWOPolySimpleMorphism(self, current)
             current.register_conversion(morph)
+        
+        try: # Trying to add conversion for the ring of linear operators
+            operator_ring = self.linear_operator_ring()
+            morph = RWOPolyToLinearOperator(self)
+            operator_ring.register_conversion(morph)
+        except NotImplementedError:
+            pass
 
         self.__operators : tuple[AdditiveMap] = tuple([
             self._create_operator(operation, ttype) 
@@ -320,8 +328,18 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_dense`
             and then transforms the output into the corresponding type for ``self``.
         '''
-        p = super()._element_constructor_(x)
-        return self.element_class(self, p)
+        try:
+            p = super()._element_constructor_(x)
+            return self.element_class(self, p)
+        except Exception as error: # if it is not a normal element, we try as linear operators
+            try: # trying to get the ring of linear operators
+                operator_ring = self.linear_operator_ring()
+                if x in operator_ring:
+                    x = operator_ring(x).polynomial()
+                    y = self.gens()[0]
+                    return sum(self.base()(c)*y[tuple(m.degrees())] for (c,m) in zip(x.coefficients(), x.monomials()))
+            except NotImplementedError:
+                raise error
 
     @cached_method
     def gen(self, i: int = None) -> RWOPolynomialGen:
@@ -649,6 +667,33 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         return AdditiveMap(self, func) 
     
+    def linear_operator_ring(self) -> Ring:
+        r'''
+            Overriden method from :func:`~RingsWithOperators.ParentMethods.linear_operator_ring`.
+
+            This method builds the ring of linear operators on the base ring. It only works when the 
+            ring of operator polynomials only have one variable.
+        '''
+        if self.ngens() > 1:
+            raise NotImplementedError(f"Impossible to generate ring of linear operators with {self.ngens()} variables")
+        
+        return self.base().linear_operator_ring()
+
+    #################################################
+    ### Methods for viewing polynomials as operators
+    #################################################
+    def as_linear_operator(self, element: RWOPolynomial) -> Element:
+        linear_operator_ring = self.linear_operator_ring() # it ensures the structure is alright for building this
+        element = self(element) # making sure the element is in ``self``
+
+        if not element.is_linear():
+            raise TypeError("Linear operator can only be built from a linear operator polynomial.")
+
+        coeffs = element.coefficients(); monoms = element.monomials(); y = self.gens()[0]
+        base_ring = linear_operator_ring.base(); gens = linear_operator_ring.gens()
+
+        return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m))) for (c,m) in zip(coeffs, monoms))
+
 def is_RWOPolynomialRing(element):
     r'''
         Method to check whether an object is a ring of infinite polynomial with an operator.
@@ -694,6 +739,20 @@ class RWOPolyRingFunctor (ConstructionFunctor):
 
     def variables(self):
         return self.__variables
+
+class RWOPolyToLinearOperator (Morphism):
+    r'''
+        Class representing a map to a ring of linear operators
+
+        This map allows the coercion system to detect that some elements in a 
+        :class:`DifferentialPolynomialRing_dense` are included in its ring of linear operators.
+    '''
+    def __init__(self, rwo : RWOPolynomialRing_dense):
+        linear_operator_ring = rwo.linear_operator_ring()
+        super().__init__(rwo, linear_operator_ring)
+
+    def _call_(self, p):
+        return self.codomain()(self.domain().as_linear_operator(p))
 
 class RWOPolySimpleMorphism (Morphism):
     r'''
