@@ -976,13 +976,58 @@ class RingWithOperators_Wrapper(CommutativeRing):
             Overridden method from :func:`~RingsWithOperators.ParentMethods.linear_operator_ring`.
 
             This method builds the ring of linear operators using :mod:`ore_algebra`. It raises an error
-            if this can not be done for any reason.
+            if this can not be done for any reason. The generators of the new ring are named
+            depending on the type:
+
+            * "D" for derivations,
+            * "S" for homomorphisms,
+            * "K" for skew derivations.
+
+            If more than one is present, we use a subindex enumerating them.
 
             EXAMPLES::
 
                 sage: from dalgebra import *
                 sage: R = DifferentialRing(QQ[x], diff)
                 sage: R.linear_operator_ring()
+                Univariate Ore algebra in D over Univariate Polynomial Ring in x over Rational Field
+
+            This also works when having several operators::
+
+                sage: B.<x,y> = QQ[]; dx,dy = B.derivation_module().gens()
+                sage: s = B.Hom(B)([x+1,y-1])
+                sage: R = DifferenceRing(DifferentialRing(B, dx, dy), s); R
+                Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (d/dx, d/dy, Hom({x: x + 1, y: y - 1}))]
+                sage: R.linear_operator_ring()
+                Multivariate Ore algebra in D_0, D_1, S over Multivariate Polynomial Ring in x, y over Rational Field
+
+            We can check that `D_0` represents the first derivation (i.e., derivation w.r.t. `x`), `D_1` represents the second derivative and 
+            `S` represents the special shift we are considering::
+
+                sage: D_0,D_1,S = R.linear_operator_ring().gens()
+                sage: D_0*x, D_0*y
+                (x*D_0 + 1, y*D_0)
+                sage: D_1*x, D_1*y
+                (x*D_1, y*D_1 + 1)
+                sage: S*x, S*y
+                ((x + 1)*S, (y - 1)*S)
+
+            This can only be used when the operators in the ring commute::
+
+                sage: ns = B.Hom(B)([x^2, y^2])
+                sage: T = DifferenceRing(DifferentialRing(B, dx, y*dy), ns); T
+                Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (d/dx, y*d/dy, Hom({x: x^2, y: y^2}))]
+                sage: T.all_operators_commute()
+                False
+                sage: T.linear_operator_ring()
+                Traceback (most recent call last):
+                ...
+                TypeError: Ore Algebra can only be created with commuting operators.
+
+            But this can be done when the operators are not in the same ring::
+
+                sage: U = DifferenceRing(B, ns); U.linear_operator_ring()
+                Univariate Ore algebra in S over Multivariate Polynomial Ring in x, y over Rational Field
         '''
         if self.__linear_operator_ring == None:
             ## We need the operators to commute
