@@ -331,15 +331,18 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         try:
             p = super()._element_constructor_(x)
             return self.element_class(self, p)
-        except Exception as error: # if it is not a normal element, we try as linear operators
+        except (ValueError, NameError) as error: # if it is not a normal element, we try as linear operators
             try: # trying to get the ring of linear operators
                 operator_ring = self.linear_operator_ring()
                 if x in operator_ring:
                     x = operator_ring(x).polynomial()
                     y = self.gens()[0]
-                    return sum(self.base()(c)*y[tuple(m.degrees())] for (c,m) in zip(x.coefficients(), x.monomials()))
+                    if self.noperators() == 1: # x is a univariate polynomial
+                        return sum(self.base()(x.monomial_coefficient(m))*y[m.degree()] for m in x.monomials())
+                    else:
+                        return sum(self.base()(c)*y[tuple(m.degrees())] for (c,m) in zip(x.coefficients(), x.monomials()))
             except NotImplementedError:
-                raise error
+                raise NotImplementedError(f"Ring of linear operator rings not implemented. Moreover: {error}")
 
     @cached_method
     def gen(self, i: int = None) -> RWOPolynomialGen:
@@ -481,6 +484,14 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             This method evaluates elements in ``self`` following that rule.
 
+            REMARK: **this method can be used to compose operator polynomials**. In the case 
+            where we have an operator polynomial `p(u) \in R\{u\}` (for `R` a ring with operators) 
+            we can interpret the polynomial `p(u)` as an operator over any extension of `R` that acts
+            by substituting `u` by the element the operator acts on.
+
+            In the case of linear operators, we can define a non-commutative product over these operators
+            and this method eval can be used to compute such multiplication (see examples below).
+
             INPUT:
 
             * ``element``: element (that must be in ``self``) to be evaluated
@@ -526,6 +537,27 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 a_1 + x*a_0
                 sage: parent(in_eval)
                 Ring of operator polynomials in (a) over Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
+
+            As explained earlier, we can use this method to compute the product as operator of two linear operators::
+
+                sage: p1 = y[2] - (x^2 - 1)*y[1] + y[0]; op1 = p1.as_linear_operator()
+                sage: p2 = x*y[1] - 3*y[0]; op2 = p2.as_linear_operator()
+                sage: p1(y=p2) == R(op1*op2)
+                True
+
+            As expected, similar behavior occurs when having several operators in the ring::
+
+                sage: T.<u> = RWOPolynomialRing(DifferenceRing(DifferentialRing(QQ[x],diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = T.base()(x)
+                sage: p3 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2]; op3 = p3.as_linear_operator()
+                sage: p4 = u[0,1] - u[0,0]; op4 = p4.as_linear_operator()
+                sage: p3(u=p4) == T(op3*op4)
+                True
+                sage: p3(u=p4) - p4(u=p3) == T(op3*op4 - op4*op3) # computing the commutator of the two operators
+                True
+
+            This can also work when having several infinite variables (in contrast with the method :func:`as_linear_operator`)::
+
+                sage: 
         '''
         ### Checking the element is in self
         if(not element in self):
@@ -572,7 +604,11 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                     else:
                         evaluation_dict[str(variable)] = R(gen[operations])
                     break
-    
+        # extending the dictionary to all variables in element.polynomial().
+        for variable in element.polynomial().parent().gens():
+            if not variable in element.variables(): # only those that do not appear
+                evaluation_dict[str(variable)] = R.zero() # we can add anything here, since they do not show up
+
         return R(element.polynomial()(**evaluation_dict))
         
     #################################################
@@ -669,7 +705,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
     
     def linear_operator_ring(self) -> Ring:
         r'''
-            Overriden method from :func:`~RingsWithOperators.ParentMethods.linear_operator_ring`.
+            Overridden method from :func:`~RingsWithOperators.ParentMethods.linear_operator_ring`.
 
             This method builds the ring of linear operators on the base ring. It only works when the 
             ring of operator polynomials only have one variable.
@@ -683,16 +719,88 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
     ### Methods for viewing polynomials as operators
     #################################################
     def as_linear_operator(self, element: RWOPolynomial) -> Element:
+        r'''
+            Method that tries to convert an operator polynomial into a linear operator.
+
+            This method tries to create a linear operator coming from a :class:`RWOPolynomial`.
+            In the case where we have an :class:`RWOPolynomial` `p(u) \in R\{u\}` (for `R` a ring with operators) 
+            we can interpret the polynomial `p(u)` as an operator over any extension of `R` that acts
+            by substituting `u` by the element the operator acts on. If `p` is linear, then it represents
+            what it is called a linear operator.
+
+            These linear operators may be represented more efficiently in other structures (see :func:`linear_operator_ring`
+            for further information). This method transforms the elements of ``self`` that can be seen as linear
+            operators to this ring structure.
+
+            Conversely, a :class:`RWOPolynomialRing_dense` can transform elements from its ring of linear operators
+            (i.e., the output of :func:`linear_operator_ring`) to linear :class:`RWOPolynomial`.
+
+            This method checks that ``self`` has the appropriate structure (i.e., it has only one infinite variable)
+            and also the ``element`` has the appropriate shape: it is linear without a constant term.
+
+            REMARK: **this method is equivalent to the method :func:`~.rwo_polynomial_ring_element.RWOPolynomial.as_linear_operator`
+            since it calls this method directly**
+
+            INPUT:
+
+            * ``element``: a :class:`RWOPolynomial` in ``self`` to be casted to a linear operator.
+            
+            OUTPUT:
+
+            An element in ``self.linear_operator_ring()`` if this ring can be built.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<y> = DifferentialPolynomialRing(QQ[x]); x = R.base()(x)
+                sage: p1 = y[2] - (x^2 - 1)*y[1] - y[0] # linear operator of order 2
+                sage: p1.as_linear_operator()
+                D^2 + (-x^2 + 1)*D - 1
+                sage: R(p1.as_linear_operator()) == p1
+                True
+                
+            If the operator polynomial is not linear or has a constant term, this method raises a :class:`TypeError`::
+
+                sage: p2 = x*y[2]*y[0] - (x^3 + 3)*y[1]^2 # non-linear operator
+                sage: p2.as_linear_operator()
+                Traceback (most recent call last):
+                ...
+                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
+                sage: p3 = y[2] - (x^2 - 1)*y[1] - y[0] + x^3 # linear operator but inhomogeneous
+                sage: p3.as_linear_operator()
+                Traceback (most recent call last):
+                ...
+                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
+
+            This also work when having several operators in the same ring::
+
+                sage: S.<u> = RWOPolynomialRing(DifferenceRing(DifferentialRing(QQ[x], diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = S.base()(x)
+                sage: p4 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2] 
+                sage: p4.as_linear_operator()
+                -D^2*S^2 + x*D*S + (x^3 - 3*x)*D + 2
+                sage: S(p4.as_linear_operator()) == p4
+                True
+
+            However, when having several infinite variables this method can not work even when the operator is clearly linear::
+
+                sage: T.<a,b> = DifferentialPolynomialRing(QQ[x]); x = T.base()(x)
+                sage: p5 = a[0] - b[1]
+                sage: p5.as_linear_operator()
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: Impossible to generate ring of linear operators with 2 variables
+
+        '''
         linear_operator_ring = self.linear_operator_ring() # it ensures the structure is alright for building this
         element = self(element) # making sure the element is in ``self``
 
-        if not element.is_linear():
-            raise TypeError("Linear operator can only be built from a linear operator polynomial.")
+        if not element.is_linear() or 1 in element.polynomial().monomials():
+            raise TypeError("Linear operator can only be built from an homogeneous linear operator polynomial.")
 
         coeffs = element.coefficients(); monoms = element.monomials(); y = self.gens()[0]
         base_ring = linear_operator_ring.base(); gens = linear_operator_ring.gens()
 
-        return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m))) for (c,m) in zip(coeffs, monoms))
+        return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
 
 def is_RWOPolynomialRing(element):
     r'''
