@@ -940,7 +940,7 @@ class RingWithOperators_Wrapper(CommutativeRing):
         self.__wrapped = base
 
         # registering conversion to simpler structures
-        current = self.base()
+        current = self.__wrapped
         morph = RingWithOperators_Wrapper_SimpleMorphism(self, current)
         current.register_conversion(morph)
         while(not(current.base() == current)):
@@ -973,7 +973,7 @@ class RingWithOperators_Wrapper(CommutativeRing):
 
     def linear_operator_ring(self) -> OreAlgebra_generic:
         r'''
-            Overriden method from :func:`~RingsWithOperators.ParentMethods.linear_operator_ring`.
+            Overridden method from :func:`~RingsWithOperators.ParentMethods.linear_operator_ring`.
 
             This method builds the ring of linear operators using :mod:`ore_algebra`. It raises an error
             if this can not be done for any reason.
