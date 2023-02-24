@@ -540,6 +540,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             As explained earlier, we can use this method to compute the product as operator of two linear operators::
 
+                sage: R.<y> = DifferentialPolynomialRing(QQ['x']); x = R.base().gens()[0]
                 sage: p1 = y[2] - (x^2 - 1)*y[1] + y[0]; op1 = p1.as_linear_operator()
                 sage: p2 = x*y[1] - 3*y[0]; op2 = p2.as_linear_operator()
                 sage: p1(y=p2) == R(op1*op2)
@@ -557,7 +558,13 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             This can also work when having several infinite variables (in contrast with the method :func:`as_linear_operator`)::
 
-                sage: 
+                sage: U.<a,b> = DifferentialPolynomialRing(QQ[x]); x = U.base()(x)
+                sage: p5 = a[0] + b[1]*(b[0]^2 - x^2)*a[1]; p5.is_linear(a)
+                True
+                sage: p6 = x*a[1] - b[0]*a[0]; p6.is_linear(a)
+                True
+                sage: p5(a=p6) - p6(a=p5) # commutator of p5 and p6 viewed as operators w.r.t. a
+                -a_0*b_1^2*b_0^2 + (-x)*a_1*b_2*b_0^2 + (-2*x)*a_1*b_1^2*b_0 + a_1*b_1*b_0^2 + x^2*a_0*b_1^2 + x^3*a_1*b_2 + x^2*a_1*b_1
         '''
         ### Checking the element is in self
         if(not element in self):
@@ -825,6 +832,7 @@ class RWOPolyRingFunctor (ConstructionFunctor):
     def __init__(self, variables):
         self.__variables = variables
         super().__init__(_RingsWithOperators,_RingsWithOperators)
+        self.rank = 10 # just above PolynomialRing
         
     ### Methods to implement
     def _coerce_into_domain(self, x):
@@ -842,8 +850,13 @@ class RWOPolyRingFunctor (ConstructionFunctor):
         if(other.__class__ == self.__class__):
             return (other.variables() == self.variables())
 
-    def merge(self, _):
-        pass # TODO
+    def merge(self, other):
+        if isinstance(other, RWOPolyRingFunctor):
+            self_names = self.__variables
+            other_names = other.__variables
+            global_names = tuple(set(list(self_names)+list(other_names)))
+            return RWOPolyRingFunctor(global_names)
+        pass
 
     def variables(self):
         return self.__variables
