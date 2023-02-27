@@ -217,7 +217,7 @@ class RWOPolynomialGen (InfinitePolynomialGen):
     def __contains__(self, other) -> bool:
         return self.contains(other)
 
-    def index(self, element: RWOPolynomial, as_tuple : bool = True) -> int:
+    def index(self, element: RWOPolynomial, as_tuple : bool = None) -> int | tuple[int]:
         r'''
             Method to know the index to generate ``element`` using ``self``.
 
@@ -233,16 +233,19 @@ class RWOPolynomialGen (InfinitePolynomialGen):
             Assumed the string form of ``X_Y`` from :func:`contains`, this method returns
             the numerical value of ``Y`` or an error if not possible.
         '''
+        as_tuple = self._parent.noperators() > 1 if as_tuple is None else as_tuple # defaulting value for as_tuple
         if(self.contains(element)):
             str_element = str(element).split("_")
             if self._name == "_".join(str_element[:-1]): # pure index given
-                index = self.index_map(int(str_element[-1])) if self._parent.noperators() > 1 else int(str_element[-1])
+                index = tuple(self.index_map(int(str_element[-1]))) if self._parent.noperators() > 1 else int(str_element[-1])
             else:
                 index = tuple(int(el) for el in str_element[-self._parent.noperators():])
             
-            # here ''index'' contains a number if noperators == 1 or a tuple                
+            # here ''index'' contains a number if noperators == 1 or a tuple              
             if self._parent.noperators() > 1 and not as_tuple: # if we want the number instead of the tuple
                 index = self.index_map.inverse(index)
+            elif self._parent.noperators() == 1 and as_tuple:
+                index = (index,)
             return index
 
     def next(self, element: RWOPolynomial, operation : int) -> RWOPolynomial:
@@ -631,6 +634,14 @@ class RWOPolynomial (InfinitePolynomial_dense):
                 if any(v in var for var in variables)
             ) <= 1 
         for t in self.monomials())
+
+    def as_linear_operator(self):
+        r'''
+            Method to convert this operator to a linear operator. 
+            
+            See method :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.as_linear_operator`.
+        '''
+        return self.parent().as_linear_operator(self)
 
     # Magic methods
     def __call__(self, *args, **kwargs) -> RWOPolynomial:
