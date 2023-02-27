@@ -731,6 +731,17 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return self.parent().element_class(self.parent(), super().__pow__(n))
 
     ###################################################################################
+    ### Other computations
+    ###################################################################################
+    def sylvester_resultant(self, other : RWOPolynomial, gen: RWOPolynomialGen = None):
+        r'''
+            Method on an element to compute (if possible) the Sylvester resultant.
+
+            See :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.sylvester_resultant` for further information.
+        '''
+        return self.parent().sylvester_resultant(self, other, gen)
+
+    ###################################################################################
     ### Other magic methods
     ###################################################################################
     def __repr__(self) -> str:

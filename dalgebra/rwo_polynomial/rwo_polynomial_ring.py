@@ -812,7 +812,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         return self.base().linear_operator_ring()
 
     #################################################
-    ### Methods for viewing polynomials as operators
+    ### Other computation methods
     #################################################
     def as_linear_operator(self, element: RWOPolynomial) -> Element:
         r'''
@@ -897,6 +897,102 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         base_ring = linear_operator_ring.base(); gens = linear_operator_ring.gens()
 
         return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
+
+    def sylvester_resultant(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None) -> RWOPolynomial:
+        r'''
+            Method to compute the Sylvester resultant of two operator polynomials.
+
+            **REMARK**: this method only works when ``self`` have with 1 operator and both `P` and `Q` are linear on the given generator.
+
+            If we have two linear operator polynomials `P(u), Q(u) \in R\{u\}` where `(R, \sigma)` is a ring with 1 operator `\sigma`, 
+            then we can consider the extended system 
+
+            .. MATH::
+
+                \{P, \sigma(P), \ldots, \sigma^{m-1}(P), Q, \sigma(Q), \ldots, \sigma^{n-1}(Q)\},
+
+            where `n` is the order of `P` and `m` is the order of `Q`. Then, it is clear that the only appearances of the infinite variable 
+            `u_*` is within `[u_0,\ldots,u_{n+m-1}]`. Hence we can build a Sylvester-type matrix using these polynomials and compute its
+            determinant obtainin an expression in `R`. 
+
+            This determinant is called the Sylvester resultant of `P` and `Q` and it is equivalent to the Sylvester resultant on the algebraic case.
+
+            This method computes the Sylvester resultant of two linear operator polynomials given the appropriate variable. If only one infinite variable 
+            is present, the it is not necessary to provide this value.
+
+            INPUT:
+
+            * ``P``: an operator polynomial (has to be linear) to be used as `P`.
+            * ``Q``: an operator polynomial (has to be linear) to be used as `Q`.
+            * ``gen``: an infinite variable that will be eliminated from `P` and `Q`. Can be ``None`` only if one infinite variable is in ``self``.
+
+            OUTPUT:
+
+            A :class:`~.rwo_polynomial_element.RWOPolynomial` with the Sylvester resultant of `P` and `Q`.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: P.sylvester_resultant(Q)
+                x^6 + 6*x^4 - 18*x^3 + 9*x^2 - 30*x - 19
+
+
+            If several variables are available, we need to explicitly provide the variable we are considering::
+
+                sage: R.<u,v> = RWOPolynomialRing(B)
+                sage: P = (3*x -1)*u[0]*v[0] + x^2*v[1]*u[0] + u[2]
+                sage: Q = 7*x*v[0] + x^2*v[0]*u[1]
+                sage: P.sylvester_resultant(Q)
+                Traceback (most recent call last):
+                ...
+                ValueError: [sylvester_resultant] No infinite variable provided but several available.
+                sage: P.sylvester_resultant(Q, u)
+                x^6*v_1*v_0^2 + (3*x^5 - x^4)*v_0^3
+                sage: P.sylvester_resultant(Q, v)
+                x^2*u_1 + 7*x
+
+            The infinite variable can also be given as an index::
+
+                sage: P.sylvester_resultant(Q, 0)
+                x^6*v_1*v_0^2 + (3*x^5 - x^4)*v_0^3
+                sage: P.sylvester_resultant(Q, 1)
+                x^2*u_1 + 7*x
+                sage: P.sylvester_resultant(Q, 2)
+                Traceback (most recent call last):
+                ...
+                IndexError: [sylvester_resultant] Requested generator 2 but only 2 exist.
+                sage: P.sylvester_resultant(Q, -1)
+                Traceback (most recent call last):
+                ...
+                IndexError: [sylvester_resultant] Requested generator -1 but only 2 exist.
+
+        '''
+        if self.noperators() > 1:
+            raise NotImplementedError(f"[sylvester_resultant] Sylvester resultant with {self.noperators()} is not implemented")
+
+        P = self(P); Q = self(Q)
+        if self.ngens() > 1 and gen is None:
+            raise ValueError("[sylvester_resultant] No infinite variable provided but several available.")
+        elif self.ngens() > 1 and gen in ZZ:
+            if gen < 0 or gen >= self.ngens():
+                raise IndexError(f"[sylvester_resultant] Requested generator {gen} but only {self.ngens()} exist.")
+            gen = self.gens()[gen]
+        elif isinstance(gen, RWOPolynomialGen) and not gen in self.gens():
+            raise ValueError(f"[sylvester_resultant] The variable {gen} fo not belong to {self}")
+        elif self.ngens() == 1 and gen is None:
+            gen = self.gens()[0]
+
+        if not P.is_linear(gen):
+            raise TypeError(f"[sylvester_resultant] The polynomial {P} is not linear w.r.t. {gen}")
+        if not Q.is_linear(gen):
+            raise TypeError(f"[sylvester_resultant] The polynomial {Q} is not linear w.r.t. {gen}")
+
+        from .rwo_polynomial_system import RWOSystem
+        return RWOSystem([P,Q], variables=[gen]).diff_resultant(alg_res = "sylvester")
 
 def is_RWOPolynomialRing(element):
     r'''

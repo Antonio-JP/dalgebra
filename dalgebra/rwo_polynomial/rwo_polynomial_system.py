@@ -837,8 +837,8 @@ class RWOSystem:
             raise TypeError(f"The Sylvester algorithm only works with 1 variable (not {len(self.variables)})")
         elif self.size() != 2:
             raise TypeError(f"The Sylvester algorithm only works with 2 equations (not {self.size()})")
-        elif self.parent().noperators() > 1:
-            raise TypeError(f"The Sylvester algorithm only works with 1 operator (not {self.parent().noperators()})")
+        # elif self.parent().noperators() > 1:
+        #     raise TypeError(f"The Sylvester algorithm only works with 1 operator (not {self.parent().noperators()})")
         
         u = self.variables[0]
         P = self.equation(0); Q = self.equation(1)
@@ -851,8 +851,8 @@ class RWOSystem:
         elif -1 in orders_Q:
             return Q # Q does not contain the variable `u` to eliminate
         
-        extended_P = [self.equation(0, *enumerate(el)) for el in product(*[range(ord_P) for ord_P in orders_P])]
-        extended_Q = [self.equation(1, *enumerate(el)) for el in product(*[range(ord_Q) for ord_Q in orders_Q])]
+        extended_P = [self.equation(0, *enumerate(el)) for el in product(*[range(ord_Q) for ord_Q in orders_Q])]
+        extended_Q = [self.equation(1, *enumerate(el)) for el in product(*[range(ord_P) for ord_P in orders_P])]
 
         # Building the Sylvester matrix
         fR = self.parent().polynomial_ring() # guaranteed common parent for all polynomials
@@ -860,7 +860,6 @@ class RWOSystem:
         cols = [fR(u[pos].polynomial()) for pos in iterator]
         equations = [fR(equation.polynomial()) for equation in extended_P + extended_Q]
         S = Matrix([[self.parent()(equation.coefficient(m)) for m in cols] for equation in equations])
-
         
         return S.determinant()
 
