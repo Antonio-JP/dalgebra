@@ -26,8 +26,9 @@ from __future__ import annotations
 import logging
 
 from functools import reduce
+from itertools import product
 
-from sage.all import latex, ZZ, Compositions, Subsets, Parent
+from sage.all import latex, ZZ, Compositions, Subsets, Parent, Matrix
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -734,7 +735,7 @@ class RWOSystem:
             * ``operation``: index for the operation for which we want to compute the resultant.
             * ``alg_res``: (``"auto"`` by default) method to compute the algebraic resultant once we extended a 
               system to a valid system (see :func:`is_sp2`). The valid values are, currently,
-              ``"dixon"``, ``"macaulay"`` and ``"iterative"``.
+              ``"dixon"``, ``"sylvester"``, ``"macaulay"`` and ``"iterative"``.
 
             OUTPUT:
 
@@ -766,12 +767,18 @@ class RWOSystem:
         elif alg_res == "dixon":
             logging.info(f"We compute the resultant using Dixon resultant")
             return self.__dixon
+        elif alg_res == "sylvester":
+            logging.info(f"We compute the resultant using Sylvester resultant")
+            return self.__sylvester
         elif alg_res == "macaulay":
             logging.info(f"We compute the resultant using Macaulay resultant")
             return self.__macaulay
         elif alg_res == "auto":
             logging.info("Deciding automatically the algorithm for the resultant...")
-            if self.is_linear():
+            if self.is_linear() and self.size() == 2 and len(self.variables) == 1 and self.parent().noperators() == 1:
+                logger.info(("The system is linear with 2 equations and 1 variable: we use Sylvester resultant"))
+                return self.__sylvester
+            elif self.is_linear():
                 logger.info("The system is linear: we use Macaulay resultant")
                 return self.__macaulay
             else:
@@ -809,6 +816,54 @@ class RWOSystem:
         '''
         raise NotImplementedError("Dixon resultant not yet implemented")
   
+    def __sylvester(self, _ : int, __: int) -> RWOPolynomial:
+        r'''
+            Method that computes a resultant using a Sylvester matrix.
+
+            This method is highly restrictive and it only works for linear systems with 2 equations, 1 variable and 1 operator.
+
+            This method takes two equations `P(u), Q(u) \in R\{u\}` where `R` is a ring with several operators
+            and it computes the extension where we apply to `P` all operators up the all the orders of `Q` and 
+            vice-versa. This leads to an extended system where we can take the matrix of coefficients and compute the 
+            determinant.
+
+            This matrix of coefficients is a Sylvester matrix, and the determinant is the Sylvester resultant. This method
+            should always return a product of the Macaulay resultant (see :func:`__macaulay`).
+        '''
+        # Checking the conditions
+        if not self.is_linear():
+            raise TypeError("The Sylvester algorithm only works for linear systems")
+        elif len(self.variables) > 1:
+            raise TypeError(f"The Sylvester algorithm only works with 1 variable (not {len(self.variables)})")
+        elif self.size() != 2:
+            raise TypeError(f"The Sylvester algorithm only works with 2 equations (not {self.size()})")
+        elif self.parent().noperators() > 1:
+            raise TypeError(f"The Sylvester algorithm only works with 1 operator (not {self.parent().noperators()})")
+        
+        u = self.variables[0]
+        P = self.equation(0); Q = self.equation(1)
+        
+        # Computing the extension
+        orders_P = [P.order(u, i) for i in range(self.parent().noperators())]
+        orders_Q = [Q.order(u, i) for i in range(self.parent().noperators())]
+        if -1 in orders_P:
+            return P # P does not contain the variable `u` to eliminate
+        elif -1 in orders_Q:
+            return Q # Q does not contain the variable `u` to eliminate
+        
+        extended_P = [self.equation(0, *enumerate(el)) for el in product(*[range(ord_P) for ord_P in orders_P])]
+        extended_Q = [self.equation(1, *enumerate(el)) for el in product(*[range(ord_Q) for ord_Q in orders_Q])]
+
+        # Building the Sylvester matrix
+        fR = self.parent().polynomial_ring() # guaranteed common parent for all polynomials
+        iterator = product(*[range(orders_P[i]+orders_Q[i]) for i in range(self.parent().noperators())]) if self.parent().noperators() > 1 else range(orders_P[0]+orders_Q[0])
+        cols = [fR(u[pos].polynomial()) for pos in iterator]
+        equations = [fR(equation.polynomial()) for equation in extended_P + extended_Q]
+        S = Matrix([[self.parent()(equation.coefficient(m)) for m in cols] for equation in equations])
+
+        
+        return S.determinant()
+
     def __macaulay(self, bound: int, operation: int) -> RWOPolynomial:
         r'''
             Method that computes the resultant of an extension of ``self` using Macaulay resultant.
