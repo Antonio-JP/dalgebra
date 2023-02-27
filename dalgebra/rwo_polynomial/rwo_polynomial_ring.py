@@ -38,10 +38,14 @@ AUTHORS:
 from __future__ import annotations
 
 from itertools import product
+from functools import reduce
 
 from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent, parent
 from sage.categories.all import Morphism, Category, CommutativeAlgebras
 from sage.categories.pushout import ConstructionFunctor, pushout
+from sage.rings.polynomial.polynomial_ring import is_PolynomialRing
+from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
+from sage.rings.polynomial.multi_polynomial_ring_base import is_MPolynomialRing #pylint: disable=no-name-in-module
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.ring import Ring #pylint: disable=no-name-in-module
 from sage.structure.element import Element #pylint: disable=no-name-in-module
@@ -50,7 +54,7 @@ from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-mod
 from typing import Collection
 
 from .rwo_polynomial_element import RWOPolynomial, RWOPolynomialGen, IndexBijection
-from ..ring_w_operator import RingsWithOperators, AdditiveMap, DifferentialRing, DifferenceRing
+from ..ring_w_operator import RingsWithOperators, AdditiveMap, DifferentialRing, DifferenceRing, RingWithOperators_Wrapper
 
 _RingsWithOperators = RingsWithOperators.__classcall__(RingsWithOperators)
 
@@ -401,6 +405,91 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         '''
         return RWOPolyRingFunctor(self._names), self.base()
     
+    def flatten(self, polynomial : RWOPolynomial) -> Element:
+        r'''
+            Method to compute the flatten version of a polynomial.
+
+            This method allows to compute a basic object where all variables appearing in the given ``polynomial``
+            and all its base parents are at the same level. This is similar to the method :func:`flattening_morphism`
+            from multivariate polynomials, but adapted to the case of infinite variable polynomials.
+
+            Moreover, we need to take care of possible wrapping problems in the RingWithOperators category. 
+
+            INPUT:
+
+            * ``polynomial``: an element in ``self`` to be flatten.
+
+            OUTPUT:
+
+            A multivariate polynomial with all the variables appearing in ``polynomial`` and all bases rings of ``self``
+            at the same level.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
+                sage: R.flatten(f1)
+                u_2*x^2 + u_0*x + v_0*x - v_0
+                sage: R.flatten(f1).parent()
+                Multivariate Polynomial Ring in u_2, u_1, u_0, v_2, v_1, v_0, x over Rational Field
+
+            This method works with more complicated ring with operators. It is interesting to remark that the subindex of the 
+            infinite variables (when having several operators) collapse to one number following the rules as in 
+            :class:`IndexBijection`::
+
+                sage: B.<x,ex,l,m,e> = QQ[]
+                sage: dx,dex,dl,dm,de = B.derivation_module().gens()
+                sage: shift = B.Hom(B)([x+1, e*ex, l, m, e])
+                sage: DSB = DifferenceRing(DifferentialRing(B, dx + ex*dex), shift); x,ex,l,m,e = DSB.gens()
+                sage: R.<u,v> = RWOPolynomialRing(DSB)
+                sage: f1 = u[1,0]*ex + (l-1)*v[0,1]*x - m; f1
+                ex*u_1_0 + (x*l - x)*v_0_1 - m
+                sage: f1.polynomial()
+                ex*u_2 + (x*l - x)*v_1 - m
+                sage: f1.derivative()
+                ex*u_2_0 + ex*u_1_0 + (x*l - x)*v_1_1 + (l - 1)*v_0_1
+                sage: f1.derivative().polynomial()
+                ex*u_5 + ex*u_2 + (x*l - x)*v_4 + (l - 1)*v_1
+                sage: R.flatten(f1.derivative())
+                v_4*x*l - v_4*x + u_5*ex + u_2*ex + v_1*l - v_1
+                sage: R.flatten(f1.derivative()).parent()
+                Multivariate Polynomial Ring in u_5, u_4, u_3, u_2, u_1, u_0, v_5, v_4, v_3, v_2, v_1, v_0, x, ex, l, m, e over Rational Field
+
+            We remark that we can reconstruct the original polynomial from the flattened version::
+
+                sage: R(R.flatten(f1.derivative())) == f1.derivative()
+                True
+                sage: R(R.flatten(f1)) == f1
+                True
+        '''
+        # we check that the input is in ``self``
+        polynomial = self(polynomial)
+
+        # we compute the destination ring for the polynomial
+        variables = [*polynomial.polynomial().parent().gens()]
+        current = self.base()
+        while (
+            isinstance(current, RingWithOperators_Wrapper) or 
+            is_PolynomialRing(current) or 
+            is_MPolynomialRing(current) or 
+            isinstance(current, InfinitePolynomialRing_dense) or 
+            isinstance(current, InfinitePolynomialRing_sparse)
+        ):
+            if is_PolynomialRing(current) or is_MPolynomialRing(current):
+                variables.extend(current.gens())
+            elif isinstance(current, InfinitePolynomialRing_dense) or isinstance(current, InfinitePolynomialRing_sparse):
+                variables.extend(reduce(lambda p, q : pushout(p,q), [c.polynomial().parent() for c in polynomial.polynomial().coefficients()]).gens())
+            
+            if isinstance(current, RingWithOperators_Wrapper):
+                current = current.wrapped
+            else:
+                current = current.base()
+
+        # at this state we have a "current" that can not be extracted further and a list of variables
+        destiny_ring = PolynomialRing(current, variables)
+        return destiny_ring(str(polynomial.polynomial()))
+
     #################################################
     ### Magic python methods
     #################################################
