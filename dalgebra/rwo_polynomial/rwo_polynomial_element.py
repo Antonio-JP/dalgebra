@@ -707,9 +707,26 @@ class RWOPolynomial (InfinitePolynomial_dense):
 
             This method relies on the base polynomial structure behind the infinite polynomial ring.
         '''
-        other = self.parent()(other)
-        return self.polynomial().divides(other.polynomial())
+        R = self.parent().polynomial_ring()
+        return R(self.polynomial()).divides(R(self.parent()(other).polynomial()))
 
+    def degree(self, x=None, std_grading=False): 
+        r'''Overriding :func:`degree` to fit the setting of RWO'''
+        if x != None and x.parent() == self.parent():
+            x = x.polynomial()
+        
+        return self.polynomial().degree(x, std_grading)
+            
+    def coefficient(self, monomial):
+        r'''Overriding :func:`coefficient` to fit the setting of RWO'''
+        P = self.parent()
+        R = P.polynomial_ring()
+
+        if isinstance(monomial, dict):
+            monomial = {R(P(mon).polynomial()) : monomial[mon] for mon in monomial}
+        else: # a monomial is given
+            monomial = R(P(monomial).polynomial())
+        return P(R(self.polynomial()).coefficient(monomial))
     ###################################################################################
     ### Arithmetic methods
     ###################################################################################
@@ -726,6 +743,8 @@ class RWOPolynomial (InfinitePolynomial_dense):
     def _mod_(self, x):
         return self.parent().element_class(self.parent(), self.polynomial() % x.polynomial())
     def _truediv_(self, x):
+        return self.parent().element_class(self.parent(), self.polynomial() // x.polynomial())
+    def _floordiv_(self, x):
         return self.parent().element_class(self.parent(), self.polynomial() // x.polynomial())
     def __pow__(self, n):
         return self.parent().element_class(self.parent(), super().__pow__(n))
