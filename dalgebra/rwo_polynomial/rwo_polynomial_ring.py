@@ -732,7 +732,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                     element=self(str(element))
                     
                 if(element in self.base()):
-                    return operator(self.base()(element))
+                    return self(operator(self.base()(element)))
                 
                 if(not element in self.__cache[operation]):
                     generators = self.gens()
@@ -764,7 +764,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                     element=self(str(element))
                     
                 if(element in self.base()):
-                    return operator(self.base()(element))
+                    return self(operator(self.base()(element)))
                 
                 if(not element in self.__cache[operation]):
                     generators = self.gens()
