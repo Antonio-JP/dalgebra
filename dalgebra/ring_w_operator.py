@@ -1085,7 +1085,10 @@ class RingWithOperators_Wrapper(CommutativeRing):
         elif isinstance(parent(x), RingWithOperators_Wrapper): 
             # conversion from other wrapped rings with operators --> we convert the element within
             x = x.wrapped
-        p = self.wrapped._element_constructor_(x)
+        if hasattr(self.wrapped, "_element_constructor_"):
+            p = self.wrapped._element_constructor_(x)
+        else:
+            p = self.wrapped(x)
         return self.element_class(self, p)
 
     def _is_valid_homomorphism_(self, codomain, im_gens, base_map=None) -> bool:
@@ -1093,6 +1096,18 @@ class RingWithOperators_Wrapper(CommutativeRing):
 
     def construction(self) -> RingWithOperatorsFunctor:
         return RingWithOperatorsFunctor([operator.function for operator in self.operators()], self.operator_types()), self.wrapped
+
+    def _pushout_(self, other):
+        scons, sbase = self.construction()
+        if isinstance(other, RingWithOperators_Wrapper):
+            ocons, obase = other.construction()
+            cons = scons.merge(ocons)
+            try:
+                base = pushout(sbase, obase)
+            except TypeError:
+                base = pushout(obase, sbase)
+            return cons(base)
+        return None
 
     # Rings methods
     def characteristic(self) -> int:
@@ -1169,16 +1184,13 @@ class RingWithOperatorsFunctor(ConstructionFunctor):
             raise ValueError("The length of the operators and types must coincide.")
         self.__operators = tuple(operators)
         self.__types = tuple(types)
+        self.rank = 10 # just above PolynomialRing
 
         super().__init__(_CommutativeRings, _RingsWithOperators)
     
-    ### Methods to implement
-    def _coerce_into_domain(self, x: Element) -> Element:
-        if not x in self.domain():
-            raise TypeError(f"The object [{x}] is not an element of [{self.domain()}]")
-            
+    ### Methods to implement            
     def _apply_functor(self, x):
-        return RingWithOperators(x, self.__operators, self.__types)
+        return RingWithOperators(x, *self.__operators, types=self.__types)
         
     def _repr_(self):
         return f"RingWithOperators(*,{self.__operators}])"
@@ -1186,11 +1198,59 @@ class RingWithOperatorsFunctor(ConstructionFunctor):
     def __eq__(self, other):
         return self.__class__ == other.__class__ and self.__operators == other.__operators and self.__types == other.__types
 
+    def __merge_skews(self, f: SkewMap, g: SkewMap):
+        Mf = f.function.parent(); Mg = g.function.parent()
+        # we try to merge the base ring of the modules
+        R = pushout(Mf.base(), Mg.base())
+        
+        if R == Mf.base(): 
+            M = Mf; twist = f.twist
+        elif R == Mg.base():
+            M = Mg; twist = g.twist
+        else:
+            raise AssertionError("We can only extend to one parent, no mix between them")
+            
+        # we try and cast both derivation into M
+        df = M(f.function); dg = M(g.function)
+        if df - dg == 0: 
+            if isinstance(f, DerivationMap):
+                return DerivationMap(M.base(), df)
+            else: # general skew case
+                return SkewMap(M.base(), twist, df)
+        return None
+
+    def __merge_homomorphism(self, f, g):
+        raise NotImplementedError("Merging of homomorphisms not implemented")
+
     def merge(self, other):
         if isinstance(other, RingWithOperatorsFunctor):
-            return RingWithOperatorsFunctor(self.__operators + other.__operators, self.__types + other.__types)
-        else:
-            raise NotImplementedError(f"{self} can only be merged with other RingWithOperatorsFunctor")
+            # we create a copy of the operators of self
+            new_operators = [el for el in self.__operators]; new_types = [el for el in self.__types]
+            self_operators = list(zip(self.__operators, self.__types))
+            used_self = set()
+
+            for (operator, ttype) in zip(other.__operators, other.__types):
+                for i, (self_op, self_type) in enumerate(self_operators):
+                    if not i in used_self:
+                        if ttype == self_type:
+                            try:
+                                if ttype in ("skew", "derivation"):
+                                    merged = self.__merge_skews(operator, self_op)
+                                    if merged != None:
+                                        used_self.add(i)
+                                        break # we found an operator repeated
+                                elif ttype == "homomorphism":
+                                    merged = self.__merge_homomorphism(operator, self_op)
+                                    if merged != None:
+                                        used_self.add(i)
+                                        break # we found an operator repeated
+                            except (AssertionError, NotImplementedError):
+                                pass
+                else: # we need to add the operator to the final list
+                    new_operators.append(operator); new_types.append(ttype)
+
+            return RingWithOperatorsFunctor(new_operators, new_types)
+        return None # Following definition of merge in ConstructionFunctor
 
     @property
     def operators(self) -> Collection[Morphism]:  return self.__operators
