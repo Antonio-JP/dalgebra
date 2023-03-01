@@ -348,6 +348,18 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             except NotImplementedError:
                 raise NotImplementedError(f"Ring of linear operator rings not implemented. Moreover: {error}")
 
+    def _pushout_(self, other):
+        scons, sbase = self.construction()
+        if isinstance(other, RWOPolynomialRing_dense):
+            ocons, obase = other.construction()
+            cons = scons.merge(ocons)
+            try:
+                base = pushout(sbase, obase)
+            except TypeError:
+                base = pushout(obase, sbase)
+            return cons(base)
+        return None
+    
     @cached_method
     def gen(self, i: int = None) -> RWOPolynomialGen:
         r'''
@@ -489,6 +501,23 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         # at this state we have a "current" that can not be extracted further and a list of variables
         destiny_ring = PolynomialRing(current, variables)
         return destiny_ring(str(polynomial.polynomial()))
+
+    def change_ring(self, R):
+        r'''
+            Return the operator polynomial ring changing the base ring to `R`.
+
+            We will keep the name of the variables of ``self`` but now will take coefficients
+            over `R` and the operations will be those on `R`.
+
+            INPUT:
+
+            * ``R``: a Ring with Operators.
+
+            OUTPUT:
+
+            A :class:`RWOPolynomialRing_dense` over ``R`` with the same variables as ``self``.
+        '''
+        return RWOPolynomialRing(R, self.variable_names())
 
     #################################################
     ### Magic python methods
@@ -1017,14 +1046,9 @@ class RWOPolyRingFunctor (ConstructionFunctor):
     def __init__(self, variables):
         self.__variables = variables
         super().__init__(_RingsWithOperators,_RingsWithOperators)
-        self.rank = 10 # just above PolynomialRing
+        self.rank = 11 # just above PolynomialRing and RingWithOperatorsFunctor
         
-    ### Methods to implement
-    def _coerce_into_domain(self, x):
-        if(x not in self.domain()):
-            raise TypeError("The object [%s] is not an element of [%s]" %(x, self.domain()))
-        return x
-        
+    ### Methods to implement        
     def _apply_functor(self, x):
         return RWOPolynomialRing(x,self.variables())
         
@@ -1041,7 +1065,7 @@ class RWOPolyRingFunctor (ConstructionFunctor):
             other_names = other.__variables
             global_names = tuple(set(list(self_names)+list(other_names)))
             return RWOPolyRingFunctor(global_names)
-        pass
+        return None
 
     def variables(self):
         return self.__variables
