@@ -262,6 +262,11 @@ class RWOPolynomialGen (InfinitePolynomialGen):
             index = tuple(index)
         return self[index]
 
+    def variable_name(self) -> str:
+        r'''
+            Method that returns the variable name of ``self``
+        '''
+        return self._parent.variable_names()[self._parent.gens().index(self)]
 
     def __hash__(self):
         return hash(self._name)
