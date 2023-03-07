@@ -40,7 +40,7 @@ from __future__ import annotations
 from itertools import product
 from functools import reduce
 
-from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent, parent
+from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent, parent, matrix
 from sage.categories.all import Morphism, Category, CommutativeAlgebras
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.rings.polynomial.polynomial_ring import is_PolynomialRing
@@ -48,7 +48,7 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.multi_polynomial_ring_base import is_MPolynomialRing #pylint: disable=no-name-in-module
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.ring import Ring #pylint: disable=no-name-in-module
-from sage.structure.element import Element #pylint: disable=no-name-in-module
+from sage.structure.element import Element, Matrix #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 from typing import Collection
@@ -942,7 +942,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             where `n` is the order of `P` and `m` is the order of `Q`. Then, it is clear that the only appearances of the infinite variable 
             `u_*` is within `[u_0,\ldots,u_{n+m-1}]`. Hence we can build a Sylvester-type matrix using these polynomials and compute its
-            determinant obtainin an expression in `R`. 
+            determinant obtaining an expression in `R`. 
 
             This determinant is called the Sylvester resultant of `P` and `Q` and it is equivalent to the Sylvester resultant on the algebraic case.
 
@@ -969,7 +969,6 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: P.sylvester_resultant(Q)
                 x^6 + 6*x^4 - 18*x^3 + 9*x^2 - 30*x - 19
 
-
             If several variables are available, we need to explicitly provide the variable we are considering::
 
                 sage: R.<u,v> = RWOPolynomialRing(B)
@@ -978,7 +977,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: P.sylvester_resultant(Q)
                 Traceback (most recent call last):
                 ...
-                ValueError: [sylvester_resultant] No infinite variable provided but several available.
+                ValueError: [sylvester_checking] No infinite variable provided but several available.
                 sage: P.sylvester_resultant(Q, u)
                 x^6*v_1*v_0^2 + (3*x^5 - x^4)*v_0^3
                 sage: P.sylvester_resultant(Q, v)
@@ -993,35 +992,129 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: P.sylvester_resultant(Q, 2)
                 Traceback (most recent call last):
                 ...
-                IndexError: [sylvester_resultant] Requested generator 2 but only 2 exist.
+                IndexError: [sylvester_checking] Requested generator 2 but only 2 exist.
                 sage: P.sylvester_resultant(Q, -1)
                 Traceback (most recent call last):
                 ...
-                IndexError: [sylvester_resultant] Requested generator -1 but only 2 exist.
-
+                IndexError: [sylvester_checking] Requested generator -1 but only 2 exist.
         '''
-        if self.noperators() > 1:
-            raise NotImplementedError(f"[sylvester_resultant] Sylvester resultant with {self.noperators()} is not implemented")
+        return self.sylvester_matrix(P,Q,gen).determinant()
 
-        P = self(P); Q = self(Q)
+    @cached_method
+    def sylvester_subresultant(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None, k: int = 0, i: int = 0):
+        r'''
+            Method to compute the `(k,i)`-th Sylvester subresultant of two operator polynomials.
+
+            From :func:`sylvester_matrix`, we obtain the matrix `S_k(P,Q)` which has `k` more columns than rows. In 
+            order to obtain a square matrix, we can remove `k` columns. In particular, removing the `k` out of the `k+1`
+            first columns (which are related to the coefficients of `(1,\ldots,\partial^k)`). 
+
+            The corresponding `(k,i)`-th subresultant of `P` and `Q` is the determinant of this matrix.
+
+            In particular, when `k=0` and `i=0`, then the subresultant is exactly the Sylvester resultant of `P` and `Q`.
+        '''
+        ## Checking the argument `i`
+        if not i in ZZ:
+            raise TypeError(f"[sylvester_subresultant] The argument {i = } must be an integer")
+        elif i < 0 or i > k:
+            raise ValueError(f"[sylvester_subresultant] The index {i = } is out of proper bounds [0,...,{k}]")
+
+        S_k = self.sylvester_matrix(P,Q,gen,k)
+        S_ki = S_k.matrix_from_columns([i]+list(range(k+1,S_k.ncols())))
+        return S_ki.determinant()
+        
+    @cached_method
+    def sylvester_matrix(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None, k: int = 0) -> Matrix:
+        r'''
+            Method to obtain the `k`-Sylvester matrix for two operator polynomials.
+
+            **REMARK**: this method only works when ``self`` have with 1 operator and both `P` and `Q` are linear on the given generator.
+
+            If we have two linear operator polynomials `P(u), Q(u) \in R\{u\}` where `(R, \sigma)` is a ring with 1 operator `\sigma`, 
+            then we can consider the extended system 
+
+            .. MATH::
+
+                \Xi_k(P,Q) = \{P, \sigma(P), \ldots, \sigma^{m-1-k}(P), Q, \sigma(Q), \ldots, \sigma^{n-1-k}(Q)\},
+
+            where `n` is the order of `P` and `m` is the order of `Q` and `k \in\{0,\ldots,N\}` for `N \min(n,m)-1`. We can 
+            build a Sylvester-type matrix using these polynomials.
+
+            INPUT:
+
+            * ``P``: an operator polynomial (has to be linear) to be used as `P`.
+            * ``Q``: an operator polynomial (has to be linear) to be used as `Q`.
+            * ``gen``: an infinite variable that will be eliminated from `P` and `Q`. Can be ``None`` only if one infinite variable is in ``self``.
+            * ``k``: an integer in `\{0,\ldots,N\}` to get the corresponding `k`-Sylvester matrix. When `k = 0`, the matrix is square.
+
+            OUTPUT:
+
+            A Sylvester-type matrix for the corresponding operators.
+
+            TODO: add examples
+        '''
+        ## Checking the polynomials and ring arguments
+        P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
+        
+        ## Checking the k argument
+        n = P.order(gen); m = Q.order(gen); N = min(n,m) - 1
+        if not k in ZZ:
+            raise TypeError(f"[sylvester_matrix] The index {k = } is not an integer.")
+        elif k < 0 or k > N:
+            raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
+        
+        # Special case when one of the orders is -1 (i.e., the variable `gen` is not present)
+        if n == -1:
+            return matrix([[P]]) # P does not contain the variable `gen` to eliminate
+        elif m == -1:
+            return matrix([[Q]]) # Q does not contain the variable `u` to eliminate
+        
+        # Building the extension
+        extended_P: list[RWOPolynomial] = [P.operation(times=i) for i in range(m-k)]
+        extended_Q: list[RWOPolynomial] = [Q.operation(times=i) for i in range(n-k)]
+
+        # Building the Sylvester matrix (n+m-1-k) , (n+m-1-k)
+        fR = self.polynomial_ring() # guaranteed common parent for all polynomials
+        cols = [fR(gen[pos].polynomial()) for pos in range(n+m-k)]
+        equations = [fR(equation.polynomial()) for equation in extended_P + extended_Q]
+
+        # Returning the matrix
+        return matrix([[self(equation.coefficient(m)) for m in cols] for equation in equations])
+
+    def sylvester_subresultant_sequence(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None) -> tuple[RWOPolynomial]:
+        ## Checking the polynomials and ring arguments
+        P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
+        return tuple(
+            sum(self.sylvester_subresultant(P,Q,gen,k,i) * gen[i] for i in range(k+1))
+            for k in range(min(P.order(gen),Q.order(gen)))
+        )
+
+    def __process_sylvester_arguments(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen):
+        r'''Check the ring, the generator and the polynomials are correct'''
+        ## Checking the ring is appropriate
+        if self.noperators() > 1:
+            raise NotImplementedError(f"[sylvester_checking] Sylvester resultant with {self.noperators()} is not implemented")
+
+        ## Checking the gen is correctly given
         if self.ngens() > 1 and gen is None:
-            raise ValueError("[sylvester_resultant] No infinite variable provided but several available.")
+            raise ValueError("[sylvester_checking] No infinite variable provided but several available.")
         elif self.ngens() > 1 and gen in ZZ:
             if gen < 0 or gen >= self.ngens():
-                raise IndexError(f"[sylvester_resultant] Requested generator {gen} but only {self.ngens()} exist.")
+                raise IndexError(f"[sylvester_checking] Requested generator {gen} but only {self.ngens()} exist.")
             gen = self.gens()[gen]
         elif isinstance(gen, RWOPolynomialGen) and not gen in self.gens():
-            raise ValueError(f"[sylvester_resultant] The variable {gen} fo not belong to {self}")
+            raise ValueError(f"[sylvester_checking] The variable {repr(gen)} do not belong to {self}")
         elif self.ngens() == 1 and gen is None:
             gen = self.gens()[0]
 
+        ## Checking the operator polynomials are correct
+        P = self(P); Q = self(Q)
         if not P.is_linear(gen):
-            raise TypeError(f"[sylvester_resultant] The polynomial {P} is not linear w.r.t. {gen}")
+            raise TypeError(f"[sylvester_checking] The polynomial {P} is not linear w.r.t. {gen}")
         if not Q.is_linear(gen):
-            raise TypeError(f"[sylvester_resultant] The polynomial {Q} is not linear w.r.t. {gen}")
+            raise TypeError(f"[sylvester_checking] The polynomial {Q} is not linear w.r.t. {gen}")
 
-        from .rwo_polynomial_system import RWOSystem
-        return RWOSystem([P,Q], variables=[gen]).diff_resultant(alg_res = "sylvester")
+        return P,Q,gen
 
 def is_RWOPolynomialRing(element):
     r'''

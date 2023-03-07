@@ -757,13 +757,21 @@ class RWOPolynomial (InfinitePolynomial_dense):
     ###################################################################################
     ### Other computations
     ###################################################################################
-    def sylvester_resultant(self, other : RWOPolynomial, gen: RWOPolynomialGen = None):
+    def sylvester_resultant(self, other : RWOPolynomial, gen: RWOPolynomialGen = None) -> RWOPolynomial:
         r'''
             Method on an element to compute (if possible) the Sylvester resultant.
 
             See :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.sylvester_resultant` for further information.
         '''
         return self.parent().sylvester_resultant(self, other, gen)
+
+    def sylvester_matrix(self, other: RWOPolynomial, gen: RWOPolynomialGen = None, k: int = 0) -> RWOPolynomial:
+        r'''
+            Method to compute the Sylvester `k`-matrix for two operator polynomials.
+
+            See :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.sylvester_matrix` for further information.
+        '''
+        return self.parent().sylvester_matrix(self, other, gen, k)
 
     ###################################################################################
     ### Other magic methods
