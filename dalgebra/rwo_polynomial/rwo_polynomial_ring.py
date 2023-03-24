@@ -37,6 +37,8 @@ AUTHORS:
 
 from __future__ import annotations
 
+import logging
+
 from itertools import product
 from functools import reduce
 
@@ -56,6 +58,7 @@ from typing import Collection
 from .rwo_polynomial_element import RWOPolynomial, RWOPolynomialGen, IndexBijection
 from ..ring_w_operator import RingsWithOperators, AdditiveMap, DifferentialRing, DifferenceRing, RingWithOperators_Wrapper
 
+logger = logging.getLogger(__name__)
 _RingsWithOperators = RingsWithOperators.__classcall__(RingsWithOperators)
 
 ## Factories for all structures
@@ -815,8 +818,13 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                             second_term += to_add
                         self.__cache[operation][element] = first_term + base*second_term
                     else:
-                        c = element.coefficients(); m = [self(str(el)) for el in element.monomials()]
-                        self.__cache[operation][element] = sum(operator(c[i])*m[i] + c[i]*__extended_derivation(m[i]) for i in range(len(m)))
+                        self.__cache[operation][element] = sum(
+                            operator(c)*m + c*__extended_derivation(m) 
+                            for (c,m) in zip(
+                                element.coefficients(), 
+                                element.monomials()
+                            )
+                        )
                         
                 return self.__cache[operation][element]
             func = __extended_derivation
@@ -840,6 +848,97 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         
         return self.base().linear_operator_ring()
 
+    def inverse_operation(self, element: RWOPolynomial, operation: int = 0) -> RWOPolynomial:
+        if not element in self:
+            raise TypeError(f"[inverse_operation] Impossible to apply operation to {element}")
+        element = self(element)
+
+        if self.operator_types()[operation] == "homomorphism":
+            return self.__inverse_homomorphism(element, operation)
+        elif self.operator_types()[operation] == "derivation":
+            return self.__inverse_derivation(element, operation)
+        elif self.operator_types()[operation] == "skew":
+            return self.__inverse_skew(element, operation)
+        else:
+            raise NotImplementedError("[inverse_operation] Inverse for unknown operation not implemented")
+    
+    def __inverse_homomorphism(self, element: RWOPolynomial, operation: int):
+        solution = self.zero()
+        for coeff, monomial in zip(element.coefficients(), element.monomials()):
+            coeff = coeff.inverse_operation() if not coeff.is_constant() else coeff
+            variables = monomial.variables()
+            new_mon = self.one()
+            for v in variables:
+                for g in element.infinite_variables():
+                    if v in g:
+                        ind = list(g.index(v, True))
+                        if ind[operation] == 0:
+                            raise ValueError(f"[inverse_homomorphism] Found an element impossible to invert: {monomial}")
+                        ind[operation] -= 1
+                        new_mon *= g[tuple(ind) if len(ind) > 1 else ind[0]]
+            solution += coeff*new_mon
+        return solution
+    
+    def __inverse_derivation(self, element: RWOPolynomial, operation: int):
+        logger.debug(f"[inverse_derivation] Called with {element}")
+        if element == 0:
+            logger.debug(f"[inverse_derivation] Found a zero --> Easy")
+            solution = self.zero()
+        elif element.degree() == 1:
+            logger.debug(f"[inverse_derivation] Found linear element --> Easy to do")
+            solution = self.zero()
+            for coeff, monomial in zip(element.coefficients(), element.monomials()):
+                if monomial == 1:
+                    raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
+                coeff = coeff.inverse_operation() if not coeff.is_constant() else coeff
+                var = monomial.variables()[0] # we know there is only 1
+                for g in element.infinite_variables():
+                    if var in g:
+                        ind = list(g.index(var, True))
+                        if ind[operation] == 0:
+                            raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
+                        ind[operation] -= 1
+                        new_mon = g[tuple(ind) if len(ind) > 1 else ind[0]]
+                        break
+                solution += coeff*new_mon
+        else:
+            logger.debug(f"[inverse_derivation] Element is not linear")
+            monomials = element.monomials()
+            if 1 in monomials:
+                raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
+            monomials_with_points = []
+            for mon in monomials:
+                bv = max(self.gens().index(v) for v in mon.infinite_variables())
+                bo = mon.order(self.gens()[bv], operation)
+                monomials_with_points.append((bv, bo))
+
+            aux = max(el[1] for el in monomials_with_points)
+            V, O = max(monomials_with_points, key = lambda p: p[0]*aux + p[1])
+            V = self.gens()[V]
+            logger.debug(f"[inverse_derivation] Maximal variable: {V[O]}")
+            
+            if element.degree(V[O]) > 1:
+                raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
+            else:
+                highest_part = element.coefficient(V[O]); deg_order_1 = highest_part.degree(V[O-1])
+                cs = [highest_part.coefficient(V[O-1]**i) for i in range(deg_order_1+1)]
+                order_1_part = sum(cs[i]*V[O-1]**i for i in range(deg_order_1+1))
+                q1 = highest_part - order_1_part # order q1 < d-1
+                
+                ## we compute remaining polynomial
+                partial_integral = sum(cs[i]*(1/ZZ(i+1)) * V[O-1]**(i+1) for i in range(deg_order_1+1)) + V[O-1]*q1
+
+            logger.debug(f"[inverse_derivation] Partial integral: {partial_integral}")
+            rem = element - partial_integral.operation(operation)
+            logger.debug(f"[inverse_derivation] Remaining to integrate: {rem}")
+            solution = partial_integral + self.inverse_operation(rem, operation)
+            
+        logger.debug(f"[inverse_derivation] Result: {solution}")
+        return solution
+   
+    def __inverse_skew(self, element: RWOPolynomial, operation: int):
+        raise NotImplementedError("[inverse_skew] Skew-derivation operation not yet implemented")
+            
     #################################################
     ### Other computation methods
     #################################################

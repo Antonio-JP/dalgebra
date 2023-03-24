@@ -1011,6 +1011,53 @@ class RWOSystem:
             return polynomial.parent().univariate_ring(variable)(str(polynomial))
 
     ###################################################################################################
+    ### Solving methods
+    def solve_linear(self):
+        r'''
+            Method to try and solve a linear system.
+
+            This method tries to solve a system with operator polynomials if the variables given are linear within the system.
+
+            This method is incomplete and may fail in several cases. We only solve "triangular" systems. Otherwise, we raise 
+            a :class:`NotImplementedError` with the corresponding issue.
+        '''
+        if not self.is_linear():
+            raise TypeError(f"[solve_linear] The linear is not linear in the variables {self.variables}")
+        
+        ## Checking if the system is triangular
+        equations = list(self.equations())
+        solution = dict()
+
+        while len(equations) > 0:
+            to_solve = dict()
+            rem_equation = []
+            for equation in equations:
+                vars_in_equ = [v for v in equation.infinite_variables() if v in self.variables]
+                if len(vars_in_equ) == 0 and equation != 0:
+                    raise ValueError(f"[solve_linear] Impossible to solve the system: found a equation {equation} to be zero with no variables in {self.variables}")
+                elif len(vars_in_equ) == 1:
+                    if not vars_in_equ[0] in to_solve:
+                        to_solve[vars_in_equ[0]] = []
+                    to_solve[vars_in_equ[0]].append(equation)
+                else:
+                    rem_equation.append(equation)
+            
+            if len(to_solve) == 0:
+                raise NotImplementedError("[solve_linear] System is not triangular: no equation found with only one variable")
+
+            for v, equs in to_solve.items():
+                solution[v] = equs[0].solve(v)
+                if any(equ(**{v.variable_name(): solution[v]}) != 0 for equ in equs[1:]):
+                    raise ValueError(f"[solve_linear] The current solution {v.variable_name()} = {solution[v]} does not solve all the equations\n\t{equs}")
+                
+            equations = [equ(**{v.variable_name() : solution[v] for v in to_solve}) for equ in rem_equation]
+            equations = [equ for equ in equations if equ != 0]
+        return solution
+
+
+
+
+    ###################################################################################################
 
 class DifferentialSystem (RWOSystem):
     r'''

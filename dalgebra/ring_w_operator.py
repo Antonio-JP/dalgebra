@@ -248,6 +248,9 @@ class RingsWithOperators(Category):
             elif operator is None: raise IndexError("An index for the operation must be provided when having several operations")
             return self.operators()[operator](element)
 
+        def inverse_operation(self, element: Element, operator: int = None) -> Element:
+            raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
+
         @abstract_method
         def operator_types(self) -> tuple[str]:
             r'''
@@ -539,6 +542,23 @@ class RingsWithOperators(Category):
                 return self.parent().operation(self, operation)
             else:
                 return self.parent().operation(self.operation(operation=operation, times=times-1), operation)
+
+        def inverse_operation(self, operation: int = None, times : int = 1) -> Element:
+            r'''
+                Apply the inverse operation to ``self`` a given amount of times.
+
+                This method applies repeatedly the inverse operation defined in the parent of ``self``.
+                See :func:`~RingsWithOperators.ParentMethods.inverse_operation` for further information.
+            '''
+            if(not times in ZZ or times < 0):
+                raise ValueError("The argument ``times`` must be a non-negative integer")
+
+            if(times == 0):
+                return self
+            elif(times == 1):
+                return self.parent().inverse_operation(self, operation)
+            else:
+                return self.parent().inverse_operation(self.inverse_operation(operation=operation, times=times-1), operation)
 
         def derivative(self, derivation: int = None, times: int = 1) -> Element:
             r'''
