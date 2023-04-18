@@ -562,7 +562,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
             raise TypeError(f"The generator must be a valid generator from {parent}")
         
         o = self.order(gen, operation)
-        monomials = [parent()(mon) for mon in self.monomials()]
+        monomials = self.monomials()
         coefficients = self.coefficients()
 
         return parent(sum(coeff*mon for (mon, coeff) in zip(monomials, coefficients) if mon.order(gen,operation) == o))

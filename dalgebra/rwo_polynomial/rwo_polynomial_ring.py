@@ -770,7 +770,6 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                     generators = self.gens()
                     if(element.is_monomial()):
                         c = element.coefficients()[0]
-                        m = element.monomials()[0]
                         v = element.variables(); d = [element.degree(v[i]) for i in range(len(v))]
                         v = [self(str(el)) for el in v]
 
@@ -783,7 +782,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                         
                         self.__cache[operation][element] = result
                     else:
-                        c = element.coefficients(); m = [self(str(el)) for el in element.monomials()]
+                        c = element.coefficients(); m = element.monomials()
                         self.__cache[operation][element] = sum(operator(c[i])*__extended_homomorphism(m[i]) for i in range(len(m)))
                         
                 return self.__cache[operation][element]
@@ -807,7 +806,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                         v = [self(str(el)) for el in v]
                         base = c*prod([v[i]**(d[i]-1) for i in range(len(v))], self.one())
 
-                        first_term = operator(c)*self(str(m))
+                        first_term = operator(c)*m
                         second_term = self.zero()
                         for i in range(len(v)):
                             to_add = d[i]*prod([v[j] for j in range(len(v)) if j != i], self.one())
@@ -1213,7 +1212,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: P = z[0,2] - 3*x*z[0,1] + (x^2 - 1)*z[1,0]
                 sage: Q = z[2,3] - z[1,0]
                 sage: P.sylvester_matrix(Q)
-                Traceback (most recent call last)
+                Traceback (most recent call last):
                 ...
                 NotImplementedError: [sylvester_checking] Sylvester resultant with 2 is not implemented
         '''
@@ -1222,16 +1221,18 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         
         ## Checking the k argument
         n = P.order(gen); m = Q.order(gen); N = min(n,m) - 1
-        if not k in ZZ:
-            raise TypeError(f"[sylvester_matrix] The index {k = } is not an integer.")
-        elif k < 0 or k > N:
-            raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
-        
         # Special case when one of the orders is -1 (i.e., the variable `gen` is not present)
         if n == -1:
             return matrix([[P]]) # P does not contain the variable `gen` to eliminate
         elif m == -1:
             return matrix([[Q]]) # Q does not contain the variable `u` to eliminate
+        
+        if not k in ZZ:
+            raise TypeError(f"[sylvester_matrix] The index {k = } is not an integer.")
+        elif N == -1 and k != 0:
+            raise TypeError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0].")
+        elif N >= 0 and (k < 0 or k > N):
+            raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
         
         # Building the extension
         extended_P: list[RWOPolynomial] = [P.operation(times=i) for i in range(m-k)]
