@@ -1111,6 +1111,27 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             The corresponding `(k,i)`-th subresultant of `P` and `Q` is the determinant of this matrix.
 
             In particular, when `k=0` and `i=0`, then the subresultant is exactly the Sylvester resultant of `P` and `Q`.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: S.sylvester_subresultant(P, Q, k=1, i=0)
+                -3*x^3 - 3*x^2 + 3*x + 2
+                sage: S.sylvester_subresultant(P, Q, k=1, i=1)
+                8*x^2 + 7*x
+
+            We can see that the case with `k=0` and `i=0`coincides with the method :func:`sylvester_resultant`::
+            
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: S.sylvester_subresultant(P, Q, k=0, i=0) == P.sylvester_resultant(Q)
+                True
         '''
         ## Checking the argument `i`
         if not i in ZZ:
@@ -1150,7 +1171,51 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             A Sylvester-type matrix for the corresponding operators.
 
-            TODO: add examples
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: P.sylvester_matrix(Q)
+                [      x^2 - 1          -3*x             1             0             0]
+                [            0     x^2 + 2*x      -3*x - 3             1             0]
+                [            0             0 x^2 + 4*x + 3      -3*x - 6             1]
+                [           -1             0             0             1             0]
+                [            0            -1             0             0             1]
+                sage: P.sylvester_matrix(Q, k=1)
+                [      x^2 - 1          -3*x             1             0]
+                [            0     x^2 + 2*x      -3*x - 3             1]
+                [           -1             0             0             1]
+
+            It is important to remark that this matrix depends directly on the operation defined on the ring::
+
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: P.sylvester_matrix(Q)
+                [x^2 - 1    -3*x       1       0       0]
+                [    2*x x^2 - 4    -3*x       1       0]
+                [      2     4*x x^2 - 7    -3*x       1]
+                [     -1       0       0       1       0]
+                [      0      -1       0       0       1]
+                sage: P.sylvester_matrix(Q,k=1)
+                [x^2 - 1    -3*x       1       0]
+                [    2*x x^2 - 4    -3*x       1]
+                [     -1       0       0       1]
+
+            However, the Sylvester matrix is not well defined when the ring has several operations::
+
+                sage: B = DifferentialRing(DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)), diff); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[0,2] - 3*x*z[0,1] + (x^2 - 1)*z[1,0]
+                sage: Q = z[2,3] - z[1,0]
+                sage: P.sylvester_matrix(Q)
+                Traceback (most recent call last)
+                ...
+                NotImplementedError: [sylvester_checking] Sylvester resultant with 2 is not implemented
         '''
         ## Checking the polynomials and ring arguments
         P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
@@ -1181,6 +1246,45 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         return matrix([[self(equation.coefficient(m)) for m in cols] for equation in equations])
 
     def sylvester_subresultant_sequence(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None) -> tuple[RWOPolynomial]:
+        r'''
+            Method that gets the subresultant sequence in form of a linear d-polynmomial.
+
+            As described in :func:`sylvester_subresultant`, when we build the `k`-Sylvester matrix of two linear 
+            d-polynomials, we obtain a non-square matrix and, in order to compute a determinant, we need to remove `k`
+            columns. The subresultants are built by removing `k` out of the first `k+1` columns.
+
+            Hence, we have remaining one columns corresponding to one operator `\sigma^i`. We can then consider the 
+            following linear operator:
+
+            .. MATH::
+
+                \mathcal{S}_k(P,Q) = \sum_{i=0}^k S_{k,i}(P,Q)\sigma^i
+
+            When iterating w.r.t. `k`, we obtain a sequence of linear operators. This is called the subresultant 
+            sequence of the d-polynomials `P` and `Q`.
+
+            This sequence is important because it describes the common factor (as operator) of the two d-polynomials. More
+            precisely, if the first element is zero (i.e., the Sylvester resultant is zero), then `P` and `Q` 
+            has a common right factor as linear operators. 
+
+            Moreover, the first non-zero element in the sequence provides a formula for the greatest right common factor.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: S.sylvester_subresultant_sequence(P, Q)
+                ((x^6 + 6*x^5 + 10*x^4 - 18*x^3 - 65*x^2 - 42*x - 2)*z_0, (8*x^2 + 7*x)*z_1 + (-3*x^3 - 3*x^2 + 3*x + 2)*z_0)
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: S.sylvester_subresultant_sequence(P, Q)
+                ((x^6 + 6*x^4 - 18*x^3 + 9*x^2 - 30*x - 19)*z_0, (8*x^2 + 4)*z_1 + (-3*x^3 + x - 1)*z_0)
+        '''
         ## Checking the polynomials and ring arguments
         P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
         return tuple(
