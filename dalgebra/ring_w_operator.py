@@ -835,7 +835,7 @@ class RingWithOperators_WrapperElement(Element):
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped - x.wrapped)
-    def _neg_(self) -> RingWithOperators_WrapperElement:
+    def __neg__(self) -> RingWithOperators_WrapperElement:
         return self.parent().element_class(self.parent(), -self.wrapped)
     def _mul_(self, x) -> RingWithOperators_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
@@ -849,16 +849,22 @@ class RingWithOperators_WrapperElement(Element):
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped * x.wrapped)
-    def _truediv_(self, x) -> RingWithOperators_WrapperElement:
+    def _div_(self, x) -> RingWithOperators_WrapperElement:
+        if parent(x) != self.parent(): # this should not happened
+            x = self.parent().element_class(self.parent(), self.parent().base()(x))
+        return self.parent().element_class(self.parent(), self.wrapped / x.wrapped) 
+    def _floordiv_(self, x) -> RingWithOperators_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped // x.wrapped) 
+    def _mod_(self, x) -> RingWithOperators_WrapperElement:
+        if parent(x) != self.parent(): # this should not happened
+            x = self.parent().element_class(self.parent(), self.parent().base()(x))
+        return self.parent().element_class(self.parent(), self.wrapped % x.wrapped) 
     def __pow__(self, n) -> RingWithOperators_WrapperElement:
         return self.parent().element_class(self.parent(), self.wrapped ** n)
-    
     def __invert__(self) -> RingWithOperators_WrapperElement:
         return self.parent().element_class(self.parent(), ~self.wrapped)
-
     def __eq__(self, x) -> bool:
         if x is None: return False
 

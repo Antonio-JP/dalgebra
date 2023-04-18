@@ -749,6 +749,8 @@ class RWOPolynomial (InfinitePolynomial_dense):
     ###################################################################################
     def _add_(self, x):
         return self.parent().element_class(self.parent(), super()._add_(x))
+    def __neg__(self):
+        return self.parent().element_class(self.parent(), super().__neg__())
     def _sub_(self, x):
         return self.parent().element_class(self.parent(), super()._sub_(x))
     def _mul_(self, x):
