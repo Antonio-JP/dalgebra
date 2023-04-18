@@ -1091,6 +1091,15 @@ class RingWithOperators_Wrapper(CommutativeRing):
             self.__linear_operator_ring = OreAlgebra(self.wrapped, *operators)
         return self.__linear_operator_ring
         
+    def inverse_operation(self, element: RingWithOperators_WrapperElement, operator: int = None) -> RingWithOperators_WrapperElement:
+        if self.operator_types()[operator] == "homomorphism":
+            try:
+                return self.element_class(self, self.operators()[operator].function.inverse()(element.wrapped))
+            except Exception as e:
+                raise NotImplementedError(f"[inverse_operation] Inverses not implemented in general. Moreover: {e}")
+
+        raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
+
     ## Coercion methods
     def _has_coerce_map_from(self, S) -> bool:
         r'''

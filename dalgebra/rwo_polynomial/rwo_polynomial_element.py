@@ -792,6 +792,42 @@ class RWOPolynomial (InfinitePolynomial_dense):
     def solve(self, gen: RWOPolynomialGen) -> Element:
         r'''
             Finds (if possible) a solution of ``gen`` using ``self == 0``.
+
+            This method tries to solve the equation `p(u) = 0` where `p \in R\{u\}` is a :class:`RWOPolynomial`
+            for a given infinite variable `u`. This means, this method will compute an element `y \in R` such that 
+            `p(y) = 0` where `p(u)` is represented by ``self``.
+
+            Currently, the only possibility that is implemented is when we can rewrite the polynomial `p(u)` to the 
+            form `p(u) = u^{(d)} + \alpha` where `\alpha \in R`. Then we try to invert the operation `d` times to `\alpha`
+            (see method :func:`inverse_operation`).
+
+            INPUT:
+
+            * ``gen``: the generator in ``self.parent()`` that will be used as main variable (i.e., `u`).
+
+            OUTPUT:
+
+            An element ``e`` in ``self.parent()`` such that ``self(gen=e) == 0`` is True.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = RWOPolynomialRing(DifferentialRing(QQ, lambda p:0))
+                sage: p = u[0] - v[1]
+                sage: p.solve(u)
+                v_1
+                sage: p.solve(v)
+                Traceback (most recent call last):
+                ...
+                ValueError: [inverse_derivation] Found an element impossible to invert: u_0
+                sage: p = u[1] - 2*v[0]*v[1]
+                sage: p.solve(u)
+                v_0^2
+                sage: p(u=p.solve(u))
+                0
+
+            This can also be done for difference operators::
+            
         '''
         if self.parent().noperators() > 1:
             raise NotImplementedError("[solve] Method implemented only for 1 operator.")

@@ -1019,6 +1019,14 @@ class RWOSystem:
 
             This method is incomplete and may fail in several cases. We only solve "triangular" systems. Otherwise, we raise 
             a :class:`NotImplementedError` with the corresponding issue.
+
+            OUTPUT:
+
+            A dictionary that be fed into the eval method of elements in ``self.parent()``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
         '''
         if not self.is_linear():
             raise TypeError(f"[solve_linear] The linear is not linear in the variables {self.variables}")
