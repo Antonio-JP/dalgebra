@@ -26,9 +26,8 @@ from __future__ import annotations
 import logging
 
 from functools import reduce
-from itertools import product
 
-from sage.all import latex, ZZ, Compositions, Subsets, Parent, Matrix
+from sage.all import latex, ZZ, Compositions, Subsets, Parent
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method #pylint: disable=no-name-in-module
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
