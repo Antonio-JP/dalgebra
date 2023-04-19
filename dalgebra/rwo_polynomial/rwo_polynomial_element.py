@@ -668,7 +668,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return self.parent().as_linear_operator(self)
 
     # Magic methods
-    def __call__(self, *args, **kwargs) -> RWOPolynomial:
+    def __call__(self, *args, dic: dict[RWOPolynomialGen, RWOPolynomial] = None, **kwargs) -> RWOPolynomial:
         r'''
             Override of the __call__ method. 
 
@@ -711,7 +711,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
                 sage: parent(in_eval)
                 Ring of operator polynomials in (a) over Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
         '''
-        return self.parent().eval(self, *args, **kwargs)
+        return self.parent().eval(self, *args, dic=dic, **kwargs)
 
     def divides(self, other : RWOPolynomial) -> bool:
         r'''

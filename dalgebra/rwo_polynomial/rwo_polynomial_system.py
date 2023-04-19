@@ -1034,14 +1034,18 @@ class RWOSystem:
                 ....:      -2*v[1] - 3*a[1]
                 ....: ], variables=[u,v])
                 sage: S.solve_linear()
-                {v_*: (-3/2)*a_0, u_*: (-3/4)*a_1}
-                sage: 
+                {u_*: (-3/4)*a_1, v_*: (-3/2)*a_0}
                 sage: S = RWOSystem([
                 ....:      -2*u[1] - b*v[2] - 3*a[2],
                 ....:      -2*v[1] - 3*a[1]
                 ....: ], variables=[u,v])
-                sage: S.solve_linear()
-                {v_*: (-3/2)*a_0, u_*: (3/4*b - 3/2)*a_1}
+                sage: sol = S.solve_linear(); sol
+                {u_*: (3/4*b - 3/2)*a_1, v_*: (-3/2)*a_0}
+
+            We can check that this solutions satify all the equations of the systems to be zero::
+
+                sage: all(equation(dic=sol) == 0 for equation in S.equations())
+                True
         '''
         if not self.is_linear():
             raise TypeError(f"[solve_linear] The linear is not linear in the variables {self.variables}")

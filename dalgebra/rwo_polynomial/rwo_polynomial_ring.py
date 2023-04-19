@@ -595,7 +595,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         
         return p
      
-    def eval(self, element, *args, **kwds):
+    def eval(self, element, *args, dic: dict[RWOPolynomialGen,RWOPolynomial] = None, **kwds):
         r'''
             Method to evaluate elements in the ring of differential polynomials.
 
@@ -618,6 +618,8 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             * ``element``: element (that must be in ``self``) to be evaluated
             * ``args``: list of arguments that will be linearly related with the generators
               of ``self`` (like they are given by ``self.gens()``)
+            * ``dic``: dictionary mapping generators to polynomials. This alllows an input equivalent to 
+              the argument in ``kwds`` but where the keys of the dictionary are :class:`RWOPOlynomialGen`.
             * ``kwds``: dictionary for providing values to the generators of ``self``. The 
               name of the keys must be the names of the generators (as they can be got using 
               the attribute ``_name``).
@@ -687,6 +689,14 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: p5(a=p6) - p6(a=p5) # commutator of p5 and p6 viewed as operators w.r.t. a
                 -a_0*b_1^2*b_0^2 + (-x)*a_1*b_2*b_0^2 + (-2*x)*a_1*b_1^2*b_0 + a_1*b_1*b_0^2 + x^2*a_0*b_1^2 + x^3*a_1*b_2 + x^2*a_1*b_1
         '''
+        ### Combining the arguments from dic and kwds
+        if dic != None:
+            for k,v in dic.items():
+                if isinstance(k, RWOPolynomialGen):
+                    kwds[k.variable_name()] = v
+                else:
+                    kwds[str(k)] = v
+
         ### Checking the element is in self
         if(not element in self):
             raise TypeError("Impossible to evaluate %s as an element of %s" %(element, self))
