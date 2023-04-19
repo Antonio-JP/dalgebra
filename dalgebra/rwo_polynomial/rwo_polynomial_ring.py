@@ -37,10 +37,12 @@ AUTHORS:
 
 from __future__ import annotations
 
+import logging
+
 from itertools import product
 from functools import reduce
 
-from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent, parent
+from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent, parent, matrix
 from sage.categories.all import Morphism, Category, CommutativeAlgebras
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.rings.polynomial.polynomial_ring import is_PolynomialRing
@@ -48,7 +50,7 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.multi_polynomial_ring_base import is_MPolynomialRing #pylint: disable=no-name-in-module
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.ring import Ring #pylint: disable=no-name-in-module
-from sage.structure.element import Element #pylint: disable=no-name-in-module
+from sage.structure.element import Element, Matrix #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 from typing import Collection
@@ -56,6 +58,7 @@ from typing import Collection
 from .rwo_polynomial_element import RWOPolynomial, RWOPolynomialGen, IndexBijection
 from ..ring_w_operator import RingsWithOperators, AdditiveMap, DifferentialRing, DifferenceRing, RingWithOperators_Wrapper
 
+logger = logging.getLogger(__name__)
 _RingsWithOperators = RingsWithOperators.__classcall__(RingsWithOperators)
 
 ## Factories for all structures
@@ -348,6 +351,18 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             except NotImplementedError:
                 raise NotImplementedError(f"Ring of linear operator rings not implemented. Moreover: {error}")
 
+    def _pushout_(self, other):
+        scons, sbase = self.construction()
+        if isinstance(other, RWOPolynomialRing_dense):
+            ocons, obase = other.construction()
+            cons = scons.merge(ocons)
+            try:
+                base = pushout(sbase, obase)
+            except TypeError:
+                base = pushout(obase, sbase)
+            return cons(base)
+        return None
+    
     @cached_method
     def gen(self, i: int = None) -> RWOPolynomialGen:
         r'''
@@ -490,6 +505,23 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         destiny_ring = PolynomialRing(current, variables)
         return destiny_ring(str(polynomial.polynomial()))
 
+    def change_ring(self, R):
+        r'''
+            Return the operator polynomial ring changing the base ring to `R`.
+
+            We will keep the name of the variables of ``self`` but now will take coefficients
+            over `R` and the operations will be those on `R`.
+
+            INPUT:
+
+            * ``R``: a Ring with Operators.
+
+            OUTPUT:
+
+            A :class:`RWOPolynomialRing_dense` over ``R`` with the same variables as ``self``.
+        '''
+        return RWOPolynomialRing(R, self.variable_names())
+
     #################################################
     ### Magic python methods
     #################################################
@@ -563,7 +595,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         
         return p
      
-    def eval(self, element, *args, **kwds):
+    def eval(self, element, *args, dic: dict[RWOPolynomialGen,RWOPolynomial] = None, **kwds):
         r'''
             Method to evaluate elements in the ring of differential polynomials.
 
@@ -586,6 +618,8 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             * ``element``: element (that must be in ``self``) to be evaluated
             * ``args``: list of arguments that will be linearly related with the generators
               of ``self`` (like they are given by ``self.gens()``)
+            * ``dic``: dictionary mapping generators to polynomials. This alllows an input equivalent to 
+              the argument in ``kwds`` but where the keys of the dictionary are :class:`RWOPOlynomialGen`.
             * ``kwds``: dictionary for providing values to the generators of ``self``. The 
               name of the keys must be the names of the generators (as they can be got using 
               the attribute ``_name``).
@@ -655,6 +689,14 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: p5(a=p6) - p6(a=p5) # commutator of p5 and p6 viewed as operators w.r.t. a
                 -a_0*b_1^2*b_0^2 + (-x)*a_1*b_2*b_0^2 + (-2*x)*a_1*b_1^2*b_0 + a_1*b_1*b_0^2 + x^2*a_0*b_1^2 + x^3*a_1*b_2 + x^2*a_1*b_1
         '''
+        ### Combining the arguments from dic and kwds
+        if dic != None:
+            for k,v in dic.items():
+                if isinstance(k, RWOPolynomialGen):
+                    kwds[k.variable_name()] = v
+                else:
+                    kwds[str(k)] = v
+
         ### Checking the element is in self
         if(not element in self):
             raise TypeError("Impossible to evaluate %s as an element of %s" %(element, self))
@@ -732,13 +774,12 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                     element=self(str(element))
                     
                 if(element in self.base()):
-                    return operator(self.base()(element))
+                    return self(operator(self.base()(element)))
                 
                 if(not element in self.__cache[operation]):
                     generators = self.gens()
                     if(element.is_monomial()):
                         c = element.coefficients()[0]
-                        m = element.monomials()[0]
                         v = element.variables(); d = [element.degree(v[i]) for i in range(len(v))]
                         v = [self(str(el)) for el in v]
 
@@ -751,7 +792,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                         
                         self.__cache[operation][element] = result
                     else:
-                        c = element.coefficients(); m = [self(str(el)) for el in element.monomials()]
+                        c = element.coefficients(); m = element.monomials()
                         self.__cache[operation][element] = sum(operator(c[i])*__extended_homomorphism(m[i]) for i in range(len(m)))
                         
                 return self.__cache[operation][element]
@@ -764,7 +805,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                     element=self(str(element))
                     
                 if(element in self.base()):
-                    return operator(self.base()(element))
+                    return self(operator(self.base()(element)))
                 
                 if(not element in self.__cache[operation]):
                     generators = self.gens()
@@ -775,7 +816,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                         v = [self(str(el)) for el in v]
                         base = c*prod([v[i]**(d[i]-1) for i in range(len(v))], self.one())
 
-                        first_term = operator(c)*self(str(m))
+                        first_term = operator(c)*m
                         second_term = self.zero()
                         for i in range(len(v)):
                             to_add = d[i]*prod([v[j] for j in range(len(v)) if j != i], self.one())
@@ -786,8 +827,13 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                             second_term += to_add
                         self.__cache[operation][element] = first_term + base*second_term
                     else:
-                        c = element.coefficients(); m = [self(str(el)) for el in element.monomials()]
-                        self.__cache[operation][element] = sum(operator(c[i])*m[i] + c[i]*__extended_derivation(m[i]) for i in range(len(m)))
+                        self.__cache[operation][element] = sum(
+                            operator(c)*m + c*__extended_derivation(m) 
+                            for (c,m) in zip(
+                                element.coefficients(), 
+                                element.monomials()
+                            )
+                        )
                         
                 return self.__cache[operation][element]
             func = __extended_derivation
@@ -811,8 +857,99 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         
         return self.base().linear_operator_ring()
 
+    def inverse_operation(self, element: RWOPolynomial, operation: int = 0) -> RWOPolynomial:
+        if not element in self:
+            raise TypeError(f"[inverse_operation] Impossible to apply operation to {element}")
+        element = self(element)
+
+        if self.operator_types()[operation] == "homomorphism":
+            return self.__inverse_homomorphism(element, operation)
+        elif self.operator_types()[operation] == "derivation":
+            return self.__inverse_derivation(element, operation)
+        elif self.operator_types()[operation] == "skew":
+            return self.__inverse_skew(element, operation)
+        else:
+            raise NotImplementedError("[inverse_operation] Inverse for unknown operation not implemented")
+    
+    def __inverse_homomorphism(self, element: RWOPolynomial, operation: int):
+        solution = self.zero()
+        for coeff, monomial in zip(element.coefficients(), element.monomials()):
+            coeff = coeff.inverse_operation(operation) if not coeff.is_constant() else coeff
+            variables = monomial.variables()
+            new_mon = self.one()
+            for v in variables:
+                for g in element.infinite_variables():
+                    if v in g:
+                        ind = list(g.index(v, True))
+                        if ind[operation] == 0:
+                            raise ValueError(f"[inverse_homomorphism] Found an element impossible to invert: {monomial}")
+                        ind[operation] -= 1
+                        new_mon *= g[tuple(ind) if len(ind) > 1 else ind[0]]
+            solution += coeff*new_mon
+        return solution
+    
+    def __inverse_derivation(self, element: RWOPolynomial, operation: int):
+        logger.debug(f"[inverse_derivation] Called with {element}")
+        if element == 0:
+            logger.debug(f"[inverse_derivation] Found a zero --> Easy")
+            solution = self.zero()
+        elif element.degree() == 1:
+            logger.debug(f"[inverse_derivation] Found linear element --> Easy to do")
+            solution = self.zero()
+            for coeff, monomial in zip(element.coefficients(), element.monomials()):
+                if monomial == 1:
+                    raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
+                coeff = coeff.inverse_operation(operation) if not coeff.is_constant() else coeff
+                var = monomial.variables()[0] # we know there is only 1
+                for g in element.infinite_variables():
+                    if var in g:
+                        ind = list(g.index(var, True))
+                        if ind[operation] == 0:
+                            raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
+                        ind[operation] -= 1
+                        new_mon = g[tuple(ind) if len(ind) > 1 else ind[0]]
+                        break
+                solution += coeff*new_mon
+        else:
+            logger.debug(f"[inverse_derivation] Element is not linear")
+            monomials = element.monomials()
+            if 1 in monomials:
+                raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
+            monomials_with_points = []
+            for mon in monomials:
+                bv = max(self.gens().index(v) for v in mon.infinite_variables())
+                bo = mon.order(self.gens()[bv], operation)
+                monomials_with_points.append((bv, bo))
+
+            aux = max(el[1] for el in monomials_with_points)
+            V, O = max(monomials_with_points, key = lambda p: p[0]*aux + p[1])
+            V = self.gens()[V]
+            logger.debug(f"[inverse_derivation] Maximal variable: {V[O]}")
+            
+            if element.degree(V[O]) > 1:
+                raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
+            else:
+                highest_part = element.coefficient(V[O]); deg_order_1 = highest_part.degree(V[O-1])
+                cs = [highest_part.coefficient(V[O-1]**i) for i in range(deg_order_1+1)]
+                order_1_part = sum(cs[i]*V[O-1]**i for i in range(deg_order_1+1))
+                q1 = highest_part - order_1_part # order q1 < d-1
+                
+                ## we compute remaining polynomial
+                partial_integral = sum(cs[i]*(1/ZZ(i+1)) * V[O-1]**(i+1) for i in range(deg_order_1+1)) + V[O-1]*q1
+
+            logger.debug(f"[inverse_derivation] Partial integral: {partial_integral}")
+            rem = element - partial_integral.operation(operation)
+            logger.debug(f"[inverse_derivation] Remaining to integrate: {rem}")
+            solution = partial_integral + self.inverse_operation(rem, operation)
+            
+        logger.debug(f"[inverse_derivation] Result: {solution}")
+        return solution
+   
+    def __inverse_skew(self, element: RWOPolynomial, operation: int):
+        raise NotImplementedError("[inverse_skew] Skew-derivation operation not yet implemented")
+            
     #################################################
-    ### Methods for viewing polynomials as operators
+    ### Other computation methods
     #################################################
     def as_linear_operator(self, element: RWOPolynomial) -> Element:
         r'''
@@ -898,6 +1035,301 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
 
+    def sylvester_resultant(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None) -> RWOPolynomial:
+        r'''
+            Method to compute the Sylvester resultant of two operator polynomials.
+
+            **REMARK**: this method only works when ``self`` have with 1 operator and both `P` and `Q` are linear on the given generator.
+
+            If we have two linear operator polynomials `P(u), Q(u) \in R\{u\}` where `(R, \sigma)` is a ring with 1 operator `\sigma`, 
+            then we can consider the extended system 
+
+            .. MATH::
+
+                \{P, \sigma(P), \ldots, \sigma^{m-1}(P), Q, \sigma(Q), \ldots, \sigma^{n-1}(Q)\},
+
+            where `n` is the order of `P` and `m` is the order of `Q`. Then, it is clear that the only appearances of the infinite variable 
+            `u_*` is within `[u_0,\ldots,u_{n+m-1}]`. Hence we can build a Sylvester-type matrix using these polynomials and compute its
+            determinant obtaining an expression in `R`. 
+
+            This determinant is called the Sylvester resultant of `P` and `Q` and it is equivalent to the Sylvester resultant on the algebraic case.
+
+            This method computes the Sylvester resultant of two linear operator polynomials given the appropriate variable. If only one infinite variable 
+            is present, the it is not necessary to provide this value.
+
+            INPUT:
+
+            * ``P``: an operator polynomial (has to be linear) to be used as `P`.
+            * ``Q``: an operator polynomial (has to be linear) to be used as `Q`.
+            * ``gen``: an infinite variable that will be eliminated from `P` and `Q`. Can be ``None`` only if one infinite variable is in ``self``.
+
+            OUTPUT:
+
+            A :class:`~.rwo_polynomial_element.RWOPolynomial` with the Sylvester resultant of `P` and `Q`.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: P.sylvester_resultant(Q)
+                x^6 + 6*x^4 - 18*x^3 + 9*x^2 - 30*x - 19
+
+            If several variables are available, we need to explicitly provide the variable we are considering::
+
+                sage: R.<u,v> = RWOPolynomialRing(B)
+                sage: P = (3*x -1)*u[0]*v[0] + x^2*v[1]*u[0] + u[2]
+                sage: Q = 7*x*v[0] + x^2*v[0]*u[1]
+                sage: P.sylvester_resultant(Q)
+                Traceback (most recent call last):
+                ...
+                ValueError: [sylvester_checking] No infinite variable provided but several available.
+                sage: P.sylvester_resultant(Q, u)
+                x^6*v_1*v_0^2 + (3*x^5 - x^4)*v_0^3
+                sage: P.sylvester_resultant(Q, v)
+                x^2*u_1 + 7*x
+
+            The infinite variable can also be given as an index::
+
+                sage: P.sylvester_resultant(Q, 0)
+                x^6*v_1*v_0^2 + (3*x^5 - x^4)*v_0^3
+                sage: P.sylvester_resultant(Q, 1)
+                x^2*u_1 + 7*x
+                sage: P.sylvester_resultant(Q, 2)
+                Traceback (most recent call last):
+                ...
+                IndexError: [sylvester_checking] Requested generator 2 but only 2 exist.
+                sage: P.sylvester_resultant(Q, -1)
+                Traceback (most recent call last):
+                ...
+                IndexError: [sylvester_checking] Requested generator -1 but only 2 exist.
+        '''
+        return self.sylvester_matrix(P,Q,gen).determinant()
+
+    @cached_method
+    def sylvester_subresultant(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None, k: int = 0, i: int = 0):
+        r'''
+            Method to compute the `(k,i)`-th Sylvester subresultant of two operator polynomials.
+
+            From :func:`sylvester_matrix`, we obtain the matrix `S_k(P,Q)` which has `k` more columns than rows. In 
+            order to obtain a square matrix, we can remove `k` columns. In particular, removing the `k` out of the `k+1`
+            first columns (which are related to the coefficients of `(1,\ldots,\partial^k)`). 
+
+            The corresponding `(k,i)`-th subresultant of `P` and `Q` is the determinant of this matrix.
+
+            In particular, when `k=0` and `i=0`, then the subresultant is exactly the Sylvester resultant of `P` and `Q`.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: S.sylvester_subresultant(P, Q, k=1, i=0)
+                -3*x^3 - 3*x^2 + 3*x + 2
+                sage: S.sylvester_subresultant(P, Q, k=1, i=1)
+                8*x^2 + 7*x
+
+            We can see that the case with `k=0` and `i=0`coincides with the method :func:`sylvester_resultant`::
+            
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: S.sylvester_subresultant(P, Q, k=0, i=0) == P.sylvester_resultant(Q)
+                True
+        '''
+        ## Checking the argument `i`
+        if not i in ZZ:
+            raise TypeError(f"[sylvester_subresultant] The argument {i = } must be an integer")
+        elif i < 0 or i > k:
+            raise ValueError(f"[sylvester_subresultant] The index {i = } is out of proper bounds [0,...,{k}]")
+
+        S_k = self.sylvester_matrix(P,Q,gen,k)
+        S_ki = S_k.matrix_from_columns([i]+list(range(k+1,S_k.ncols())))
+        return S_ki.determinant()
+        
+    @cached_method
+    def sylvester_matrix(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None, k: int = 0) -> Matrix:
+        r'''
+            Method to obtain the `k`-Sylvester matrix for two operator polynomials.
+
+            **REMARK**: this method only works when ``self`` have with 1 operator and both `P` and `Q` are linear on the given generator.
+
+            If we have two linear operator polynomials `P(u), Q(u) \in R\{u\}` where `(R, \sigma)` is a ring with 1 operator `\sigma`, 
+            then we can consider the extended system 
+
+            .. MATH::
+
+                \Xi_k(P,Q) = \{P, \sigma(P), \ldots, \sigma^{m-1-k}(P), Q, \sigma(Q), \ldots, \sigma^{n-1-k}(Q)\},
+
+            where `n` is the order of `P` and `m` is the order of `Q` and `k \in\{0,\ldots,N\}` for `N \min(n,m)-1`. We can 
+            build a Sylvester-type matrix using these polynomials.
+
+            INPUT:
+
+            * ``P``: an operator polynomial (has to be linear) to be used as `P`.
+            * ``Q``: an operator polynomial (has to be linear) to be used as `Q`.
+            * ``gen``: an infinite variable that will be eliminated from `P` and `Q`. Can be ``None`` only if one infinite variable is in ``self``.
+            * ``k``: an integer in `\{0,\ldots,N\}` to get the corresponding `k`-Sylvester matrix. When `k = 0`, the matrix is square.
+
+            OUTPUT:
+
+            A Sylvester-type matrix for the corresponding operators.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: P.sylvester_matrix(Q)
+                [      x^2 - 1          -3*x             1             0             0]
+                [            0     x^2 + 2*x      -3*x - 3             1             0]
+                [            0             0 x^2 + 4*x + 3      -3*x - 6             1]
+                [           -1             0             0             1             0]
+                [            0            -1             0             0             1]
+                sage: P.sylvester_matrix(Q, k=1)
+                [      x^2 - 1          -3*x             1             0]
+                [            0     x^2 + 2*x      -3*x - 3             1]
+                [           -1             0             0             1]
+
+            It is important to remark that this matrix depends directly on the operation defined on the ring::
+
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: P.sylvester_matrix(Q)
+                [x^2 - 1    -3*x       1       0       0]
+                [    2*x x^2 - 4    -3*x       1       0]
+                [      2     4*x x^2 - 7    -3*x       1]
+                [     -1       0       0       1       0]
+                [      0      -1       0       0       1]
+                sage: P.sylvester_matrix(Q,k=1)
+                [x^2 - 1    -3*x       1       0]
+                [    2*x x^2 - 4    -3*x       1]
+                [     -1       0       0       1]
+
+            However, the Sylvester matrix is not well defined when the ring has several operations::
+
+                sage: B = DifferentialRing(DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)), diff); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[0,2] - 3*x*z[0,1] + (x^2 - 1)*z[1,0]
+                sage: Q = z[2,3] - z[1,0]
+                sage: P.sylvester_matrix(Q)
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: [sylvester_checking] Sylvester resultant with 2 is not implemented
+        '''
+        ## Checking the polynomials and ring arguments
+        P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
+        
+        ## Checking the k argument
+        n = P.order(gen); m = Q.order(gen); N = min(n,m) - 1
+        # Special case when one of the orders is -1 (i.e., the variable `gen` is not present)
+        if n == -1:
+            return matrix([[P]]) # P does not contain the variable `gen` to eliminate
+        elif m == -1:
+            return matrix([[Q]]) # Q does not contain the variable `u` to eliminate
+        
+        if not k in ZZ:
+            raise TypeError(f"[sylvester_matrix] The index {k = } is not an integer.")
+        elif N == -1 and k != 0:
+            raise TypeError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0].")
+        elif N >= 0 and (k < 0 or k > N):
+            raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
+        
+        # Building the extension
+        extended_P: list[RWOPolynomial] = [P.operation(times=i) for i in range(m-k)]
+        extended_Q: list[RWOPolynomial] = [Q.operation(times=i) for i in range(n-k)]
+
+        # Building the Sylvester matrix (n+m-1-k) , (n+m-1-k)
+        fR = self.polynomial_ring() # guaranteed common parent for all polynomials
+        cols = [fR(gen[pos].polynomial()) for pos in range(n+m-k)]
+        equations = [fR(equation.polynomial()) for equation in extended_P + extended_Q]
+
+        # Returning the matrix
+        return matrix([[self(equation.coefficient(m)) for m in cols] for equation in equations])
+
+    def sylvester_subresultant_sequence(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None) -> tuple[RWOPolynomial]:
+        r'''
+            Method that gets the subresultant sequence in form of a linear d-polynmomial.
+
+            As described in :func:`sylvester_subresultant`, when we build the `k`-Sylvester matrix of two linear 
+            d-polynomials, we obtain a non-square matrix and, in order to compute a determinant, we need to remove `k`
+            columns. The subresultants are built by removing `k` out of the first `k+1` columns.
+
+            Hence, we have remaining one columns corresponding to one operator `\sigma^i`. We can then consider the 
+            following linear operator:
+
+            .. MATH::
+
+                \mathcal{S}_k(P,Q) = \sum_{i=0}^k S_{k,i}(P,Q)\sigma^i
+
+            When iterating w.r.t. `k`, we obtain a sequence of linear operators. This is called the subresultant 
+            sequence of the d-polynomials `P` and `Q`.
+
+            This sequence is important because it describes the common factor (as operator) of the two d-polynomials. More
+            precisely, if the first element is zero (i.e., the Sylvester resultant is zero), then `P` and `Q` 
+            has a common right factor as linear operators. 
+
+            Moreover, the first non-zero element in the sequence provides a formula for the greatest right common factor.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: S.sylvester_subresultant_sequence(P, Q)
+                ((x^6 + 6*x^5 + 10*x^4 - 18*x^3 - 65*x^2 - 42*x - 2)*z_0, (8*x^2 + 7*x)*z_1 + (-3*x^3 - 3*x^2 + 3*x + 2)*z_0)
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: S.<z> = RWOPolynomialRing(B)
+                sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - z[0]
+                sage: S.sylvester_subresultant_sequence(P, Q)
+                ((x^6 + 6*x^4 - 18*x^3 + 9*x^2 - 30*x - 19)*z_0, (8*x^2 + 4)*z_1 + (-3*x^3 + x - 1)*z_0)
+        '''
+        ## Checking the polynomials and ring arguments
+        P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
+        return tuple(
+            sum(self.sylvester_subresultant(P,Q,gen,k,i) * gen[i] for i in range(k+1))
+            for k in range(min(P.order(gen),Q.order(gen)))
+        )
+
+    def __process_sylvester_arguments(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen):
+        r'''Check the ring, the generator and the polynomials are correct'''
+        ## Checking the ring is appropriate
+        if self.noperators() > 1:
+            raise NotImplementedError(f"[sylvester_checking] Sylvester resultant with {self.noperators()} is not implemented")
+
+        ## Checking the gen is correctly given
+        if self.ngens() > 1 and gen is None:
+            raise ValueError("[sylvester_checking] No infinite variable provided but several available.")
+        elif self.ngens() > 1 and gen in ZZ:
+            if gen < 0 or gen >= self.ngens():
+                raise IndexError(f"[sylvester_checking] Requested generator {gen} but only {self.ngens()} exist.")
+            gen = self.gens()[gen]
+        elif isinstance(gen, RWOPolynomialGen) and not gen in self.gens():
+            raise ValueError(f"[sylvester_checking] The variable {repr(gen)} do not belong to {self}")
+        elif self.ngens() == 1 and gen is None:
+            gen = self.gens()[0]
+
+        ## Checking the operator polynomials are correct
+        P = self(P); Q = self(Q)
+        if not P.is_linear(gen):
+            raise TypeError(f"[sylvester_checking] The polynomial {P} is not linear w.r.t. {gen}")
+        if not Q.is_linear(gen):
+            raise TypeError(f"[sylvester_checking] The polynomial {Q} is not linear w.r.t. {gen}")
+
+        return P,Q,gen
+
 def is_RWOPolynomialRing(element):
     r'''
         Method to check whether an object is a ring of infinite polynomial with an operator.
@@ -921,14 +1353,9 @@ class RWOPolyRingFunctor (ConstructionFunctor):
     def __init__(self, variables):
         self.__variables = variables
         super().__init__(_RingsWithOperators,_RingsWithOperators)
-        self.rank = 10 # just above PolynomialRing
+        self.rank = 11 # just above PolynomialRing and RingWithOperatorsFunctor
         
-    ### Methods to implement
-    def _coerce_into_domain(self, x):
-        if(x not in self.domain()):
-            raise TypeError("The object [%s] is not an element of [%s]" %(x, self.domain()))
-        return x
-        
+    ### Methods to implement        
     def _apply_functor(self, x):
         return RWOPolynomialRing(x,self.variables())
         
@@ -945,7 +1372,7 @@ class RWOPolyRingFunctor (ConstructionFunctor):
             other_names = other.__variables
             global_names = tuple(set(list(self_names)+list(other_names)))
             return RWOPolyRingFunctor(global_names)
-        pass
+        return None
 
     def variables(self):
         return self.__variables

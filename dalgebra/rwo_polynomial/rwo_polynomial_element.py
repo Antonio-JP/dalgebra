@@ -262,6 +262,11 @@ class RWOPolynomialGen (InfinitePolynomialGen):
             index = tuple(index)
         return self[index]
 
+    def variable_name(self) -> str:
+        r'''
+            Method that returns the variable name of ``self``
+        '''
+        return self._parent.variable_names()[self._parent.gens().index(self)]
 
     def __hash__(self):
         return hash(self._name)
@@ -557,12 +562,19 @@ class RWOPolynomial (InfinitePolynomial_dense):
             raise TypeError(f"The generator must be a valid generator from {parent}")
         
         o = self.order(gen, operation)
-        monomials = [parent()(mon) for mon in self.monomials()]
+        monomials = self.monomials()
         coefficients = self.coefficients()
 
         return parent(sum(coeff*mon for (mon, coeff) in zip(monomials, coefficients) if mon.order(gen,operation) == o))
 
     lc = initial #: alias for initial (also called "leading coefficient")
+
+    @cached_method
+    def infinite_variables(self) -> tuple[RWOPolynomialGen]:
+        r'''
+            Method to compute which generators of the parent appear in ``self``.
+        '''
+        return tuple(v for v in self.parent().gens() if self.order(v, 0) >= 0)
 
     #######################################################################################
     ### Flattening methods
@@ -656,7 +668,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return self.parent().as_linear_operator(self)
 
     # Magic methods
-    def __call__(self, *args, **kwargs) -> RWOPolynomial:
+    def __call__(self, *args, dic: dict[RWOPolynomialGen, RWOPolynomial] = None, **kwargs) -> RWOPolynomial:
         r'''
             Override of the __call__ method. 
 
@@ -699,7 +711,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
                 sage: parent(in_eval)
                 Ring of operator polynomials in (a) over Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
         '''
-        return self.parent().eval(self, *args, **kwargs)
+        return self.parent().eval(self, *args, dic=dic, **kwargs)
 
     def divides(self, other : RWOPolynomial) -> bool:
         r'''
@@ -707,14 +719,38 @@ class RWOPolynomial (InfinitePolynomial_dense):
 
             This method relies on the base polynomial structure behind the infinite polynomial ring.
         '''
-        other = self.parent()(other)
-        return self.polynomial().divides(other.polynomial())
+        R = self.parent().polynomial_ring()
+        return R(self.polynomial()).divides(R(self.parent()(other).polynomial()))
 
+    def degree(self, x=None, std_grading=False) -> int: 
+        r'''Overriding :func:`degree` to fit the setting of RWO'''
+        R = self.parent().polynomial_ring()
+        if x != None and x.parent() == self.parent():
+            x = R(x.polynomial())
+        
+        return R(self.polynomial()).degree(x, std_grading)
+
+    def coefficient(self, monomial) -> RWOPolynomial:
+        r'''Overriding :func:`coefficient` to fit the setting of RWO'''
+        P = self.parent()
+        R = P.polynomial_ring()
+
+        if isinstance(monomial, dict):
+            monomial = {R(P(mon).polynomial()) : monomial[mon] for mon in monomial}
+        else: # a monomial is given
+            monomial = R(P(monomial).polynomial())
+        return P(R(self.polynomial()).coefficient(monomial))
+    
+    def monomials(self) -> list[RWOPolynomial]:
+        return [self.parent()(m) for m in self.polynomial().monomials()]
+    
     ###################################################################################
     ### Arithmetic methods
     ###################################################################################
     def _add_(self, x):
         return self.parent().element_class(self.parent(), super()._add_(x))
+    def __neg__(self):
+        return self.parent().element_class(self.parent(), super().__neg__())
     def _sub_(self, x):
         return self.parent().element_class(self.parent(), super()._sub_(x))
     def _mul_(self, x):
@@ -724,11 +760,87 @@ class RWOPolynomial (InfinitePolynomial_dense):
     def _lmul_(self, x):
         return self.parent().element_class(self.parent(), super()._lmul_(x))
     def _mod_(self, x):
-        return self.parent().element_class(self.parent(), self.polynomial() % x.polynomial())
-    def _truediv_(self, x):
-        return self.parent().element_class(self.parent(), self.polynomial() // x.polynomial())
+        return self - (self // x)*x
+        #return self.parent().element_class(self.parent(), self.polynomial() % x.polynomial())
+    def _div_(self, x):
+        return self.parent().element_class(self.parent(), self.polynomial() / x.polynomial())
+    def _floordiv_(self, x):
+        R = self.parent().polynomial_ring()
+        return self.parent().element_class(self.parent(), R(self.polynomial()) // R(self.parent()(x.polynomial())))
     def __pow__(self, n):
         return self.parent().element_class(self.parent(), super().__pow__(n))
+
+    ###################################################################################
+    ### Other computations
+    ###################################################################################
+    def sylvester_resultant(self, other : RWOPolynomial, gen: RWOPolynomialGen = None) -> RWOPolynomial:
+        r'''
+            Method on an element to compute (if possible) the Sylvester resultant.
+
+            See :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.sylvester_resultant` for further information.
+        '''
+        return self.parent().sylvester_resultant(self, other, gen)
+
+    def sylvester_matrix(self, other: RWOPolynomial, gen: RWOPolynomialGen = None, k: int = 0) -> RWOPolynomial:
+        r'''
+            Method to compute the Sylvester `k`-matrix for two operator polynomials.
+
+            See :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.sylvester_matrix` for further information.
+        '''
+        return self.parent().sylvester_matrix(self, other, gen, k)
+
+    def solve(self, gen: RWOPolynomialGen) -> Element:
+        r'''
+            Finds (if possible) a solution of ``gen`` using ``self == 0``.
+
+            This method tries to solve the equation `p(u) = 0` where `p \in R\{u\}` is a :class:`RWOPolynomial`
+            for a given infinite variable `u`. This means, this method will compute an element `y \in R` such that 
+            `p(y) = 0` where `p(u)` is represented by ``self``.
+
+            Currently, the only possibility that is implemented is when we can rewrite the polynomial `p(u)` to the 
+            form `p(u) = u^{(d)} + \alpha` where `\alpha \in R`. Then we try to invert the operation `d` times to `\alpha`
+            (see method :func:`inverse_operation`).
+
+            INPUT:
+
+            * ``gen``: the generator in ``self.parent()`` that will be used as main variable (i.e., `u`).
+
+            OUTPUT:
+
+            An element ``e`` in ``self.parent()`` such that ``self(gen=e) == 0`` is True.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = RWOPolynomialRing(DifferentialRing(QQ, lambda p:0))
+                sage: p = u[0] - v[1]
+                sage: p.solve(u)
+                v_1
+                sage: p.solve(v)
+                Traceback (most recent call last):
+                ...
+                ValueError: [inverse_derivation] Found an element impossible to invert: u_0
+                sage: p = u[1] - 2*v[0]*v[1]
+                sage: p.solve(u)
+                v_0^2
+                sage: p(u=p.solve(u))
+                0
+
+            This can also be done for difference operators::
+            
+        '''
+        if self.parent().noperators() > 1:
+            raise NotImplementedError("[solve] Method implemented only for 1 operator.")
+        
+        appearances = len([v for v in self.variables() if v in gen])
+        if appearances == 0:
+            raise ValueError(f"[solve] The variable {gen.variable_name()} does not appear in {self}")
+        elif appearances > 1:
+            raise NotImplementedError(f"[solve] The variable {gen.variable_name()} appear with different orders in {self}")
+        
+        coeff = self.coefficient(gen[self.order(gen)])
+        rem = -self + coeff*gen[self.order(gen)]
+        return (rem/coeff).inverse_operation(0, times=self.order(gen))
 
     ###################################################################################
     ### Other magic methods

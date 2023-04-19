@@ -248,6 +248,9 @@ class RingsWithOperators(Category):
             elif operator is None: raise IndexError("An index for the operation must be provided when having several operations")
             return self.operators()[operator](element)
 
+        def inverse_operation(self, element: Element, operator: int = None) -> Element:
+            raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
+
         @abstract_method
         def operator_types(self) -> tuple[str]:
             r'''
@@ -540,6 +543,23 @@ class RingsWithOperators(Category):
             else:
                 return self.parent().operation(self.operation(operation=operation, times=times-1), operation)
 
+        def inverse_operation(self, operation: int = None, times : int = 1) -> Element:
+            r'''
+                Apply the inverse operation to ``self`` a given amount of times.
+
+                This method applies repeatedly the inverse operation defined in the parent of ``self``.
+                See :func:`~RingsWithOperators.ParentMethods.inverse_operation` for further information.
+            '''
+            if(not times in ZZ or times < 0):
+                raise ValueError("The argument ``times`` must be a non-negative integer")
+
+            if(times == 0):
+                return self
+            elif(times == 1):
+                return self.parent().inverse_operation(self, operation)
+            else:
+                return self.parent().inverse_operation(self.inverse_operation(operation=operation, times=times-1), operation)
+
         def derivative(self, derivation: int = None, times: int = 1) -> Element:
             r'''
                 Apply a derivation to ``self`` a given amount of times.
@@ -815,7 +835,7 @@ class RingWithOperators_WrapperElement(Element):
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped - x.wrapped)
-    def _neg_(self) -> RingWithOperators_WrapperElement:
+    def __neg__(self) -> RingWithOperators_WrapperElement:
         return self.parent().element_class(self.parent(), -self.wrapped)
     def _mul_(self, x) -> RingWithOperators_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
@@ -829,9 +849,22 @@ class RingWithOperators_WrapperElement(Element):
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped * x.wrapped)
+    def _div_(self, x) -> RingWithOperators_WrapperElement:
+        if parent(x) != self.parent(): # this should not happened
+            x = self.parent().element_class(self.parent(), self.parent().base()(x))
+        return self.parent().element_class(self.parent(), self.wrapped / x.wrapped) 
+    def _floordiv_(self, x) -> RingWithOperators_WrapperElement:
+        if parent(x) != self.parent(): # this should not happened
+            x = self.parent().element_class(self.parent(), self.parent().base()(x))
+        return self.parent().element_class(self.parent(), self.wrapped // x.wrapped) 
+    def _mod_(self, x) -> RingWithOperators_WrapperElement:
+        if parent(x) != self.parent(): # this should not happened
+            x = self.parent().element_class(self.parent(), self.parent().base()(x))
+        return self.parent().element_class(self.parent(), self.wrapped % x.wrapped) 
     def __pow__(self, n) -> RingWithOperators_WrapperElement:
         return self.parent().element_class(self.parent(), self.wrapped ** n)
-
+    def __invert__(self) -> RingWithOperators_WrapperElement:
+        return self.parent().element_class(self.parent(), ~self.wrapped)
     def __eq__(self, x) -> bool:
         if x is None: return False
 
@@ -844,6 +877,15 @@ class RingWithOperators_WrapperElement(Element):
         return self.wrapped == 0
     def is_one(self) -> bool:
         return self.wrapped == 1
+    
+    ## Other methods from rings and element
+    def divides(self, other) -> bool:
+        if not hasattr(self.wrapped, "divides"):
+            raise AttributeError(f"Attribute 'divides' not included in {self.wrapped.parent()}")
+        
+        if other in self.parent():
+            other = self.parent()(other)
+        return self.wrapped.divides(other.wrapped)
 
     ## Other magic methods
     def __hash__(self) -> int:
@@ -1049,6 +1091,15 @@ class RingWithOperators_Wrapper(CommutativeRing):
             self.__linear_operator_ring = OreAlgebra(self.wrapped, *operators)
         return self.__linear_operator_ring
         
+    def inverse_operation(self, element: RingWithOperators_WrapperElement, operator: int = None) -> RingWithOperators_WrapperElement:
+        if self.operator_types()[operator] == "homomorphism":
+            try:
+                return self.element_class(self, self.operators()[operator].function.inverse()(element.wrapped))
+            except Exception as e:
+                raise NotImplementedError(f"[inverse_operation] Inverses not implemented in general. Moreover: {e}")
+
+        raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
+
     ## Coercion methods
     def _has_coerce_map_from(self, S) -> bool:
         r'''
@@ -1069,7 +1120,10 @@ class RingWithOperators_Wrapper(CommutativeRing):
         elif isinstance(parent(x), RingWithOperators_Wrapper): 
             # conversion from other wrapped rings with operators --> we convert the element within
             x = x.wrapped
-        p = self.wrapped._element_constructor_(x)
+        if hasattr(self.wrapped, "_element_constructor_"):
+            p = self.wrapped._element_constructor_(x)
+        else:
+            p = self.wrapped(x)
         return self.element_class(self, p)
 
     def _is_valid_homomorphism_(self, codomain, im_gens, base_map=None) -> bool:
@@ -1077,6 +1131,18 @@ class RingWithOperators_Wrapper(CommutativeRing):
 
     def construction(self) -> RingWithOperatorsFunctor:
         return RingWithOperatorsFunctor([operator.function for operator in self.operators()], self.operator_types()), self.wrapped
+
+    def _pushout_(self, other):
+        scons, sbase = self.construction()
+        if isinstance(other, RingWithOperators_Wrapper):
+            ocons, obase = other.construction()
+            cons = scons.merge(ocons)
+            try:
+                base = pushout(sbase, obase)
+            except TypeError:
+                base = pushout(obase, sbase)
+            return cons(base)
+        return None
 
     # Rings methods
     def characteristic(self) -> int:
@@ -1153,16 +1219,13 @@ class RingWithOperatorsFunctor(ConstructionFunctor):
             raise ValueError("The length of the operators and types must coincide.")
         self.__operators = tuple(operators)
         self.__types = tuple(types)
+        self.rank = 10 # just above PolynomialRing
 
         super().__init__(_CommutativeRings, _RingsWithOperators)
     
-    ### Methods to implement
-    def _coerce_into_domain(self, x: Element) -> Element:
-        if not x in self.domain():
-            raise TypeError(f"The object [{x}] is not an element of [{self.domain()}]")
-            
+    ### Methods to implement            
     def _apply_functor(self, x):
-        return RingWithOperators(x, self.__operators, self.__types)
+        return RingWithOperators(x, *self.__operators, types=self.__types)
         
     def _repr_(self):
         return f"RingWithOperators(*,{self.__operators}])"
@@ -1170,11 +1233,59 @@ class RingWithOperatorsFunctor(ConstructionFunctor):
     def __eq__(self, other):
         return self.__class__ == other.__class__ and self.__operators == other.__operators and self.__types == other.__types
 
+    def __merge_skews(self, f: SkewMap, g: SkewMap):
+        Mf = f.function.parent(); Mg = g.function.parent()
+        # we try to merge the base ring of the modules
+        R = pushout(Mf.base(), Mg.base())
+        
+        if R == Mf.base(): 
+            M = Mf; twist = f.twist
+        elif R == Mg.base():
+            M = Mg; twist = g.twist
+        else:
+            raise AssertionError("We can only extend to one parent, no mix between them")
+            
+        # we try and cast both derivation into M
+        df = M(f.function); dg = M(g.function)
+        if df - dg == 0: 
+            if isinstance(f, DerivationMap):
+                return DerivationMap(M.base(), df)
+            else: # general skew case
+                return SkewMap(M.base(), twist, df)
+        return None
+
+    def __merge_homomorphism(self, f, g):
+        raise NotImplementedError("Merging of homomorphisms not implemented")
+
     def merge(self, other):
         if isinstance(other, RingWithOperatorsFunctor):
-            return RingWithOperatorsFunctor(self.__operators + other.__operators, self.__types + other.__types)
-        else:
-            raise NotImplementedError(f"{self} can only be merged with other RingWithOperatorsFunctor")
+            # we create a copy of the operators of self
+            new_operators = [el for el in self.__operators]; new_types = [el for el in self.__types]
+            self_operators = list(zip(self.__operators, self.__types))
+            used_self = set()
+
+            for (operator, ttype) in zip(other.__operators, other.__types):
+                for i, (self_op, self_type) in enumerate(self_operators):
+                    if not i in used_self:
+                        if ttype == self_type:
+                            try:
+                                if ttype in ("skew", "derivation"):
+                                    merged = self.__merge_skews(operator, self_op)
+                                    if merged != None:
+                                        used_self.add(i)
+                                        break # we found an operator repeated
+                                elif ttype == "homomorphism":
+                                    merged = self.__merge_homomorphism(operator, self_op)
+                                    if merged != None:
+                                        used_self.add(i)
+                                        break # we found an operator repeated
+                            except (AssertionError, NotImplementedError):
+                                pass
+                else: # we need to add the operator to the final list
+                    new_operators.append(operator); new_types.append(ttype)
+
+            return RingWithOperatorsFunctor(new_operators, new_types)
+        return None # Following definition of merge in ConstructionFunctor
 
     @property
     def operators(self) -> Collection[Morphism]:  return self.__operators

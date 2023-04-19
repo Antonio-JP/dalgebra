@@ -734,7 +734,7 @@ class RWOSystem:
             * ``operation``: index for the operation for which we want to compute the resultant.
             * ``alg_res``: (``"auto"`` by default) method to compute the algebraic resultant once we extended a 
               system to a valid system (see :func:`is_sp2`). The valid values are, currently,
-              ``"dixon"``, ``"macaulay"`` and ``"iterative"``.
+              ``"dixon"``, ``"sylvester"``, ``"macaulay"`` and ``"iterative"``.
 
             OUTPUT:
 
@@ -766,12 +766,18 @@ class RWOSystem:
         elif alg_res == "dixon":
             logging.info(f"We compute the resultant using Dixon resultant")
             return self.__dixon
+        elif alg_res == "sylvester":
+            logging.info(f"We compute the resultant using Sylvester resultant")
+            return self.__sylvester
         elif alg_res == "macaulay":
             logging.info(f"We compute the resultant using Macaulay resultant")
             return self.__macaulay
         elif alg_res == "auto":
             logging.info("Deciding automatically the algorithm for the resultant...")
-            if self.is_linear():
+            if self.is_linear() and self.size() == 2 and len(self.variables) == 1 and self.parent().noperators() == 1:
+                logger.info(("The system is linear with 2 equations and 1 variable: we use Sylvester resultant"))
+                return self.__sylvester
+            elif self.is_linear():
                 logger.info("The system is linear: we use Macaulay resultant")
                 return self.__macaulay
             else:
@@ -809,6 +815,28 @@ class RWOSystem:
         '''
         raise NotImplementedError("Dixon resultant not yet implemented")
   
+    def __sylvester(self, _ : int, __: int) -> RWOPolynomial:
+        r'''
+            Method that computes a resultant using a Sylvester matrix.
+
+            This method is highly restrictive and it only works for linear systems with 2 equations, 1 variable and 1 operator.
+
+            This method takes two equations `P(u), Q(u) \in R\{u\}` where `R` is a ring with several operators
+            and it computes the extension where we apply to `P` all operators up the all the orders of `Q` and 
+            vice-versa. This leads to an extended system where we can take the matrix of coefficients and compute the 
+            determinant.
+
+            This matrix of coefficients is a Sylvester matrix, and the determinant is the Sylvester resultant. This method
+            should always return a product of the Macaulay resultant (see :func:`__macaulay`).
+        '''
+        # Checking the conditions
+        if len(self.variables) > 1:
+            raise TypeError(f"The Sylvester algorithm only works with 1 variable (not {len(self.variables)})")
+        elif self.size() != 2:
+            raise TypeError(f"The Sylvester algorithm only works with 2 equations (not {self.size()})")
+        
+        return self.parent().sylvester_resultant(self.equation(0), self.equation(1), self.variables[0])
+
     def __macaulay(self, bound: int, operation: int) -> RWOPolynomial:
         r'''
             Method that computes the resultant of an extension of ``self` using Macaulay resultant.
@@ -981,6 +1009,76 @@ class RWOSystem:
         except:
             return polynomial.parent().univariate_ring(variable)(str(polynomial))
 
+    ###################################################################################################
+    ### Solving methods
+    def solve_linear(self):
+        r'''
+            Method to try and solve a linear system.
+
+            This method tries to solve a system with operator polynomials if the variables given are linear within the system.
+
+            This method is incomplete and may fail in several cases. We only solve "triangular" systems. Otherwise, we raise 
+            a :class:`NotImplementedError` with the corresponding issue.
+
+            OUTPUT:
+
+            A dictionary that be fed into the eval method of elements in ``self.parent()``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<a,u,v> = RWOPolynomialRing(DifferentialRing(QQ['b'], lambda p:0))
+                sage: b = R.base().gens()[0]
+                sage: S = RWOSystem([
+                ....:      -2*u[1] - v[2] - 3*a[2],
+                ....:      -2*v[1] - 3*a[1]
+                ....: ], variables=[u,v])
+                sage: S.solve_linear()
+                {u_*: (-3/4)*a_1, v_*: (-3/2)*a_0}
+                sage: S = RWOSystem([
+                ....:      -2*u[1] - b*v[2] - 3*a[2],
+                ....:      -2*v[1] - 3*a[1]
+                ....: ], variables=[u,v])
+                sage: sol = S.solve_linear(); sol
+                {u_*: (3/4*b - 3/2)*a_1, v_*: (-3/2)*a_0}
+
+            We can check that this solutions satify all the equations of the systems to be zero::
+
+                sage: all(equation(dic=sol) == 0 for equation in S.equations())
+                True
+        '''
+        if not self.is_linear():
+            raise TypeError(f"[solve_linear] The linear is not linear in the variables {self.variables}")
+        
+        ## Checking if the system is triangular
+        equations = list(self.equations())
+        solution = dict()
+
+        while len(equations) > 0:
+            to_solve = dict()
+            rem_equation = []
+            for equation in equations:
+                vars_in_equ = [v for v in equation.infinite_variables() if v in self.variables]
+                if len(vars_in_equ) == 0 and equation != 0:
+                    raise ValueError(f"[solve_linear] Impossible to solve the system: found a equation {equation} to be zero with no variables in {self.variables}")
+                elif len(vars_in_equ) == 1:
+                    if not vars_in_equ[0] in to_solve:
+                        to_solve[vars_in_equ[0]] = []
+                    to_solve[vars_in_equ[0]].append(equation)
+                else:
+                    rem_equation.append(equation)
+            
+            if len(to_solve) == 0:
+                raise NotImplementedError("[solve_linear] System is not triangular: no equation found with only one variable")
+
+            for v, equs in to_solve.items():
+                solution[v] = equs[0].solve(v)
+                if any(equ(**{v.variable_name(): solution[v]}) != 0 for equ in equs[1:]):
+                    raise ValueError(f"[solve_linear] The current solution {v.variable_name()} = {solution[v]} does not solve all the equations\n\t{equs}")
+                
+            equations = [equ(**{v.variable_name() : solution[v] for v in to_solve}) for equ in rem_equation]
+            equations = [equ for equ in equations if equ != 0]
+        return solution
     ###################################################################################################
 
 class DifferentialSystem (RWOSystem):
