@@ -1386,5 +1386,5 @@ class WrappedMap(AdditiveMap):
 
 __all__ = [
     "DRings", "DRing", "DifferentialRing", "DifferenceRing", # names imported
-    "RingsWithOperators", "RingWithOperator" # deprecated names (backward compatibilities)
+    "RingsWithOperators", "RingWithOperators" # deprecated names (backward compatibilities)
 ]

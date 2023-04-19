@@ -1336,7 +1336,7 @@ def is_DPolynomialRing(element):
         Method to check whether an object is a ring of infinite polynomial with an operator.
     '''
     return isinstance(element, DPolynomialRing_dense)
-is_RWOPolynomial = is_DPolynomialRing #: alias for is_DPolynomialRing (used for backward compatibility)
+is_RWOPolynomialRing = is_DPolynomialRing #: alias for is_DPolynomialRing (used for backward compatibility)
 
 class DPolyRingFunctor (ConstructionFunctor):
     r'''
@@ -1411,5 +1411,5 @@ class DPolynomialSimpleMorphism (Morphism):
 
 __all__ = [
     "DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing", # names imported
-    "RWOPolynomialRing", "is_RWOPOlynomialRing" # deprecated names (backward compatibilities) 
+    "RWOPolynomialRing", "is_RWOPolynomialRing" # deprecated names (backward compatibilities) 
 ]
