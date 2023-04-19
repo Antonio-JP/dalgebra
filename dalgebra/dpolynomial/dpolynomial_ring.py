@@ -99,7 +99,7 @@ class DPolynomialRingFactory(UniqueFactory):
 
         return DPolynomialRing_dense(base, names)
 
-DPolynomialRing = DPolynomialRingFactory("dalgebra.diff_polynomial.diff_polynomial_ring.DPolynomialRing")
+DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing")
 def DifferentialPolynomialRing(base, *names : str, **kwds):
     if not base in _DRings:
         base = DifferentialRing(base, diff)
@@ -115,7 +115,7 @@ def DifferencePolynomialRing(base, *names : str, **kwds):
 
 class DPolynomialRing_dense (InfinitePolynomialRing_dense):
     r'''
-        Class for a ring of polynomials over a :class:`~dalgebra.ring_w_operator.DRing`.
+        Class for a ring of polynomials over a :class:`~dalgebra.dring.DRing`.
 
         Given a ring with an associated operators `(R, (d_1,...,d_n))`, where `d_i : R \rightarrow R`, we can 
         always define the ring of polynomials on `y` as the *infinite polynomial ring*
@@ -143,7 +143,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         REMARK:
 
         The behavior of the operations with respect with the multiplication must be explicit (namely, they must 
-        all be ''homomorphism'', ''derivation'' or ''skew''). See documentation of :mod:`dalgebra.ring_w_operator`
+        all be ''homomorphism'', ''derivation'' or ''skew''). See documentation of :mod:`dalgebra.dring`
         for further information.
 
         EXAMPLES::
@@ -166,7 +166,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         Although the use of diff can work in these rings, it is not fully recommended because we may require more 
         information for the ``diff`` method to work properly. We recommend the use of the ``derivative`` methods 
         of the elements or the method ``derivative`` of the Rings (as indicated in the category 
-        :class:`dalgebra.ring_w_operators.DRings`)::
+        :class:`dalgebra.dring.DRings`)::
 
             sage: R.derivative(y[0])
             y_1
@@ -227,7 +227,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             sage: T.difference(x^2*z[1]^2 - z[2]*z[1])
             -z_3*z_2 + (x^2 + 2*x + 1)*z_2^2
 
-        One of the main features of the category :class:`dalgebra.ring_w_operators.DRings` is that
+        One of the main features of the category :class:`dalgebra.dring.DRings` is that
         several operators can be included in the ring. This class of operator rings also have such feature, 
         extending all operators at once. 
 

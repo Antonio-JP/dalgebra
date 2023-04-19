@@ -46,7 +46,7 @@ class DSystem:
         Class for representing a system over a ring with an operator.
 
         This class allows the user to represent a system of equations 
-        over a ring with operators (see the category :class:`~dalgebra.ring_w_operator.DRings`)
+        over a ring with operators (see the category :class:`~dalgebra.dring.DRings`)
         as a list of infinite polynomials in one or several variables.
 
         This class will offer a set of methods and properties to extract the main

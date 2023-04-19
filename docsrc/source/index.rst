@@ -13,7 +13,7 @@ List of Packages
 .. toctree::
    :maxdepth: 1
 
-   ring_w_operator
+   dring
    dpolynomial
 
 

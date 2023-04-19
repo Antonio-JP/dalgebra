@@ -780,7 +780,7 @@ class DRingFactory(UniqueFactory):
         base, operators, types = key
 
         return DRing_Wrapper(base, *operators, types=types)
-DRing = DRingFactory("dalgebra.ring_w_operator.ring_w_operator.DRing")
+DRing = DRingFactory("dalgebra.dring.DRing")
 
 def DifferentialRing(base : CommutativeRing, *operators : Callable):
     r'''
@@ -906,7 +906,7 @@ class DRing_Wrapper(CommutativeRing):
 
         We do not recommend to use this class by itself. It should be created using the 
         corresponding factory (see :class:`DRingFactory` and its defined instance in 
-        ``dalgebra.ring_w_operator.ring_w_operator.DRing``).
+        ``dalgebra.dring.DRing``).
 
         INPUT:
 
