@@ -1027,6 +1027,21 @@ class RWOSystem:
             EXAMPLES::
 
                 sage: from dalgebra import *
+                sage: R.<a,u,v> = RWOPolynomialRing(DifferentialRing(QQ['b'], lambda p:0))
+                sage: b = R.base().gens()[0]
+                sage: S = RWOSystem([
+                ....:      -2*u[1] - v[2] - 3*a[2],
+                ....:      -2*v[1] - 3*a[1]
+                ....: ], variables=[u,v])
+                sage: S.solve_linear()
+                {v_*: (-3/2)*a_0, u_*: (-3/4)*a_1}
+                sage: 
+                sage: S = RWOSystem([
+                ....:      -2*u[1] - b*v[2] - 3*a[2],
+                ....:      -2*v[1] - 3*a[1]
+                ....: ], variables=[u,v])
+                sage: S.solve_linear()
+                {v_*: (-3/2)*a_0, u_*: (3/4*b - 3/2)*a_1}
         '''
         if not self.is_linear():
             raise TypeError(f"[solve_linear] The linear is not linear in the variables {self.variables}")
@@ -1060,10 +1075,6 @@ class RWOSystem:
             equations = [equ(**{v.variable_name() : solution[v] for v in to_solve}) for equ in rem_equation]
             equations = [equ for equ in equations if equ != 0]
         return solution
-
-
-
-
     ###################################################################################################
 
 class DifferentialSystem (RWOSystem):
