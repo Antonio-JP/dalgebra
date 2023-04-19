@@ -48,7 +48,8 @@ doc:
 	cd docsrc && $(SAGE) -sh -c "make html"
 
 doc-github: doc
-	cp -a docsrc/build/html/. ./docs
+	@cp -a docsrc/build/html/. ./docs
+	@echo "" > ./docs/.nojekyll 
 		
 # Cleaning commands
 clean: clean_doc clean_pyc
@@ -59,6 +60,7 @@ clean_build:
 
 clean_doc:
 	@echo "Cleaning documentation"
+	@rm -rf docs/* docs/.buildinfo docs/.nojekyll
 	@cd docsrc && $(SAGE) -sh -c "make clean"
 	
 clean_pyc:
