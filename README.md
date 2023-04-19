@@ -18,3 +18,4 @@ This package has been developed with the finaltial support of the following insi
 * The Oberösterreich region: by the Innovatives OÖ-2010 plus program.
 * The Île-de-France region: by the project "XOR".
 * The Spanish Ministry of Science and Innovation (MICINN): by the grant PID2021-124473NB-I00, "Algorithmic Differential Algebra and Integrability" (ADAI)
+* The Poul Due Jensen Foundation: grant 883901.
