@@ -3,7 +3,7 @@
 Infinite Polynomials of Rings with Operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra.rwo_polynomial
+.. automodule:: dalgebra.dpolynomial
    :members:
    :undoc-members:
    :show-inheritance:
@@ -14,9 +14,9 @@ List of Modules
 .. toctree::
    :maxdepth: 1
 
-   rwo_polynomial/rwo_polynomial_ring
-   rwo_polynomial/rwo_polynomial_element
-   rwo_polynomial/rwo_polynomial_system
+   dpolynomial/dpolynomial_ring
+   dpolynomial/dpolynomial_element
+   dpolynomial/dpolynomial_system
 
 
 Indices and Tables

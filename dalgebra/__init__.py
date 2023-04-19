@@ -171,8 +171,8 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 logger.propagate = False
 
-from .ring_w_operator import * # basic ring structures
-from .rwo_polynomial import * # ring of difference/differential polynomials
+from .dring import * # basic ring structures
+from .dpolynomial import * # ring of difference/differential polynomials
 
 def dalgebra_version():
     import pkg_resources

@@ -3,7 +3,7 @@
 Element structures for Infinite Polynomials over rings with operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra.rwo_polynomial.rwo_polynomial_element
+.. automodule:: dalgebra.dpolynomial.dpolynomial_element
    :members:
    :undoc-members:
    :show-inheritance:

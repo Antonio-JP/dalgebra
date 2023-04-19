@@ -55,19 +55,19 @@ from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-mod
 
 from typing import Collection
 
-from .rwo_polynomial_element import RWOPolynomial, RWOPolynomialGen, IndexBijection
-from ..ring_w_operator import RingsWithOperators, AdditiveMap, DifferentialRing, DifferenceRing, RingWithOperators_Wrapper
+from .dpolynomial_element import DPolynomial, DPolynomialGen, IndexBijection
+from ..dring import DRings, AdditiveMap, DifferentialRing, DifferenceRing, DRing_Wrapper
 
 logger = logging.getLogger(__name__)
-_RingsWithOperators = RingsWithOperators.__classcall__(RingsWithOperators)
+_DRings = DRings.__classcall__(DRings)
 
 ## Factories for all structures
-class RWOPolynomialRingFactory(UniqueFactory):
+class DPolynomialRingFactory(UniqueFactory):
     r'''
         Factory to create a ring of polynomials over a ring with operators.
 
         This allows to cache the same rings created from different objects. See
-        :class:`RWOPolynomialRing_dense` for further information on this structure.
+        :class:`DPolynomialRing_dense` for further information on this structure.
     '''
     def create_key(self, base, *names : str, **kwds):
         if "names" in kwds and len(names) > 0:
@@ -88,7 +88,7 @@ class RWOPolynomialRingFactory(UniqueFactory):
         names = tuple(sorted(names))
 
         # We check now whether the base ring is valid or not
-        if not base in _RingsWithOperators:
+        if not base in _DRings:
             raise TypeError("The base ring must have operators attached")
 
         # Now the names are appropriate and the base is correct
@@ -97,25 +97,25 @@ class RWOPolynomialRingFactory(UniqueFactory):
     def create_object(self, _, key):
         base, names = key
 
-        return RWOPolynomialRing_dense(base, names)
+        return DPolynomialRing_dense(base, names)
 
-RWOPolynomialRing = RWOPolynomialRingFactory("dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing")
+DPolynomialRing = DPolynomialRingFactory("dalgebra.diff_polynomial.diff_polynomial_ring.DPolynomialRing")
 def DifferentialPolynomialRing(base, *names : str, **kwds):
-    if not base in _RingsWithOperators:
+    if not base in _DRings:
         base = DifferentialRing(base, diff)
     if not base.is_differential():
         raise TypeError("The base ring must be a differential ring")
-    return RWOPolynomialRing(base, *names, **kwds)
+    return DPolynomialRing(base, *names, **kwds)
 def DifferencePolynomialRing(base, *names : str, **kwds):
-    if not base in _RingsWithOperators:
+    if not base in _DRings:
         base = DifferenceRing(base, base.Hom(base).one())
     if not base.is_difference():
         raise TypeError("The base ring must be a difference ring")
-    return RWOPolynomialRing(base, *names, **kwds)
+    return DPolynomialRing(base, *names, **kwds)
 
-class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
+class DPolynomialRing_dense (InfinitePolynomialRing_dense):
     r'''
-        Class for a ring of polynomials over a :class:`~dalgebra.ring_w_operator.RingWithOperators`.
+        Class for a ring of polynomials over a :class:`~dalgebra.ring_w_operator.DRing`.
 
         Given a ring with an associated operators `(R, (d_1,...,d_n))`, where `d_i : R \rightarrow R`, we can 
         always define the ring of polynomials on `y` as the *infinite polynomial ring*
@@ -166,7 +166,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         Although the use of diff can work in these rings, it is not fully recommended because we may require more 
         information for the ``diff`` method to work properly. We recommend the use of the ``derivative`` methods 
         of the elements or the method ``derivative`` of the Rings (as indicated in the category 
-        :class:`dalgebra.ring_w_operators.RingsWithOperators`)::
+        :class:`dalgebra.ring_w_operators.DRings`)::
 
             sage: R.derivative(y[0])
             y_1
@@ -227,7 +227,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             sage: T.difference(x^2*z[1]^2 - z[2]*z[1])
             -z_3*z_2 + (x^2 + 2*x + 1)*z_2^2
 
-        One of the main features of the category :class:`dalgebra.ring_w_operators.RingsWithOperators` is that
+        One of the main features of the category :class:`dalgebra.ring_w_operators.DRings` is that
         several operators can be included in the ring. This class of operator rings also have such feature, 
         extending all operators at once. 
 
@@ -247,14 +247,14 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         Hence, we can create the ring of operator polynomials with as many variables as we want::
 
-            sage: OR.<u,v> = RWOPolynomialRing(dsR); OR
+            sage: OR.<u,v> = DPolynomialRing(dsR); OR
             Ring of operator polynomials in (u, v) over Ring [[Multivariate Polynomial Ring in 
             x, y over Rational Field], (d/dx, d/dy, Hom({x: x + 1, y: y - 1}))]
             
         When we have several operators, we can create elements on the variables in two ways:
 
         * Using an index (as usual): then the corresponding variable will be created but following the order
-          that is given by :class:`dalgebra.rwo_polynomial.rwo_polynomial_element.IndexBijection`.
+          that is given by :class:`dalgebra.dpolynomial.dpolynomial_element.IndexBijection`.
         * Using a tuple: have the standard meaning that each of the operators has been applied that amount of times.
 
         We can see these two approaches in place::
@@ -274,17 +274,17 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             sage: (u[5]*v[0,1,0]).derivative(1) - u[0,1,0].shift()*v[0,2,0]
             u_0_2_1*v_0_1_0
     '''
-    Element = RWOPolynomial
+    Element = DPolynomial
 
-    def _base_category(self) -> Category: return _RingsWithOperators
+    def _base_category(self) -> Category: return _DRings
 
-    def _set_categories(self, base : Parent) -> list[Category]: return [_RingsWithOperators, CommutativeAlgebras(base)]
+    def _set_categories(self, base : Parent) -> list[Category]: return [_DRings, CommutativeAlgebras(base)]
 
     def __init__(self, base : Parent, names : Collection[str]):
-        if not base in _RingsWithOperators:
+        if not base in _DRings:
             raise TypeError("The base must be a ring with operators")
         if not base.all_operators_commute():
-            raise TypeError("Detected operators that do NOT commute. Impossible to build the RWOPolynomialRing")
+            raise TypeError("Detected operators that do NOT commute. Impossible to build the DPolynomialRing")
 
         if any(ttype == "none" for ttype in base.operator_types()):
             raise TypeError(f"All operators in {base} must be typed")
@@ -298,16 +298,16 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         
         # registering conversion to simpler structures
         current = self.base()
-        morph = RWOPolySimpleMorphism(self, current)
+        morph = DPolynomialSimpleMorphism(self, current)
         current.register_conversion(morph)
         while(not(current.base() == current)):
             current = current.base()
-            morph = RWOPolySimpleMorphism(self, current)
+            morph = DPolynomialSimpleMorphism(self, current)
             current.register_conversion(morph)
         
         try: # Trying to add conversion for the ring of linear operators
             operator_ring = self.linear_operator_ring()
-            morph = RWOPolyToLinearOperator(self)
+            morph = DPolynomialToLinOperator(self)
             operator_ring.register_conversion(morph)
         except NotImplementedError:
             pass
@@ -316,7 +316,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             self._create_operator(operation, ttype) 
             for operation, ttype in enumerate(self.base().operator_types())
         ])
-        self.__cache : list[dict[RWOPolynomial, RWOPolynomial]] = [dict() for _ in range(len(self.__operators))]
+        self.__cache : list[dict[DPolynomial, DPolynomial]] = [dict() for _ in range(len(self.__operators))]
 
     #################################################
     ### Coercion methods
@@ -328,7 +328,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         coer =  self._coerce_map_from_(S)
         return (not(coer is False) and not(coer is None))
         
-    def _element_constructor_(self, x) -> RWOPolynomial:
+    def _element_constructor_(self, x) -> DPolynomial:
         r'''
             Extended definition of :func:`_element_constructor_`.
 
@@ -353,7 +353,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
     def _pushout_(self, other):
         scons, sbase = self.construction()
-        if isinstance(other, RWOPolynomialRing_dense):
+        if isinstance(other, DPolynomialRing_dense):
             ocons, obase = other.construction()
             cons = scons.merge(ocons)
             try:
@@ -364,13 +364,13 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         return None
     
     @cached_method
-    def gen(self, i: int = None) -> RWOPolynomialGen:
+    def gen(self, i: int = None) -> DPolynomialGen:
         r'''
             Override method to create the `i^{th}` generator (see method 
             :func:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse.gen`).
 
-            For a :class:`RWOPolynomialRing_dense`, the generator type is 
-            :class:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen`
+            For a :class:`DPolynomialRing_dense`, the generator type is 
+            :class:`~dalgebra.diff_polynomial.diff_polynomial_element.DPolynomialGen`
             which provides extra features to know if an object can be generated by that generator.
             See tis documentation for further details.
 
@@ -380,21 +380,21 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             OUTPUT:
 
-            A :class:`~dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen`
+            A :class:`~dalgebra.diff_polynomial.diff_polynomial_element.DPolynomialGen`
             representing the `i^{th}` generator of ``self``.
 
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: from dalgebra.rwo_polynomial.rwo_polynomial_element import RWOPolynomialGen
-                sage: R.<y> = RWOPolynomialRing(DifferentialRing(QQ['x'], diff))
+                sage: from dalgebra.dpolynomial.dpolynomial_element import DPolynomialGen
+                sage: R.<y> = DPolynomialRing(DifferentialRing(QQ['x'], diff))
                 sage: R.gen(0)
                 y_*
                 sage: R.gen(0) is y
                 True
-                sage: isinstance(R.gen(0), RWOPolynomialGen)
+                sage: isinstance(R.gen(0), DPolynomialGen)
                 True
-                sage: S = RWOPolynomialRing(DifferentialRing(ZZ, lambda z : 0), ('a', 'b'))
+                sage: S = DPolynomialRing(DifferentialRing(ZZ, lambda z : 0), ('a', 'b'))
                 sage: S
                 Ring of operator polynomials in (a, b) over Differential Ring [[Integer Ring], (0,)]
                 sage: S.gen(0)
@@ -405,9 +405,9 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         if(not(i in ZZ) or (i < 0 or i > len(self._names))):
             raise ValueError("Invalid index for generator")
         
-        return RWOPolynomialGen(self, self._names[i])
+        return DPolynomialGen(self, self._names[i])
                 
-    def construction(self) -> RWOPolyRingFunctor:
+    def construction(self) -> DPolyRingFunctor:
         r'''
             Return the associated functor and input to create ``self``.
 
@@ -415,12 +415,12 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             a valid input for it that would create ``self`` again. This is a necessary method to
             implement all the coercion system properly.
 
-            For a :class:`RWOPolynomialRing_dense`, the associated functor class is :class:`RWOPolyRingFunctor`.
+            For a :class:`DPolynomialRing_dense`, the associated functor class is :class:`DPolyRingFunctor`.
             See its documentation for further information.
         '''
-        return RWOPolyRingFunctor(self._names), self.base()
+        return DPolyRingFunctor(self._names), self.base()
     
-    def flatten(self, polynomial : RWOPolynomial) -> Element:
+    def flatten(self, polynomial : DPolynomial) -> Element:
         r'''
             Method to compute the flatten version of a polynomial.
 
@@ -428,7 +428,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             and all its base parents are at the same level. This is similar to the method :func:`flattening_morphism`
             from multivariate polynomials, but adapted to the case of infinite variable polynomials.
 
-            Moreover, we need to take care of possible wrapping problems in the RingWithOperators category. 
+            Moreover, we need to take care of possible wrapping problems in the DRing category. 
 
             INPUT:
 
@@ -457,7 +457,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 sage: dx,dex,dl,dm,de = B.derivation_module().gens()
                 sage: shift = B.Hom(B)([x+1, e*ex, l, m, e])
                 sage: DSB = DifferenceRing(DifferentialRing(B, dx + ex*dex), shift); x,ex,l,m,e = DSB.gens()
-                sage: R.<u,v> = RWOPolynomialRing(DSB)
+                sage: R.<u,v> = DPolynomialRing(DSB)
                 sage: f1 = u[1,0]*ex + (l-1)*v[0,1]*x - m; f1
                 ex*u_1_0 + (x*l - x)*v_0_1 - m
                 sage: f1.polynomial()
@@ -485,7 +485,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         variables = [*polynomial.polynomial().parent().gens()]
         current = self.base()
         while (
-            isinstance(current, RingWithOperators_Wrapper) or 
+            isinstance(current, DRing_Wrapper) or 
             is_PolynomialRing(current) or 
             is_MPolynomialRing(current) or 
             isinstance(current, InfinitePolynomialRing_dense) or 
@@ -496,7 +496,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             elif isinstance(current, InfinitePolynomialRing_dense) or isinstance(current, InfinitePolynomialRing_sparse):
                 variables.extend(reduce(lambda p, q : pushout(p,q), [c.polynomial().parent() for c in polynomial.polynomial().coefficients()]).gens())
             
-            if isinstance(current, RingWithOperators_Wrapper):
+            if isinstance(current, DRing_Wrapper):
                 current = current.wrapped
             else:
                 current = current.base()
@@ -518,14 +518,14 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             OUTPUT:
 
-            A :class:`RWOPolynomialRing_dense` over ``R`` with the same variables as ``self``.
+            A :class:`DPolynomialRing_dense` over ``R`` with the same variables as ``self``.
         '''
-        return RWOPolynomialRing(R, self.variable_names())
+        return DPolynomialRing(R, self.variable_names())
 
     #################################################
     ### Magic python methods
     #################################################
-    def __call__(self, *args, **kwds) -> RWOPolynomial:
+    def __call__(self, *args, **kwds) -> DPolynomial:
         res = super().__call__(*args, **kwds)
         if not isinstance(res, self.element_class):
             res = self.element_class(self, res)
@@ -541,27 +541,27 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
     #################################################
     ### Element generation methods
     #################################################
-    def one(self) -> RWOPolynomial:
+    def one(self) -> DPolynomial:
         r'''
             Return the one element in ``self``.
 
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<y> = RWOPolynomialRing(DifferentialRing(QQ['x'], diff))
+                sage: R.<y> = DPolynomialRing(DifferentialRing(QQ['x'], diff))
                 sage: R.one()
                 1
         '''
         return self(1)
     
-    def zero(self) -> RWOPolynomial:
+    def zero(self) -> DPolynomial:
         r'''
             Return the zero element in ``self``.
 
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<y> = RWOPolynomialRing(DifferentialRing(QQ['x'], diff))
+                sage: R.<y> = DPolynomialRing(DifferentialRing(QQ['x'], diff))
                 sage: R.zero()
                 0
         '''
@@ -595,7 +595,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         
         return p
      
-    def eval(self, element, *args, dic: dict[RWOPolynomialGen,RWOPolynomial] = None, **kwds):
+    def eval(self, element, *args, dic: dict[DPolynomialGen,DPolynomial] = None, **kwds):
         r'''
             Method to evaluate elements in the ring of differential polynomials.
 
@@ -619,7 +619,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             * ``args``: list of arguments that will be linearly related with the generators
               of ``self`` (like they are given by ``self.gens()``)
             * ``dic``: dictionary mapping generators to polynomials. This alllows an input equivalent to 
-              the argument in ``kwds`` but where the keys of the dictionary are :class:`RWOPOlynomialGen`.
+              the argument in ``kwds`` but where the keys of the dictionary are :class:`DPOlynomialGen`.
             * ``kwds``: dictionary for providing values to the generators of ``self``. The 
               name of the keys must be the names of the generators (as they can be got using 
               the attribute ``_name``).
@@ -671,7 +671,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             As expected, similar behavior occurs when having several operators in the ring::
 
-                sage: T.<u> = RWOPolynomialRing(DifferenceRing(DifferentialRing(QQ[x],diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = T.base()(x)
+                sage: T.<u> = DPolynomialRing(DifferenceRing(DifferentialRing(QQ[x],diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = T.base()(x)
                 sage: p3 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2]; op3 = p3.as_linear_operator()
                 sage: p4 = u[0,1] - u[0,0]; op4 = p4.as_linear_operator()
                 sage: p3(u=p4) == T(op3*op4)
@@ -692,7 +692,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         ### Combining the arguments from dic and kwds
         if dic != None:
             for k,v in dic.items():
-                if isinstance(k, RWOPolynomialGen):
+                if isinstance(k, DPolynomialGen):
                     kwds[k.variable_name()] = v
                 else:
                     kwds[str(k)] = v
@@ -703,12 +703,12 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         element = self(element) # making sure the structure is the appropriate
 
         ### Checking the input that needs to be evaluated
-        gens : tuple[RWOPolynomialGen] = self.gens()
+        gens : tuple[DPolynomialGen] = self.gens()
         names : list[str] = [el._name for el in gens]
         if(len(args) > self.ngens()):
             raise ValueError(f"Too many argument for evaluation: given {len(args)}, expected (at most) {self.ngens()}")
 
-        final_input : dict[RWOPolynomialGen, Element] = {gens[i] : args[i] for i in range(len(args))}
+        final_input : dict[DPolynomialGen, Element] = {gens[i] : args[i] for i in range(len(args))}
         for key in kwds:
             if(not key in names):
                 raise TypeError(f"Invalid name for argument {key}")
@@ -719,7 +719,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         ### Deciding final parent
         rem_names = [name for (name,gen) in zip(names,gens) if gen not in final_input]
-        R = RWOPolynomialRing(self.base(), rem_names) if len(rem_names) > 0 else self.base()
+        R = DPolynomialRing(self.base(), rem_names) if len(rem_names) > 0 else self.base()
         for value in final_input.values():
             R = pushout(R, parent(value))
         
@@ -750,7 +750,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         return R(element.polynomial()(**evaluation_dict))
         
     #################################################
-    ### Method from RingWithOperators category
+    ### Method from DRing category
     #################################################
     def operators(self) -> Collection[Morphism]:
         return self.__operators
@@ -767,7 +767,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         '''
         operator : AdditiveMap = self.base().operators()[operation] 
         if ttype == "homomorphism":
-            def __extended_homomorphism(element : RWOPolynomial) -> RWOPolynomial:
+            def __extended_homomorphism(element : DPolynomial) -> DPolynomial:
                 if(element in self):
                     element = self(element)
                 else:
@@ -798,7 +798,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
                 return self.__cache[operation][element]
             func = __extended_homomorphism
         elif ttype == "derivation":
-            def __extended_derivation(element : RWOPolynomial) -> RWOPolynomial:
+            def __extended_derivation(element : DPolynomial) -> DPolynomial:
                 if(element in self):
                     element = self(element)
                 else:
@@ -847,7 +847,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
     
     def linear_operator_ring(self) -> Ring:
         r'''
-            Overridden method from :func:`~RingsWithOperators.ParentMethods.linear_operator_ring`.
+            Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
 
             This method builds the ring of linear operators on the base ring. It only works when the 
             ring of operator polynomials only have one variable.
@@ -857,7 +857,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         
         return self.base().linear_operator_ring()
 
-    def inverse_operation(self, element: RWOPolynomial, operation: int = 0) -> RWOPolynomial:
+    def inverse_operation(self, element: DPolynomial, operation: int = 0) -> DPolynomial:
         if not element in self:
             raise TypeError(f"[inverse_operation] Impossible to apply operation to {element}")
         element = self(element)
@@ -871,7 +871,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         else:
             raise NotImplementedError("[inverse_operation] Inverse for unknown operation not implemented")
     
-    def __inverse_homomorphism(self, element: RWOPolynomial, operation: int):
+    def __inverse_homomorphism(self, element: DPolynomial, operation: int):
         solution = self.zero()
         for coeff, monomial in zip(element.coefficients(), element.monomials()):
             coeff = coeff.inverse_operation(operation) if not coeff.is_constant() else coeff
@@ -888,7 +888,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             solution += coeff*new_mon
         return solution
     
-    def __inverse_derivation(self, element: RWOPolynomial, operation: int):
+    def __inverse_derivation(self, element: DPolynomial, operation: int):
         logger.debug(f"[inverse_derivation] Called with {element}")
         if element == 0:
             logger.debug(f"[inverse_derivation] Found a zero --> Easy")
@@ -945,18 +945,18 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         logger.debug(f"[inverse_derivation] Result: {solution}")
         return solution
    
-    def __inverse_skew(self, element: RWOPolynomial, operation: int):
+    def __inverse_skew(self, element: DPolynomial, operation: int):
         raise NotImplementedError("[inverse_skew] Skew-derivation operation not yet implemented")
             
     #################################################
     ### Other computation methods
     #################################################
-    def as_linear_operator(self, element: RWOPolynomial) -> Element:
+    def as_linear_operator(self, element: DPolynomial) -> Element:
         r'''
             Method that tries to convert an operator polynomial into a linear operator.
 
-            This method tries to create a linear operator coming from a :class:`RWOPolynomial`.
-            In the case where we have an :class:`RWOPolynomial` `p(u) \in R\{u\}` (for `R` a ring with operators) 
+            This method tries to create a linear operator coming from a :class:`DPolynomial`.
+            In the case where we have an :class:`DPolynomial` `p(u) \in R\{u\}` (for `R` a ring with operators) 
             we can interpret the polynomial `p(u)` as an operator over any extension of `R` that acts
             by substituting `u` by the element the operator acts on. If `p` is linear, then it represents
             what it is called a linear operator.
@@ -965,18 +965,18 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             for further information). This method transforms the elements of ``self`` that can be seen as linear
             operators to this ring structure.
 
-            Conversely, a :class:`RWOPolynomialRing_dense` can transform elements from its ring of linear operators
-            (i.e., the output of :func:`linear_operator_ring`) to linear :class:`RWOPolynomial`.
+            Conversely, a :class:`DPolynomialRing_dense` can transform elements from its ring of linear operators
+            (i.e., the output of :func:`linear_operator_ring`) to linear :class:`DPolynomial`.
 
             This method checks that ``self`` has the appropriate structure (i.e., it has only one infinite variable)
             and also the ``element`` has the appropriate shape: it is linear without a constant term.
 
-            REMARK: **this method is equivalent to the method :func:`~.rwo_polynomial_ring_element.RWOPolynomial.as_linear_operator`
+            REMARK: **this method is equivalent to the method :func:`~.dpolynomial_ring_element.DPolynomial.as_linear_operator`
             since it calls this method directly**
 
             INPUT:
 
-            * ``element``: a :class:`RWOPolynomial` in ``self`` to be casted to a linear operator.
+            * ``element``: a :class:`DPolynomial` in ``self`` to be casted to a linear operator.
             
             OUTPUT:
 
@@ -1007,7 +1007,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             This also work when having several operators in the same ring::
 
-                sage: S.<u> = RWOPolynomialRing(DifferenceRing(DifferentialRing(QQ[x], diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = S.base()(x)
+                sage: S.<u> = DPolynomialRing(DifferenceRing(DifferentialRing(QQ[x], diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = S.base()(x)
                 sage: p4 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2] 
                 sage: p4.as_linear_operator()
                 -D^2*S^2 + x*D*S + (x^3 - 3*x)*D + 2
@@ -1035,7 +1035,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
 
-    def sylvester_resultant(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None) -> RWOPolynomial:
+    def sylvester_resultant(self, P: DPolynomial, Q: DPolynomial, gen: DPolynomialGen = None) -> DPolynomial:
         r'''
             Method to compute the Sylvester resultant of two operator polynomials.
 
@@ -1065,13 +1065,13 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             OUTPUT:
 
-            A :class:`~.rwo_polynomial_element.RWOPolynomial` with the Sylvester resultant of `P` and `Q`.
+            A :class:`~.dpolynomial_element.DPolynomial` with the Sylvester resultant of `P` and `Q`.
 
             EXAMPLES::
 
                 sage: from dalgebra import *
                 sage: B = DifferentialRing(QQ[x], diff); x = B(x)
-                sage: S.<z> = RWOPolynomialRing(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: P.sylvester_resultant(Q)
@@ -1079,7 +1079,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             If several variables are available, we need to explicitly provide the variable we are considering::
 
-                sage: R.<u,v> = RWOPolynomialRing(B)
+                sage: R.<u,v> = DPolynomialRing(B)
                 sage: P = (3*x -1)*u[0]*v[0] + x^2*v[1]*u[0] + u[2]
                 sage: Q = 7*x*v[0] + x^2*v[0]*u[1]
                 sage: P.sylvester_resultant(Q)
@@ -1109,7 +1109,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         return self.sylvester_matrix(P,Q,gen).determinant()
 
     @cached_method
-    def sylvester_subresultant(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None, k: int = 0, i: int = 0):
+    def sylvester_subresultant(self, P: DPolynomial, Q: DPolynomial, gen: DPolynomialGen = None, k: int = 0, i: int = 0):
         r'''
             Method to compute the `(k,i)`-th Sylvester subresultant of two operator polynomials.
 
@@ -1125,7 +1125,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
                 sage: from dalgebra import *
                 sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
-                sage: S.<z> = RWOPolynomialRing(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: S.sylvester_subresultant(P, Q, k=1, i=0)
@@ -1136,7 +1136,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             We can see that the case with `k=0` and `i=0`coincides with the method :func:`sylvester_resultant`::
             
                 sage: B = DifferentialRing(QQ[x], diff); x = B(x)
-                sage: S.<z> = RWOPolynomialRing(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: S.sylvester_subresultant(P, Q, k=0, i=0) == P.sylvester_resultant(Q)
@@ -1153,7 +1153,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         return S_ki.determinant()
         
     @cached_method
-    def sylvester_matrix(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None, k: int = 0) -> Matrix:
+    def sylvester_matrix(self, P: DPolynomial, Q: DPolynomial, gen: DPolynomialGen = None, k: int = 0) -> Matrix:
         r'''
             Method to obtain the `k`-Sylvester matrix for two operator polynomials.
 
@@ -1184,7 +1184,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
                 sage: from dalgebra import *
                 sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
-                sage: S.<z> = RWOPolynomialRing(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: P.sylvester_matrix(Q)
@@ -1201,7 +1201,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             It is important to remark that this matrix depends directly on the operation defined on the ring::
 
                 sage: B = DifferentialRing(QQ[x], diff); x = B(x)
-                sage: S.<z> = RWOPolynomialRing(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: P.sylvester_matrix(Q)
@@ -1218,7 +1218,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             However, the Sylvester matrix is not well defined when the ring has several operations::
 
                 sage: B = DifferentialRing(DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)), diff); x = B(x)
-                sage: S.<z> = RWOPolynomialRing(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[0,2] - 3*x*z[0,1] + (x^2 - 1)*z[1,0]
                 sage: Q = z[2,3] - z[1,0]
                 sage: P.sylvester_matrix(Q)
@@ -1245,8 +1245,8 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
         
         # Building the extension
-        extended_P: list[RWOPolynomial] = [P.operation(times=i) for i in range(m-k)]
-        extended_Q: list[RWOPolynomial] = [Q.operation(times=i) for i in range(n-k)]
+        extended_P: list[DPolynomial] = [P.operation(times=i) for i in range(m-k)]
+        extended_Q: list[DPolynomial] = [Q.operation(times=i) for i in range(n-k)]
 
         # Building the Sylvester matrix (n+m-1-k) , (n+m-1-k)
         fR = self.polynomial_ring() # guaranteed common parent for all polynomials
@@ -1256,7 +1256,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
         # Returning the matrix
         return matrix([[self(equation.coefficient(m)) for m in cols] for equation in equations])
 
-    def sylvester_subresultant_sequence(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen = None) -> tuple[RWOPolynomial]:
+    def sylvester_subresultant_sequence(self, P: DPolynomial, Q: DPolynomial, gen: DPolynomialGen = None) -> tuple[DPolynomial]:
         r'''
             Method that gets the subresultant sequence in form of a linear d-polynmomial.
 
@@ -1284,13 +1284,13 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
                 sage: from dalgebra import *
                 sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
-                sage: S.<z> = RWOPolynomialRing(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: S.sylvester_subresultant_sequence(P, Q)
                 ((x^6 + 6*x^5 + 10*x^4 - 18*x^3 - 65*x^2 - 42*x - 2)*z_0, (8*x^2 + 7*x)*z_1 + (-3*x^3 - 3*x^2 + 3*x + 2)*z_0)
                 sage: B = DifferentialRing(QQ[x], diff); x = B(x)
-                sage: S.<z> = RWOPolynomialRing(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: S.sylvester_subresultant_sequence(P, Q)
@@ -1303,7 +1303,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             for k in range(min(P.order(gen),Q.order(gen)))
         )
 
-    def __process_sylvester_arguments(self, P: RWOPolynomial, Q: RWOPolynomial, gen: RWOPolynomialGen):
+    def __process_sylvester_arguments(self, P: DPolynomial, Q: DPolynomial, gen: DPolynomialGen):
         r'''Check the ring, the generator and the polynomials are correct'''
         ## Checking the ring is appropriate
         if self.noperators() > 1:
@@ -1316,7 +1316,7 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
             if gen < 0 or gen >= self.ngens():
                 raise IndexError(f"[sylvester_checking] Requested generator {gen} but only {self.ngens()} exist.")
             gen = self.gens()[gen]
-        elif isinstance(gen, RWOPolynomialGen) and not gen in self.gens():
+        elif isinstance(gen, DPolynomialGen) and not gen in self.gens():
             raise ValueError(f"[sylvester_checking] The variable {repr(gen)} do not belong to {self}")
         elif self.ngens() == 1 and gen is None:
             gen = self.gens()[0]
@@ -1330,15 +1330,15 @@ class RWOPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         return P,Q,gen
 
-def is_RWOPolynomialRing(element):
+def is_DPolynomialRing(element):
     r'''
         Method to check whether an object is a ring of infinite polynomial with an operator.
     '''
-    return isinstance(element, RWOPolynomialRing_dense)
+    return isinstance(element, DPolynomialRing_dense)
 
-class RWOPolyRingFunctor (ConstructionFunctor):
+class DPolyRingFunctor (ConstructionFunctor):
     r'''
-        Class representing Functor for creating :class:`RWOPolynomialRing_dense`.
+        Class representing Functor for creating :class:`DPolynomialRing_dense`.
 
         This class represents the functor `F: R \mapsto R\{y^(1),\ldots,y^{(n)}\}`.
         The names of the variables must be given to the functor and, then
@@ -1352,46 +1352,46 @@ class RWOPolyRingFunctor (ConstructionFunctor):
     '''
     def __init__(self, variables):
         self.__variables = variables
-        super().__init__(_RingsWithOperators,_RingsWithOperators)
-        self.rank = 11 # just above PolynomialRing and RingWithOperatorsFunctor
+        super().__init__(_DRings,_DRings)
+        self.rank = 11 # just above PolynomialRing and DRingFunctor
         
     ### Methods to implement        
     def _apply_functor(self, x):
-        return RWOPolynomialRing(x,self.variables())
+        return DPolynomialRing(x,self.variables())
         
     def _repr_(self):
-        return f"RWOPolynomialRing((*),{self.variables()})"
+        return f"DPolynomialRing((*),{self.variables()})"
         
     def __eq__(self, other):
         if(other.__class__ == self.__class__):
             return (other.variables() == self.variables())
 
     def merge(self, other):
-        if isinstance(other, RWOPolyRingFunctor):
+        if isinstance(other, DPolyRingFunctor):
             self_names = self.__variables
             other_names = other.__variables
             global_names = tuple(set(list(self_names)+list(other_names)))
-            return RWOPolyRingFunctor(global_names)
+            return DPolyRingFunctor(global_names)
         return None
 
     def variables(self):
         return self.__variables
 
-class RWOPolyToLinearOperator (Morphism):
+class DPolynomialToLinOperator (Morphism):
     r'''
         Class representing a map to a ring of linear operators
 
         This map allows the coercion system to detect that some elements in a 
         :class:`DifferentialPolynomialRing_dense` are included in its ring of linear operators.
     '''
-    def __init__(self, rwo : RWOPolynomialRing_dense):
-        linear_operator_ring = rwo.linear_operator_ring()
-        super().__init__(rwo, linear_operator_ring)
+    def __init__(self, dpoly_ring : DPolynomialRing_dense):
+        linear_operator_ring = dpoly_ring.linear_operator_ring()
+        super().__init__(dpoly_ring, linear_operator_ring)
 
     def _call_(self, p):
         return self.codomain()(self.domain().as_linear_operator(p))
 
-class RWOPolySimpleMorphism (Morphism):
+class DPolynomialSimpleMorphism (Morphism):
     r'''
         Class representing maps to simpler rings.
 
@@ -1407,4 +1407,4 @@ class RWOPolySimpleMorphism (Morphism):
 
         return self.codomain()(str(p))
 
-__all__ = ["RWOPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_RWOPolynomialRing"]
+__all__ = ["DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing"]

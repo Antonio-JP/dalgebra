@@ -73,7 +73,7 @@ def IndexBijection(size : int):
 
         EXAMPLES::
 
-            sage: from dalgebra.rwo_polynomial.rwo_polynomial_element import IndexBijection
+            sage: from dalgebra.dpolynomial.dpolynomial_element import IndexBijection
             sage: size2 = IndexBijection(2)
             sage: size2(0)
             (0, 0)
@@ -151,16 +151,16 @@ class IndexBijection_Object (Morphism):
 ### MAIN CLASS FOR THE GENERATORS
 ###
 #######################################################################################
-class RWOPolynomialGen (InfinitePolynomialGen):
+class DPolynomialGen (InfinitePolynomialGen):
     r'''
-        Class for generators of :class:`.rwo_polynomial_ring.RWOPolynomialRing_dense`.
+        Class for generators of :class:`.dpolynomial_ring.DPolynomialRing_dense`.
 
-        A generator of a :class:`.rwo_polynomial_ring.RWOPolynomialRing_dense` is 
+        A generator of a :class:`.dpolynomial_ring.DPolynomialRing_dense` is 
         an object that can create the infinitely many variables associated with a particular name. The variables it generates
         are of the form ``name_index`` where ``name`` is the string defining the variable and the index is the image 
         a :class:`IndexBijection_Object`.
 
-        Let assume `R{y}` is a :class:`.rwo_polynomial_ring.RWOPolynomialRing_dense` with operators `\sigma` and `\delta`.
+        Let assume `R{y}` is a ring of d-polynomials with operators `\sigma` and `\delta`.
         Then the generator will be ``y_(i,j)`` representing the element `\sigma^i ( \delta^j (y))`.
 
         To allow more flexibility, this class provides methods to know if an object can be generated with this
@@ -168,24 +168,24 @@ class RWOPolynomialGen (InfinitePolynomialGen):
 
         INPUT:
 
-        * ``parent``: a :class:`.rwo_polynomial_ring.DifferentialPolynomialRing_dense` where ``self`` will generate its elements.
+        * ``parent``: a :class:`.dpolynomial_ring.DifferentialPolynomialRing_dense` where ``self`` will generate its elements.
           This will indicate also the amount of indices allow to generate a variable.
         * ``name``: main part of the name for the generated variables.
     '''
     def __init__(self, parent: Parent, name: str):
-        from .rwo_polynomial_ring import is_RWOPolynomialRing
-        if(not is_RWOPolynomialRing(parent)):
-            raise TypeError("The RWOPolynomialGen must have a ring of polynomial with an operator as parent")
+        from .dpolynomial_ring import is_DPolynomialRing
+        if(not is_DPolynomialRing(parent)):
+            raise TypeError("The DPolynomialGen must have a ring of polynomial with an operator as parent")
 
         self.index_map = IndexBijection(parent.noperators())
         super().__init__(parent, name)
 
-    def __getitem__(self, i : int | tuple[int]) -> RWOPolynomial:
+    def __getitem__(self, i : int | tuple[int]) -> DPolynomial:
         if self._parent.noperators() > 1 and isinstance(i, tuple) and len(i) == self._parent.noperators():
             return self._parent(super().__getitem__(self.index_map.inverse(i)))
         return self._parent(super().__getitem__(i))
 
-    def contains(self, element: RWOPolynomial) -> bool:
+    def contains(self, element: DPolynomial) -> bool:
         r'''
             Method to know if an object can be generated using ``self``.
 
@@ -217,7 +217,7 @@ class RWOPolynomialGen (InfinitePolynomialGen):
     def __contains__(self, other) -> bool:
         return self.contains(other)
 
-    def index(self, element: RWOPolynomial, as_tuple : bool = None) -> int | tuple[int]:
+    def index(self, element: DPolynomial, as_tuple : bool = None) -> int | tuple[int]:
         r'''
             Method to know the index to generate ``element`` using ``self``.
 
@@ -248,7 +248,7 @@ class RWOPolynomialGen (InfinitePolynomialGen):
                 index = (index,)
             return index
 
-    def next(self, element: RWOPolynomial, operation : int) -> RWOPolynomial:
+    def next(self, element: DPolynomial, operation : int) -> DPolynomial:
         r'''
             Method to get the next variable from ``element`` with the given operation
         '''
@@ -276,12 +276,12 @@ class RWOPolynomialGen (InfinitePolynomialGen):
 ### MAIN CLASS FOR THE ELEMENTS
 ###
 #######################################################################################
-class RWOPolynomial (InfinitePolynomial_dense):
+class DPolynomial (InfinitePolynomial_dense):
     r'''
-        Class for representing infinite polynomials associated ring with operators.
+        Class for representing infinite polynomials associated with a d-ring.
 
-        Given a ring `R` with several operators `d_1,\ldots,d_n`, we can define the ring of infinite polynomials with an operator
-        on `y` over `R` as the *infinite polynomial ring* 
+        Given a d-ring `(R,\{d_1,\ldots,d_n\})`, we can define a new d-ring with infinitely many variables
+        where the operations map one variable to the next. This is call the ring of d-polynomials:
 
         .. MATH::
 
@@ -296,7 +296,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
         where `e_i` is the `i`-th canonical vector of length `n`, i.e., a vector of length `n` with all zeros except
         the `i`-th entry, which is a one.
 
-        We can iterate the process to define thr ring of operator polynomials in several variables:
+        We can iterate the process to define thr ring of d-polynomials in several variables:
 
         .. MATH::
 
@@ -304,15 +304,15 @@ class RWOPolynomial (InfinitePolynomial_dense):
 
         Objects of this class represents the polynomials of within one of these a ring. They 
         are a natural extension of the class :class:`~sage.rings.polynomial.infinite_polynomial_element.InfinitePolynomial_dense`
-        including some extra functionality more specific of these polynomials (such as the the operation, evaluation and orders).
+        including some extra functionality more specific for d-polynomials (such as the the operation, evaluation and orders).
 
         INPUT:
 
-        * ``parent``: a :class:`.rwo_polynomial_ring.RWOPolynomialRing_dense` where the new element will be contained.
+        * ``parent``: a :class:`.dpolynomial_ring.DPolynomialRing_dense` where the new element will be contained.
         * ``polynomial``: a valid polynomial to be casted into an element of ``parent``.
 
         We recommend not to use this constructor, but instead build the polynomials using the generators of the 
-        corresponding :class:`.rwo_polynomial_ring.RWOPolynomialRing_dense`.
+        corresponding :class:`.dpolynomial_ring.DPolynomialRing_dense`.
     '''
     def __init__(self, parent : Parent, polynomial : Element):
         if(is_InfinitePolynomial(polynomial)):
@@ -329,8 +329,8 @@ class RWOPolynomial (InfinitePolynomial_dense):
 
             This method computes the order of a concrete polynomial in all the 
             variables that appear in its parent. This method relies on the method 
-            :func:`~dalgebra.rwo_polynomial.rwo_polynomial_ring.RWOPolynomialRing_dense.gens`
-            and the method :func:`~RWOPolynomialGen.index`.
+            :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_dense.gens`
+            and the method :func:`~DPolynomialGen.index`.
 
             INPUT:
 
@@ -372,13 +372,13 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return tuple([max(lst, default = -1) for lst in indices])
 
     @cached_method
-    def order(self, gen : RWOPolynomialGen = None, operation : int = -1) -> int:
+    def order(self, gen : DPolynomialGen = None, operation : int = -1) -> int:
         r'''
             Method to obtain the order of a polynomial w.r.t. a variable
 
             This method computes the order of a polynomial with respect to 
             a particular variable. Such variable has to be provided as a generator of 
-            the ring of polynomials (see :class:`RWOPolynomialGen`).
+            the ring of polynomials (see :class:`DPolynomialGen`).
 
             This method uses the method :func:`orders` as a basic definition of these orders.
 
@@ -387,7 +387,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
 
             INPUT:
 
-            * ``gen``: a :class:`RWOPolynomialGen` in the parent ring.
+            * ``gen``: a :class:`DPolynomialGen` in the parent ring.
             * ``operation``: index of the operator we want to check. If `-1` is given, then the combined
               order of all operators is returned (only useful when having several operators).
 
@@ -436,8 +436,8 @@ class RWOPolynomial (InfinitePolynomial_dense):
 
             This method computes the lowest appearing order of a concrete polynomial in all the 
             variables that appear in its parent. This method relies on the method 
-            :func:`~dalgebra.rwo_polynomial.rwo_polynomial_ring.RWOPolynomialRing_dense.gens`
-            and the method :func:`~RWOPolynomialGen.index`.
+            :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_dense.gens`
+            and the method :func:`~DPolynomialGen.index`.
 
             INPUT:
 
@@ -479,13 +479,13 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return tuple([min(lst, default = -1) for lst in indices])
 
     @cached_method
-    def lorder(self, gen : RWOPolynomialGen = None, operation: int = -1) -> int:
+    def lorder(self, gen : DPolynomialGen = None, operation: int = -1) -> int:
         r'''
             Method to obtain the minimal order of a polynomial w.r.t. a variable
 
             This method computes the minimal order of a polynomial with respect to 
             a particular variable. Such variable has to be provided as a generator of 
-            the ring of polynomials (see :class:`RWOPolynomialGen`).
+            the ring of polynomials (see :class:`DPolynomialGen`).
 
             This method uses the method :func:`lorders` as a basic definition of these orders.
 
@@ -494,7 +494,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
 
             INPUT:
 
-            * ``gen``: a :class:`RWOPolynomialGen` in the parent ring.
+            * ``gen``: a :class:`DPolynomialGen` in the parent ring.
             * ``operation``: index of the operator we want to check. If `-1` is given, then the combined
               order of all operators is returned (only useful when having several operators).
 
@@ -538,7 +538,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return self.lorders(operation)[index]
 
     @cached_method
-    def initial(self, gen : RWOPolynomialGen = None, operation: int = -1) -> RWOPolynomial:
+    def initial(self, gen : DPolynomialGen = None, operation: int = -1) -> DPolynomial:
         r'''
             Computes the leading polynomial of an infinite polynomial.
 
@@ -558,7 +558,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
 
         if parent.ngens() == 1 or gen is None: gen = parent.gens()[0]
 
-        if (not isinstance(gen, RWOPolynomialGen)) or (not gen in parent.gens()):
+        if (not isinstance(gen, DPolynomialGen)) or (not gen in parent.gens()):
             raise TypeError(f"The generator must be a valid generator from {parent}")
         
         o = self.order(gen, operation)
@@ -570,7 +570,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
     lc = initial #: alias for initial (also called "leading coefficient")
 
     @cached_method
-    def infinite_variables(self) -> tuple[RWOPolynomialGen]:
+    def infinite_variables(self) -> tuple[DPolynomialGen]:
         r'''
             Method to compute which generators of the parent appear in ``self``.
         '''
@@ -583,7 +583,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
         r'''
             Method to obtain the flattened version of a polynomial.
 
-            Check :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.flatten` for further information and 
+            Check :func:`~.dpolynomial_ring.DPolynomialRing_dense.flatten` for further information and 
             examples.
         '''
         return self.parent().flatten(self)
@@ -591,7 +591,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
     #######################################################################################
     ### Properties methods (is_...)
     #######################################################################################
-    def is_linear(self, variables : RWOPolynomialGen | Collection[RWOPolynomialGen]=None) -> bool:
+    def is_linear(self, variables : DPolynomialGen | Collection[DPolynomialGen]=None) -> bool:
         r'''
             Method that checks whether a infinite polynomial is linear (in terms of degree).
 
@@ -600,7 +600,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
 
             INPUT:
 
-            * ``variables``: (``None`` by default) variable or list of variables (see :class:`RWOPolynomialGen`)
+            * ``variables``: (``None`` by default) variable or list of variables (see :class:`DPolynomialGen`)
               for which we will consider if the polynomial is linear or not.
 
             OUTPUT:
@@ -663,27 +663,27 @@ class RWOPolynomial (InfinitePolynomial_dense):
         r'''
             Method to convert this operator to a linear operator. 
             
-            See method :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.as_linear_operator`.
+            See method :func:`~.dpolynomial_ring.DPolynomialRing_dense.as_linear_operator`.
         '''
         return self.parent().as_linear_operator(self)
 
     # Magic methods
-    def __call__(self, *args, dic: dict[RWOPolynomialGen, RWOPolynomial] = None, **kwargs) -> RWOPolynomial:
+    def __call__(self, *args, dic: dict[DPolynomialGen, DPolynomial] = None, **kwargs) -> DPolynomial:
         r'''
             Override of the __call__ method. 
 
             Evaluating an operator polynomial has a different meaning than evaluating a polynomial
-            with infinitely many variables (see method :func:`~dalgebra.rwo_polynomial.rwo_polynomial_ring.RWOPolynomialRing_dense.eval`
+            with infinitely many variables (see method :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_dense.eval`
             for further information)
 
             INPUT:
 
             * ``args`` and ``kwargs`` with the same format as in 
-              :func:`~dalgebra.rwo_polynomial.rwo_polynomial_ring.RWOPolynomialRing_dense.eval`
+              :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_dense.eval`
 
             OUTPUT:
 
-            The evaluated object as in :func:`~dalgebra.rwo_polynomial.rwo_polynomial_ring.RWOPolynomialRing_dense.eval`.
+            The evaluated object as in :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_dense.eval`.
 
             EXAMPLES::
 
@@ -713,7 +713,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
         '''
         return self.parent().eval(self, *args, dic=dic, **kwargs)
 
-    def divides(self, other : RWOPolynomial) -> bool:
+    def divides(self, other : DPolynomial) -> bool:
         r'''
             Method that checks whether a polynomial divides ``other``.
 
@@ -723,15 +723,15 @@ class RWOPolynomial (InfinitePolynomial_dense):
         return R(self.polynomial()).divides(R(self.parent()(other).polynomial()))
 
     def degree(self, x=None, std_grading=False) -> int: 
-        r'''Overriding :func:`degree` to fit the setting of RWO'''
+        r'''Overriding :func:`degree` to fit the setting of D'''
         R = self.parent().polynomial_ring()
         if x != None and x.parent() == self.parent():
             x = R(x.polynomial())
         
         return R(self.polynomial()).degree(x, std_grading)
 
-    def coefficient(self, monomial) -> RWOPolynomial:
-        r'''Overriding :func:`coefficient` to fit the setting of RWO'''
+    def coefficient(self, monomial) -> DPolynomial:
+        r'''Overriding :func:`coefficient` to fit the setting of D'''
         P = self.parent()
         R = P.polynomial_ring()
 
@@ -741,7 +741,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
             monomial = R(P(monomial).polynomial())
         return P(R(self.polynomial()).coefficient(monomial))
     
-    def monomials(self) -> list[RWOPolynomial]:
+    def monomials(self) -> list[DPolynomial]:
         return [self.parent()(m) for m in self.polynomial().monomials()]
     
     ###################################################################################
@@ -773,27 +773,27 @@ class RWOPolynomial (InfinitePolynomial_dense):
     ###################################################################################
     ### Other computations
     ###################################################################################
-    def sylvester_resultant(self, other : RWOPolynomial, gen: RWOPolynomialGen = None) -> RWOPolynomial:
+    def sylvester_resultant(self, other : DPolynomial, gen: DPolynomialGen = None) -> DPolynomial:
         r'''
             Method on an element to compute (if possible) the Sylvester resultant.
 
-            See :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.sylvester_resultant` for further information.
+            See :func:`~.dpolynomial_ring.DPolynomialRing_dense.sylvester_resultant` for further information.
         '''
         return self.parent().sylvester_resultant(self, other, gen)
 
-    def sylvester_matrix(self, other: RWOPolynomial, gen: RWOPolynomialGen = None, k: int = 0) -> RWOPolynomial:
+    def sylvester_matrix(self, other: DPolynomial, gen: DPolynomialGen = None, k: int = 0) -> DPolynomial:
         r'''
             Method to compute the Sylvester `k`-matrix for two operator polynomials.
 
-            See :func:`~.rwo_polynomial_ring.RWOPolynomialRing_dense.sylvester_matrix` for further information.
+            See :func:`~.dpolynomial_ring.DPolynomialRing_dense.sylvester_matrix` for further information.
         '''
         return self.parent().sylvester_matrix(self, other, gen, k)
 
-    def solve(self, gen: RWOPolynomialGen) -> Element:
+    def solve(self, gen: DPolynomialGen) -> Element:
         r'''
             Finds (if possible) a solution of ``gen`` using ``self == 0``.
 
-            This method tries to solve the equation `p(u) = 0` where `p \in R\{u\}` is a :class:`RWOPolynomial`
+            This method tries to solve the equation `p(u) = 0` where `p \in R\{u\}` is a :class:`DPolynomial`
             for a given infinite variable `u`. This means, this method will compute an element `y \in R` such that 
             `p(y) = 0` where `p(u)` is represented by ``self``.
 
@@ -812,7 +812,7 @@ class RWOPolynomial (InfinitePolynomial_dense):
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R.<u,v> = RWOPolynomialRing(DifferentialRing(QQ, lambda p:0))
+                sage: R.<u,v> = DPolynomialRing(DifferentialRing(QQ, lambda p:0))
                 sage: p = u[0] - v[1]
                 sage: p.solve(u)
                 v_1

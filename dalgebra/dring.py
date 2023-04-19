@@ -2,25 +2,24 @@ r'''
     Module with all structures for defining rings with operators.
 
     Let `\sigma: R \rightarrow R` be an additive homomorphism, i.e., for all elements `r,s \in R`,
-    the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the *ring* `R` *with operator*
-    `\sigma` as the pair `(R, \sigma)`. 
+    the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the pair `(R, \sigma)`as a *d-ring*. 
 
-    Similarly, if we have a set of additive maps `\sigma_1,\ldots,\sigma_n : R \rightarrow R`.
-    Then we define the *ring* `R` *with operators* `(\sigma_1,\ldots,\sigma_n)` as the tuple 
-    `(R, (\sigma_1,\ldots,\sigma_n))`.
+    Similarly, if we have a set of additive maps `\sigma_1,\ldots,\sigma_n : R \rightarrow R`,
+    we define the *ring* `R` *with operators* `(\sigma_1,\ldots,\sigma_n)` (or simply, *d-ring*) as the tuple 
+    `(R, \{\sigma_1,\ldots,\sigma_n\})`.
 
-    This module provides the framework to define this type of rings with as many operators as 
+    This module provides the framework to define d-rings with as many operators as 
     the user wants and we also provide a Wrapper class so we can extend existing ring structures that 
     already exist in `SageMath <https://www.sagemath.org>`_. 
 
-    The factory :func:`RingWithOperator` allows the creation of these rings with operators and will determine 
+    The factory :func:`DRing` allows the creation of these rings with operators and will determine 
     automatically in which specified category a ring will belong. For example, we can create the differential
     ring `(\mathbb{Q}[x], \partial_x)` or the difference ring `(\mathbb{Q}[x], x \mapsto x + 1)` with the 
     following code::
 
         sage: from dalgebra import *
-        sage: dQx = RingWithOperators(QQ[x], lambda p : p.derivative())
-        sage: sQx = RingWithOperators(QQ[x], lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1))
+        sage: dQx = DRing(QQ[x], lambda p : p.derivative())
+        sage: sQx = DRing(QQ[x], lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1))
 
     Once the rings are created, we can create elements within the ring and apply the corresponding operator::
 
@@ -33,7 +32,7 @@ r'''
 
     We can also create the same ring with both operators together::
 
-        sage: dsQx = RingWithOperators(QQ[x], lambda p : p.derivative(), lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1))
+        sage: dsQx = DRing(QQ[x], lambda p : p.derivative(), lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1))
         sage: x = dsQx(x)
         sage: x.operation(operation=0)
         1
@@ -44,7 +43,7 @@ r'''
     of the operators if they are defined using lambda expressions or callables. This can be seen by the fact that
     the factory can not detect the equality on two identical rings::
 
-        sage: dQx is RingWithOperators(QQ[x], lambda p : p.derivative())
+        sage: dQx is DRing(QQ[x], lambda p : p.derivative())
         False
 
     To avoid this behavior, we can set the types by providing an optional list called ``types`` whose elements are 
@@ -57,24 +56,24 @@ r'''
 
     We can see that, when setting this value, the ring is detected to be equal::
 
-        sage: dQx = RingWithOperators(QQ[x], lambda p : p.derivative(), types=["derivation"])
-        sage: dQx is RingWithOperators(QQ[x], lambda p : p.derivative(), types=["derivation"])
+        sage: dQx = DRing(QQ[x], lambda p : p.derivative(), types=["derivation"])
+        sage: dQx is DRing(QQ[x], lambda p : p.derivative(), types=["derivation"])
         True
         sage: # Since we have one variable, the built-in `diff` also work
-        sage: dQx is RingWithOperators(QQ[x], diff, types=["derivation"])
+        sage: dQx is DRing(QQ[x], diff, types=["derivation"])
         True
         sage: # We can also use elements in the derivation module
-        sage: dQx is RingWithOperators(QQ[x], QQ[x].derivation_module().gens()[0], types=["derivation"])
+        sage: dQx is DRing(QQ[x], QQ[x].derivation_module().gens()[0], types=["derivation"])
         True
 
     Also, we can detect this equality when adding operators sequentially instead of at once::
 
-        sage: dsQx = RingWithOperators(QQ[x], 
+        sage: dsQx = DRing(QQ[x], 
         ....:     lambda p : p.derivative(), 
         ....:     lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1), 
         ....:     types = ["derivation", "homomorphism"]
         ....: )
-        sage: dsQx is RingWithOperators(dQx, lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1), types=["homomorphism"])
+        sage: dsQx is DRing(dQx, lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1), types=["homomorphism"])
         True
 
     For specific types of operators as *derivations* or *homomorphism*, there are other functions where the ``types`` argument can be skipped
@@ -115,7 +114,7 @@ r'''
         sage: R.<x,y> = QQ[]
         sage: s = R.Hom(R)([x-y, x+y])
         sage: td = R.derivation_module(twist=s)(x-y)
-        sage: tR = RingWithOperators(R, s, td, types=["homomorphism", "skew"])
+        sage: tR = DRing(R, s, td, types=["homomorphism", "skew"])
         sage: x,y = tR.gens()
         sage: (x*y).skew() == x.skew()*y + x.shift()*y.skew()
         True
@@ -162,9 +161,9 @@ _CommutativeAdditiveGroups = CommutativeAdditiveGroups.__classcall__(Commutative
 ### DEFINING THE CATEGORY FOR RINGS WITH OPERATORS
 ###
 ####################################################################################################
-class RingsWithOperators(Category):
+class DRings(Category):
     r'''
-        Category for representing rings with operators.
+        Category for representing d-rings.
 
         Let `\sigma: R \rightarrow R` be an additive homomorphism, i.e., for all elements `r,s \in R`,
         the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the *ring* `R` *with operator*
@@ -223,9 +222,9 @@ class RingsWithOperators(Category):
                 EXAMPLES::
 
                     sage: from dalgebra import *
-                    sage: dQx = RingWithOperators(QQ[x], lambda p : p.derivative())
-                    sage: sQx = RingWithOperators(QQ[x], lambda p : p(x=QQ[x].gens()[0] + 1))
-                    sage: sdQx = RingWithOperators(QQ[x], lambda p : p(x=QQ[x].gens()[0] + 1), lambda p : p.derivative())
+                    sage: dQx = DRing(QQ[x], lambda p : p.derivative())
+                    sage: sQx = DRing(QQ[x], lambda p : p(x=QQ[x].gens()[0] + 1))
+                    sage: sdQx = DRing(QQ[x], lambda p : p(x=QQ[x].gens()[0] + 1), lambda p : p.derivative())
                     sage: p = QQ[x](x^3 - 3*x^2 + 3*x - 1)
                     sage: dQx.operation(p)
                     3*x^2 - 6*x + 3
@@ -277,7 +276,7 @@ class RingsWithOperators(Category):
         @cached_method
         def derivations(self) -> Collection[DerivationMap]:
             r'''
-                Method to filter the derivations out of a ring with operators.
+                Method to filter the derivations out of a d-ring.
 
                 Derivations are a particular type of operators. With this method we 
                 provide a similar interface as with the generic operators but just with
@@ -312,7 +311,7 @@ class RingsWithOperators(Category):
                 Method to apply a derivation over an element.
 
                 This method applies a derivation over a given element in the same way an operator
-                is applied by the method :func:`~RingsWithOperators.ParentMethods.operation`.
+                is applied by the method :func:`~DRings.ParentMethods.operation`.
             '''
             if derivation is None and self.nderivations() == 1: derivation = 0
             elif derivation is None: raise IndexError("An index for the derivation must be provided when having several derivations")
@@ -322,7 +321,7 @@ class RingsWithOperators(Category):
         @cached_method
         def differences(self) -> Collection[Morphism]:
             r'''
-                Method to filter the differences out of a ring with operators.
+                Method to filter the differences out of a d-ring.
 
                 Differences are a particular type of operators. With this method we 
                 provide a similar interface as with the generic operators but just with
@@ -357,7 +356,7 @@ class RingsWithOperators(Category):
                 Method to apply a difference over an element.
 
                 This method applies a difference over a given element in the same way an operator
-                is applied by the method :func:`~RingsWithOperators.ParentMethods.operation`.
+                is applied by the method :func:`~DRings.ParentMethods.operation`.
             '''
             if difference is None and self.ndifferences() == 1: difference = 0
             elif difference is None: raise IndexError("An index for the difference must be provided when having several differences")
@@ -365,7 +364,7 @@ class RingsWithOperators(Category):
         
         def shift(self, element: Element, shift: int = None) -> Element:
             r'''
-                Alias for :func:`~RingsWithOperators.ParentMethods.difference`.
+                Alias for :func:`~DRings.ParentMethods.difference`.
             '''
             return self.difference(element, shift)
 
@@ -373,7 +372,7 @@ class RingsWithOperators(Category):
         @cached_method
         def skews(self) -> Collection[Morphism]:
             r'''
-                Method to filter the skew-derivations out of a ring with operators.
+                Method to filter the skew-derivations out of a d-ring.
 
                 Differences are a particular type of operators. With this method we 
                 provide a similar interface as with the generic operators but just with
@@ -408,7 +407,7 @@ class RingsWithOperators(Category):
                 Method to apply a skew-derivation over an element.
 
                 This method applies a skew-derivation over a given element in the same way an operator
-                is applied by the method :func:`~RingsWithOperators.ParentMethods.operation`.
+                is applied by the method :func:`~DRings.ParentMethods.operation`.
             '''
             if skew is None and self.nskews() == 1: skew = 0
             elif skew is None: raise IndexError("An index for the skew must be provided when having several skews")
@@ -422,7 +421,7 @@ class RingsWithOperators(Category):
             r'''
                 Method to get the operator ring of ``self``.
 
-                When we consider a ring with operators, we can always consider a new (usually non-commutative)
+                When we consider a d-ring, we can always consider a new (usually non-commutative)
                 ring where we extend ``self`` polynomially with all the operators and its elements represent
                 new operators created from the operators defined over ``self``.
 
@@ -531,7 +530,7 @@ class RingsWithOperators(Category):
                 Apply an operation to ``self`` a given amount of times.
 
                 This method applies repeatedly an operation defined in the parent of ``self``.
-                See :func:`~RingsWithOperators.ParentMethods.operation` for further information.
+                See :func:`~DRings.ParentMethods.operation` for further information.
             '''
             if(not times in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
@@ -548,7 +547,7 @@ class RingsWithOperators(Category):
                 Apply the inverse operation to ``self`` a given amount of times.
 
                 This method applies repeatedly the inverse operation defined in the parent of ``self``.
-                See :func:`~RingsWithOperators.ParentMethods.inverse_operation` for further information.
+                See :func:`~DRings.ParentMethods.inverse_operation` for further information.
             '''
             if(not times in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
@@ -565,7 +564,7 @@ class RingsWithOperators(Category):
                 Apply a derivation to ``self`` a given amount of times.
 
                 This method applies repeatedly a derivation defined in the parent of ``self``.
-                See :func:`~RingsWithOperators.ParentMethods.derivative` for further information.
+                See :func:`~DRings.ParentMethods.derivative` for further information.
             '''
             if(not times in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
@@ -582,7 +581,7 @@ class RingsWithOperators(Category):
                 Apply a difference to ``self`` a given amount of times.
 
                 This method applies repeatedly a difference defined in the parent of ``self``.
-                See :func:`~RingsWithOperators.ParentMethods.difference` for further information.
+                See :func:`~DRings.ParentMethods.difference` for further information.
             '''
             if(not times in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
@@ -596,7 +595,7 @@ class RingsWithOperators(Category):
                 
         def shift(self, shift: int = None, times: int = 1) -> Element:
             r'''
-                Alias for :func:`~RingsWithOperators.ElementMethods.difference`.
+                Alias for :func:`~DRings.ElementMethods.difference`.
             '''
             return self.difference(shift, times)
 
@@ -605,7 +604,7 @@ class RingsWithOperators(Category):
                 Apply a skew-derivation to ``self`` a given amount of times.
 
                 This method applies repeatedly a difference defined in the parent of ``self``.
-                See :func:`~RingsWithOperators.ParentMethods.skew` for further information.
+                See :func:`~DRings.ParentMethods.skew` for further information.
             '''
             if(not times in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
@@ -631,10 +630,10 @@ class RingsWithOperators(Category):
                 OUTPUT:
 
                 A boolean value with ``True`` is the element is a constant (see 
-                :func:`~RingsWithOperators.ParentMethods.constant_ring` for further information
+                :func:`~DRings.ParentMethods.constant_ring` for further information
                 on what is a constant depending on the type of operator).
 
-                REMARK: this method do not require the implementation on :func:`~RingsWithOperators.ParentMethods.constant_ring`
+                REMARK: this method do not require the implementation on :func:`~DRings.ParentMethods.constant_ring`
                 on its parent structure.
 
                 EXAMPLES::
@@ -675,13 +674,13 @@ class RingsWithOperators(Category):
     class MorphismMethods: 
         pass
 
-_RingsWithOperators = RingsWithOperators.__classcall__(RingsWithOperators)
+_DRings = DRings.__classcall__(DRings)
 ####################################################################################################
 ###
 ### DEFINING THE FACTORY FOR THE CREATION OF WRAPPED RINGS
 ###
 ####################################################################################################
-class RingWithOperatorFactory(UniqueFactory):
+class DRingFactory(UniqueFactory):
     r'''
         Factory to create wrappers around existing rings.
 
@@ -707,7 +706,7 @@ class RingWithOperatorFactory(UniqueFactory):
 
         OUTPUT:
 
-        A :class:`RingWithOperators_Wrapper` with the new ring with operators.
+        A :class:`DRing_Wrapper` with the new d-ring.
     '''
     def create_key(self, base : CommutativeRing, *operators : Callable, **kwds):
         # checking the arguments
@@ -718,7 +717,7 @@ class RingWithOperatorFactory(UniqueFactory):
         operators = list(operators)
         types = list(kwds.pop("types", len(operators)*["none"]))
 
-        if isinstance(base, RingWithOperators_Wrapper):
+        if isinstance(base, DRing_Wrapper):
             operators = list(base.construction()[0].operators) + operators
             types = list(base.construction()[0].types) + types
             base = base.wrapped
@@ -780,14 +779,14 @@ class RingWithOperatorFactory(UniqueFactory):
     def create_object(self, _, key):
         base, operators, types = key
 
-        return RingWithOperators_Wrapper(base, *operators, types=types)
-RingWithOperators = RingWithOperatorFactory("dalgebra.ring_w_operator.ring_w_operator.RingWithOperator")
+        return DRing_Wrapper(base, *operators, types=types)
+DRing = DRingFactory("dalgebra.ring_w_operator.ring_w_operator.DRing")
 
 def DifferentialRing(base : CommutativeRing, *operators : Callable):
     r'''
-        Method that calls the :class:`RingWithOperatorFactory` with types always as "derivation".
+        Method that calls the :class:`DRingFactory` with types always as "derivation".
 
-        See documentation on :class:`RingWithOperatorFactory` for further information.
+        See documentation on :class:`DRingFactory` for further information.
     '''
     # checking the arguments
     if len(operators) < 1:
@@ -795,13 +794,13 @@ def DifferentialRing(base : CommutativeRing, *operators : Callable):
     elif len(operators) == 1 and isinstance(operators[0], Collection):
         operators = operators[0]
 
-    return RingWithOperators(base, *operators, types=len(operators)*["derivation"])
+    return DRing(base, *operators, types=len(operators)*["derivation"])
 
 def DifferenceRing(base: CommutativeRing, *operators : Callable):
     r'''
-        Method that calls the :class:`RingWithOperatorFactory` with types always as "homomorphism".
+        Method that calls the :class:`DRingFactory` with types always as "homomorphism".
 
-        See documentation on :class:`RingWithOperatorFactory` for further information.
+        See documentation on :class:`DRingFactory` for further information.
     '''
     # checking the arguments
     if len(operators) < 1:
@@ -809,16 +808,16 @@ def DifferenceRing(base: CommutativeRing, *operators : Callable):
     elif len(operators) == 1 and isinstance(operators[0], Collection):
         operators = operators[0]
 
-    return RingWithOperators(base, *operators, types=len(operators)*["homomorphism"])
+    return DRing(base, *operators, types=len(operators)*["homomorphism"])
 
 ####################################################################################################
 ###
 ### DEFINING THE ELEMENT AND PARENT FOR WRAPPED RINGS
 ###
 ####################################################################################################
-class RingWithOperators_WrapperElement(Element):
+class DRing_WrapperElement(Element):
     def __init__(self, parent, element):
-        if(not isinstance(parent, RingWithOperators_Wrapper)):
+        if(not isinstance(parent, DRing_Wrapper)):
             raise TypeError("An element created from a non-wrapper parent")
         elif(not element in parent.wrapped):
             raise TypeError("An element outside the parent [%s] is requested" %parent)
@@ -827,49 +826,49 @@ class RingWithOperators_WrapperElement(Element):
         self.wrapped = element
 
     # Arithmetic methods
-    def _add_(self, x) -> RingWithOperators_WrapperElement:
+    def _add_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped + x.wrapped)
-    def _sub_(self, x) -> RingWithOperators_WrapperElement:
+    def _sub_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped - x.wrapped)
-    def __neg__(self) -> RingWithOperators_WrapperElement:
+    def __neg__(self) -> DRing_WrapperElement:
         return self.parent().element_class(self.parent(), -self.wrapped)
-    def _mul_(self, x) -> RingWithOperators_WrapperElement:
+    def _mul_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped * x.wrapped)
-    def _rmul_(self, x) -> RingWithOperators_WrapperElement:
+    def _rmul_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped * x.wrapped)
-    def _lmul_(self, x) -> RingWithOperators_WrapperElement:
+    def _lmul_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped * x.wrapped)
-    def _div_(self, x) -> RingWithOperators_WrapperElement:
+    def _div_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped / x.wrapped) 
-    def _floordiv_(self, x) -> RingWithOperators_WrapperElement:
+    def _floordiv_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped // x.wrapped) 
-    def _mod_(self, x) -> RingWithOperators_WrapperElement:
+    def _mod_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
         return self.parent().element_class(self.parent(), self.wrapped % x.wrapped) 
-    def __pow__(self, n) -> RingWithOperators_WrapperElement:
+    def __pow__(self, n) -> DRing_WrapperElement:
         return self.parent().element_class(self.parent(), self.wrapped ** n)
-    def __invert__(self) -> RingWithOperators_WrapperElement:
+    def __invert__(self) -> DRing_WrapperElement:
         return self.parent().element_class(self.parent(), ~self.wrapped)
     def __eq__(self, x) -> bool:
         if x is None: return False
 
         r = pushout(self.parent(), parent(x))
-        if isinstance(r, RingWithOperators_Wrapper):
+        if isinstance(r, DRing_Wrapper):
             return self.wrapped == r(x).wrapped
         return r(self) == r(x)
 
@@ -897,27 +896,27 @@ class RingWithOperators_WrapperElement(Element):
     def _latex_(self) -> str:
         return latex(self.wrapped)
 
-class RingWithOperators_Wrapper(CommutativeRing):
+class DRing_Wrapper(CommutativeRing):
     r'''
         Class for wrapping a Commutative ring and add operators over it.
 
         This class allows the user to translate a Commutative ring with some operations to 
-        the category of :class:`RingsWithOperators` preserving as many operations and properties
+        the category of :class:`DRings` preserving as many operations and properties
         of the original ring as possible, but adding the new functionality in the category.
 
         We do not recommend to use this class by itself. It should be created using the 
-        corresponding factory (see :class:`RingWithOperatorFactory` and its defined instance in 
-        ``dalgebra.ring_w_operator.ring_w_operator.RingWithOperators``).
+        corresponding factory (see :class:`DRingFactory` and its defined instance in 
+        ``dalgebra.ring_w_operator.ring_w_operator.DRing``).
 
         INPUT:
 
         * ``base``: the :class:`CommutativeRing` that will be wrapped.
         * ``operators``: a valid :class:`sage.categories.map.Map` to define an operator over ``self``.
-        * ``types`` (optional): a list with the types (see :func:`RingsWithOperators.ParentMethods.operator_types` 
+        * ``types`` (optional): a list with the types (see :func:`DRings.ParentMethods.operator_types` 
           for further information). If nothing is given, the list will be automatically computed.
         * ``category`` (optional): argument from the category framework to allow further flexibility.
     '''
-    Element = RingWithOperators_WrapperElement
+    Element = DRing_WrapperElement
 
     def __init__(self, 
         base : CommutativeRing, 
@@ -929,7 +928,7 @@ class RingWithOperators_Wrapper(CommutativeRing):
         ### CHECKING THE ARGUMENTS
         ### 'base'
         if not base in _CommutativeRings:
-            raise TypeError("Only commutative rings can be wrapped as RingWithOperators")
+            raise TypeError("Only commutative rings can be wrapped as DRing")
 
         ### 'operators'
         if len(operators) == 1 and isinstance(operators[0], (list,tuple)):
@@ -970,7 +969,7 @@ class RingWithOperators_Wrapper(CommutativeRing):
 
         #########################################################################################################
         # CREATING CATEGORIES
-        categories = [_RingsWithOperators, base.category()]
+        categories = [_DRings, base.category()]
         if(isinstance(category, (list, tuple))):
             categories += list(category)
         elif(category != None): 
@@ -983,17 +982,17 @@ class RingWithOperators_Wrapper(CommutativeRing):
 
         # registering conversion to simpler structures
         current = self.__wrapped
-        morph = RingWithOperators_Wrapper_SimpleMorphism(self, current)
+        morph = DRing_Wrapper_SimpleMorphism(self, current)
         current.register_conversion(morph)
         while(not(current.base() == current)):
             current = current.base()
-            morph = RingWithOperators_Wrapper_SimpleMorphism(self, current)
+            morph = DRing_Wrapper_SimpleMorphism(self, current)
             current.register_conversion(morph)
 
         # registering coercion into its ring of linear operators
         try:
             operator_ring = self.linear_operator_ring()
-            morph = RingWithOperators_Wrapper_SimpleMorphism(self, operator_ring)
+            morph = DRing_Wrapper_SimpleMorphism(self, operator_ring)
             operator_ring.register_conversion(morph)
         except:
             pass
@@ -1015,7 +1014,7 @@ class RingWithOperators_Wrapper(CommutativeRing):
 
     def linear_operator_ring(self) -> OreAlgebra_generic:
         r'''
-            Overridden method from :func:`~RingsWithOperators.ParentMethods.linear_operator_ring`.
+            Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
 
             This method builds the ring of linear operators using :mod:`ore_algebra`. It raises an error
             if this can not be done for any reason. The generators of the new ring are named
@@ -1091,7 +1090,7 @@ class RingWithOperators_Wrapper(CommutativeRing):
             self.__linear_operator_ring = OreAlgebra(self.wrapped, *operators)
         return self.__linear_operator_ring
         
-    def inverse_operation(self, element: RingWithOperators_WrapperElement, operator: int = None) -> RingWithOperators_WrapperElement:
+    def inverse_operation(self, element: DRing_WrapperElement, operator: int = None) -> DRing_WrapperElement:
         if self.operator_types()[operator] == "homomorphism":
             try:
                 return self.element_class(self, self.operators()[operator].function.inverse()(element.wrapped))
@@ -1105,19 +1104,19 @@ class RingWithOperators_Wrapper(CommutativeRing):
         r'''
             Return ``True`` if it is possible to have a coercion map from `S` to ``self``.
         '''
-        if isinstance(S, RingWithOperators_Wrapper):
+        if isinstance(S, DRing_Wrapper):
             return self.wrapped._has_coerce_map_from(S.wrapped) # the operators do not matter for coercing elements
         else:
             return self.wrapped._has_coerce_map_from(S)
 
-    def _element_constructor_(self, x) -> RingWithOperators_WrapperElement:
+    def _element_constructor_(self, x) -> DRing_WrapperElement:
         r'''
             Extended definition of :func:`_element_constructor_`.
         '''
         if x in SR: 
             # conversion from symbolic ring --> using its string representation
             x = str(x)
-        elif isinstance(parent(x), RingWithOperators_Wrapper): 
+        elif isinstance(parent(x), DRing_Wrapper): 
             # conversion from other wrapped rings with operators --> we convert the element within
             x = x.wrapped
         if hasattr(self.wrapped, "_element_constructor_"):
@@ -1129,12 +1128,12 @@ class RingWithOperators_Wrapper(CommutativeRing):
     def _is_valid_homomorphism_(self, codomain, im_gens, base_map=None) -> bool:
         return self.wrapped._is_valid_homomorphism_(codomain, im_gens, base_map)
 
-    def construction(self) -> RingWithOperatorsFunctor:
-        return RingWithOperatorsFunctor([operator.function for operator in self.operators()], self.operator_types()), self.wrapped
+    def construction(self) -> DRingFunctor:
+        return DRingFunctor([operator.function for operator in self.operators()], self.operator_types()), self.wrapped
 
     def _pushout_(self, other):
         scons, sbase = self.construction()
-        if isinstance(other, RingWithOperators_Wrapper):
+        if isinstance(other, DRing_Wrapper):
             ocons, obase = other.construction()
             cons = scons.merge(ocons)
             try:
@@ -1148,7 +1147,7 @@ class RingWithOperators_Wrapper(CommutativeRing):
     def characteristic(self) -> int:
         return self.wrapped.characteristic()
 
-    def gens(self) -> tuple[RingWithOperators_WrapperElement]:
+    def gens(self) -> tuple[DRing_WrapperElement]:
         return tuple([self.element_class(self, gen) for gen in self.wrapped.gens()])
 
     def ngens(self) -> int:
@@ -1172,38 +1171,37 @@ class RingWithOperators_Wrapper(CommutativeRing):
         ))
 
     ## Element generation
-    def one(self) -> RingWithOperators_WrapperElement:
+    def one(self) -> DRing_WrapperElement:
         r'''
             Return the one element in ``self``.
 
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R = RingWithOperators(QQ['x'], diff)
+                sage: R = DRing(QQ['x'], diff)
                 sage: R.one()
                 1
         '''
         return self.element_class(self, self.wrapped.one())
     
-    def zero(self) -> RingWithOperators_WrapperElement:
+    def zero(self) -> DRing_WrapperElement:
         r'''
             Return the zero element in ``self``.
 
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R = RingWithOperators(QQ['x'], diff)
+                sage: R = DRing(QQ['x'], diff)
                 sage: R.zero()
                 0
         '''
         return self.element_class(self, self.wrapped.zero())
     
-    def random_element(self,*args,**kwds) -> RingWithOperators_WrapperElement:
+    def random_element(self,*args,**kwds) -> DRing_WrapperElement:
         r'''
             Creates a random element in this ring.
 
-            This method creates a random element in the base infinite polynomial ring and 
-            cast it into an element of ``self``.
+            This method creates a random element in the base ring and cast it into an element of ``self``.
         '''
         p = self.wrapped.random_element(*args,**kwds)
         return self.element_class(self, p)
@@ -1213,7 +1211,7 @@ class RingWithOperators_Wrapper(CommutativeRing):
 ### DEFINING THE CONSTRUCTION FUNCTOR AND SIMPLE MORPHISM
 ###
 ####################################################################################################
-class RingWithOperatorsFunctor(ConstructionFunctor):
+class DRingFunctor(ConstructionFunctor):
     def __init__(self, operators: Collection[Morphism], types: Collection[str]):
         if len(operators) != len(types):
             raise ValueError("The length of the operators and types must coincide.")
@@ -1221,14 +1219,14 @@ class RingWithOperatorsFunctor(ConstructionFunctor):
         self.__types = tuple(types)
         self.rank = 10 # just above PolynomialRing
 
-        super().__init__(_CommutativeRings, _RingsWithOperators)
+        super().__init__(_CommutativeRings, _DRings)
     
     ### Methods to implement            
     def _apply_functor(self, x):
-        return RingWithOperators(x, *self.__operators, types=self.__types)
+        return DRing(x, *self.__operators, types=self.__types)
         
     def _repr_(self):
-        return f"RingWithOperators(*,{self.__operators}])"
+        return f"DRing(*,{self.__operators}])"
         
     def __eq__(self, other):
         return self.__class__ == other.__class__ and self.__operators == other.__operators and self.__types == other.__types
@@ -1258,7 +1256,7 @@ class RingWithOperatorsFunctor(ConstructionFunctor):
         raise NotImplementedError("Merging of homomorphisms not implemented")
 
     def merge(self, other):
-        if isinstance(other, RingWithOperatorsFunctor):
+        if isinstance(other, DRingFunctor):
             # we create a copy of the operators of self
             new_operators = [el for el in self.__operators]; new_types = [el for el in self.__types]
             self_operators = list(zip(self.__operators, self.__types))
@@ -1284,7 +1282,7 @@ class RingWithOperatorsFunctor(ConstructionFunctor):
                 else: # we need to add the operator to the final list
                     new_operators.append(operator); new_types.append(ttype)
 
-            return RingWithOperatorsFunctor(new_operators, new_types)
+            return DRingFunctor(new_operators, new_types)
         return None # Following definition of merge in ConstructionFunctor
 
     @property
@@ -1292,12 +1290,12 @@ class RingWithOperatorsFunctor(ConstructionFunctor):
     @property
     def types(self): return self.__types
 
-class RingWithOperators_Wrapper_SimpleMorphism(Morphism):
+class DRing_Wrapper_SimpleMorphism(Morphism):
     r'''
         Class representing maps to simpler rings.
 
         This map allows the coercion system to detect that some elements in a 
-        :class:`RingWithOperator_Wrapper` are included in simpler rings.
+        :class:`DRing_Wrapper` are included in simpler rings.
     '''
     def __init__(self, domain, codomain):
         super().__init__(domain, codomain)
@@ -1354,9 +1352,9 @@ class DerivationMap(SkewMap):
         return f"Derivation [{repr(self)}] over (({self.domain()}))"
 
 class WrappedMap(AdditiveMap):
-    def __init__(self, domain : RingWithOperators_Wrapper, function : Morphism):
-        if not isinstance(domain, RingWithOperators_Wrapper):
-            raise TypeError("A WrappedMap can only be created for a 'RingWithOperators_Wrapper'")
+    def __init__(self, domain : DRing_Wrapper, function : Morphism):
+        if not isinstance(domain, DRing_Wrapper):
+            raise TypeError("A WrappedMap can only be created for a 'DRing_Wrapper'")
 
         if function.domain() != domain.wrapped:
             raise ValueError(f"The map to be wrapped must have appropriate domain: ({domain.wrapped}) instead of ({function.domain()})")
@@ -1384,4 +1382,4 @@ class WrappedMap(AdditiveMap):
             return r"\text{id}"
         return super()._latex_()
 
-__all__ = ["RingsWithOperators", "RingWithOperators", "DifferentialRing", "DifferenceRing"]
+__all__ = ["DRings", "DRing", "DifferentialRing", "DifferenceRing"]

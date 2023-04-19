@@ -34,7 +34,7 @@ setup(
     ], # classifiers list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
     keywords = "SageMath difference/differential algebra",
     packages = ["dalgebra",
-                "dalgebra.rwo_polynomial",
+                "dalgebra.dpolynomial",
                 "dalgebra.logging"],
     setup_requires   = [],
     install_requires = readfile("requirements.txt").split("\n"),

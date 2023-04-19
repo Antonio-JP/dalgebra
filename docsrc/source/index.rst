@@ -14,7 +14,7 @@ List of Packages
    :maxdepth: 1
 
    ring_w_operator
-   rwo_polynomial
+   dpolynomial
 
 
 Indices and Tables
