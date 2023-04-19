@@ -271,6 +271,7 @@ class DPolynomialGen (InfinitePolynomialGen):
     def __hash__(self):
         return hash(self._name)
 
+RWOPolynomialGen = DPolynomialGen #: alias for DPolynomialGen (used for backward compatibility)
 #######################################################################################
 ###
 ### MAIN CLASS FOR THE ELEMENTS
@@ -861,4 +862,5 @@ class DPolynomial (InfinitePolynomial_dense):
             original = re.sub(r"_{(\d+)}", sub_match, original)
         return original
 
+RWOPolynomial = DPolynomial #: alias for DPolynomial (used for backward compatibility)
 __all__ = ["IndexBijection"]

@@ -1081,6 +1081,7 @@ class DSystem:
         return solution
     ###################################################################################################
 
+RWOSystem = DSystem #: alias for DSystem (used for backward compatibility)
 class DifferentialSystem (DSystem):
     r'''
         Class representing a differential system.
@@ -1113,4 +1114,7 @@ class DifferenceSystem (DSystem):
 
     extend_by_difference = DSystem.extend_by_operation #: new alias for :func:`extend_by_operation`
 
-__all__ = ["DSystem", "DifferentialSystem", "DifferenceSystem"]
+__all__ = [
+    "DSystem", "DifferentialSystem", "DifferenceSystem", # names imported
+    "RWOSystem" # deprecated names (backward compatibilities) 
+]

@@ -674,6 +674,7 @@ class DRings(Category):
     class MorphismMethods: 
         pass
 
+RingsWithOperators = DRings #: alias for DRings (used for backward-compatibility)
 _DRings = DRings.__classcall__(DRings)
 ####################################################################################################
 ###
@@ -781,6 +782,7 @@ class DRingFactory(UniqueFactory):
 
         return DRing_Wrapper(base, *operators, types=types)
 DRing = DRingFactory("dalgebra.dring.DRing")
+RingWithOperators = DRing #: alias fod DRing (used for backward-compatibility)
 
 def DifferentialRing(base : CommutativeRing, *operators : Callable):
     r'''
@@ -1382,4 +1384,7 @@ class WrappedMap(AdditiveMap):
             return r"\text{id}"
         return super()._latex_()
 
-__all__ = ["DRings", "DRing", "DifferentialRing", "DifferenceRing"]
+__all__ = [
+    "DRings", "DRing", "DifferentialRing", "DifferenceRing", # names imported
+    "RingsWithOperators", "RingWithOperator" # deprecated names (backward compatibilities)
+]

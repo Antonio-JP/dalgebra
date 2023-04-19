@@ -100,6 +100,7 @@ class DPolynomialRingFactory(UniqueFactory):
         return DPolynomialRing_dense(base, names)
 
 DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing")
+RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing (used for backward compatility)
 def DifferentialPolynomialRing(base, *names : str, **kwds):
     if not base in _DRings:
         base = DifferentialRing(base, diff)
@@ -1335,6 +1336,7 @@ def is_DPolynomialRing(element):
         Method to check whether an object is a ring of infinite polynomial with an operator.
     '''
     return isinstance(element, DPolynomialRing_dense)
+is_RWOPolynomial = is_DPolynomialRing #: alias for is_DPolynomialRing (used for backward compatibility)
 
 class DPolyRingFunctor (ConstructionFunctor):
     r'''
@@ -1407,4 +1409,7 @@ class DPolynomialSimpleMorphism (Morphism):
 
         return self.codomain()(str(p))
 
-__all__ = ["DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing"]
+__all__ = [
+    "DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing", # names imported
+    "RWOPolynomialRing", "is_RWOPOlynomialRing" # deprecated names (backward compatibilities) 
+]
