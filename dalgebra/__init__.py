@@ -143,6 +143,7 @@ This package has been developed with the financial support of the following inst
 * The Oberösterreich region: by the Innovatives OÖ-2010 plus program.
 * The Île-de-France region: by the project "XOR".
 * The Spanish Ministry of Science and Innovation (MICINN): by the grant PID2021-124473NB-I00, "Algorithmic Differential Algebra and Integrability" (ADAI)
+* The Poul Due Jensen Foundation: grant 883901.
 '''
 
 # ****************************************************************************
@@ -170,8 +171,8 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 logger.propagate = False
 
-from .ring_w_operator import * # basic ring structures
-from .rwo_polynomial import * # ring of difference/differential polynomials
+from .dring import * # basic ring structures
+from .dpolynomial import * # ring of difference/differential polynomials
 
 def dalgebra_version():
     import pkg_resources
