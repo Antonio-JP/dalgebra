@@ -1516,12 +1516,16 @@ class WeightFunction(SetMorphism):
             * Add examples
         '''
         monomials = element.monomials()
-        if len(monomials) > 1:
+        if len(monomials) == 0:
+            return ZZ(0)
+        elif len(monomials) > 1:
             return max(self(m) for m in monomials)
         else:
             m = monomials[0] # we treat the monomial by itself
+            if m == 1:
+                return ZZ(0)
             return sum(
-                self.__base_weights[i] + sum(j*w for (j,w) in zip(gen.index(variable, as_tuple=True), self.__oper_weights))
+                (self.__base_weights[i] + sum(j*w for (j,w) in zip(gen.index(variable, as_tuple=True), self.__oper_weights)))*m.degree(variable)
                 for variable in m.variables() 
                 for (i,gen) in enumerate(self.parent().gens()) if variable in gen
             )
