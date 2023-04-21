@@ -772,7 +772,7 @@ class DPolynomial (InfinitePolynomial_dense):
         return self.parent().element_class(self.parent(), super().__pow__(n))
 
     ###################################################################################
-    ### Other computations
+    ### Sylvester methods
     ###################################################################################
     def sylvester_resultant(self, other : DPolynomial, gen: DPolynomialGen = None) -> DPolynomial:
         r'''
@@ -790,6 +790,9 @@ class DPolynomial (InfinitePolynomial_dense):
         '''
         return self.parent().sylvester_matrix(self, other, gen, k)
 
+    ###################################################################################
+    ### Solving methods
+    ###################################################################################
     def solve(self, gen: DPolynomialGen) -> Element:
         r'''
             Finds (if possible) a solution of ``gen`` using ``self == 0``.
@@ -842,6 +845,36 @@ class DPolynomial (InfinitePolynomial_dense):
         coeff = self.coefficient(gen[self.order(gen)])
         rem = -self + coeff*gen[self.order(gen)]
         return (rem/coeff).inverse_operation(0, times=self.order(gen))
+
+    ###################################################################################
+    ### Weight methods
+    ###################################################################################
+    def weight(self, weight=None):
+        r'''
+            Computes the weight of a d-polynomial.
+
+            This method compues the weight of a d-polynomial for a given weight function. These 
+            weight functions can be given as an actual :class:`~dalgebra.dpolynomial.dpolynomial_ring.WeightFunction`
+            or the same arguments as this class have.
+        '''
+        from .dpolynomial_ring import WeightFunction
+        if not isinstance(weight, WeightFunction):
+            weight = self.parent().weight_func(*weight)
+        
+        return weight(self)
+    
+    def is_homogeneous(self, weight=None):
+        r'''
+            Checks whether a d-polynomial is homogeneous. If a weight is given, this will be used for homogeneous.
+        '''
+        if weight == None:
+            return self.polynomial().is_homogeneous()
+        
+        from .dpolynomial_ring import WeightFunction
+        if not isinstance(weight, WeightFunction):
+            weight = self.parent().weight_func(*weight)
+
+        return weight.is_homogeneous(self)
 
     ###################################################################################
     ### Other magic methods

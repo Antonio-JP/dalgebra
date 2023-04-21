@@ -42,8 +42,9 @@ import logging
 from itertools import product
 from functools import reduce
 
-from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent, parent, matrix
-from sage.categories.all import Morphism, Category, CommutativeAlgebras
+from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent, parent, matrix, vector
+from sage.categories.all import Morphism, Category, CommutativeAlgebras, Sets
+from sage.categories.morphism import SetMorphism # pylint: disable=no-name-in-module
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.rings.polynomial.polynomial_ring import is_PolynomialRing
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -60,6 +61,7 @@ from ..dring import DRings, AdditiveMap, DifferentialRing, DifferenceRing, DRing
 
 logger = logging.getLogger(__name__)
 _DRings = DRings.__classcall__(DRings)
+_Sets = Sets.__classcall__(Sets)
 
 ## Factories for all structures
 class DPolynomialRingFactory(UniqueFactory):
@@ -950,92 +952,8 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         raise NotImplementedError("[inverse_skew] Skew-derivation operation not yet implemented")
             
     #################################################
-    ### Other computation methods
+    ### Sylvester methods
     #################################################
-    def as_linear_operator(self, element: DPolynomial) -> Element:
-        r'''
-            Method that tries to convert an operator polynomial into a linear operator.
-
-            This method tries to create a linear operator coming from a :class:`DPolynomial`.
-            In the case where we have an :class:`DPolynomial` `p(u) \in R\{u\}` (for `R` a ring with operators) 
-            we can interpret the polynomial `p(u)` as an operator over any extension of `R` that acts
-            by substituting `u` by the element the operator acts on. If `p` is linear, then it represents
-            what it is called a linear operator.
-
-            These linear operators may be represented more efficiently in other structures (see :func:`linear_operator_ring`
-            for further information). This method transforms the elements of ``self`` that can be seen as linear
-            operators to this ring structure.
-
-            Conversely, a :class:`DPolynomialRing_dense` can transform elements from its ring of linear operators
-            (i.e., the output of :func:`linear_operator_ring`) to linear :class:`DPolynomial`.
-
-            This method checks that ``self`` has the appropriate structure (i.e., it has only one infinite variable)
-            and also the ``element`` has the appropriate shape: it is linear without a constant term.
-
-            REMARK: **this method is equivalent to the method :func:`~.dpolynomial_ring_element.DPolynomial.as_linear_operator`
-            since it calls this method directly**
-
-            INPUT:
-
-            * ``element``: a :class:`DPolynomial` in ``self`` to be casted to a linear operator.
-            
-            OUTPUT:
-
-            An element in ``self.linear_operator_ring()`` if this ring can be built.
-
-            EXAMPLES::
-
-                sage: from dalgebra import *
-                sage: R.<y> = DifferentialPolynomialRing(QQ[x]); x = R.base()(x)
-                sage: p1 = y[2] - (x^2 - 1)*y[1] - y[0] # linear operator of order 2
-                sage: p1.as_linear_operator()
-                D^2 + (-x^2 + 1)*D - 1
-                sage: R(p1.as_linear_operator()) == p1
-                True
-                
-            If the operator polynomial is not linear or has a constant term, this method raises a :class:`TypeError`::
-
-                sage: p2 = x*y[2]*y[0] - (x^3 + 3)*y[1]^2 # non-linear operator
-                sage: p2.as_linear_operator()
-                Traceback (most recent call last):
-                ...
-                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
-                sage: p3 = y[2] - (x^2 - 1)*y[1] - y[0] + x^3 # linear operator but inhomogeneous
-                sage: p3.as_linear_operator()
-                Traceback (most recent call last):
-                ...
-                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
-
-            This also work when having several operators in the same ring::
-
-                sage: S.<u> = DPolynomialRing(DifferenceRing(DifferentialRing(QQ[x], diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = S.base()(x)
-                sage: p4 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2] 
-                sage: p4.as_linear_operator()
-                -D^2*S^2 + x*D*S + (x^3 - 3*x)*D + 2
-                sage: S(p4.as_linear_operator()) == p4
-                True
-
-            However, when having several infinite variables this method can not work even when the operator is clearly linear::
-
-                sage: T.<a,b> = DifferentialPolynomialRing(QQ[x]); x = T.base()(x)
-                sage: p5 = a[0] - b[1]
-                sage: p5.as_linear_operator()
-                Traceback (most recent call last):
-                ...
-                NotImplementedError: Impossible to generate ring of linear operators with 2 variables
-
-        '''
-        linear_operator_ring = self.linear_operator_ring() # it ensures the structure is alright for building this
-        element = self(element) # making sure the element is in ``self``
-
-        if not element.is_linear() or 1 in element.polynomial().monomials():
-            raise TypeError("Linear operator can only be built from an homogeneous linear operator polynomial.")
-
-        coeffs = element.coefficients(); monoms = element.monomials(); y = self.gens()[0]
-        base_ring = linear_operator_ring.base(); gens = linear_operator_ring.gens()
-
-        return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
-
     def sylvester_resultant(self, P: DPolynomial, Q: DPolynomial, gen: DPolynomialGen = None) -> DPolynomial:
         r'''
             Method to compute the Sylvester resultant of two operator polynomials.
@@ -1331,6 +1249,102 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         return P,Q,gen
 
+    #################################################
+    ### Weighting methods
+    #################################################
+    def weight_func(self, weight_vars, weight_oper):
+        r'''
+            TODO: add documentation to this method
+        '''
+        return WeightFunction(self, weight_vars, weight_oper)
+
+    #################################################
+    ### Other computation methods
+    #################################################
+    def as_linear_operator(self, element: DPolynomial) -> Element:
+        r'''
+            Method that tries to convert an operator polynomial into a linear operator.
+
+            This method tries to create a linear operator coming from a :class:`DPolynomial`.
+            In the case where we have an :class:`DPolynomial` `p(u) \in R\{u\}` (for `R` a ring with operators) 
+            we can interpret the polynomial `p(u)` as an operator over any extension of `R` that acts
+            by substituting `u` by the element the operator acts on. If `p` is linear, then it represents
+            what it is called a linear operator.
+
+            These linear operators may be represented more efficiently in other structures (see :func:`linear_operator_ring`
+            for further information). This method transforms the elements of ``self`` that can be seen as linear
+            operators to this ring structure.
+
+            Conversely, a :class:`DPolynomialRing_dense` can transform elements from its ring of linear operators
+            (i.e., the output of :func:`linear_operator_ring`) to linear :class:`DPolynomial`.
+
+            This method checks that ``self`` has the appropriate structure (i.e., it has only one infinite variable)
+            and also the ``element`` has the appropriate shape: it is linear without a constant term.
+
+            REMARK: **this method is equivalent to the method :func:`~.dpolynomial_ring_element.DPolynomial.as_linear_operator`
+            since it calls this method directly**
+
+            INPUT:
+
+            * ``element``: a :class:`DPolynomial` in ``self`` to be casted to a linear operator.
+            
+            OUTPUT:
+
+            An element in ``self.linear_operator_ring()`` if this ring can be built.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<y> = DifferentialPolynomialRing(QQ[x]); x = R.base()(x)
+                sage: p1 = y[2] - (x^2 - 1)*y[1] - y[0] # linear operator of order 2
+                sage: p1.as_linear_operator()
+                D^2 + (-x^2 + 1)*D - 1
+                sage: R(p1.as_linear_operator()) == p1
+                True
+                
+            If the operator polynomial is not linear or has a constant term, this method raises a :class:`TypeError`::
+
+                sage: p2 = x*y[2]*y[0] - (x^3 + 3)*y[1]^2 # non-linear operator
+                sage: p2.as_linear_operator()
+                Traceback (most recent call last):
+                ...
+                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
+                sage: p3 = y[2] - (x^2 - 1)*y[1] - y[0] + x^3 # linear operator but inhomogeneous
+                sage: p3.as_linear_operator()
+                Traceback (most recent call last):
+                ...
+                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
+
+            This also work when having several operators in the same ring::
+
+                sage: S.<u> = DPolynomialRing(DifferenceRing(DifferentialRing(QQ[x], diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = S.base()(x)
+                sage: p4 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2] 
+                sage: p4.as_linear_operator()
+                -D^2*S^2 + x*D*S + (x^3 - 3*x)*D + 2
+                sage: S(p4.as_linear_operator()) == p4
+                True
+
+            However, when having several infinite variables this method can not work even when the operator is clearly linear::
+
+                sage: T.<a,b> = DifferentialPolynomialRing(QQ[x]); x = T.base()(x)
+                sage: p5 = a[0] - b[1]
+                sage: p5.as_linear_operator()
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: Impossible to generate ring of linear operators with 2 variables
+
+        '''
+        linear_operator_ring = self.linear_operator_ring() # it ensures the structure is alright for building this
+        element = self(element) # making sure the element is in ``self``
+
+        if not element.is_linear() or 1 in element.polynomial().monomials():
+            raise TypeError("Linear operator can only be built from an homogeneous linear operator polynomial.")
+
+        coeffs = element.coefficients(); monoms = element.monomials(); y = self.gens()[0]
+        base_ring = linear_operator_ring.base(); gens = linear_operator_ring.gens()
+
+        return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
+
 def is_DPolynomialRing(element):
     r'''
         Method to check whether an object is a ring of infinite polynomial with an operator.
@@ -1408,6 +1422,269 @@ class DPolynomialSimpleMorphism (Morphism):
             return self.codomain()(p.coefficients()[0])
 
         return self.codomain()(str(p))
+
+class WeightFunction(SetMorphism):
+    r'''
+        Class to represent a weight function for a ring of d-polynomials.
+
+        Let `\mathcal{R} = (R,\Delta)\{a_1,\ldots,a_m\}` be a ring of d-polynomials and let `\mathcal{T}`
+        be the monoid of monomials of `\mathcal{R}`. We say that a function `w: \mathcal{T} \rightarrow \mathbb{N}`
+        if a weight function if it is a monoid homomorphism, i.e., `w(st) = w(s) + w(t)`.
+
+        With this definition, it is clear that we can split `\mathcal{R}` into a `R`-direct sum where we keep in each 
+        summand the monomials of a fixed weight:
+
+        .. MATH::
+
+            \mathcal{R} = \bigoplus_{i \in \mathbb{N}} \mathcal{R}_i,
+
+        where `\mathcal{R}_i = R[t\ :\ t\in T\text{ with }w(t) = i]`. We call each layer `\mathcal{R}_i` the set of 
+        `i`-homogeneous polynomials w.r.t. the weight function `w(\cdot)`.
+
+        In order to define a weight function, we only need to define for each of the generators of `\mathcal{T}`. It 
+        is interesting to remark that, for a ring of d-polynomials, we have an infinite amount of generators. In order to simplify 
+        the implementation, we require two information:
+
+        * A list of base weights `(w_1,\ldots,w_m)` such that `w(a_i) = w_i`.
+        * A list of extending weights `(W_1,\ldots,W_n)` such that for 
+        
+        .. MATH::
+        
+            w(\sigma_j^k(a_i)) = \left\{\begin{array}{ll}
+                w_i + kW_j & \text{if w_i \neq 0},\\
+                0 & \text{otherwise}.
+            \end{array}\right.
+
+        INPUT:
+
+        * ``dpoly_ring``: a :class:`DPolynomialRing` over which we will base the weight function.
+        * ``base_weights``: a list, tuple or dictionary indicating the base weights. If a variable is not provided, we consider it with weight 0.
+        * ``oper_weights``: a list or tuple indicating how each operation extends the weights (i.e., a list with the `W_i`).
+
+        TODO:
+
+        * Add reference to weight functions in differential setting.
+        * Add reference to weight functions in difference setting.
+    '''
+    def __init__(self, dpoly_ring: DPolynomialRing_dense, base_weights: list[int] | tuple[int] | dict[str|DPolynomialGen, int], oper_weigths: list[int] |tuple[int]):
+        if isinstance(base_weights, (list,tuple)): # we got a list of weights
+            if not len(base_weights) == dpoly_ring.ngens():
+                raise TypeError(f"[WeightFunction] A weight must be define for all generators (got {len(base_weights)}, expected {dpoly_ring.ngens()})")
+            if any(el < 0 for el in base_weights):
+                raise ValueError(f"[WeightFunction] Weights must be always non-negative.")
+        elif isinstance(base_weights, dict):
+            base_weights = [int(base_weights.get(v, base_weights.get(v.variable_name, base_weights.get(str(v), 0)))) for v in dpoly_ring.gens()]
+            if any(el < 0 for el in base_weights):
+                raise ValueError(f"[WeightFunction] Weights must be always non-negative.")
+        else:
+            raise TypeError("[WeightFunction] Weights must be given as lists or dictionaries.")
+        self.__base_weights = base_weights
+
+        if not isinstance(oper_weigths, (list,tuple)): # we got a list of weights
+            raise TypeError("[WeightFunction] Extension of weights must be given as lists.")
+        if not len(oper_weigths) == dpoly_ring.noperators():
+            raise TypeError(f"[WeightFunction] A weight must be define for all operations (got {len(oper_weigths)}, expected {dpoly_ring.noperators()})")
+        if any(el <= 0 for el in oper_weigths):
+            raise ValueError(f"[WeightFunction] Weights must be always positive.")
+        self.__oper_weights = oper_weigths
+
+        super().__init__(dpoly_ring.Hom(ZZ, _Sets), self.weight)
+
+    def parent(self) -> DPolynomialRing_dense:
+        r'''
+            Return the base ring of d-polynomials
+        '''
+        return self.domain()
+
+    def weight(self, element: DPolynomial) -> int:
+        r'''
+            Method to weight an element of the parent
+
+            This method compute the actual weight of a d-polynomial. If the element is a monomial, we return the corresponding weight
+            for the monoid as defined by its base weights. Otherwise, we return the maximal weight of the monomials appearing in ``self``.
+
+            INPUT:
+
+            * ``element``: a :class:`DPolynomial` in the base ring of the weight function.
+
+            OUTPUT:
+
+            The weight of the element following the usual definitions.
+
+            TODO: 
+
+            * Add examples
+        '''
+        monomials = element.monomials()
+        if len(monomials) > 1:
+            return max(self(m) for m in monomials)
+        else:
+            m = monomials[0] # we treat the monomial by itself
+            return sum(
+                self.__base_weights[i] + sum(j*w for (j,w) in zip(gen.index(variable, as_tuple=True), self.__oper_weights))
+                for variable in m.variables() 
+                for (i,gen) in enumerate(self.parent().gens()) if variable in gen
+            )
+    
+    @cached_method
+    def weighted_variables(self, weight: int) -> set[DPolynomial]:
+        r'''
+            Method that generates the variables with a given weight.
+
+            INPUT:
+
+            * ``weight``: the value of the weight we want to generate
+
+            OUTPUT:
+
+            A set of :class:`DPolynomial` with variables of the given weight.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B.<c,x> = QQ[]
+                sage: R.<a,b> = DPolynomialRing(DifferenceRing(DifferentialRing(B, lambda p : diff(p,x)), B.Hom(B)([c,x+1])))
+                sage: w = R.weight_func([1,2],[2,1])
+                sage: w.weighted_variables(0)
+                set()
+                sage: w.weighted_variables(1)
+                {a_0_0}
+                sage: w.weighted_variables(2)
+                {b_0_0, a_0_1}
+                sage: w.weighted_variables(3)
+                {b_0_1, a_1_0, a_0_2}
+                sage: w.weighted_variables(4)
+                {b_1_0, b_0_2, a_1_1, a_0_3}
+                sage: w.weighted_variables(5)
+                {b_1_1, b_0_3, a_2_0, a_1_2, a_0_4}
+                sage: w.weighted_variables(6)
+                {b_2_0, b_1_2, b_0_4, a_2_1, a_1_3, a_0_5}
+                sage: [len(w.weighted_variables(i)) for i in range(20)]
+                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+                sage: w = R.weight_func([1,3],[1,1])
+                sage: [len(w.weighted_variables(i)) for i in range(20)]
+                [0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36]
+        '''
+        if weight <= 0: return set()
+        ## recursive part
+        recursive = set()
+        for i in range(self.parent().noperators()):
+            recursive = recursive.union([v.operation(i) for v in self.weighted_variables(weight - self.__oper_weights[i])])
+        
+        ## adding the special case if needed
+        return recursive.union(set([v[0] for (v,i) in zip(self.parent().gens(), self.__base_weights) if i == weight]))
+
+    @cached_method
+    def homogeneous_monomials(self, weight: int) -> set[DPolynomial]:
+        r'''
+            Method that generates the homogeneous monomials of weight ``weight``.
+
+            This uses a recursive approach using the basic formulas on how to compute the 
+            weights of monomials.
+
+            INPUT:
+
+            * ``weight``: the value of the weight we want to generate.
+
+            OUTPUT:
+
+            A set of :class:`DPolynomial` with monomials of the given weight.
+
+            REMARK: 
+
+            If a generator has weight zero, it won't appear in the set generated wince we could have infinitely many monomials, and we 
+            are looking for finite sets.
+
+            TODO: add examples
+        '''
+        if weight < 0:
+            return set()
+        elif weight == 0:
+            return set([self.parent().one()])
+        else:
+            ## operation part
+            result = set()
+            for (operator, ttype, op_weight) in zip(self.parent().operators(), self.parent().operator_types(), self.__oper_weights):
+                if ttype == "derivation":
+                    logger.debug(f"Adding derivations of monomilas of weights {weight-1}")
+                    to_add = sum([operator(mon).monomials() for mon in self.homogeneous_monomials(weight - op_weight)], [])
+                elif ttype == "homomorphism":
+                    cweight = weight - op_weight; i = 1
+                    while cweight >= 0:
+                        logger.debug(f"Adding shifts of monomilas of weights {cweight} with degree {i}")
+                        to_add = sum([operator(mon).monomials() for mon in self.homogeneous_monomials(cweight) if mon.degree() == i], [])
+                        i += 1; cweight -= op_weight
+                else:
+                    cweight = weight - 1
+                    while cweight >= 0:
+                        logger.debug(f"Adding operation of monomilas of weights {cweight} that has weight {weight}")
+                        to_add = sum([[m for m in operator(mon).monomials() if self(m) == weight] for mon in self.homogeneous_monomials(cweight)], [])
+                        cweight -= 1
+                logger.debug(f"Adding {len(to_add)} elements")
+                result.update(to_add)
+                        
+            ## multiplication part
+            for i in range(1,weight//2 + 1):
+                logger.debug(f"Adding product of monomilas of weights {i} and {weight-i}")
+                to_add = [tl*th for (tl,th) in product(self.homogeneous_monomials(i), self.homogeneous_monomials(weight-i))]
+                logger.debug(f"Adding {len(to_add)} elements")
+                result.update(to_add)
+
+            ## special cases for the variables
+            to_add = [v[0] for i,v in enumerate(self.parent().gens()) if self.__base_weights[i] == weight]
+            logger.debug(f"Special cases added: {len(to_add)}")
+            result.update(to_add)
+
+            return result
+
+    def is_homogeneous(self, element: DPolynomial) -> bool:
+        r'''
+            Method that check if a polynomial is homogeneous w.r.t. this weight or not.
+        '''
+        if element == 0:
+            return True
+        mons = self.parent()(element).monomials()
+        w = self(mons[0])
+        return all(self(m) == w for m in mons[1:])
+    
+    def as_vector(self, element: DPolynomial) -> Element:
+        element = self.parent()(element)
+        if not self.is_homogeneous(element):
+            raise ValueError("[WeightFunction] Vector representation only valid for homogeneous d-polynomials")
+        
+        w = self(element)
+        mons = self.homogeneous_monomials(w)
+        return vector([element.coefficient(m) for m in mons])
+    
+    def operation_from_vector(self, vector: Element, weight: int, operation: int):
+        r'''
+            Method that applies an operation to a vector.
+
+            This method takes a vector, interpret it as an homogenoeus element (hence the need to specifying the weight)
+            and applies the corresponding operation to it. When the result is again homogeneous, we return the new vector.
+
+            INPUT:
+
+            * ``vector``: a vector with a parent that can be casted into ``self.parent()``.
+            * ``weight``: the weight assigned to the vector. We need the dimension to be appropriate.
+            * ``operation``: the operation to be applied. We will check the result is homogeneous again.
+
+            OUTPUT:
+
+            A new vector with the result of applying the given operation to the vector when interpret as a homogeneous d-polynomial.
+
+            TODO: add examples
+        '''
+        mons = self.homogeneous_monomials(weight)
+        if len(vector) != len(mons):
+            raise TypeError(f"[WeightFunction] The given vector is not of appropriate dimension (got {len(vector)}, expected {len(mons)})")
+        
+        element = sum(c*m for (c,m) in zip(vector, mons))
+        element = element.operation(operation)
+        if not self.is_homogeneous(element):
+            raise ValueError("[WeightFunction] After operation, the result is not homogeneous")
+
+        return self.as_vector(element)
 
 __all__ = [
     "DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing", # names imported
