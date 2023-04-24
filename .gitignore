@@ -7,6 +7,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Python compiled-sage files
+*.sage.py
+
 # C extensions
 *.so
 
@@ -101,3 +104,7 @@ ENV/
 /log
 
 docs/_sources
+
+# Results files
+*.prf
+*.csv
