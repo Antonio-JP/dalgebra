@@ -10,12 +10,9 @@ from pstats import Stats, SortKey
 from dalgebra.hierarchies.commutators import *
 
 if __name__ == "__main__":
-    print("+++ Measure timing for quasi-commuting element +++")
-    print(sys.argv)
     n = int(sys.argv[1])
     m = int(sys.argv[2])
     method = sys.argv[3]
-    print(f"\t - {n =}\n\t - {m = }\n\t - {method = }")
 
 
     with Profile() as profile:
@@ -25,11 +22,7 @@ if __name__ == "__main__":
     
     stats = Stats(profile)
     stats.sort_stats(SortKey.TIME)
-    print(f"[{n=},{m=},{method}] Saving profile...")
     stats.dump_stats(filename=f"./profiles/time_{method}[{n=},{m=}].prf")
 
-    print(f"[{n=},{m=},{method}] Saving time...")
     with open(f"./results/{method}.csv", "a+") as file:
         file.write(f"{n};{m};{total}\n")
-
-    print(f"--- [{n=},{m=},{method}]")
