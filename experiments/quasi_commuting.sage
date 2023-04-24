@@ -29,7 +29,7 @@ if __name__ == "__main__":
     stats.dump_stats(filename=f"./profiles/time_{method}[{n=},{m=}].prf")
 
     print(f"[{n=},{m=},{method}] Saving time...")
-    with open(f"./results/{method}.txt", "a+") as file:
+    with open(f"./results/{method}.csv", "a+") as file:
         file.write(f"{n};{m};{total}\n")
 
     print(f"--- [{n=},{m=},{method}]")

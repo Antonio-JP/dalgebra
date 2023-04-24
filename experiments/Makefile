@@ -10,7 +10,7 @@ all: quasi_commuting
 
 clean:
 	@rm -rf profiles/*.prf
-	@for m in $(METHODS) ; do rm results/$$m.txt ; echo "n;m;time" > results/$$m.txt ; done
+	@for m in $(METHODS) ; do rm results/$$m.csv ; echo "n;m;time" > results/$$m.csv ; done
 
 quasi_commuting: $(METHODS)
 	@echo "All methods executed"
