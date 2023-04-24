@@ -367,7 +367,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         return None
     
     @cached_method
-    def gen(self, i: int = None) -> DPolynomialGen:
+    def gen(self, i: int | str = None) -> DPolynomialGen:
         r'''
             Override method to create the `i^{th}` generator (see method 
             :func:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse.gen`).
@@ -379,7 +379,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             INPUT:
 
-            * ``i``: index of the required generator.
+            * ``i``: index or name of the required generator.
 
             OUTPUT:
 
@@ -404,7 +404,20 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
                 a_*
                 sage: S.gen(1)
                 b_*
+
+            This method also allow the name of the generator as input::
+
+                sage: S.gen('a')
+                a_*
+                sage: S.gen('b')
+                b_*
+                sage: S.gen('t')
+                Traceback (most recent call last):
+                ...
+                ValueError: tuple.index(x): x not in tuple
         '''
+        if isinstance(i, str):
+            i = self._names.index(i)
         if(not(i in ZZ) or (i < 0 or i > len(self._names))):
             raise ValueError("Invalid index for generator")
         

@@ -1,0 +1,28 @@
+SHELL:=/bin/bash 
+SAGE=sage
+BOUND_N=5
+BOUND_M=15
+REPEATS=10
+METHODS=diff linear
+
+all: quasi_commuting
+	@echo "All experiments executed"
+
+clean:
+	@rm -rf profiles/*.prf
+	@for m in $(METHODS) ; do rm results/$$m.txt ; echo "n;m;time" > results/$$m.txt ; done
+
+quasi_commuting: $(METHODS)
+	@echo "All methods executed"
+
+%:
+	@n=2; while [[ $$n -le $(BOUND_N) ]] ; do \
+		m=1; while [[ $$m -le $(BOUND_M) ]] ; do \
+			t=1; while [[ $$t -le $(REPEATS) ]] ; do \
+				sage quasi_commuting.sage $$n $$m $@ ; \
+				((t = t + 1)) ; \
+			done ; \
+			((m = m + 1)) ; \
+		done ; \
+		((n = n + 1)) ; \
+	done
