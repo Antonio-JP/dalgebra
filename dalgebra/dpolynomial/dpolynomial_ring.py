@@ -1703,6 +1703,38 @@ class WeightFunction(SetMorphism):
 
         return self.as_vector(element)
 
+class RankingFunction:
+    r'''
+        Class for representing a ranking function over a ring of d-polynomials.
+
+        (Check: https://www.maplesoft.com/support/helpjp/addons/view.aspx?path=diffalg(deprecated)%2fdifferential_algebra#ranking)
+
+        Let `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` be a ring of d-polynomials with `n` operators and `m` d-variables.
+        A ranking is a total order over the set of all the variables that satisfies the two axioms:
+
+        * `1 \leq t` for all `t \in \mathcal{T}`.
+        * `t < s` implies `tu < su` for all `t,s,u \in \mathcal{T}`.
+        * `t < \sigma_j(t)` for all monomial `t \in \mathcal{T}`.
+        * If `t \leq s` then `\sigma_j(t) \leq \sigma_j(s)` for all monomials `s, t \in \mathcal{T}`.
+
+        A ranking is the analog of a term ordering used in Groebner bases algorithms. However, rankings order the monomials in 
+        `\mathcal{T}` that is a monoid infinitely generated with some extra properties that relate the operations with the variables.
+   	
+        In particular, we say that a ranking `\leq` of `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` is an elimination ranking 
+        between two d-variables `u, v` (say `u < v`) if they satisfy `\sigma^\alpha(u) < \sigma^\beta(v)` for all `\alpha,\beta\in \mathbb{N}^n`.
+
+        We also say that `\leq` of `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` is an orderly ranking on `u_1,\ldots, u_n` if 
+        `\sigma^\alpha(u_i) < \sigma^\beta(u_j)` for all `\alpha,\beta \in \mathbb{N}^n` with `|\alpha| < |\beta|`.
+        
+        Once a ranking is fully define, the following methods are automatically defined for non-constant d-polynomials:
+
+        * ``leader``: given `p(u) \in R\{u\}`, the leader is the ???
+        * ``rank``: given `p(u) \in R\{u\}`, the rank is the ???
+        * ``initial``: given `p(u) \in R\{u\}`, the initial is the ???
+        * ``separant``: given `p(u) \in R\{u\}`, the separant is the ???
+   	'''
+    pass
+
 __all__ = [
     "DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing", # names imported
     "RWOPolynomialRing", "is_RWOPolynomialRing" # deprecated names (backward compatibilities) 
