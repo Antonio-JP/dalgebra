@@ -1774,25 +1774,23 @@ class RankingFunction:
     def parent(self) -> DPolynomialRing_dense:
         return self.__parent
 
-    def compare(self, u: DPolynomial, v: DPolynomial):
+    def compare_variables(self, u: DPolynomial, v: DPolynomial):
         r'''
-            Method that compares to variables in a ring of d-polynomials.
+            Method to compare two variables.
 
-            This method is the critical step of a rakning function. It takes two variables in 
-            a ring of d-polynomials, i.e., two variables in a :class:`DPolynomialRing_dense`
-            and compare which one is bigger in terms of this rakning function.
+            This method implements the actual ranking order. It compares two variables
+            and returns which one is bigger as follows: the output is positive if `u > v`,
+            the output is negative is `u < v` and the output is 0 if `u = v`.
 
             INPUT:
 
-            * ``u``: first variable to be compared.
-            * ``v``: second variable to be compared.
+            * ``u``: first d-polynomial to be compared.
+            * ``v``: second d-polynomial to be compared.
 
             OUTPUT:
 
             This method behaves like the :func:`cmp` method in Python 2.x, returning a negative element if `u < v`, 
             a positive element if `u > v` and 0 if they are equal.
-
-            TODO: add examples
         '''
         u = self.parent()(u); v = self.parent()(v)
         if not u.is_variable(): raise TypeError(f"[ranking] Comparing something that is not a variable: [[{u} < {v}]]?")
@@ -1826,6 +1824,58 @@ class RankingFunction:
         else:
             raise NotImplementedError(f"[ranking] Method 'compare' not yet implemented for type {self.type}")
 
+    def compare(self, p: DPolynomial, q: DPolynomial):
+        r'''
+            Method that compares two d-polynomials.
+
+            This method is the critical step of a ranking function. It takes two variables in 
+            a ring of d-polynomials, i.e., two variables in a :class:`DPolynomialRing_dense`
+            and compare which one is bigger in terms of this rakning function.
+
+            When the inputs are d-polynomials (not only variables) we proceed to extend
+            the ranking to the whole d-polynomial as follows:
+
+            1. We sort by the leaders.
+            2. If the leaders coincide, we sort by degree on the leader (i.e., by rank)
+            3. If the rank coincide, we sort by initials (recursively).
+            4. If we compare two elements without ranking (i.e., with leaders 1) we say they are equal.
+
+            INPUT:
+
+            * ``p``: first d-polynomial to be compared.
+            * ``q``: second d-polynomial to be compared.
+
+            OUTPUT:
+
+            This method behaves like the :func:`cmp` method in Python 2.x, returning a negative element if `p < q`, 
+            a positive element if `p > q` and 0 if they are equal or we can not compare them.
+
+            TODO: add examples
+        '''
+        u = self.leader(p); v = self.leader(q)
+        # special cases when the leader are 1
+        if u == 1 and v == 1:
+            return 0
+        elif u == 1:
+            return -1
+        elif v == 1:
+            return 1
+
+        # both have a non-constant leader
+        cmp_leaders = self.compare_variables(u,v)
+        if cmp_leaders != 0: return cmp_leaders
+
+        # here the leader are the same
+        cmp_rank = p.degree(u) - q.degree(u)
+        if cmp_rank != 0:
+            return cmp_rank
+        
+        # here the rank are equal
+        return self.compare(self.initial(p), self.initial(q))
+
+    ################################################################################
+    ### Basic extraction methods from d-polynomials
+    ################################################################################
     @cached_method
     def leader(self, element: DPolynomial) -> DPolynomial:
         r'''
@@ -1854,7 +1904,7 @@ class RankingFunction:
         
         max_var = variables[0]
         for new_var in variables[1:]:
-            if self.compare(max_var, new_var) < 0: # max_var < new_var
+            if self.compare_variables(max_var, new_var) < 0: # max_var < new_var
                 max_var = new_var
         return max_var
         
@@ -1930,6 +1980,72 @@ class RankingFunction:
         max_var = self.leader(element)
         return self.parent()(element.polynomial().derivative(max_var.polynomial())) if max_var != self.parent().one() else self.parent().zero()
 
+    ################################################################################
+    ### Sorting methods
+    ################################################################################
+    def __merge(self, left, right):
+        # If the first array is empty, then nothing needs
+        # to be merged, and you can return the second array as the result
+        if len(left) == 0:
+            return right
+
+        # If the second array is empty, then nothing needs
+        # to be merged, and you can return the first array as the result
+        if len(right) == 0:
+            return left
+
+        result = []
+        index_left = index_right = 0
+
+        # Now go through both arrays until all the elements
+        # make it into the resultant array
+        while len(result) < len(left) + len(right):
+            # The elements need to be sorted to add them to the
+            # resultant array, so you need to decide whether to get
+            # the next element from the first or the second array
+            if self.compare(left[index_left],right[index_right]) <= 0:
+                result.append(left[index_left])
+                index_left += 1
+            else:
+                result.append(right[index_right])
+                index_right += 1
+
+            # If you reach the end of either array, then you can
+            # add the remaining elements from the other array to
+            # the result and break the loop
+            if index_right == len(right):
+                result.extend(left[index_left:])
+                break
+
+            if index_left == len(left):
+                result.extend(right[index_right:])
+                break
+
+        return result
+    
+    def sort(self, elements: list[DPolynomial], reverse: bool = False) -> list[DPolynomial]:
+        r'''
+            Method to sort a list of d-polynomials following a ranking.
+
+            This method allows to sort a list of d-polynomials using the leader as the main 
+            sorting key and, in case of a tie, we will use the recursive use of ranking 
+            into the initial of the d-polynomial.
+
+            This is an implementation of Merge-sort (see :wiki:`Merge_sort`).
+
+            INPUT: 
+
+            * ``elements``: list of d-polynomials to be sorted.
+            * ``reverse``: a boolean indicating if we want the first element to be the biggest (``True``)
+              or the smallest (``False`` - default).
+        '''
+        middle = len(elements)//2
+        left = self.sort(elements[:middle]); right = self.sort(elements[middle:])
+
+        result = self.__merge(left, right)
+        if reverse: result.reverse()
+        return result
+    
     def __repr__(self) -> str:
         return f"{self.type.capitalize()} ranking over {self.parent()} where [{' < '.join([repr(el) for el in self.base_order])}]"
     
