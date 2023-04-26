@@ -1707,13 +1707,9 @@ class RankingFunction:
     r'''
         Class for representing a ranking function over a ring of d-polynomials.
 
-        (Check: https://www.maplesoft.com/support/helpjp/addons/view.aspx?path=diffalg(deprecated)%2fdifferential_algebra#ranking)
-
         Let `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` be a ring of d-polynomials with `n` operators and `m` d-variables.
         A ranking is a total order over the set of all the variables that satisfies the two axioms:
 
-        * `1 \leq t` for all `t \in \mathcal{T}`.
-        * `t < s` implies `tu < su` for all `t,s,u \in \mathcal{T}`.
         * `t < \sigma_j(t)` for all monomial `t \in \mathcal{T}`.
         * If `t \leq s` then `\sigma_j(t) \leq \sigma_j(s)` for all monomials `s, t \in \mathcal{T}`.
 
@@ -1728,12 +1724,200 @@ class RankingFunction:
         
         Once a ranking is fully define, the following methods are automatically defined for non-constant d-polynomials:
 
-        * ``leader``: given `p(u) \in R\{u\}`, the leader is the ???
-        * ``rank``: given `p(u) \in R\{u\}`, the rank is the ???
-        * ``initial``: given `p(u) \in R\{u\}`, the initial is the ???
-        * ``separant``: given `p(u) \in R\{u\}`, the separant is the ???
+        * ``leader``: given `p(u) \in R\{u\}`, the leader is the actual variable that is maximal on the polynomial
+        * ``rank``: given `p(u) \in R\{u\}`, the rank is the biggest monomial involving the leader variable.
+        * ``initial``: given `p(u) \in R\{u\}`, the initial is the coefficient of the rank of the polynomial.
+        * ``separant``: given `p(u) \in R\{u\}`, the separant is the derivative of `p(u)` w.r.t. the leader variable.
+
+        INPUT:
+
+        * ``parent``: a :class:`DPolynomialRing_dense` where the ranking will be applied.
+        * ``ordering``: a list or tuple of :class:`DPolynomialGen` that will include the variables of a :class:`DPolynomialRing_dense`
+          that will be incorporated to the ranking and the base ordering between the base variables.
+        * ``ttype``: the type of ranking to be created. Currently, only "elimination" or "orderly" are allowed:
+          - "elimination": the ranking will be the elimination ranking where the ``ordering`` determines the order of the variables.
+          - "orderly": generates the orderly ranking where ``ordering`` provides the basic ordering between variables.
+
+        TODO: add examples
    	'''
-    pass
+    def __init__(self, parent: DPolynomialRing_dense, ordering: list[DPolynomialGen] | tuple[DPolynomialGen] = None, ttype: str = "orderly"):
+        ## Processing arguments
+        if not isinstance(parent, DPolynomialRing_dense):
+            raise TypeError(f"[ranking] The parent must be a ring of d-polynomials, but got {type(parent)}")
+        if ordering is None:
+            ordering = parent.gens()
+        elif not isinstance(ordering, (list,tuple)):
+            raise TypeError(f"[ranking] The base ordering must be given as a list or tuple of generators, but got {type(ordering)}")
+        elif any(g not in parent.gens() for g in ordering):
+            raise ValueError(f"[ranking] The base ordeging must be given as a list of generators (DPolynomialGen) (got {ordering})")
+        
+        if not ttype in ("elimination", "orderly"):
+            raise ValueError(f"[ranking] The type of a ranking must be either 'elimination' or 'orderly'. Got {ttype}")
+        
+        ## Storing the information required for the ranking function
+        self.__parent = parent
+        self.base_order : list[DPolynomialGen] | tuple[DPolynomialGen] = ordering
+        self.type : str = ttype
+
+    def parent(self) -> DPolynomialRing_dense:
+        return self.__parent
+
+    def compare(self, u: DPolynomial, v: DPolynomial):
+        r'''
+            Method that compares to variables in a ring of d-polynomials.
+
+            This method is the critical step of a rakning function. It takes two variables in 
+            a ring of d-polynomials, i.e., two variables in a :class:`DPolynomialRing_dense`
+            and compare which one is bigger in terms of this rakning function.
+
+            INPUT:
+
+            * ``u``: first variable to be compared.
+            * ``v``: second variable to be compared.
+
+            OUTPUT:
+
+            This method behaves like the :func:`cmp` method in Python 2.x, returning a negative element if `u < v`, 
+            a positive element if `u > v` and 0 if they are equal.
+
+            TODO: add examples
+        '''
+        u = self.parent()(u); v = self.parent()(v)
+        if not u.is_variable(): raise TypeError(f"[ranking] Comparing something that is not a variable: [[{u} < {v}]]?")
+        if not v.is_variable(): raise TypeError(f"[ranking] Comparing something that is not a variable: [[{u} < {v}]]?")
+
+        gu = None; gv = None
+        for g in self.base_order:
+            if u in g: gu = g
+            if v in g: gv = g
+            if gu != None and gv != None: break
+        else:
+            raise ValueError(f"[ranking] Comparing a variable that is not ordered (allow {self.base_order}): [[{u} < {v}]]?")
+        
+        if self.type == "elimination":
+            if self.base_order.index(gu) < self.base_order.index(gv):
+                return -1
+            elif self.base_order.index(gu) > self.base_order.index(gv):
+                return 1
+            else:
+                return gu.index(u, False) - gu.index(v, False)
+        elif self.type == "orderly":
+            ord_u = u.order(gu); ord_v = v.order(gv)
+            if ord_u < ord_v: return -1
+            elif ord_u > ord_v: return 1
+            else:
+                ind_u = gu.index(u, False); ind_v = gv.index(v, False)
+                if ind_u < ind_v: return -1
+                elif ind_u > ind_v: return 1
+                else:
+                    return self.base_order.index(gu) - self.base_order.index(gv)
+        else:
+            raise NotImplementedError(f"[ranking] Method 'compare' not yet implemented for type {self.type}")
+
+    @cached_method
+    def leader(self, element: DPolynomial) -> DPolynomial:
+        r'''
+            Method to get the leader variable from a d-polynomial.
+
+            This method computes the leader variable for the current ranking function. The leader is the maximal
+            variable that appear in a d-polynomial. If there is no variable appearing, we say the leader is the 
+            monomial `1`.
+
+            INPUT: 
+
+            * ``element``: the d-polynomial to get the leader.
+
+            OUTPUT:
+
+            A variable of ``self.parent()`` or `1` if no variables to compare appear in ``element``.
+
+            TODO: add examples
+        '''
+        element = self.parent()(element)
+
+        ## we get the variables that must be ordered
+        variables = [self.parent()(v) for v in element.variables() if any(v in g for g in self.base_order)]
+        if len(variables) == 0: # if nothing is there, the leader is the `1`
+            return self.parent().one()
+        
+        max_var = variables[0]
+        for new_var in variables[1:]:
+            if self.compare(max_var, new_var) < 0: # max_var < new_var
+                max_var = new_var
+        return max_var
+        
+    @cached_method
+    def rank(self, element: DPolynomial) -> DPolynomial:
+        r'''
+            Method to get the rank from a d-polynomial.
+
+            This method computes the rank for the current ranking function. The rank is the maximal
+            variable that appear in a d-polynomial to the hieghest degree. If there is no variable appearing, we say the rank is the 
+            monomial `1`.
+
+            INPUT: 
+
+            * ``element``: the d-polynomial to get the rank.
+
+            OUTPUT:
+
+            A variable of ``self.parent()`` or `1` if no variables to compare appear in ``element``.
+
+            TODO: add examples
+        '''
+        element = self.parent()(element)
+
+        max_var = self.leader(element)
+        deg = element.degree(max_var) if max_var != self.parent().one() else 1
+        return max_var**deg
+
+    @cached_method
+    def initial(self, element: DPolynomial) -> DPolynomial:
+        r'''
+            Method to get the initial from a d-polynomial.
+
+            This method computes the initial for the current ranking function. The initial is the coefficient
+            that multiplies the rank of a d-polynomial. If there is no variable appearing, we say the initial 
+            the whole d-polynomial.
+
+            INPUT: 
+
+            * ``element``: the d-polynomial to get the initial.
+
+            OUTPUT:
+
+            The initial of ``element`` with respect to ``self``.
+
+            TODO: add examples
+        '''
+        element = self.parent()(element)
+
+        return element.coefficient(self.rank(element))
+
+    @cached_method
+    def separant(self, element: DPolynomial) -> DPolynomial:
+        r'''
+            Method to get the sepparant from a d-polynomial.
+
+            This method computes the separant for the current ranking function. The separant is the partial
+            derivative w.r.t. the leader variable of a d-polynomial. If there is no variable appearing, we 
+            define the separant to be zero.
+
+            INPUT: 
+
+            * ``element``: the d-polynomial to get the separant.
+
+            OUTPUT:
+
+            The separant of ``element`` with respect to ``self``
+
+            TODO: add examples
+        '''
+        element = self.parent()(element)
+
+        max_var = self.leader(element)
+        return self.parent()(element.polynomial().derivative(max_var.polynomial())) if max_var != self.parent().one() else self.parent().zero()
+
 
 __all__ = [
     "DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing", # names imported

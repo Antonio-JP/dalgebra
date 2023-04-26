@@ -660,6 +660,17 @@ class DPolynomial (InfinitePolynomial_dense):
             ) <= 1 
         for t in self.monomials())
 
+    def is_variable(self) -> bool:
+        r'''
+            Method that checks whether a polynomial is simply a variable
+        '''
+        variables = self.variables()
+        if len(variables) > 1: return False
+
+        v = variables[0]
+        if self.degree(v) > 1: return False
+        return self.coefficient(v) == self.parent().one()
+
     def as_linear_operator(self):
         r'''
             Method to convert this operator to a linear operator. 
