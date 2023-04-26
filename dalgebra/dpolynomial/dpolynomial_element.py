@@ -746,7 +746,7 @@ class DPolynomial (InfinitePolynomial_dense):
         return self.parent().element_class(self.parent(), self.polynomial() / x.polynomial())
     def _floordiv_(self, x):
         R = self.parent().polynomial_ring()
-        return self.parent().element_class(self.parent(), R(self.polynomial()) // R(self.parent()(x.polynomial())))
+        return self.parent().element_class(self.parent(), R(self.polynomial()) // R(x.polynomial()))
     def __pow__(self, n):
         return self.parent().element_class(self.parent(), super().__pow__(n))
 

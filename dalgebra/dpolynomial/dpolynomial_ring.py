@@ -2039,6 +2039,9 @@ class RankingFunction:
             * ``reverse``: a boolean indicating if we want the first element to be the biggest (``True``)
               or the smallest (``False`` - default).
         '''
+        # Base case when the list is empty or with just 1 element
+        if len(elements) <= 1:
+            return elements
         middle = len(elements)//2
         left = self.sort(elements[:middle]); right = self.sort(elements[middle:])
 
