@@ -539,38 +539,6 @@ class DPolynomial (InfinitePolynomial_dense):
         return self.lorders(operation)[index]
 
     @cached_method
-    def initial(self, gen : DPolynomialGen = None, operation: int = -1) -> DPolynomial:
-        r'''
-            Computes the leading polynomial of an infinite polynomial.
-
-            This method computes the leading term of the infinite polynomial
-            when the generator given in ``gen`` is consider the *most important* 
-            variable of the polynomial and then it is ordered by its order.
-
-            INPUT:
-
-            * ``gen``: the generator we want to focus. May be omitted when there is only one generator.
-            * ``operation``: index of the operator we want to check. If `-1` is given, then the combined
-              order of all operators is returned (only useful when having several operators).
-
-            TODO add tests
-        '''
-        parent = self.parent()
-
-        if parent.ngens() == 1 or gen is None: gen = parent.gens()[0]
-
-        if (not isinstance(gen, DPolynomialGen)) or (not gen in parent.gens()):
-            raise TypeError(f"The generator must be a valid generator from {parent}")
-        
-        o = self.order(gen, operation)
-        monomials = self.monomials()
-        coefficients = self.coefficients()
-
-        return parent(sum(coeff*mon for (mon, coeff) in zip(monomials, coefficients) if mon.order(gen,operation) == o))
-
-    lc = initial #: alias for initial (also called "leading coefficient")
-
-    @cached_method
     def infinite_variables(self) -> tuple[DPolynomialGen]:
         r'''
             Method to compute which generators of the parent appear in ``self``.
@@ -886,6 +854,42 @@ class DPolynomial (InfinitePolynomial_dense):
             weight = self.parent().weight_func(*weight)
 
         return weight.is_homogeneous(self)
+    
+    ###################################################################################
+    ### Ranking methods
+    ###################################################################################
+    def __check_ranking_argument(self, ranking, ordering=None, ttype="orderly"):
+        from .dpolynomial_ring import RankingFunction
+        if ranking == None: ranking = self.parent().ranking()
+        elif not isinstance(ranking, RankingFunction): ranking = self.parent().ranking(ordering, ttype)
+        return ranking
+    
+    def leader(self, ranking=None, ordering=None, ttype="orderly"):
+        r'''
+            Gets the leader of ``self`` w.r.t. a ranking.
+        '''
+        return self.__check_ranking_argument(ranking,ordering,ttype).leader(self)
+    
+    def rank(self, ranking=None, ordering=None, ttype="orderly"):
+        r'''
+            Gets the rank of ``self`` w.r.t. a ranking.
+        '''
+        return self.__check_ranking_argument(ranking,ordering,ttype).rank(self)
+    
+    def initial(self, ranking=None, ordering=None, ttype="orderly"):
+        r'''
+            Gets the leader of ``self`` w.r.t. a ranking.
+        '''
+        return self.__check_ranking_argument(ranking,ordering,ttype).initial(self)
+    
+    def separant(self, ranking=None, ordering=None, ttype="orderly"):
+        r'''
+            Gets the leader of ``self`` w.r.t. a ranking.
+        '''
+        return self.__check_ranking_argument(ranking,ordering,ttype).separant(self)
+    
+    ### Some aliases
+    lc = initial #: alias for initial (also called "leading coefficient")
 
     ###################################################################################
     ### Other magic methods

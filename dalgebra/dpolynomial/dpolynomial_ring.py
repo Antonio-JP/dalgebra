@@ -320,6 +320,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             for operation, ttype in enumerate(self.base().operator_types())
         ])
         self.__cache : list[dict[DPolynomial, DPolynomial]] = [dict() for _ in range(len(self.__operators))]
+        self.__cache_ranking : dict[tuple[tuple[DPolynomial], str], RankingFunction] = dict()
 
     #################################################
     ### Coercion methods
@@ -1263,13 +1264,24 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         return P,Q,gen
 
     #################################################
-    ### Weighting methods
+    ### Weighting and Ranking methods
     #################################################
-    def weight_func(self, weight_vars, weight_oper):
+    def weight_func(self, weight_vars, weight_oper) -> WeightFunction:
         r'''
             TODO: add documentation to this method
         '''
         return WeightFunction(self, weight_vars, weight_oper)
+    
+    def ranking(self, ordering: list[DPolynomialGen] | tuple[DPolynomialGen] = None, ttype: str = "orderly") -> RankingFunction:
+        r'''
+            Method to create a ranking for this ring.
+
+            This method creates a ranking for ``self`` using the arguments as in :class:`RankingFunction`.
+        '''
+        if ordering != None and isinstance(ordering, list): ordering = tuple(ordering)
+        if not (ordering, ttype) in self.__cache_ranking:
+            self.__cache_ranking[(ordering, ttype)] = RankingFunction(self, ordering, ttype)
+        return self.__cache_ranking[(ordering, ttype)]
 
     #################################################
     ### Other computation methods
@@ -1918,6 +1930,11 @@ class RankingFunction:
         max_var = self.leader(element)
         return self.parent()(element.polynomial().derivative(max_var.polynomial())) if max_var != self.parent().one() else self.parent().zero()
 
+    def __repr__(self) -> str:
+        return f"{self.type.capitalize()} ranking over {self.parent()} where [{' < '.join([repr(el) for el in self.base_order])}]"
+    
+    def _latex_(self) -> str:
+        return r"\mathbf{" + ("OrdR" if self.type == "orderly" else "ElimR") + r"}(" + "<".join(latex(v) for v in self.base_order) + r")"
 
 __all__ = [
     "DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing", # names imported
