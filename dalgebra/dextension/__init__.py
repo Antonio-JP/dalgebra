@@ -1,8 +1,10 @@
 r"""
-Package ``diff_polynomial``
+Package ``dextension``
 
-This is a package containing all the classes for creating and 
-manipulating differential and difference polynomial ring over arbitrary ground rings.
+This is a package containing all the classes for extending d-rings (see module
+:mod:`~dalgebra.dring`) in a polynomial manner. This can be interpret, when the added
+elements are transcendental or algebraically independent, as polynomial rings where the 
+operations are extended in a specific way.
 
 AUTHORS:
 
@@ -20,6 +22,6 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from .dpolynomial_element import *
-from .dpolynomial_ring import *
-from .dpolynomial_system import *
+from .dextension_parent import *
+from .dextension_element import *
+from .dextension_field import *

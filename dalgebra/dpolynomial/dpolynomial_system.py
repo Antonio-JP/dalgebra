@@ -7,12 +7,12 @@ differential polynomials.
 
 AUTHORS:
 
-    - Antonio Jimenez-Pastor (2022-02-04): initial version
+    - Antonio Jimenez-Pastor (:git:`GitHub <Antonio-JP>`)
 
 """
 
 # ****************************************************************************
-#  Copyright (C) 2022 Antonio Jimenez-Pastor <jimenezpastor@lix.polytechnique.fr>
+#  Copyright (C) 2023 Antonio Jimenez-Pastor <ajpa@cs.aau.dk>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
