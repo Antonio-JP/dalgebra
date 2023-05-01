@@ -21,7 +21,9 @@ from __future__ import annotations
 
 import logging
 
-from sage.all import cached_method, Parent, CommutativeRing
+from itertools import chain, islice
+
+from sage.all import cached_method, Parent, CommutativeRing, latex, prod
 from sage.categories.all import Morphism
 from sage.categories.pushout import ConstructionFunctor
 from sage.rings.polynomial.multi_polynomial_libsingular import MPolynomialRing_libsingular #pylint: disable=no-name-in-module
@@ -32,7 +34,7 @@ from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-mod
 from typing import Collection, Any
 
 from .dextension_element import DExtension_Element, DExtension_Element_libsingular
-from ..dring import AdditiveMap, DRings
+from ..dring import AdditiveMap, DerivationMap, DRings
 
 logger = logging.getLogger(__name__)
 
@@ -183,17 +185,20 @@ class DExtension_generic(MPolynomialRing_base):
         r'''
             TODO: add documentation
         '''
-        raise NotImplementedError("[DExtension] _element_constructor_ not implemented")
+        return self.element_class(self, super()._element_constructor_(x))
 
-    def _pushout_(self, other):
-        raise NotImplementedError("[DExtension] _pushout_ not implemented")
+    # def _pushout_(self, other):
+    #     raise NotImplementedError("[DExtension] _pushout_ not implemented")
     
     @cached_method
-    def gen(self, i: int = None) -> DExtension_Element:
+    def gen(self, i: int | str = None) -> DExtension_Element:
         r'''
             TODO: add documentation
         '''
-        raise NotImplementedError("[DExtension] gen not implemented")
+        if isinstance(i, str):
+            i = self.variable_names().index(i)
+
+        return self.gens()[i]
                 
     def construction(self) -> DExtensionFunctor:
         r'''
@@ -201,20 +206,23 @@ class DExtension_generic(MPolynomialRing_base):
         '''
         raise NotImplementedError("[DExtension] construction not implemented")
     
-    def change_ring(self, R):
+    def change_ring(self, R) -> DExtension_generic:
         r'''
             TODO: add documentation
         '''
-        raise NotImplementedError("[DExtension] change_ring not implemented")
+        if not R in _DRings:
+            raise TypeError(f"[change_ring] The new ring must be a d-ring (got: {R})")
+        
+        return DExtension(R, [[self.operation(i, g) for i in range(self.noperators())] for g in self.gens()], names=self.variable_names())
 
     #################################################
     ### Magic python methods
     #################################################
-    def __repr__(self):
-        raise NotImplementedError("[DExtension] __repr__ not implemented")
+    def __repr__(self) -> str:
+        return f"({super().__repr__()}, {[[self.operation(i,g) for i in range(self.noperators())] for g in self.gens()]})"
 
     def _latex_(self):
-        raise NotImplementedError("[DExtension] _latex_ not implemented")
+        raise r"\left(" + super()._latex_() + ",".join([f"{latex(g)} \\mapsto [{','.join(self.operation(i,g) for i in range(self.noperators()))}]" for g in self.gens()]) + r"\right)"
             
     #################################################
     ### Element generation methods
@@ -232,23 +240,9 @@ class DExtension_generic(MPolynomialRing_base):
         return self(0)
     
     def random_element(self,
-        deg_bound : int = 0,order_bound : int = 0, sparsity : float = 0.75,
-        *args,**kwds
-    ):
-        r'''
-            Creates a random element in this ring.
-
-            This method receives a bound for the degree and order of all the variables
-            appearing in the ring and also a sparsity measure to avoid dense polynomials.
-            Extra arguments are passed to the random method of the base ring.
-
-            INPUT:
-
-            * ``deg_bound``: total degree bound for the resulting polynomial.
-            * ``order_bound``: order bound for the resulting polynomial.
-            * ``sparsity``: probability of a coefficient to be zero.
-        '''
-        raise NotImplementedError("[DExtension] random_element not implemented")
+        degree: int = 2, terms: int = 5, choose_degree: bool = False, *args, **kwargs
+    ) -> DExtension_Element:
+        return self.element_class(self, super().random_element(degree, terms, choose_degree, *args, **kwargs))
       
     #################################################
     ### Method from DRing category
@@ -266,17 +260,31 @@ class DExtension_generic(MPolynomialRing_base):
             We create an :class:`AdditiveMap` from the given operator assuming the type given in ``ttype``.
             This type will determine how the multiplication behaves with respect to the different variables.
         '''
-        operator : AdditiveMap = self.base().operators()[operation] 
+        operator = self.base().operators()[operation] 
         if ttype == "homomorphism":
-            raise NotImplementedError("[DExtension] _create_operator - homomorphism not implemented")
+            new_operator = self.Hom(self)(values, base_map=operator)
         elif ttype == "derivation":
-            raise NotImplementedError("[DExtension] _create_operator - derivation not implemented")
+            def __skip_i(seq, i):
+                return chain(islice(seq, 0, i), islice(seq, i+1, None))
+            def __extended_derivation(element: DExtension_Element):
+                if element.is_monomial():
+                    if element == self.one():
+                        return self.zero()
+                    variables, degrees = list(zip(*[(var, deg) for var,deg in zip(self.gens(), self.degrees()) if deg > 0]))
+                    base = prod(g**(d-1) for g,d in zip(variables, degrees))
+                    return base*sum(degree*prod(__skip_i(variables, i)) for (i,degree) in enumerate(degrees) if degree > 0)
+                else:
+                    return sum(
+                        operator(self.base()(coeff)) * monom + coeff * __extended_derivation(monom)
+                        for coeff, monom in zip(element.coefficients(), element.monomials())
+                    )
+            new_operator = DerivationMap(self, __extended_derivation)
         elif ttype == "skew":
             raise NotImplementedError("[DExtension] _create_operator - skew not implemented")
         else:
             raise ValueError(f"The type {ttype} is not recognized as a valid operator.")
 
-        # return AdditiveMap(self, func) 
+        return new_operator
     
     def linear_operator_ring(self) -> Ring:
         r'''
@@ -302,13 +310,13 @@ class DExtension_generic(MPolynomialRing_base):
             raise NotImplementedError("[inverse_operation] Inverse for unknown operation not implemented")
     
     def __inverse_homomorphism(self, element: DExtension_Element, operation: int):
-        raise NotImplementedError("[DExtension] __init__ not implemented")
+        raise NotImplementedError("[DExtension] __inverse_homomorphism not implemented")
     
     def __inverse_derivation(self, element: DExtension_Element, operation: int):
-        raise NotImplementedError("[DExtension] __init__ not implemented")
+        raise NotImplementedError("[DExtension] __inverse_derivation not implemented")
    
     def __inverse_skew(self, element: DExtension_Element, operation: int):
-        raise NotImplementedError("[DExtension] Skew-derivation operation not yet implemented")
+        raise NotImplementedError("[DExtension] __inverse_skew not implemented")
     
 def is_DExtension(element):
     r'''
