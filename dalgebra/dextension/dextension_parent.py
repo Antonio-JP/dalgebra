@@ -23,17 +23,17 @@ import logging
 
 from itertools import chain, islice
 
-from sage.all import cached_method, Parent, CommutativeRing, latex, prod
+from sage.all import cached_method, Parent, CommutativeRing, latex, prod, PolynomialRing, ZZ
 from sage.categories.all import Morphism
 from sage.categories.pushout import ConstructionFunctor
 from sage.rings.polynomial.multi_polynomial_libsingular import MPolynomialRing_libsingular #pylint: disable=no-name-in-module
-from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_base
+from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_polydict_domain, MPolynomialRing_base
 from sage.rings.ring import Ring #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 from typing import Collection, Any
 
-from .dextension_element import DExtension_Element, DExtension_Element_libsingular
+from .dextension_element import DExtension_Element, DExtension_Element_libsingular, DExtension_Element_polydict
 from ..dring import AdditiveMap, DerivationMap, DRings
 
 logger = logging.getLogger(__name__)
@@ -46,8 +46,11 @@ class DExtensionFactory(UniqueFactory):
         TODO: add documentation
     '''
     def create_key_and_extra_args(self, base: Parent, values_operations: Collection[Collection[Any]], *names : str, **kwds):
+        names = kwds["names"] if len(names) == 0 and "names" in kwds else names
+        
         if not base in _DRings:
             raise TypeError(f"[DExtensionFactory] The base ring ({base}) must be a d-ring.")
+        aux_R = PolynomialRing(base, names)
         noperators = base.noperators()
         ngens = len(names)
 
@@ -81,16 +84,16 @@ class DExtensionFactory(UniqueFactory):
                 raise TypeError(f"[DExtensionFactory] For {ngens} variable and {noperators} operator, we require a list with one element or a list with one list")
         
         # We transform eh images of the operations into polynomial elements in ``self``
-        values_operations = tuple([tuple([self(img) for img in imgs]) for imgs in values_operations])
+        values_operations = tuple([tuple([aux_R(img) for img in imgs]) for imgs in values_operations])
 
         # We read the extra arguments from kwds
         extra = dict()
-        extra["impl"] = kwds.get("implementation", kwds.get("impl", "singular"))
+        extra["impl"] = kwds.get("implementation", kwds.get("impl", "polydict"))
 
         # Checking the extra arguments
-        if extra["impl"] not in ("singular"):
-            logger.warning(f"Requested implementation {extra['impl']} but that does not exist. Backing to default ('singular')")
-            extra["impl"] = "singular"
+        if extra["impl"] not in ("polydict", "singular"):
+            logger.warning(f"Requested implementation {extra['impl']} but that does not exist. Backing to default ('polydict')")
+            extra["impl"] = "polydict"
 
         return (base, tuple(names), values_operations), extra
 
@@ -98,7 +101,10 @@ class DExtensionFactory(UniqueFactory):
         base, names, values_operations = key
         if kwds["impl"] == "singular":
             return DExtension_libsingular(base, values_operations, names)
-        return 
+        elif kwds["impl"] == "polydict":
+            return DExtension_polydict(base, values_operations, names)
+        else:
+            raise ValueError(f"Requested implementation {kwds['impl']}, but it is not implemented") 
 
 DExtension = DExtensionFactory("dalgebra.dextension.dextension_parent.DExtension")
 
@@ -177,6 +183,8 @@ class DExtension_generic(MPolynomialRing_base):
         noperators = base.noperators()
         ngens = len(names)
 
+        self.__key_hash = (base, values_operations, names)
+
         if (not isinstance(values_operations, Collection) or 
             len(values_operations) != ngens or 
             any((not isinstance(values, Collection) or len(values) != noperators) for values in values_operations)
@@ -184,7 +192,7 @@ class DExtension_generic(MPolynomialRing_base):
             raise TypeError("The structure for the values for the opearations does not match the number of operations and variables.") 
 
         # We create now the operations for this d-ring
-        self.__operators = [self._create_operator(i, ttype, values) for (i,ttype, values) in enumerate(zip(base.operator_types(), values_operations))]
+        self.__operators = [self._create_operator(i, ttype, values) for (i,(ttype, values)) in enumerate(zip(base.operator_types(), values_operations))]
 
         # Registering conversion to simpler structures
         current = self.base()
@@ -218,10 +226,14 @@ class DExtension_generic(MPolynomialRing_base):
         r'''
             TODO: add documentation
         '''
-        if isinstance(i, str):
+        if i is None:
+            i = 0
+        elif isinstance(i, str):
             i = self.variable_names().index(i)
-
-        return self.gens()[i]
+        elif not i in ZZ:
+            raise ValueError("A name or an index is required for getting a generator.")
+        i = int(i)
+        return super().gen(i)
                 
     def construction(self) -> DExtensionFunctor:
         r'''
@@ -241,8 +253,10 @@ class DExtension_generic(MPolynomialRing_base):
     #################################################
     ### Magic python methods
     #################################################
+    def __hash__(self) -> int:
+        return hash(self.__key_hash)
     def __repr__(self) -> str:
-        return f"({super().__repr__()}, {[[self.operation(i,g) for i in range(self.noperators())] for g in self.gens()]})"
+        return f"DExtension{self.__key_hash}"
 
     def _latex_(self):
         raise r"\left(" + super()._latex_() + ",".join([f"{latex(g)} \\mapsto [{','.join(self.operation(i,g) for i in range(self.noperators()))}]" for g in self.gens()]) + r"\right)"
@@ -354,9 +368,18 @@ class DExtension_libsingular (DExtension_generic, MPolynomialRing_libsingular):
     Element = DExtension_Element_libsingular
 
     def __init__(self, base : Parent, values_operations: Collection[Collection[Any]], names : Collection[str]):
-        MPolynomialRing_libsingular.__init__(self, base, names=names)
+        MPolynomialRing_libsingular.__init__(self, base.sage_ring(), len(names), names)
         DExtension_generic.__init__(self, base, values_operations, names)
 
+class DExtension_polydict (DExtension_generic, MPolynomialRing_polydict_domain):
+    r'''
+        Implementation of a d-extension using the Singular library
+    '''
+    Element = DExtension_Element_polydict
+
+    def __init__(self, base : Parent, values_operations: Collection[Collection[Any]], names : Collection[str]):
+        MPolynomialRing_polydict_domain.__init__(self, base, len(names), names, "degrevlex")
+        DExtension_generic.__init__(self, base, values_operations, names)
 
 class DExtensionFunctor (ConstructionFunctor):
     r'''

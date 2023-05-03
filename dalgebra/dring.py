@@ -524,6 +524,12 @@ class DRings(Category):
             '''
             raise NotImplementedError("Method 'constant_ring' not implemented")
             
+        def sage_ring(self) -> Parent:
+            r'''
+                Method that gets an object that inherits from a Sage ring. Useful to unwrap when needed 
+                the d-ring.
+            '''
+            return self
     ## Defining methods for the Element structures of this category
     class ElementMethods: #pylint: disable=no-member
         ##########################################################
@@ -1106,6 +1112,9 @@ class DRing_Wrapper(CommutativeRing):
                 raise NotImplementedError(f"[inverse_operation] Inverses not implemented in general. Moreover: {e}")
 
         raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
+
+    def sage_ring(self) -> CommutativeRing:
+        return self.wrapped
 
     ## Coercion methods
     def _has_coerce_map_from(self, S) -> bool:

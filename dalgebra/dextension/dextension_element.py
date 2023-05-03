@@ -22,8 +22,7 @@ from __future__ import annotations
 from sage.all import Parent
 from sage.rings.polynomial.multi_polynomial import MPolynomial #pylint: disable=no-name-in-module
 from sage.rings.polynomial.multi_polynomial_libsingular import MPolynomial_libsingular #pylint: disable=no-name-in-module
-
-from .dextension_parent import DExtension_generic, DExtension_libsingular
+from sage.rings.polynomial.multi_polynomial_element import MPolynomial_polydict
 
 #######################################################################################
 ###
@@ -100,7 +99,12 @@ class DExtension_Element (MPolynomial):
     #     raise NotImplementedError("[DExtension_Element] __init__ not implemented")
 
 class DExtension_Element_libsingular (DExtension_Element, MPolynomial_libsingular):
-    def __init__(self, parent: DExtension_libsingular):
+    def __init__(self, parent):
         super().__init__(parent)
+
+class DExtension_Element_polydict (DExtension_Element, MPolynomial_polydict):
+    def __init__(self, parent, x):
+        MPolynomial_polydict.__init__(parent, x)
+        DExtension_Element.__init__(parent)
 
 __all__ = []
