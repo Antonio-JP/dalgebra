@@ -996,8 +996,10 @@ class DRing_Wrapper(CommutativeRing):
 
         # registering conversion to simpler structures
         current = self.__wrapped
-        morph = DRing_Wrapper_SimpleMorphism(self, current)
-        current.register_conversion(morph)
+        self_to_wrap = DRing_Wrapper_SimpleMorphism(self, current)
+        wrap_to_self = SetMorphism(current.Hom(self), lambda p : self._element_constructor_(p))
+        current.register_coercion(self_to_wrap)
+        self.register_coercion(wrap_to_self)
         while(not(current.base() == current)):
             current = current.base()
             morph = DRing_Wrapper_SimpleMorphism(self, current)
