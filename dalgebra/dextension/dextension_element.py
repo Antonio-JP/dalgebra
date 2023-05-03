@@ -40,7 +40,6 @@ class DExtension_Element (MPolynomial):
     def __init__(self, parent: Parent):
         super().__init__(parent)
 
-
     def as_linear_operator(self):
         r'''
             Method to convert this operator to a linear operator. 
@@ -48,14 +47,7 @@ class DExtension_Element (MPolynomial):
             See method :func:`~.dpolynomial_ring.DPolynomialRing_dense.as_linear_operator`.
         '''
         return self.parent().as_linear_operator(self)
-
-    # Magic methods
-    def __call__(self, *args, **kwargs) -> None:
-        r'''
-            TODO: add documentation
-        '''
-        raise NotImplementedError("[DExtension_Element] __init__ not implemented")        
-
+    
     def coefficients(self) -> list[DExtension_Element]:
         return [self.parent()(coeff) for coeff in super().coefficients()]
 
