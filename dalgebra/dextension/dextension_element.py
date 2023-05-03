@@ -19,8 +19,11 @@ AUTHORS:
 
 from __future__ import annotations
 
+from sage.all import Parent
 from sage.rings.polynomial.multi_polynomial import MPolynomial #pylint: disable=no-name-in-module
 from sage.rings.polynomial.multi_polynomial_libsingular import MPolynomial_libsingular #pylint: disable=no-name-in-module
+
+from .dextension_parent import DExtension_generic, DExtension_libsingular
 
 #######################################################################################
 ###
@@ -29,10 +32,14 @@ from sage.rings.polynomial.multi_polynomial_libsingular import MPolynomial_libsi
 #######################################################################################
 class DExtension_Element (MPolynomial):
     r'''
-        TODO: add documentation
+        Class to represent elements in a d-extension.
+
+        Given a d-extension (see :class:`.dextension_parent.DExtension_generic`), its elements will be a polynomial in the 
+        extended variables. This class extends the functionality of these multivariate polynomials to incorporate the 
+        operations defined in the base ring into the polynomials.
     '''
-    def __init__(self, *args, **kwds):
-        raise NotImplementedError("[DExtension_Element] __init__ not implemented")
+    def __init__(self, parent: Parent):
+        super().__init__(parent)
 
 
     def as_linear_operator(self):
@@ -51,48 +58,49 @@ class DExtension_Element (MPolynomial):
         raise NotImplementedError("[DExtension_Element] __init__ not implemented")        
 
     def coefficients(self) -> list[DExtension_Element]:
-        raise NotImplementedError("[DExtension_Element] __init__ not implemented")  
+        return [self.parent()(coeff) for coeff in super().coefficients()]
 
     def coefficient(self, monomial) -> DExtension_Element:
-        raise NotImplementedError("[DExtension_Element] __init__ not implemented")  
+        return self.parent()(super().coefficient(monomial))
     
     def monomials(self) -> list[DExtension_Element]:
-        raise NotImplementedError("[DExtension_Element] __init__ not implemented")  
+        return [self.parent()(monom) for monom in super().monomials()]
     
     ###################################################################################
     ### Arithmetic methods
     ###################################################################################
-    def _add_(self, x):
-        return self.parent().element_class(self.parent(), super()._add_(x))
-    def __neg__(self):
-        return self.parent().element_class(self.parent(), super().__neg__())
-    def _sub_(self, x):
-        return self.parent().element_class(self.parent(), super()._sub_(x))
-    def _mul_(self, x):
-        return self.parent().element_class(self.parent(), super()._mul_(x))
-    def _rmul_(self, x):
-        return self.parent().element_class(self.parent(), super()._rmul_(x))
-    def _lmul_(self, x):
-        return self.parent().element_class(self.parent(), super()._lmul_(x))
-    def _mod_(self, x):
-        return self.parent().element_class(self.parent(), super()._mod_(x))
-    def _div_(self, x):
-        return self.parent().element_class(self.parent(), super()._div_(x))
-    def _floordiv_(self, x):
-        return self.parent().element_class(self.parent(), super()._floordiv_(x))
-    def __pow__(self, n):
-        return self.parent().element_class(self.parent(), super().__pow__(n))
+    # def _add_(self, x):
+    #     return self.parent().element_class(self.parent(), super()._add_(x))
+    # def __neg__(self):
+    #     return self.parent().element_class(self.parent(), super().__neg__())
+    # def _sub_(self, x):
+    #     return self.parent().element_class(self.parent(), super()._sub_(x))
+    # def _mul_(self, x):
+    #     return self.parent().element_class(self.parent(), super()._mul_(x))
+    # def _rmul_(self, x):
+    #     return self.parent().element_class(self.parent(), super()._rmul_(x))
+    # def _lmul_(self, x):
+    #     return self.parent().element_class(self.parent(), super()._lmul_(x))
+    # def _mod_(self, x):
+    #     return self.parent().element_class(self.parent(), super()._mod_(x))
+    # def _div_(self, x):
+    #     return self.parent().element_class(self.parent(), super()._div_(x))
+    # def _floordiv_(self, x):
+    #     return self.parent().element_class(self.parent(), super()._floordiv_(x))
+    # def __pow__(self, n):
+    #     return self.parent().element_class(self.parent(), super().__pow__(n))
 
     ###################################################################################
     ### Other magic methods
     ###################################################################################
-    def __repr__(self) -> str:
-        raise NotImplementedError("[DExtension_Element] __init__ not implemented")
+    # def __repr__(self) -> str:
+    #     raise NotImplementedError("[DExtension_Element] __init__ not implemented")
     
-    def _latex_(self) -> str:
-        raise NotImplementedError("[DExtension_Element] __init__ not implemented")
+    # def _latex_(self) -> str:
+    #     raise NotImplementedError("[DExtension_Element] __init__ not implemented")
 
 class DExtension_Element_libsingular (DExtension_Element, MPolynomial_libsingular):
-    pass
+    def __init__(self, parent: DExtension_libsingular):
+        super().__init__(parent)
 
 __all__ = []

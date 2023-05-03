@@ -45,11 +45,60 @@ class DExtensionFactory(UniqueFactory):
     r'''
         TODO: add documentation
     '''
-    def create_key(self, base, *names : str, **kwds):
-        raise NotImplementedError("[DExtensionFactory] create_key not implemented")
+    def create_key_and_extra_args(self, base: Parent, values_operations: Collection[Collection[Any]], *names : str, **kwds):
+        if not base in _DRings:
+            raise TypeError(f"[DExtensionFactory] The base ring ({base}) must be a d-ring.")
+        noperators = base.noperators()
+        ngens = len(names)
 
-    def create_object(self, _, key):
-        raise NotImplementedError("[DExtensionFactory] create_key not implemented")
+        if ngens > 1 and noperators > 1: # we require list of lists
+            if ((not isinstance(values_operations, (list, tuple)) or len(values_operations) != ngens) or 
+                any((not isinstance(imgs, (list, tuple)) or len(imgs) != noperators) for imgs in values_operations)):
+                raise TypeError(f"[DExtensionFactory] For {ngens} variables and {noperators} operators, we require a list of lists as ``value_operations`` argument.")
+        elif ngens > 1 and noperators == 1: # we allow list of lists or a simple list
+            if (not isinstance(values_operations, (list, tuple)) or len(values_operations) != ngens):
+                raise TypeError(f"[DExtensionFactory] For {ngens} variables and {noperators} operator, we require a list of elements.")
+            if any(isinstance(imgs, (list, tuple) and len(imgs) > 1) for imgs in values_operations):
+                raise TypeError(f"[DExtensionFactory] For {ngens} variables and {noperators} operator, images must be elements or lists of length 1")
+            values_operations = [imgs if isinstance(imgs, list(tuple)) else [imgs] for imgs in values_operations]
+        elif ngens == 1 and noperators > 1: # we allow list of lists or a simple list
+            if not isinstance(values_operations, (list, tuple)):
+                raise TypeError(f"[DExtensionFactory] For {ngens} variable and {noperators} operators, we require a list of elements or a list with one list of elements")
+            elif len(values_operations) == 1 and (not isinstance(values_operations[0], (list,tuple)) or len(values_operations[0], noperators)):
+                raise TypeError(f"[DExtensionFactory] For {ngens} variable and {noperators} operators, we require a list with one list of elements")
+            elif len(values_operations) > 1 and len(values_operations) != noperators:
+                raise TypeError(f"[DExtensionFactory] For {ngens} variable and {noperators} operators, we require a list of elements")
+            elif len(values_operations) == noperators: # we convert the input into a list of lists
+                values_operations = [values_operations]
+        else: # ngens = noperators = 1 --> we allow the list of lists, list of element or an element
+            if not isinstance(values_operations, (list, tuple)):
+                values_operations = [[values_operations]]
+            elif len(values_operations) != 1:
+                raise TypeError(f"[DExtensionFactory] For {ngens} variable and {noperators} operator, we require a list with one element or a list with one list")
+            elif not isinstance(values_operations[0], (list, tuple)):
+                values_operations = [values_operations]
+            elif len(values_operations[0]) != 1:
+                raise TypeError(f"[DExtensionFactory] For {ngens} variable and {noperators} operator, we require a list with one element or a list with one list")
+        
+        # We transform eh images of the operations into polynomial elements in ``self``
+        values_operations = tuple([tuple([self(img) for img in imgs]) for imgs in values_operations])
+
+        # We read the extra arguments from kwds
+        extra = dict()
+        extra["impl"] = kwds.get("implementation", kwds.get("impl", "singular"))
+
+        # Checking the extra arguments
+        if extra["impl"] not in ("singular"):
+            logger.warning(f"Requested implementation {extra['impl']} but that does not exist. Backing to default ('singular')")
+            extra["impl"] = "singular"
+
+        return (base, tuple(names), values_operations), extra
+
+    def create_object(self, _, key, **kwds):
+        base, names, values_operations = key
+        if kwds["impl"] == "singular":
+            return DExtension_libsingular(base, values_operations, names)
+        return 
 
 DExtension = DExtensionFactory("dalgebra.dextension.dextension_parent.DExtension")
 
@@ -128,37 +177,11 @@ class DExtension_generic(MPolynomialRing_base):
         noperators = base.noperators()
         ngens = len(names)
 
-        if ngens > 1 and noperators > 1: # we require list of lists
-            if ((not isinstance(values_operations, (list, tuple)) or len(values_operations) != ngens) or 
-                any((not isinstance(imgs, (list, tuple)) or len(imgs) != noperators) for imgs in values_operations)):
-                raise TypeError(f"[DExtension] For {ngens} variables and {noperators} operators, we require a list of lists as ``value_operations`` argument.")
-        elif ngens > 1 and noperators == 1: # we allow list of lists or a simple list
-            if (not isinstance(values_operations, (list, tuple)) or len(values_operations) != ngens):
-                raise TypeError(f"[DExtension] For {ngens} variables and {noperators} operator, we require a list of elements.")
-            if any(isinstance(imgs, (list, tuple) and len(imgs) > 1) for imgs in values_operations):
-                raise TypeError(f"[DExtension] For {ngens} variables and {noperators} operator, images must be elements or lists of length 1")
-            values_operations = [imgs if isinstance(imgs, list(tuple)) else [imgs] for imgs in values_operations]
-        elif ngens == 1 and noperators > 1: # we allow list of lists or a simple list
-            if not isinstance(values_operations, (list, tuple)):
-                raise TypeError(f"[DExtension] For {ngens} variable and {noperators} operators, we require a list of elements or a list with one list of elements")
-            elif len(values_operations) == 1 and (not isinstance(values_operations[0], (list,tuple)) or len(values_operations[0], noperators)):
-                raise TypeError(f"[DExtension] For {ngens} variable and {noperators} operators, we require a list with one list of elements")
-            elif len(values_operations) > 1 and len(values_operations) != noperators:
-                raise TypeError(f"[DExtension] For {ngens} variable and {noperators} operators, we require a list of elements")
-            elif len(values_operations) == noperators: # we convert the input into a list of lists
-                values_operations = [values_operations]
-        else: # ngens = noperators = 1 --> we allow the list of lists, list of element or an element
-            if not isinstance(values_operations, (list, tuple)):
-                values_operations = [[values_operations]]
-            elif len(values_operations) != 1:
-                raise TypeError(f"[DExtension] For {ngens} variable and {noperators} operator, we require a list with one element or a list with one list")
-            elif not isinstance(values_operations[0], (list, tuple)):
-                values_operations = [values_operations]
-            elif len(values_operations[0]) != 1:
-                raise TypeError(f"[DExtension] For {ngens} variable and {noperators} operator, we require a list with one element or a list with one list")
-        
-        # We transformt eh images of the operations into polynomial elements in ``self``
-        values_operations = [[self(img) for img in imgs] for imgs in values_operations]
+        if (not isinstance(values_operations, Collection) or 
+            len(values_operations) != ngens or 
+            any((not isinstance(values, Collection) or len(values) != noperators) for values in values_operations)
+        ):      
+            raise TypeError("The structure for the values for the opearations does not match the number of operations and variables.") 
 
         # We create now the operations for this d-ring
         self.__operators = [self._create_operator(i, ttype, values) for (i,ttype, values) in enumerate(zip(base.operator_types(), values_operations))]
@@ -330,8 +353,9 @@ class DExtension_libsingular (DExtension_generic, MPolynomialRing_libsingular):
     '''
     Element = DExtension_Element_libsingular
 
-    def __init__(self, *args, **kwds):
-        raise NotImplementedError("[DExtension_libsingular] __init__ operation not yet implemented")
+    def __init__(self, base : Parent, values_operations: Collection[Collection[Any]], names : Collection[str]):
+        MPolynomialRing_libsingular.__init__(self, base, names=names)
+        DExtension_generic.__init__(self, base, values_operations, names)
 
 
 class DExtensionFunctor (ConstructionFunctor):
