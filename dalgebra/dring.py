@@ -138,6 +138,8 @@ r'''
 
 from __future__ import annotations
 
+import logging
+
 from ore_algebra.ore_algebra import OreAlgebra, OreAlgebra_generic
 from sage.all import ZZ, latex, Parent
 from sage.categories.all import Morphism, Category, Rings, CommutativeRings, CommutativeAdditiveGroups
@@ -151,6 +153,8 @@ from sage.structure.element import parent, Element #pylint: disable=no-name-in-m
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 from sage.symbolic.ring import SR #pylint: disable=no-name-in-module
 from typing import Callable, Collection
+
+logger = logging.getLogger(__name__)
 
 _Rings = Rings.__classcall__(Rings)
 _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
@@ -792,7 +796,8 @@ def DifferentialRing(base : CommutativeRing, *operators : Callable):
     '''
     # checking the arguments
     if len(operators) < 1:
-        raise ValueError("At least one operator must be given.")
+        logger.info("No operation is given: we set a zero derivative.")
+        operators = [lambda p : 0]
     elif len(operators) == 1 and isinstance(operators[0], Collection):
         operators = operators[0]
 
@@ -806,7 +811,8 @@ def DifferenceRing(base: CommutativeRing, *operators : Callable):
     '''
     # checking the arguments
     if len(operators) < 1:
-        raise ValueError("At least one operator must be given.")
+        logger.info("No operation is given: we set an identity map.")
+        operators = [base.Hom(base).one()]
     elif len(operators) == 1 and isinstance(operators[0], Collection):
         operators = operators[0]
 
