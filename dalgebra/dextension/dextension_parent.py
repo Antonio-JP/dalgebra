@@ -24,17 +24,16 @@ import logging
 from itertools import chain, islice
 
 from sage.all import cached_method, Parent, CommutativeRing, latex, prod, PolynomialRing, ZZ
-from sage.categories.all import Morphism
+from sage.categories.all import Morphism, CommutativeAlgebras
 from sage.categories.pushout import ConstructionFunctor
-from sage.rings.polynomial.multi_polynomial_libsingular import MPolynomialRing_libsingular #pylint: disable=no-name-in-module
-from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_polydict_domain, MPolynomialRing_base
+from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_polydict_domain
 from sage.rings.ring import Ring #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 from typing import Collection, Any
 
-from .dextension_element import DExtension_Element, DExtension_Element_libsingular, DExtension_Element_polydict
-from ..dring import AdditiveMap, DerivationMap, DRings
+from .dextension_element import DExtension_element
+from ..dring import AdditiveMap, DRings
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ class DExtensionFactory(UniqueFactory):
     r'''
         TODO: add documentation
     '''
-    def create_key_and_extra_args(self, base: Parent, values_operations: Collection[Collection[Any]], *names : str, **kwds):
+    def create_key(self, base: Parent, values_operations: Collection[Collection[Any]], *names : str, **kwds):
         names = kwds["names"] if len(names) == 0 and "names" in kwds else names
         
         if not base in _DRings:
@@ -86,29 +85,15 @@ class DExtensionFactory(UniqueFactory):
         # We transform eh images of the operations into polynomial elements in ``self``
         values_operations = tuple([tuple([aux_R(img) for img in imgs]) for imgs in values_operations])
 
-        # We read the extra arguments from kwds
-        extra = dict()
-        extra["impl"] = kwds.get("implementation", kwds.get("impl", "polydict"))
+        return (base, tuple(names), values_operations)
 
-        # Checking the extra arguments
-        if extra["impl"] not in ("polydict", "singular"):
-            logger.warning(f"Requested implementation {extra['impl']} but that does not exist. Backing to default ('polydict')")
-            extra["impl"] = "polydict"
-
-        return (base, tuple(names), values_operations), extra
-
-    def create_object(self, _, key, **kwds):
+    def create_object(self, _, key):
         base, names, values_operations = key
-        if kwds["impl"] == "singular":
-            return DExtension_libsingular(base, values_operations, names)
-        elif kwds["impl"] == "polydict":
-            return DExtension_polydict(base, values_operations, names)
-        else:
-            raise ValueError(f"Requested implementation {kwds['impl']}, but it is not implemented") 
-
+        return DExtension_parent(base, values_operations, names)
+        
 DExtension = DExtensionFactory("dalgebra.dextension.dextension_parent.DExtension")
 
-class DExtension_generic(MPolynomialRing_base):
+class DExtension_parent(MPolynomialRing_polydict_domain):
     r'''
         Polynomial d-extension for a d-ring.
 
@@ -161,7 +146,7 @@ class DExtension_generic(MPolynomialRing_base):
             True
             sage: # Case with 1 operator and several variables
             sage: R1.<x,y> = DExtension(B, [1,0])
-            sage: R2.<x,y> = Dextension(B, [[1],[0]])
+            sage: R2.<x,y> = DExtension(B, [[1],[0]])
             sage: R1 is R2
             True
             sage: # Case with several operators and 1 variable
@@ -171,28 +156,28 @@ class DExtension_generic(MPolynomialRing_base):
             sage: R1 is R2
             True
     '''
-    Element = DExtension_Element # TODO: add the class for elements
+    Element = DExtension_element # TODO: add the class for elements
 
     def __init__(self, base : Parent, values_operations: Collection[Collection[Any]], names : Collection[str]):
-        ## WE ASSUME AT THIS STAGE THAT THE POLYNOMIAL STRUCTURE IS CREATED ALREADY
         ## Resetting the category to be the appropriate
-        CommutativeRing.__init__(self, base, names, category=[_DRings, self.category()])
+        CommutativeRing.__init__(self, base, category=[_DRings, CommutativeAlgebras(base)])
+        MPolynomialRing_polydict_domain.__init__(self, base, len(names), names, "degrevlex")
+        CommutativeRing.__init__(self, base, category=[_DRings, self.category()])
+        ## Setting the generators to proper type
+        self._gens = tuple(self.gen(i) for i in range(self.ngens()))
+
+        self.__hash = (base, values_operations, names)
         ## Checking the type and shape of the input
         if not base in _DRings:
             raise TypeError(f"[DExtension] The base ring ({base}) must be a d-ring.")
         noperators = base.noperators()
         ngens = len(names)
 
-        self.__key_hash = (base, values_operations, names)
-
         if (not isinstance(values_operations, Collection) or 
             len(values_operations) != ngens or 
             any((not isinstance(values, Collection) or len(values) != noperators) for values in values_operations)
         ):      
             raise TypeError("The structure for the values for the opearations does not match the number of operations and variables.") 
-
-        # We create now the operations for this d-ring
-        self.__operators = [self._create_operator(i, ttype, values) for (i,(ttype, values)) in enumerate(zip(base.operator_types(), values_operations))]
 
         # Registering conversion to simpler structures
         current = self.base()
@@ -202,46 +187,45 @@ class DExtension_generic(MPolynomialRing_base):
             current = current.base()
             morph = DExtensionSimpleMorphism(self, current)
             current.register_conversion(morph)
+            
+        # We create now the operations for this d-ring
+        values_for_each_operation = list(map(list, zip(*values_operations)))
+        self.__operators : tuple[Morphism] = tuple([
+            self._create_operator(i, ttype, values) 
+            for (i,(ttype, values)) in enumerate(zip(base.operator_types(), values_for_each_operation))
+        ])
 
     #################################################
     ### Coercion methods
-    #################################################
-    def _has_coerce_map_from(self, S: Parent) -> bool:
+    #################################################             
+    def _element_constructor_(self, x) -> DExtension_element:
         r'''
-            TODO: add documentation
-        '''
-        raise NotImplementedError("[DExtension] _has_coerce_map_from not implemented")
-        
-    def _element_constructor_(self, x) -> DExtension_Element:
-        r'''
-            TODO: add documentation
-        '''
-        return self.element_class(self, super()._element_constructor_(x))
+            Extended definition of :func:`_element_constructor_`.
 
-    # def _pushout_(self, other):
-    #     raise NotImplementedError("[DExtension] _pushout_ not implemented")
-    
-    @cached_method
-    def gen(self, i: int | str = None) -> DExtension_Element:
-        r'''
-            TODO: add documentation
+            Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_dense`
+            and then transforms the output into the corresponding type for ``self``.
         '''
-        if i is None:
-            i = 0
-        elif isinstance(i, str):
+        p = super()._element_constructor_(x)
+        return self.element_class(self, p)
+
+    def gen(self, i: int = None) -> DExtension_element:
+        r'''
+            TODO: add documentation 
+        '''
+        if isinstance(i, str):
             i = self.variable_names().index(i)
-        elif not i in ZZ:
-            raise ValueError("A name or an index is required for getting a generator.")
-        i = int(i)
-        return super().gen(i)
-                
+        if(not(i in ZZ) or (i < 0 or i > len(self._names))):
+            raise ValueError("Invalid index for generator")
+        
+        return self.element_class(self, {(i+1,): 1})
+     
     def construction(self) -> DExtensionFunctor:
         r'''
             TODO: add documentation
         '''
-        raise NotImplementedError("[DExtension] construction not implemented")
+        return DExtensionFunctor(self.variable_names(), [[self.operation(g, i) for i in range(self.noperators())] for g in self.gens()]), self.base()
     
-    def change_ring(self, R) -> DExtension_generic:
+    def change_ring(self, R) -> DExtension_parent:
         r'''
             TODO: add documentation
         '''
@@ -250,13 +234,17 @@ class DExtension_generic(MPolynomialRing_base):
         
         return DExtension(R, [[self.operation(i, g) for i in range(self.noperators())] for g in self.gens()], names=self.variable_names())
 
+    def base_ring(self):
+        return self.base().sage_ring()
+
     #################################################
     ### Magic python methods
     #################################################
     def __hash__(self) -> int:
-        return hash(self.__key_hash)
+        return hash(self.__hash)
+
     def __repr__(self) -> str:
-        return f"DExtension{self.__key_hash}"
+        return f"DExtension({self.__hash})"
 
     def _latex_(self):
         raise r"\left(" + super()._latex_() + ",".join([f"{latex(g)} \\mapsto [{','.join(self.operation(i,g) for i in range(self.noperators()))}]" for g in self.gens()]) + r"\right)"
@@ -264,13 +252,13 @@ class DExtension_generic(MPolynomialRing_base):
     #################################################
     ### Element generation methods
     #################################################
-    def one(self) -> DExtension_Element:
+    def one(self) -> DExtension_element:
         r'''
             TODO: add documentation
         '''
         return self(1)
     
-    def zero(self) -> DExtension_Element:
+    def zero(self) -> DExtension_element:
         r'''
             TODO: add documentation
         '''
@@ -278,7 +266,7 @@ class DExtension_generic(MPolynomialRing_base):
     
     def random_element(self,
         degree: int = 2, terms: int = 5, choose_degree: bool = False, *args, **kwargs
-    ) -> DExtension_Element:
+    ) -> DExtension_element:
         return self.element_class(self, super().random_element(degree, terms, choose_degree, *args, **kwargs))
       
     #################################################
@@ -290,11 +278,11 @@ class DExtension_generic(MPolynomialRing_base):
     def operator_types(self) -> tuple[str]:
         return self.base().operator_types()
     
-    def _create_operator(self, operation: int, ttype: str, values: list[DExtension_Element]) -> AdditiveMap:
+    def _create_operator(self, operation: int, ttype: str, values: list[DExtension_element]) -> Morphism:
         r'''
             Method to create a map on the ring of polynomials from an operator on the base ring.
 
-            We create an :class:`AdditiveMap` from the given operator assuming the type given in ``ttype``.
+            We create an :class:`Morphism` from the given operator assuming the type given in ``ttype``.
             This type will determine how the multiplication behaves with respect to the different variables.
         '''
         operator = self.base().operators()[operation] 
@@ -303,11 +291,11 @@ class DExtension_generic(MPolynomialRing_base):
         elif ttype == "derivation":
             def __skip_i(seq, i):
                 return chain(islice(seq, 0, i), islice(seq, i+1, None))
-            def __extended_derivation(element: DExtension_Element):
+            def __extended_derivation(element: DExtension_element):
                 if element.is_monomial():
                     if element == self.one():
                         return self.zero()
-                    variables, degrees = list(zip(*[(var, deg) for var,deg in zip(self.gens(), self.degrees()) if deg > 0]))
+                    variables, degrees = list(zip(*[(var, deg) for var,deg in zip(self.gens(), element.degrees()) if deg > 0]))
                     base = prod(g**(d-1) for g,d in zip(variables, degrees))
                     return base*sum(degree*prod(__skip_i(variables, i)) for (i,degree) in enumerate(degrees) if degree > 0)
                 else:
@@ -315,7 +303,7 @@ class DExtension_generic(MPolynomialRing_base):
                         operator(self.base()(coeff)) * monom + coeff * __extended_derivation(monom)
                         for coeff, monom in zip(element.coefficients(), element.monomials())
                     )
-            new_operator = DerivationMap(self, __extended_derivation)
+            new_operator = AdditiveMap(self, __extended_derivation)
         elif ttype == "skew":
             raise NotImplementedError("[DExtension] _create_operator - skew not implemented")
         else:
@@ -332,7 +320,7 @@ class DExtension_generic(MPolynomialRing_base):
         '''
         raise NotImplementedError("[DExtension] __init__ not implemented")
 
-    def inverse_operation(self, element: DExtension_Element, operation: int = 0) -> DExtension_Element:
+    def inverse_operation(self, element: DExtension_element, operation: int = 0) -> DExtension_element:
         if not element in self:
             raise TypeError(f"[inverse_operation] Impossible to apply operation to {element}")
         element = self(element)
@@ -346,69 +334,63 @@ class DExtension_generic(MPolynomialRing_base):
         else:
             raise NotImplementedError("[inverse_operation] Inverse for unknown operation not implemented")
     
-    def __inverse_homomorphism(self, element: DExtension_Element, operation: int):
+    def __inverse_homomorphism(self, element: DExtension_element, operation: int):
         raise NotImplementedError("[DExtension] __inverse_homomorphism not implemented")
     
-    def __inverse_derivation(self, element: DExtension_Element, operation: int):
+    def __inverse_derivation(self, element: DExtension_element, operation: int):
         raise NotImplementedError("[DExtension] __inverse_derivation not implemented")
    
-    def __inverse_skew(self, element: DExtension_Element, operation: int):
+    def __inverse_skew(self, element: DExtension_element, operation: int):
         raise NotImplementedError("[DExtension] __inverse_skew not implemented")
     
 def is_DExtension(element):
     r'''
         Method to check whether an object is a ring of infinite polynomial with an operator.
     '''
-    return isinstance(element, DExtension_generic)
-
-class DExtension_libsingular (DExtension_generic, MPolynomialRing_libsingular):
-    r'''
-        Implementation of a d-extension using the Singular library
-    '''
-    Element = DExtension_Element_libsingular
-
-    def __init__(self, base : Parent, values_operations: Collection[Collection[Any]], names : Collection[str]):
-        MPolynomialRing_libsingular.__init__(self, base.sage_ring(), len(names), names)
-        DExtension_generic.__init__(self, base, values_operations, names)
-
-class DExtension_polydict (DExtension_generic, MPolynomialRing_polydict_domain):
-    r'''
-        Implementation of a d-extension using the Singular library
-    '''
-    Element = DExtension_Element_polydict
-
-    def __init__(self, base : Parent, values_operations: Collection[Collection[Any]], names : Collection[str]):
-        MPolynomialRing_polydict_domain.__init__(self, base, len(names), names, "degrevlex")
-        DExtension_generic.__init__(self, base, values_operations, names)
+    return isinstance(element, DExtension_parent)
 
 class DExtensionFunctor (ConstructionFunctor):
     r'''
-        TODO: update documentation
+        Class representing Functor for creating :class:`DExtension_parent`.
 
-        Class representing Functor for creating :class:`DPolynomialRing_dense`.
-
-        This class represents the functor `F: R \mapsto R\{y^(1),\ldots,y^{(n)}\}`.
-        The names of the variables must be given to the functor and, then
-        this can take any ring and create the corresponding ring of differential 
-        polynomials.
+        This class represents the functor that adds new variables to a d-ring 
+        extending the operations with polynomial images. This functor requires that the
+        number of operations matches the number of images in the functor.
 
         INPUT:
 
         * ``variables``: names of the variables that the functor will add (see 
           the input ``names`` in :class:`DifferentialPolynomialRing_dense`)
+        * ``images``: values (something that ca be casted) for the variables for each of the 
+          operations.
     '''
-    def __init__(self, variables):
-        raise NotImplementedError("[DExtensiongFunctor] __init__ not implemented")
+    def __init__(self, variables: Collection[str], images: Collection[Collection[Any]]):
+        if len(variables) == 0:
+            raise ValueError("At least one new variable has to be added")
+        self.__variables = variables
+        if len(images) != len(variables):
+            raise TypeError("The same number of variables must be given for the images.")
+        if any(len(v) != len(images[0]) for v in images[1:]):
+            raise ValueError("Incosistent number of images for each operator.")
+        self.__images = images
+        super().__init__(_DRings,_DRings)
         
     ### Methods to implement        
     def _apply_functor(self, x):
-        raise NotImplementedError("[DExtensiongFunctor] _apply_functor not implemented")
+        if x.noperators() != len(self.__images[0]):
+            raise TypeError(f"{x} do not have appropriate number of operations ({len(self.__images[0])}")
+        
+        return DExtension(x, names=self.__variables, values_operations=self.__images)
         
     def _repr_(self):
-        raise NotImplementedError("[DExtensiongFunctor] _repr_ not implemented")
+        return f"DExtension(*, {self.__images}, names={self.__variables})"
         
     def __eq__(self, other):
-        raise NotImplementedError("[DExtensiongFunctor] __eq__ not implemented")
+        if not isinstance(other, DExtensionFunctor):
+            return False
+        if self.__variables != other.__variables:
+            return False
+        return all([str(img) for img in s_image] == [str(img) for img in o_image] for (s_image, o_image) in zip(self.__images, other.__images))
 
     def merge(self, other):
         raise NotImplementedError("[DExtensiongFunctor] merge not implemented")
