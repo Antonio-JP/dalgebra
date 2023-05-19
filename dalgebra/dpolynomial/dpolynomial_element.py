@@ -328,10 +328,10 @@ class DPolynomialGen (InfinitePolynomialGen):
     def __rmod__(self, x):
         if isinstance(x, DPolynomialGen): x = x[0]
         return x % self[0]
-    def __truediv__(self, x):
+    def __div__(self, x):
         if isinstance(x, DPolynomialGen): x = x[0]
         return self[0] / x
-    def __rtruediv__(self, x):
+    def __rdiv__(self, x):
         if isinstance(x, DPolynomialGen): x = x[0]
         return x / self[0]
     def __floordiv__(self, x):
@@ -813,8 +813,11 @@ class DPolynomial (InfinitePolynomial_dense):
         return self.parent().element_class(self.parent(), super()._lmul_(x))
     def _mod_(self, x):
         return self - (self // x)*x
-    def _truediv_(self, x):
-        return self.parent().element_class(self.parent(), super()._truediv_(x)) 
+    def _div_(self, x):
+        if self % x != 0:
+            return self.parent().element_class(self.parent(), super()._div_(x)) 
+        else:
+            return self // x
     def _floordiv_(self, x):
         R = self.parent().polynomial_ring()
         return self.parent().element_class(self.parent(), R(self.polynomial()) // R(x.polynomial()))
@@ -903,7 +906,7 @@ class DPolynomial (InfinitePolynomial_dense):
         r'''
             Computes the weight of a d-polynomial.
 
-            This method compues the weight of a d-polynomial for a given weight function. These 
+            This method computes the weight of a d-polynomial for a given weight function. These 
             weight functions can be given as an actual :class:`~dalgebra.dpolynomial.dpolynomial_ring.WeightFunction`
             or the same arguments as this class have.
         '''

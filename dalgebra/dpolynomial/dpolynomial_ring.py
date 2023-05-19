@@ -102,7 +102,7 @@ class DPolynomialRingFactory(UniqueFactory):
         return DPolynomialRing_dense(base, names)
 
 DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing")
-RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing (used for backward compatility)
+RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing (used for backward compatibility)
 def DifferentialPolynomialRing(base, *names : str, **kwds):
     if not base in _DRings:
         base = DifferentialRing(base, diff)
@@ -635,7 +635,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             * ``element``: element (that must be in ``self``) to be evaluated
             * ``args``: list of arguments that will be linearly related with the generators
               of ``self`` (like they are given by ``self.gens()``)
-            * ``dic``: dictionary mapping generators to polynomials. This alllows an input equivalent to 
+            * ``dic``: dictionary mapping generators to polynomials. This allows an input equivalent to 
               the argument in ``kwds`` but where the keys of the dictionary are :class:`DPOlynomialGen`.
             * ``kwds``: dictionary for providing values to the generators of ``self``. The 
               name of the keys must be the names of the generators (as they can be got using 
@@ -1191,7 +1191,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
 
     def sylvester_subresultant_sequence(self, P: DPolynomial, Q: DPolynomial, gen: DPolynomialGen = None) -> tuple[DPolynomial]:
         r'''
-            Method that gets the subresultant sequence in form of a linear d-polynmomial.
+            Method that gets the subresultant sequence in form of a linear d-polynomial.
 
             As described in :func:`sylvester_subresultant`, when we build the `k`-Sylvester matrix of two linear 
             d-polynomials, we obtain a non-square matrix and, in order to compute a determinant, we need to remove `k`
@@ -1266,11 +1266,11 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
     #################################################
     ### Weighting and Ranking methods
     #################################################
-    def weight_func(self, weight_vars, weight_oper) -> WeightFunction:
+    def weight_func(self, weight_vars, weight_operators) -> WeightFunction:
         r'''
             TODO: add documentation to this method
         '''
-        return WeightFunction(self, weight_vars, weight_oper)
+        return WeightFunction(self, weight_vars, weight_operators)
     
     def ranking(self, ordering: list[DPolynomialGen] | tuple[DPolynomialGen] = None, ttype: str = "orderly") -> RankingFunction:
         r'''
@@ -1450,20 +1450,20 @@ class DPolynomialSimpleMorphism (Morphism):
 
 class WeightFunction(SetMorphism):
     r'''
-        Class to represent a weight function for a ring of d-polynomials.
+        Class to represent a weight or grading function for a ring of d-polynomials.
 
         Let `\mathcal{R} = (R,\Delta)\{a_1,\ldots,a_m\}` be a ring of d-polynomials and let `\mathcal{T}`
         be the monoid of monomials of `\mathcal{R}`. We say that a function `w: \mathcal{T} \rightarrow \mathbb{N}`
         if a weight function if it is a monoid homomorphism, i.e., `w(st) = w(s) + w(t)`.
 
-        With this definition, it is clear that we can split `\mathcal{R}` into a `R`-direct sum where we keep in each 
+        With this definition, it is clear that we can write the set `\mathcal{R}` a direct sum of the abelian groups where we keep in each 
         summand the monomials of a fixed weight:
 
         .. MATH::
 
             \mathcal{R} = \bigoplus_{i \in \mathbb{N}} \mathcal{R}_i,
 
-        where `\mathcal{R}_i = R[t\ :\ t\in T\text{ with }w(t) = i]`. We call each layer `\mathcal{R}_i` the set of 
+        where `\mathcal{R}_i = \langle t\ :\ t\in T\text{ with }w(t) = i\rangle_R`. We call each layer `\mathcal{R}_i` the set of 
         `i`-homogeneous polynomials w.r.t. the weight function `w(\cdot)`.
 
         In order to define a weight function, we only need to define for each of the generators of `\mathcal{T}`. It 
@@ -1484,14 +1484,14 @@ class WeightFunction(SetMorphism):
 
         * ``dpoly_ring``: a :class:`DPolynomialRing` over which we will base the weight function.
         * ``base_weights``: a list, tuple or dictionary indicating the base weights. If a variable is not provided, we consider it with weight 0.
-        * ``oper_weights``: a list or tuple indicating how each operation extends the weights (i.e., a list with the `W_i`).
+        * ``operator_weights``: a list or tuple indicating how each operation extends the weights (i.e., a list with the `W_i`).
 
         TODO:
 
         * Add reference to weight functions in differential setting.
         * Add reference to weight functions in difference setting.
     '''
-    def __init__(self, dpoly_ring: DPolynomialRing_dense, base_weights: list[int] | tuple[int] | dict[str|DPolynomialGen, int], oper_weigths: list[int] |tuple[int]):
+    def __init__(self, dpoly_ring: DPolynomialRing_dense, base_weights: list[int] | tuple[int] | dict[str|DPolynomialGen, int], operator_weights: list[int] |tuple[int]):
         if isinstance(base_weights, (list,tuple)): # we got a list of weights
             if not len(base_weights) == dpoly_ring.ngens():
                 raise TypeError(f"[WeightFunction] A weight must be define for all generators (got {len(base_weights)}, expected {dpoly_ring.ngens()})")
@@ -1505,13 +1505,13 @@ class WeightFunction(SetMorphism):
             raise TypeError("[WeightFunction] Weights must be given as lists or dictionaries.")
         self.__base_weights = base_weights
 
-        if not isinstance(oper_weigths, (list,tuple)): # we got a list of weights
+        if not isinstance(operator_weights, (list,tuple)): # we got a list of weights
             raise TypeError("[WeightFunction] Extension of weights must be given as lists.")
-        if not len(oper_weigths) == dpoly_ring.noperators():
-            raise TypeError(f"[WeightFunction] A weight must be define for all operations (got {len(oper_weigths)}, expected {dpoly_ring.noperators()})")
-        if any(el <= 0 for el in oper_weigths):
+        if not len(operator_weights) == dpoly_ring.noperators():
+            raise TypeError(f"[WeightFunction] A weight must be define for all operations (got {len(operator_weights)}, expected {dpoly_ring.noperators()})")
+        if any(el <= 0 for el in operator_weights):
             raise ValueError(f"[WeightFunction] Weights must be always positive.")
-        self.__oper_weights = oper_weigths
+        self.__operator_weights = operator_weights
 
         super().__init__(dpoly_ring.Hom(ZZ, _Sets), self.weight)
 
@@ -1550,7 +1550,7 @@ class WeightFunction(SetMorphism):
             if m == 1:
                 return ZZ(0)
             return sum(
-                (self.__base_weights[i] + sum(j*w for (j,w) in zip(gen.index(variable, as_tuple=True), self.__oper_weights)))*m.degree(variable)
+                (self.__base_weights[i] + sum(j*w for (j,w) in zip(gen.index(variable, as_tuple=True), self.__operator_weights)))*m.degree(variable)
                 for variable in m.variables() 
                 for (i,gen) in enumerate(self.parent().gens()) if variable in gen
             )
@@ -1598,7 +1598,7 @@ class WeightFunction(SetMorphism):
         ## recursive part
         recursive = set()
         for i in range(self.parent().noperators()):
-            recursive = recursive.union([v.operation(i) for v in self.weighted_variables(weight - self.__oper_weights[i])])
+            recursive = recursive.union([v.operation(i) for v in self.weighted_variables(weight - self.__operator_weights[i])])
         
         ## adding the special case if needed
         return recursive.union(set([v[0] for (v,i) in zip(self.parent().gens(), self.__base_weights) if i == weight]))
@@ -1633,20 +1633,20 @@ class WeightFunction(SetMorphism):
         else:
             ## operation part
             result = set()
-            for (operator, ttype, op_weight) in zip(self.parent().operators(), self.parent().operator_types(), self.__oper_weights):
+            for (operator, ttype, op_weight) in zip(self.parent().operators(), self.parent().operator_types(), self.__operator_weights):
                 if ttype == "derivation":
-                    logger.debug(f"Adding derivations of monomilas of weights {weight-1}")
+                    logger.debug(f"Adding derivations of monomials of weights {weight-1}")
                     to_add = sum([operator(mon).monomials() for mon in self.homogeneous_monomials(weight - op_weight)], [])
                 elif ttype == "homomorphism":
                     cweight = weight - op_weight; i = 1
                     while cweight >= 0:
-                        logger.debug(f"Adding shifts of monomilas of weights {cweight} with degree {i}")
+                        logger.debug(f"Adding shifts of monomials of weights {cweight} with degree {i}")
                         to_add = sum([operator(mon).monomials() for mon in self.homogeneous_monomials(cweight) if mon.degree() == i], [])
                         i += 1; cweight -= op_weight
                 else:
                     cweight = weight - 1
                     while cweight >= 0:
-                        logger.debug(f"Adding operation of monomilas of weights {cweight} that has weight {weight}")
+                        logger.debug(f"Adding operation of monomials of weights {cweight} that has weight {weight}")
                         to_add = sum([[m for m in operator(mon).monomials() if self(m) == weight] for mon in self.homogeneous_monomials(cweight)], [])
                         cweight -= 1
                 logger.debug(f"Adding {len(to_add)} elements")
@@ -1654,7 +1654,7 @@ class WeightFunction(SetMorphism):
                         
             ## multiplication part
             for i in range(1,weight//2 + 1):
-                logger.debug(f"Adding product of monomilas of weights {i} and {weight-i}")
+                logger.debug(f"Adding product of monomials of weights {i} and {weight-i}")
                 to_add = [tl*th for (tl,th) in product(self.homogeneous_monomials(i), self.homogeneous_monomials(weight-i))]
                 logger.debug(f"Adding {len(to_add)} elements")
                 result.update(to_add)
@@ -1689,7 +1689,7 @@ class WeightFunction(SetMorphism):
         r'''
             Method that applies an operation to a vector.
 
-            This method takes a vector, interpret it as an homogenoeus element (hence the need to specifying the weight)
+            This method takes a vector, interpret it as an homogeneous element (hence the need to specifying the weight)
             and applies the corresponding operation to it. When the result is again homogeneous, we return the new vector.
 
             INPUT:
@@ -1725,9 +1725,9 @@ class RankingFunction:
         * `t < \sigma_j(t)` for all monomial `t \in \mathcal{T}`.
         * If `t \leq s` then `\sigma_j(t) \leq \sigma_j(s)` for all monomials `s, t \in \mathcal{T}`.
 
-        A ranking is the analog of a term ordering used in Groebner bases algorithms. However, rankings order the monomials in 
+        A ranking is the analog of a term ordering used in Gröbner bases algorithms. However, rankings order the monomials in 
         `\mathcal{T}` that is a monoid infinitely generated with some extra properties that relate the operations with the variables.
-   	
+    
         In particular, we say that a ranking `\leq` of `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` is an elimination ranking 
         between two d-variables `u, v` (say `u < v`) if they satisfy `\sigma^\alpha(u) < \sigma^\beta(v)` for all `\alpha,\beta\in \mathbb{N}^n`.
 
@@ -1751,7 +1751,7 @@ class RankingFunction:
           - "orderly": generates the orderly ranking where ``ordering`` provides the basic ordering between variables.
 
         TODO: add examples
-   	'''
+    '''
     def __init__(self, parent: DPolynomialRing_dense, ordering: list[DPolynomialGen] | tuple[DPolynomialGen] = None, ttype: str = "orderly"):
         ## Processing arguments
         if not isinstance(parent, DPolynomialRing_dense):
@@ -1761,7 +1761,7 @@ class RankingFunction:
         elif not isinstance(ordering, (list,tuple)):
             raise TypeError(f"[ranking] The base ordering must be given as a list or tuple of generators, but got {type(ordering)}")
         elif any(g not in parent.gens() for g in ordering):
-            raise ValueError(f"[ranking] The base ordeging must be given as a list of generators (DPolynomialGen) (got {ordering})")
+            raise ValueError(f"[ranking] The base ordering must be given as a list of generators (DPolynomialGen) (got {ordering})")
         
         if not ttype in ("elimination", "orderly"):
             raise ValueError(f"[ranking] The type of a ranking must be either 'elimination' or 'orderly'. Got {ttype}")
@@ -1830,7 +1830,7 @@ class RankingFunction:
 
             This method is the critical step of a ranking function. It takes two variables in 
             a ring of d-polynomials, i.e., two variables in a :class:`DPolynomialRing_dense`
-            and compare which one is bigger in terms of this rakning function.
+            and compare which one is bigger in terms of this ranking function.
 
             When the inputs are d-polynomials (not only variables) we proceed to extend
             the ranking to the whole d-polynomial as follows:
@@ -1914,7 +1914,7 @@ class RankingFunction:
             Method to get the rank from a d-polynomial.
 
             This method computes the rank for the current ranking function. The rank is the maximal
-            variable that appear in a d-polynomial to the hieghest degree. If there is no variable appearing, we say the rank is the 
+            variable that appear in a d-polynomial to the highest degree. If there is no variable appearing, we say the rank is the 
             monomial `1`.
 
             INPUT: 
@@ -1959,7 +1959,7 @@ class RankingFunction:
     @cached_method
     def separant(self, element: DPolynomial) -> DPolynomial:
         r'''
-            Method to get the sepparant from a d-polynomial.
+            Method to get the separant from a d-polynomial.
 
             This method computes the separant for the current ranking function. The separant is the partial
             derivative w.r.t. the leader variable of a d-polynomial. If there is no variable appearing, we 

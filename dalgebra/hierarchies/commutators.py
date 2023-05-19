@@ -1,5 +1,5 @@
 r'''
-    Module with the algorithms to compute commutator of differential oeprators.
+    Module with the algorithms to compute commutator of differential operators.
 
     This module provides algorithms and methods to quickly generate the rings and commutators for some integrable hierarchies.
 
@@ -9,7 +9,8 @@ r'''
     * Add examples of this module.
 '''
 from functools import reduce
-from sage.all import ZZ, QQ, PolynomialRing, matrix, vector
+from sage.all import ZZ, QQ, matrix, vector
+from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from typing import Callable
 
 from ..dring import DifferentialRing
@@ -117,21 +118,21 @@ def quasi_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", m
 
         return (Pm,T)
 
-def __quasi_commuting_diff(parent: DPolynomialRing_dense, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]):
+def __quasi_commuting_diff(parent: DPolynomialRing_dense, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]):
     r'''
         Method that solves the system for quasi-commutation using a differential approach
 
         This method sets up a differential system and tries to solve it using the method 
         :func:`~dalgebra.dpolynomial.dpolynomial_system.DSystem.solve_linear`.
     '''
-    S = DSystem(equations, variables=p)
+    S = DSystem(equations, parent=parent, variables=p)
     return S.solve_linear()
 
 def __quasi_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]):
         r'''
             Method that solves the system for quasi-commutation using a linear approach
 
-            This method exploits the homogenoues structure that the coefficient must have in order to 
+            This method exploits the homogeneous structure that the coefficient must have in order to 
             solve the system of quasi-commutation.
         '''
         n = len(u) + 1; m = len(p) + 1
@@ -147,7 +148,7 @@ def __quasi_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPol
         ansatz_variables = {p[i]: [base_C(el) for el in ansatz_variables[p[i]]] for i in range(m-1)}
         cs = base_C.wrapped.gens()
 
-        ## Adating the DPolynomialRing
+        ## Adapting the DPolynomialRing
         R = parent.change_ring(base_C)
         to_plug = {R.gen(gen.variable_name()) : sum(coeff*R(mon) for (coeff,mon) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
 
