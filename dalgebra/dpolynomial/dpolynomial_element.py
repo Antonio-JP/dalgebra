@@ -171,6 +171,31 @@ class DPolynomialGen (InfinitePolynomialGen):
         * ``parent``: a :class:`.dpolynomial_ring.DifferentialPolynomialRing_dense` where ``self`` will generate its elements.
           This will indicate also the amount of indices allow to generate a variable.
         * ``name``: main part of the name for the generated variables.
+
+        REMARK:
+
+        A d-polynomial generator can act, when use in arithmetic operations as the first element it generates::
+
+            sage: from dalgebra import *
+            sage: R.<u,v> = DPolynomialRing(DifferentialRing(QQ['x'], diff)); x = R('x')
+            sage: x*u - v[1]
+            x*u_0 - v_1
+
+        Observe that the objects are not equal by themselves, but when computing with :class:`DPolynomialGen`
+        they are automatically casted::
+
+            sage: u[0] == u
+            False
+            sage: u[0] - u
+            0
+            sage: u * v[1] + u[1] * v[0]
+            u_1*v_0 + u_0*v_1
+            sage: (u**2).derivative() // u
+            2*u_1
+            sage: (u*v).derivative() % u
+            u_1*v_0
+
+        This is done to simplify the reading of the code for the user when using these objects.
     '''
     def __init__(self, parent: Parent, name: str):
         from .dpolynomial_ring import is_DPolynomialRing
@@ -270,6 +295,53 @@ class DPolynomialGen (InfinitePolynomialGen):
 
     def __hash__(self):
         return hash(self._name)
+    
+    ###################################################################################
+    ### Arithmetic methods
+    ###################################################################################
+    def __add__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] + x
+    def __radd__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x + self[0]
+    def __neg__(self):
+        return -self[0]
+    def __sub__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] - x
+    def __rsub__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x - self[0]
+    def __mul__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] * x
+    def __rmul__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x * self[0]
+    def __lmul__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] * x
+    def __mod__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] % x
+    def __rmod__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x % self[0]
+    def __truediv__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] / x
+    def __rtruediv__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x / self[0]
+    def __floordiv__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] // x
+    def __rfloordiv__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x // self[0]
+    def __pow__(self, n):
+        return self[0]**n
 
 RWOPolynomialGen = DPolynomialGen #: alias for DPolynomialGen (used for backward compatibility)
 #######################################################################################
@@ -741,9 +813,8 @@ class DPolynomial (InfinitePolynomial_dense):
         return self.parent().element_class(self.parent(), super()._lmul_(x))
     def _mod_(self, x):
         return self - (self // x)*x
-        #return self.parent().element_class(self.parent(), self.polynomial() % x.polynomial())
-    def _div_(self, x):
-        return self.parent().element_class(self.parent(), self.polynomial() / x.polynomial())
+    def _truediv_(self, x):
+        return self.parent().element_class(self.parent(), super()._truediv_(x)) 
     def _floordiv_(self, x):
         R = self.parent().polynomial_ring()
         return self.parent().element_class(self.parent(), R(self.polynomial()) // R(x.polynomial()))
