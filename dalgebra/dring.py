@@ -764,7 +764,7 @@ class DRingFactory(UniqueFactory):
                 der_module = base.derivation_module()
                 new_operator = DerivationMap(
                     base, 
-                    sum((operator(base_gen)*der_gen for (base_gen,der_gen) in zip(base.gens(),der_module.gens())), der_module.zero())
+                    sum((base(operator(base_gen))*der_gen for (base_gen,der_gen) in zip(base.gens(),der_module.gens())), der_module.zero())
                 )
             elif ttype == "skew":
                 if not isinstance(parent(operator), RingDerivationModule):
@@ -853,7 +853,11 @@ class DRing_WrapperElement(Element):
     def _div_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
-        return self.parent().element_class(self.parent(), self.wrapped / x.wrapped) 
+        value = self.wrapped / x.wrapped
+        if value in self.parent().wrapped:
+            return self.parent().element_class(self.parent(), value) 
+        else:
+            return self.parent().fraction_field().element_class(self.parent().fraction_field(), value)
     def _floordiv_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
@@ -865,7 +869,11 @@ class DRing_WrapperElement(Element):
     def __pow__(self, n) -> DRing_WrapperElement:
         return self.parent().element_class(self.parent(), self.wrapped ** n)
     def __invert__(self) -> DRing_WrapperElement:
-        return self.parent().element_class(self.parent(), ~self.wrapped)
+        value = ~self.wrapped
+        if value in self.parent().wrapped:
+            return self.parent().element_class(self.parent(), value)
+        else:
+            return self.parent().fraction_field().element_class(self.parent().fraction_field(), value)
     def __eq__(self, x) -> bool:
         if x is None: return False
 
@@ -887,6 +895,27 @@ class DRing_WrapperElement(Element):
         if other in self.parent():
             other = self.parent()(other)
         return self.wrapped.divides(other.wrapped)
+    
+    def numerator(self):
+        try:
+            numer = self.wrapped.numerator()
+            if numer.parent() == self.parent().wrapped:
+                destiny = self.parent()
+            else:
+                destiny = DRing(numer.parent(), *[operator.function for operator in self.parent().operators()], types=self.parent().operator_types())
+            return destiny.element_class(destiny, numer)
+        except Exception as e:
+            raise AttributeError(f"'numerator' not an attribute for {self.__class__}. Reason: {e}")
+    def denominator(self):
+        try:
+            denom = self.wrapped.denominator()
+            if denom.parent() == self.parent().wrapped:
+                destiny = self.parent()
+            else:
+                destiny = DRing(denom.parent(), *[operator.function for operator in self.parent().operators()], types=self.parent().operator_types())
+            return destiny.element_class(destiny, denom)
+        except Exception as e:
+            raise AttributeError(f"'denominator' not an attribute for {self.__class__}. Reason: {e}")
 
     ## Other magic methods
     def __hash__(self) -> int:
@@ -898,7 +927,7 @@ class DRing_WrapperElement(Element):
     def _latex_(self) -> str:
         return latex(self.wrapped)
 
-class DRing_Wrapper(CommutativeRing):
+class DRing_Wrapper(Parent):
     r'''
         Class for wrapping a Commutative ring and add operators over it.
 
@@ -979,9 +1008,9 @@ class DRing_Wrapper(CommutativeRing):
 
         #########################################################################################################
         ### CALLING THE SUPER AND ARRANGING SOME CONVERSIONS
-        super().__init__(base.base(), category=tuple(categories))
         self.__wrapped = base
-
+        super().__init__(base.base(), category=tuple(categories))
+        
         # registering conversion to simpler structures
         current = self.__wrapped
         morph = DRing_Wrapper_SimpleMorphism(self, current)
@@ -1146,6 +1175,36 @@ class DRing_Wrapper(CommutativeRing):
         return None
 
     # Rings methods
+    def fraction_field(self):
+        base = self.wrapped.fraction_field()
+        extended_operators = []
+        for operator, otype in zip(self.operators(), self.operator_types()):
+            operator = operator.function # operator is a WrappedMap
+            if otype == "homomorphism":
+                if isinstance(operator, AdditiveMap):
+                    func = lambda element : operator(element.numerator()).wrapped / operator(element.denominator()).wrapped
+                    func = AdditiveMap(base, func)
+                else:
+                    func = base.Hom(base)(operator)
+            elif otype == "derivation":
+                if isinstance(operator, DerivationMap): 
+                    M = base.derivation_module(); f = operator.function
+                    derivation = M([f(g) for g in M.base().gens()])
+                    func = DerivationMap(base, derivation)
+                elif isinstance(operator, AdditiveMap):
+                    func = lambda element : (operator(element.numerator()).wrapped * element.denominator() - element.numerator() * operator(element.denominator())) / element.denominator()**2
+                    func = AdditiveMap(base, func)
+            elif otype == "skew":
+                if isinstance(operator, SkewMap):
+                    twist = base.Hom(base)(operator.twist)
+                    M = base.derivation_module(twist=twist); f = operator.function
+                    skew = M([f(g) for g in M.base().gens()])
+                    func = SkewMap(base, twist, skew)
+                else:
+                    raise NotImplementedError("Extending skew-derivation only implemented for Skew maps")
+            extended_operators.append(func)
+        return DRing_Wrapper(base, *extended_operators, types=self.operator_types())
+
     def characteristic(self) -> int:
         return self.wrapped.characteristic()
 
@@ -1236,26 +1295,40 @@ class DRingFunctor(ConstructionFunctor):
     def __merge_skews(self, f: SkewMap, g: SkewMap):
         Mf = f.function.parent(); Mg = g.function.parent()
         # we try to merge the base ring of the modules
-        R = pushout(Mf.base(), Mg.base())
+        R = pushout(Mf.domain(), Mg.domain())
         
-        if R == Mf.base(): 
+        if R == Mf.domain(): 
             M = Mf; twist = f.twist
-        elif R == Mg.base():
+        elif R == Mg.domain():
             M = Mg; twist = g.twist
         else:
             raise AssertionError("We can only extend to one parent, no mix between them")
             
         # we try and cast both derivation into M
-        df = M(f.function); dg = M(g.function)
+        df = M(f.function) if f.function in M else M([f.function(v) for v in M.domain().gens()])
+        dg = M(g.function) if g.function in M else M([g.function(v) for v in M.domain().gens()])
+        
         if df - dg == 0: 
             if isinstance(f, DerivationMap):
-                return DerivationMap(M.base(), df)
+                return DerivationMap(M.domain(), df)
             else: # general skew case
-                return SkewMap(M.base(), twist, df)
+                return SkewMap(M.domain(), twist, df)
         return None
 
     def __merge_homomorphism(self, f, g):
-        raise NotImplementedError("Merging of homomorphisms not implemented")
+        Mf = f.parent(); Mg = g.parent()
+        # we try to merge the base ring of the modules
+        R = pushout(Mf.domain(), Mg.domain())
+        
+        if R == Mf.domain(): M = Mf
+        elif R == Mg.domain(): M = Mg
+        else: raise AssertionError("We can only extend to one parent, no mix between them")    
+        
+        # we try and cast both derivation into M
+        df = M(f) if f in M else M([f(v) for v in M.domain().gens()])
+        dg = M(g) if g in M else M([g(v) for v in M.domain().gens()])
+        
+        return df if df == dg else None
 
     def merge(self, other):
         if isinstance(other, DRingFunctor):
