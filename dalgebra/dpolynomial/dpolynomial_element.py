@@ -774,6 +774,9 @@ class DPolynomial (InfinitePolynomial_dense):
         R = self.parent().polynomial_ring()
         return R(self.polynomial()).divides(R(self.parent()(other).polynomial()))
 
+    def is_unit(self):
+        return self.degree() == 0
+
     def degree(self, x=None, std_grading=False) -> int: 
         r'''Overriding :func:`degree` to fit the setting of D'''
         R = self.parent().polynomial_ring()
@@ -811,16 +814,17 @@ class DPolynomial (InfinitePolynomial_dense):
         return self.parent().element_class(self.parent(), super()._rmul_(x))
     def _lmul_(self, x):
         return self.parent().element_class(self.parent(), super()._lmul_(x))
+    def __invert__(self) -> DPolynomial:
+        if self.degree() == 0:
+            return self.parent()(~self.coefficients()[0])
+        raise ArithmeticError(f"{self} not a unit")
     def _mod_(self, x):
         return self - (self // x)*x
     def _div_(self, x):
-        result = super()._div_(x)
         F = self.parent().fraction_field()
-        if result in self.parent():
-            return self.parent()(result)
-        if result in F:
-            return F._element_class(F, result.numerator(), result.denominator())
-        
+        result = F._element_class(F, self, x, reduce=True)
+        result = self.parent()(result) if result in self.parent() else result   
+        return result
     def _floordiv_(self, x):
         R = self.parent().polynomial_ring()
         return self.parent().element_class(self.parent(), R(self.polynomial()) // R(x.polynomial()))
