@@ -2,7 +2,7 @@ r'''
     Module with all structures for defining rings with operators.
 
     Let `\sigma: R \rightarrow R` be an additive homomorphism, i.e., for all elements `r,s \in R`,
-    the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the pair `(R, \sigma)`as a *d-ring*. 
+    the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the pair `(R, \sigma)` as a *d-ring*. 
 
     Similarly, if we have a set of additive maps `\sigma_1,\ldots,\sigma_n : R \rightarrow R`,
     we define the *ring* `R` *with operators* `(\sigma_1,\ldots,\sigma_n)` (or simply, *d-ring*) as the tuple 
@@ -139,7 +139,6 @@ r'''
 from __future__ import annotations
 
 from collections.abc import Sequence
-from ore_algebra.ore_algebra import OreAlgebra, OreAlgebra_generic
 from sage.all import ZZ, latex, Parent
 from sage.categories.all import Morphism, Category, Rings, CommutativeRings, CommutativeAdditiveGroups, QuotientFields
 from sage.categories.morphism import IdentityMorphism, SetMorphism # pylint: disable=no-name-in-module
@@ -1040,7 +1039,7 @@ class DRing_Wrapper(Parent):
 
         #########################################################################################################
         ### CREATING CACHED VARIABLES
-        self.__linear_operator_ring : OreAlgebra_generic = None
+        self.__linear_operator_ring = None
         self.__fraction_field : DFractionField = None
 
     @property
@@ -1050,7 +1049,7 @@ class DRing_Wrapper(Parent):
 
     def operator_types(self) -> tuple[str]: return self.__types
 
-    def linear_operator_ring(self) -> OreAlgebra_generic:
+    def linear_operator_ring(self):
         r'''
             Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
 
@@ -1108,6 +1107,7 @@ class DRing_Wrapper(Parent):
                 sage: U = DifferenceRing(B, ns); U.linear_operator_ring()
                 Univariate Ore algebra in S over Multivariate Polynomial Ring in x, y over Rational Field
         '''
+        from ore_algebra.ore_algebra import OreAlgebra
         if self.__linear_operator_ring == None:
             ## We need the operators to commute
             if not self.all_operators_commute():

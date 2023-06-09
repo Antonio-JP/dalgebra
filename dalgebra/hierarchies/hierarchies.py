@@ -8,7 +8,9 @@ r'''
     This software has been used in the presentation in ISSAC'23 "Computing almost-commuting basis of Ordinary Differential
     Operators", by A. Jiménez-Pastor, S.L. Rueda and M.A. Zurro in Tromsø, Norway.
 
-    ## Theory explanation
+    
+    **Theory explanation**
+    -----------------------------------------
 
     Let us consider an algebraically closed field of characteristic zero `C` and the field of d-polynomials defined by `n-2` 
     differential varuables `u_0,\ldots,u_{n-2}`. Let us consider the linear differential operator::
