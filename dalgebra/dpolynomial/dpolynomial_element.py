@@ -814,10 +814,13 @@ class DPolynomial (InfinitePolynomial_dense):
     def _mod_(self, x):
         return self - (self // x)*x
     def _div_(self, x):
-        if self % x != 0:
-            return self.parent().element_class(self.parent(), super()._div_(x)) 
-        else:
-            return self // x
+        result = super()._div_(x)
+        F = self.parent().fraction_field()
+        if result in self.parent():
+            return self.parent()(result)
+        if result in F:
+            return F._element_class(F, result.numerator(), result.denominator())
+        
     def _floordiv_(self, x):
         R = self.parent().polynomial_ring()
         return self.parent().element_class(self.parent(), R(self.polynomial()) // R(x.polynomial()))

@@ -57,7 +57,7 @@ from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-mod
 from typing import Collection
 
 from .dpolynomial_element import DPolynomial, DPolynomialGen, IndexBijection
-from ..dring import DRings, AdditiveMap, DifferentialRing, DifferenceRing, DRing_Wrapper
+from ..dring import DRings, DFractionField, AdditiveMap, DifferentialRing, DifferenceRing, DRing_Wrapper
 
 logger = logging.getLogger(__name__)
 _DRings = DRings.__classcall__(DRings)
@@ -321,6 +321,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         ])
         self.__cache : list[dict[DPolynomial, DPolynomial]] = [dict() for _ in range(len(self.__operators))]
         self.__cache_ranking : dict[tuple[tuple[DPolynomial], str], RankingFunction] = dict()
+        self.__fraction_field : DFractionField = None
 
     #################################################
     ### Coercion methods
@@ -538,6 +539,17 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             A :class:`DPolynomialRing_dense` over ``R`` with the same variables as ``self``.
         '''
         return DPolynomialRing(R, self.variable_names())
+
+    def fraction_field(self):
+        try:
+            if self.is_field():
+                return self
+        except NotImplementedError:
+            pass
+
+        if self.__fraction_field is None:
+            self.__fraction_field = DFractionField(self)
+        return self.__fraction_field
 
     #################################################
     ### Magic python methods
