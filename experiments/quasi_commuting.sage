@@ -7,7 +7,7 @@ from time import time
 from cProfile import Profile
 from pstats import Stats, SortKey
 
-from dalgebra.hierarchies.commutators import *
+from dalgebra.hierarchies.hierarchies import *
 
 if __name__ == "__main__":
     n = int(sys.argv[1])

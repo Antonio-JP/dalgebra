@@ -1,12 +1,51 @@
 r'''
-    Module with the algorithms to compute commutator of differential operators.
+    Generic almost-commutators and integrable hierarchies.
 
-    This module provides algorithms and methods to quickly generate the rings and commutators for some integrable hierarchies.
+    This module contains the main functionality to compute the generic almost commutators of linear differential 
+    operators. This is based on the work of G. Wilson: "Algebraic curves and soliton equations" in *Geometry today 60*, **1985**,
+    pp. 303-239.
+
+    This software has been used in the presentation in ISSAC'23 "Computing almost-commuting basis of Ordinary Differential
+    Operators", by A. Jiménez-Pastor, S.L. Rueda and M.A. Zurro in Tromsø, Norway.
+
+    ## Theory explanation
+
+    Let us consider an algebraically closed field of characteristic zero `C` and the field of d-polynomials defined by `n-2` 
+    differential varuables `u_0,\ldots,u_{n-2}`. Let us consider the linear differential operator::
+
+    .. MATH::
+
+        L = \partial^n + u_{n-2}\partial^{n-2}  + \ldots + u_1\partial + u_0.
+
+    This operator `L` can be written in terms of d-polynomilas in the ring `K\{z\} = C\{u_0,\ldots,u_{n-2},z\}`. We say that 
+    another operator `P \in K\{z\}` *almost commutes with `L`* if and only if the commutator of `L` with `P` (`[L,P]`) has order
+    at most `\ord(L) - 2`. 
+
+    In general, the order of `[L,P]` is `\ord(L) + \ord(P) - 1`. Hence, in order to obtain a specific order of at most `\ord(L) - 2`
+    we need that the coefficients of `P` satisfy `ord(P) + 1` conditions. 
+
+    It was shown in the article by G. Wilson that, if we set `w(u_i) = n-i`, then for every `m \in \mathbb{N}` there is a unique
+    operator `P_m \in K\{z\}` in normal form of order `m` (i.e, `P_m = z^{(m)} + p_{2}z^{(m-2)}) + \ldots + p_m`) such that
+
+    * The coefficient `p_i` is homogeneous of weight `i`.
+    * `P_m` alsmost commutes with `L`.
+
+    If we consider all the `P_m`, we obtain a basis of the operators that almost commute with `L`. Moreover, the remaining coefficients
+    of `[L,P_m]` provide extra differential conditions that the coefficients of `P_m` have to satisfy in order to have an actual 
+    commutator of `L`. These sequences of conditions are called **integrable hierarchies** for a given value of `n = ord(L)`.
+
+    This module provides algorithms and methods to quickly generate the hierarchies in a method :func:`almost_commuting_schr`, which takes
+    the values for `n = \ord(L)` and `m = \ord(P_m)` and computes the `m`-th step in the corresponding hierarchy.
+
+    EXAMPLES::
+
+        sage: from dalgebra.hierarchies.hierarchies import *
+        sage: 
 
     TODO:
 
-    * Improve explanation on this module.
-    * Add examples of this module.
+    1. Add methods to have specific hierarchies.
+    2. Incorporate methods to reduce the equations for higher hierarchies.
 '''
 from functools import reduce
 from sage.all import ZZ, QQ, matrix, vector
@@ -18,9 +57,9 @@ from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
 from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing_dense
 from ..dpolynomial.dpolynomial_system import DSystem
 
-def quasi_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", method: str | Callable ="diff"):
+def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", method: (str | Callable) ="diff"):
     r'''
-        Method to compute an element on the quasi-commuting basis.
+        Method to compute an element on the almost-commuting basis.
 
         Let `L` be a linear differential operator of order `n`. We say that `A` *almost commute
         with `L`* if `ord([L,A]) \leq n-2`. In general, the commutator will have order `n+m-1` where 
@@ -46,32 +85,32 @@ def quasi_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", m
         * `P_m = \partial^m + p_{m,m-2}\partial^{m-2} + \ldots + p_{m,1}\partial + p_{m,0}`, where `p_{m,i} \in C\{u_*\}`.
         * If we give weights `u_i^{(k)} --> n-i+k`, then `p_{m,j}` are homogeneous of weight `m-j`.
 
-        This method computes, for a given pair or orders `n` and `m` the Wilson's quasi commuting base element of order `m`
+        This method computes, for a given pair or orders `n` and `m` the Wilson's almost commuting base element of order `m`
         for the `n`-th order Schrödinger operator `L_n`.
 
         INPUT:
 
         * ``n``: the order of the Schrödinger operator `L_n`.
-        * ``m``: the desired order for the quasi-commutator.
+        * ``m``: the desired order for the almost-commutator.
         * ``name_u`` (optional): base name for the `u` variables that will appear in `L_n` and in the output `P_m`.
         * ``name_z`` (optional): base name for the differential variable to represent `\partial`.
         * ``method`` (optional): method to decide how to solve the arising differential system. Currently 
-          the methods ``diff`` (see :func:`__quasi_commuting_diff`) and ``linear`` (see :func:`__quasi__commuting_linear`).
+          the methods ``diff`` (see :func:`__almost_commuting_diff`) and ``linear`` (see :func:`__almost__commuting_linear`).
 
         OUTPUT: 
 
-        A pair `(P_m, (T_0,\ldots,T_{n-2}))` such that `P_m` is the quasi commutator for the generic `L_n` and the `T_i` are such
+        A pair `(P_m, (T_0,\ldots,T_{n-2}))` such that `P_m` is the almost commutator for the generic `L_n` and the `T_i` are such
 
         .. MATH::
 
             [L_n, P_m] = T_0 + T_1\partial + \ldots + T_{n-2}\partial^{n-2}
     '''
     if (not n in ZZ) or ZZ(n) <= 0:
-        raise ValueError(f"[quasi] The value {n = } must be a positive integer")
+        raise ValueError(f"[almost] The value {n = } must be a positive integer")
     if (not m in ZZ) or ZZ(m) <= 0:
-        raise ValueError(f"[quasi] The value {m = } must be a positive integer")
+        raise ValueError(f"[almost] The value {m = } must be a positive integer")
     if name_u == name_z:
-        raise ValueError(f"[quasi] The names for the differential variables must be different. Given {name_u} and {name_z}")
+        raise ValueError(f"[almost] The names for the differential variables must be different. Given {name_u} and {name_z}")
     
     names_u = [f"{name_u}{i}" for i in range(n-1)] if n > 2 else [name_u] if n == 2 else []
     output_ring = DifferentialPolynomialRing(QQ, names_u + [name_z])
@@ -88,7 +127,7 @@ def quasi_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", m
         P = z[1]
         C = L(dic={z:P}) - P(dic={z:L}); T = tuple([C.coefficient(z[i]) for i in range(C.order(z)+1)])
         return (P, T)
-    elif m%n == 0: # special case: the order of the required quasi-commutator is divisible by order of base operator
+    elif m%n == 0: # special case: the order of the required almost-commutator is divisible by order of base operator
         ## Since `L_n` always commute with itself, so it does `L_n^k` for any `k`. 
         z = output_z; u = output_u
         Ln = output_z[n] + sum(u[i][0]*z[i] for i in range(n-1))
@@ -96,7 +135,7 @@ def quasi_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", m
         return (Pm, tuple((n-1)*[output_ring.zero()]))
     else: # generic case, there are some computations to be done
         name_p = "p" if not "p" in [name_u, name_z] else "q" if not "q" in [name_u, name_z] else "r"
-        method = __quasi_commuting_diff if method == "diff" else __quasi_commuting_linear if method == "linear" else method
+        method = __almost_commuting_diff if method == "diff" else __almost_commuting_linear if method == "linear" else method
         ## building the operators `L_n` and `P_m`
         names_p = [f"{name_p}{i}" for i in range(m-1)] if m > 2 else [name_p]
 
@@ -108,7 +147,7 @@ def quasi_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", m
         ## building the commutator
         C = Ln(dic={z:Pm}) - Pm(dic={z:Ln})
 
-        ## getting equations for quasi-commutation and the remaining with 
+        ## getting equations for almost-commutation and the remaining with 
         equations = [C.coefficient(z[i]) for i in range(n-1, C.order(z)+1)]
         T = [C.coefficient(z[i]) for i in range(n-1)]
 
@@ -118,9 +157,9 @@ def quasi_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", m
 
         return (Pm,T)
 
-def __quasi_commuting_diff(parent: DPolynomialRing_dense, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]):
+def __almost_commuting_diff(parent: DPolynomialRing_dense, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]):
     r'''
-        Method that solves the system for quasi-commutation using a differential approach
+        Method that solves the system for almost-commutation using a differential approach
 
         This method sets up a differential system and tries to solve it using the method 
         :func:`~dalgebra.dpolynomial.dpolynomial_system.DSystem.solve_linear`.
@@ -128,12 +167,12 @@ def __quasi_commuting_diff(parent: DPolynomialRing_dense, equations: list[DPolyn
     S = DSystem(equations, parent=parent, variables=p)
     return S.solve_linear()
 
-def __quasi_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]):
+def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]):
         r'''
-            Method that solves the system for quasi-commutation using a linear approach
+            Method that solves the system for almost-commutation using a linear approach
 
             This method exploits the homogeneous structure that the coefficient must have in order to 
-            solve the system of quasi-commutation.
+            solve the system of almost-commutation.
         '''
         n = len(u) + 1; m = len(p) + 1
         # Creating the Weight function
@@ -170,4 +209,4 @@ def __quasi_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPol
 
         return ansatz_evaluated
 
-__all__ = ["quasi_commuting_schr"]
+__all__ = ["almost_commuting_schr"]
