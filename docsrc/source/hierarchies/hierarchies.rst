@@ -1,6 +1,6 @@
 .. nodoctest
 
-Parent structures for Infinite Polynomials over rings with operators
+Integrable hierarchies and almost commuting operators
 ==============================================================================================================================
 
 .. automodule:: dalgebra.hierarchies.hierarchies

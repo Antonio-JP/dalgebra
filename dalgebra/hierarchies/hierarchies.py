@@ -13,7 +13,8 @@ r'''
     -----------------------------------------
 
     Let us consider an algebraically closed field of characteristic zero `C` and the field of d-polynomials defined by `n-2` 
-    differential varuables `u_0,\ldots,u_{n-2}`. Let us consider the linear differential operator::
+    differential varuables `u_0,\ldots,u_{n-2}`. Let us consider the linear differential operator:
+
 
     .. MATH::
 
@@ -21,9 +22,9 @@ r'''
 
     This operator `L` can be written in terms of d-polynomilas in the ring `K\{z\} = C\{u_0,\ldots,u_{n-2},z\}`. We say that 
     another operator `P \in K\{z\}` *almost commutes with `L`* if and only if the commutator of `L` with `P` (`[L,P]`) has order
-    at most `\ord(L) - 2`. 
+    at most `\text{ord}(L) - 2`. 
 
-    In general, the order of `[L,P]` is `\ord(L) + \ord(P) - 1`. Hence, in order to obtain a specific order of at most `\ord(L) - 2`
+    In general, the order of `[L,P]` is `\text{ord}(L) + \text{ord}(P) - 1`. Hence, in order to obtain a specific order of at most `\text{ord}(L) - 2`
     we need that the coefficients of `P` satisfy `ord(P) + 1` conditions. 
 
     It was shown in the article by G. Wilson that, if we set `w(u_i) = n-i`, then for every `m \in \mathbb{N}` there is a unique
@@ -37,7 +38,7 @@ r'''
     commutator of `L`. These sequences of conditions are called **integrable hierarchies** for a given value of `n = ord(L)`.
 
     This module provides algorithms and methods to quickly generate the hierarchies in a method :func:`almost_commuting_schr`, which takes
-    the values for `n = \ord(L)` and `m = \ord(P_m)` and computes the `m`-th step in the corresponding hierarchy.
+    the values for `n = \text{ord}(L)` and `m = \text{ord}(P_m)` and computes the `m`-th step in the corresponding hierarchy.
 
     EXAMPLES::
 
@@ -211,4 +212,22 @@ def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPo
 
         return ansatz_evaluated
 
-__all__ = ["almost_commuting_schr"]
+__KDV = dict()
+def kdv(m: int):
+    r'''
+        KdV hierarchy (see :wiki:`KdV_hierarchy`) is the integrable hierarchy that appears from almost commutators of a generic operator of otder 2.
+    '''
+    if not m in __KDV:
+        __KDV[m] = almost_commuting_schr(2, m)[1]
+    return __KDV[m][0]
+
+__BOUSSINESQ = dict()
+def boussinesq(m, i):
+    r'''
+        Boussinesq hierarchy (TODO: add reference)
+    '''
+    if not m in __BOUSSINESQ:
+        __BOUSSINESQ[m] = almost_commuting_schr(3, m)[1]
+    return __BOUSSINESQ[m][i]
+
+__all__ = ["almost_commuting_schr", "kdv", "boussinesq"]
