@@ -1992,6 +1992,118 @@ class RankingFunction:
         max_var = self.leader(element)
         return self.parent()(element.polynomial().derivative(max_var.polynomial())) if max_var != self.parent().one() else self.parent().zero()
 
+    def pseudo_quo_rem(self, p: DPolynomial, q: DPolynomial) -> tuple[DPolynomial, dict[tuple,tuple[DPolynomial,DPolynomial]], DPolynomial]:
+        r'''
+            Compute a pseudo-operational division of `p` and `q`.
+
+            The output of this method will be a tuple `(a,b,r)` such that :
+            
+            * `ap + bq = r`,
+            * `r < q`.
+
+            In this case, the operations can be applied to `q` but not to `a`.
+        '''
+        if self.compare(p, q) < 0: # base case: we are done
+            return (1, dict(), p)
+        
+        N = self.parent().noperators()
+        
+        ## Here we have p > q.        
+        ####################################################################
+        ### In this part we will get:
+        ###   - a
+        ###   - b
+        ###   - r
+        ### such that `ap = b(q) + r` with `r < p`
+        ####################################################################
+        lp = self.leader(p); lq = self.leader(q)
+        original_q = q
+        comparison = self.compare_variables(lp, lq)
+        if comparison < 0: # impossible condition
+            raise TypeError("[ranking] Impossible condition reached: 'l(p) < l(q) when p > q'")
+        elif comparison == 0: # same leader --> we need to multiply by the leader to match degrees
+            a = lp**(q.degree(lp)-p.degree(lp)) * self.initial(q)
+            b = {tuple(N*[0]): (self.initial(p), 1)}
+            r = a*p - self.initial(p)*q
+        else: # different variables are the leader. Two cases:
+            vp = lp.infinite_variables()[0]; vq = lq.infinite_variables()[0]
+            if vp == vq: # the same variable --> we need to apply an operator to p
+                ip = vp.index(lp, as_tuple=True); iq = vp.index(lq, as_tuple=True)
+                operation = tuple([ip[i] - iq[i] for i in range(len(ip))])
+                if any(el < 0 for el in operation):
+                    raise TypeError("[ranking] Impossible condition reached: inverse operation from 'l(q)' to 'l(p)' when 'p > q'")
+                prev = 1
+            else: # different variables: we multiply `p` by `vq` and apply again
+                operation = vp.index(lp, as_tuple=True)
+                prev = vp[0]
+            q = self.parent().apply_operations(prev*q, operation, _ordered=False)
+            a = lp**(q.degree(lp)-p.degree(lp)) * self.initial(q)
+            b = {operation: (self.initial(p), prev)}
+            r = a*p - self.initial(p)*q
+            
+        ####################################################################
+        ### In this part we will get:
+        ###   - a
+        ###   - b
+        ###   - r
+        ### such that `ap = b(q) + r` with `r < p`
+        ####################################################################
+        ra, rb, r = self.pseudo_quo_rem(r, original_q)
+        fa = a*ra
+        fb = {k: (ra*v[0], v[1]) for (k,v) in b.items()}
+        fb.update(rb)
+
+        return fa, fb, r
+    
+    def smallest(self, p: DPolynomial, q: DPolynomial) -> tuple[DPolynomial, DPolynomial]:
+        r'''
+            Method that return a variation of the arguments so they have the same leading term.
+
+            The leading term for a given ranking is defined as the :func:`rank` times :func:`initial`
+            of a d-polynomial. For any given pair of d-polynomials, there is a minimal rank 
+            that is greater or euqal to both polynomials `p` and `q`.
+
+            Then, this method returns an extension of both polynomials (i.e., the returned d-polynomials
+            are obtained by multiplication and applying operations only) with that common bigger rank.
+            Hence, the difference between the two polynomials has smaller rank than the common smallest 
+            rank of the two polynomials.
+        '''
+        if self.compare(p, q) > 0: # we return the inverse call to this function
+            return tuple(list(self.smallest(q,p))[::-1])
+        
+        lp = self.leader(p); lq = self.leader(q)
+        comparison = self.compare_variables(lp, lq)
+        if comparison > 0: # impossible condition
+            raise TypeError("[ranking] Impossible condition reached: 'l(p) > l(q) when p < q'")
+        elif comparison == 0: # same leader --> we need to multiply by the leader to match degrees
+            p = lp**(q.degree(lp)-p.degree(lp)) * p
+            return self.monic(self.initial(q)*p), self.monic(self.initial(p)*q)
+        else: # different variables are the leader. Two cases:
+            vp = lp.infinite_variables()[0]; vq = lp.infinite_variables()[0]
+            if vp == vq: # the same variable --> we need to apply an operator to p
+                ip = vp.index(lp, as_tuple=True); iq = vp.index(lq, as_tuple=True)
+                try:
+                    for i in range(len(ip)):
+                        p = p.operation(i, times=iq[i]-ip[i]) # this must be always be positive
+                except ValueError:
+                    raise TypeError("[ranking] Impossible condition reached: inverse operation from 'l(p)' to 'l(q)' when 'p < q'")
+                return self.smallest(p,q) # we repeat with the changed `p`
+            else: # different variables: we multiply `p` by `vq` and apply again
+                return self.smallest(vq*p, q)
+
+    def S(self, p: DPolynomial, q: DPolynomial) -> DPolynomial:
+        r'''Computes the S-polynomial of two d-polynomials for the given ranking'''
+        sp, sq = self.smallest(p, q)
+        return sp - sq
+
+    def monic(self, p: DPolynomial) -> DPolynomial:
+        r'''Return a d-polynomial where the biggest monomial has coefficient 1'''
+        mon = p.parent().one()
+        for m in p.monomials():
+            mon = m if self.compare(mon, m) < 0 else mon
+        
+        return p // p.coefficient(mon)
+
     ################################################################################
     ### Sorting methods
     ################################################################################

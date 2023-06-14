@@ -945,6 +945,10 @@ class DPolynomial (InfinitePolynomial_dense):
         elif not isinstance(ranking, RankingFunction): ranking = self.parent().ranking(ordering, ttype)
         return ranking
     
+    def monic(self, ranking, ordering=None, ttype="orderly"):
+        r'''Method to get the monic polynomial w.r.t. a ranking'''
+        return self.__check_ranking_argument(ranking, ordering, ttype).monic(self)
+
     def leader(self, ranking=None, ordering=None, ttype="orderly"):
         r'''
             Gets the leader of ``self`` w.r.t. a ranking.
