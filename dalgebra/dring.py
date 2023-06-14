@@ -250,6 +250,33 @@ class DRings(Category):
             elif operator is None: raise IndexError("An index for the operation must be provided when having several operations")
             return self.operators()[operator](element)
 
+        def apply_operations(self, element: Element, operations: list[int] | tuple[int], *, _ordered = False):
+            r'''
+                Method that apply several operations to an element in a specific way.
+
+                INPUT:
+
+                * ``element``: an element in ``self`` to whom the operations will be applied
+                * ``operations``: list or tuple indicating the operations to be applied. If ``_ordered`` is given to 
+                  ``True``, then the elements are interpreted as a list of operations that will be applied in 
+                  the specific order that appears in ``operations``. Otherwise, the input must be a list/tuple of 
+                  exactly ``self.noperations()`` indicating how many times each operation is applied.
+
+                OUTPUT:
+
+                The result of applying the operators to ``element``.
+            '''
+            result = element
+            if _ordered:
+                for operation in operations:
+                    result = self.operation(result, operation)
+            else:
+                if len(operations) != self.noperators():
+                    raise TypeError(f"The operations must be as many as operations (expected {self.noperators()}, got {len(operations)})")
+                for operation, i in enumerate(operations):
+                    result = result.operation(operation, times=i)
+            return result
+
         def inverse_operation(self, element: Element, operator: int = None) -> Element:
             raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
 
