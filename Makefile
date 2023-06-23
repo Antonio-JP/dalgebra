@@ -27,7 +27,7 @@ test: no-deps
 	$(SAGE) -t --force-lib ./dalgebra
 
 lint: no-deps
-	$(SAGE) -sh -c "pylint ./dalgebra --disable=all --enable=F,unreachable,duplicate-key,unnecessary-semicolon,\
+	$(SAGE) -sh -c "pylint ./$(PACKAGE) --disable=all --enable=F,unreachable,duplicate-key,unnecessary-semicolon,\
 	global-variable-not-assigned,unused-variable,unused-wildcard-import,binary-op-exception,bad-format-string,\
 	anomalous-backslash-in-string,bad-open-mode,E0001,E0011,E0012,E0100,E0101,E0102,E0103,E0104,E0105,E0107,\
 	E0108,E0110,E0111,E0112,E0113,E0114,E0115,E0116,E0117,E0118,E0202,E0203,E0211,E0213,E0236,E0237,E0238,\
@@ -56,7 +56,7 @@ clean: clean_doc clean_pyc
 
 clean_build:
 	@echo "Cleaning previous build files"
-	@rm -rf ./build ./dalgebra.egg-info
+	@rm -rf ./build ./$(PACKAGE).egg-info
 
 clean_doc:
 	@echo "Cleaning documentation"
