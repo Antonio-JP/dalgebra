@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Structures for systems of equation over rings with operators &#8212; Differential Algebra in Sage 0.0.4.2+is-29 documentation</title>
+    <title>Structures for systems of equation over rings with operators &#8212; Differential Algebra in Sage 0.0.4.4 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/classic.css" />
     
@@ -14,9 +14,11 @@
     <script src="../_static/jquery.js"></script>
     <script src="../_static/underscore.js"></script>
     <script src="../_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Integrable Hierarchies" href="../hierarchies.html" />
     <link rel="prev" title="Element structures for Infinite Polynomials over rings with operators" href="dpolynomial_element.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
@@ -25,6 +27,12 @@
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../hierarchies.html" title="Integrable Hierarchies"
+             accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="dpolynomial_element.html" title="Element structures for Infinite Polynomials over rings with operators"
              accesskey="P">previous</a> |</li>
@@ -39,8 +47,659 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <section id="structures-for-systems-of-equation-over-rings-with-operators">
-<h1>Structures for systems of equation over rings with operators<a class="headerlink" href="#structures-for-systems-of-equation-over-rings-with-operators" title="Permalink to this headline">¶</a></h1>
+  <section id="module-dalgebra.dpolynomial.dpolynomial_system">
+<span id="structures-for-systems-of-equation-over-rings-with-operators"></span><h1>Structures for systems of equation over rings with operators<a class="headerlink" href="#module-dalgebra.dpolynomial.dpolynomial_system" title="Permalink to this headline">¶</a></h1>
+<p>File for the structures concerning differential systems</p>
+<p>This file contains the structures and main algorithms to manipulate
+and study the solutions of differential systems expressed in terms of 
+differential polynomials.</p>
+<p>AUTHORS:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Antonio Jimenez-Pastor (2022-02-04): initial version</p></li>
+</ul>
+</div></blockquote>
+<dl class="py class">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dalgebra.dpolynomial.dpolynomial_system.</span></span><span class="sig-name descname"><span class="pre">DSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">equations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for representing a system over a ring with an operator.</p>
+<p>This class allows the user to represent a system of equations 
+over a ring with operators (see the category <a class="reference internal" href="../dring.html#dalgebra.dring.DRings" title="dalgebra.dring.DRings"><code class="xref py py-class docutils literal notranslate"><span class="pre">DRings</span></code></a>)
+as a list of infinite polynomials in one or several variables.</p>
+<p>This class will offer a set of methods and properties to extract the main
+information of the system and also the main algorithms and methods
+to study or manipulate these systems such as elimination procedures, etc.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">equations</span></code>: list or tuple of <em>operator polynomials</em> (see 
+<code class="xref py py-class docutils literal notranslate"><span class="pre">DPolynomial</span></code>). The system will 
+be the one defined by <span class="math notranslate nohighlight">\(eq = 0\)</span> for all <span class="math notranslate nohighlight">\(eq\)</span> in the input <code class="docutils literal notranslate"><span class="pre">equations</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parent</span></code>: the common parent to transform the input. The final parent of all
+the elements will a common structure (if possible) that will be the 
+pushout of all the parents of <code class="docutils literal notranslate"><span class="pre">elements</span></code> and this structure.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">variables</span></code>: list of names or infinite variables that will fix 
+the variables of the system. If it is not given, we will consider all the 
+differential variables as main variables.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.algebraic_equations">
+<span class="sig-name descname"><span class="pre">algebraic_equations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.algebraic_equations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get the equivalent algebraic equations.</p>
+<p>Considering a differential polynomial algebraically means to separate semantically
+the relation of different derivatives of a differential variable. This is mainly useful 
+once all differential operations are completed.</p>
+<p>OUTPUT:</p>
+<p>A tuple of polynomials in a common parent that represent the equations of <code class="docutils literal notranslate"><span class="pre">self</span></code> 
+in a purely algebraic context.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">algebraic_equations</span><span class="p">()</span>
+<span class="p">(</span><span class="o">-</span><span class="n">u_0</span> <span class="o">+</span> <span class="n">u_1</span><span class="p">,)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">algebraic_equations</span><span class="p">()</span>
+<span class="p">(</span><span class="o">-</span><span class="n">u_0</span> <span class="o">+</span> <span class="n">u_1</span><span class="p">,</span> <span class="o">-</span><span class="n">u_1</span> <span class="o">+</span> <span class="n">u_2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can check that the parent of all the equations is the same:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">parents</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">parent</span><span class="p">()</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">algebraic_equations</span><span class="p">()]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="nb">all</span><span class="p">(</span><span class="n">el</span> <span class="o">==</span> <span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">Multivariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">u_0</span><span class="p">,</span> <span class="n">u_1</span><span class="p">,</span> <span class="n">u_2</span> <span class="n">over</span> <span class="n">Differential</span> 
+<span class="n">Ring</span> <span class="p">[[</span><span class="n">Rational</span> <span class="n">Field</span><span class="p">],</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)]</span>
+</pre></div>
+</div>
+<p>The same can be checked for a multivariate differential polynomial:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">x</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">algebraic_equations</span><span class="p">()</span>
+<span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u_2</span><span class="p">,</span> <span class="n">v_1</span> <span class="o">-</span> <span class="n">v_2</span> <span class="o">+</span> <span class="n">u_1</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">algebraic_equations</span><span class="p">()</span>
+<span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u_2</span><span class="p">,</span>
+<span class="n">v_0</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_1</span> <span class="o">+</span> <span class="n">u_0</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">u_1</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">u_2</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u_3</span><span class="p">,</span>
+<span class="n">v_1</span> <span class="o">-</span> <span class="n">v_2</span> <span class="o">+</span> <span class="n">u_1</span><span class="p">,</span>
+<span class="n">v_2</span> <span class="o">-</span> <span class="n">v_3</span> <span class="o">+</span> <span class="n">u_2</span><span class="p">,</span>
+<span class="n">v_3</span> <span class="o">-</span> <span class="n">v_4</span> <span class="o">+</span> <span class="n">u_3</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>And the parents are again the same for all those equations:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">parents</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">parent</span><span class="p">()</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">algebraic_equations</span><span class="p">()]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="nb">all</span><span class="p">(</span><span class="n">el</span> <span class="o">==</span> <span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">Multivariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">v_0</span><span class="p">,</span> <span class="n">v_1</span><span class="p">,</span> <span class="n">v_2</span><span class="p">,</span> <span class="n">v_3</span><span class="p">,</span> <span class="n">v_4</span><span class="p">,</span> <span class="n">u_0</span><span class="p">,</span> <span class="n">u_1</span><span class="p">,</span> <span class="n">u_2</span><span class="p">,</span> <span class="n">u_3</span> <span class="n">over</span> 
+<span class="n">Differential</span> <span class="n">Ring</span> <span class="p">[[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">],</span> <span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">,)]</span>
+</pre></div>
+</div>
+<p>The output of this method depends actively in the set of active variables that defines the system:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">system_with_u</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">x</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">variables</span><span class="o">=</span><span class="p">[</span><span class="n">u</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system_with_u</span><span class="o">.</span><span class="n">algebraic_equations</span><span class="p">()</span>                                                                                                                                        
+<span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u_2</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span><span class="p">,</span> <span class="n">u_1</span> <span class="o">+</span> <span class="n">v_1</span> <span class="o">-</span> <span class="n">v_2</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system_with_u</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">algebraic_equations</span><span class="p">()</span>
+<span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u_2</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span><span class="p">,</span>
+<span class="n">u_0</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">u_1</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">u_2</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u_3</span> <span class="o">+</span> <span class="n">v_0</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_1</span><span class="p">,</span>
+<span class="n">u_1</span> <span class="o">+</span> <span class="n">v_1</span> <span class="o">-</span> <span class="n">v_2</span><span class="p">,</span>
+<span class="n">u_2</span> <span class="o">+</span> <span class="n">v_2</span> <span class="o">-</span> <span class="n">v_3</span><span class="p">,</span>
+<span class="n">u_3</span> <span class="o">+</span> <span class="n">v_3</span> <span class="o">-</span> <span class="n">v_4</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In this case, the parent prioritize the variables related with <span class="math notranslate nohighlight">\(u_*\)</span>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">system_with_u</span><span class="o">.</span><span class="n">algebraic_equations</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">parent</span><span class="p">()</span>
+<span class="n">Multivariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">u_0</span><span class="p">,</span> <span class="n">u_1</span><span class="p">,</span> <span class="n">u_2</span> <span class="n">over</span> <span class="n">Multivariate</span> <span class="n">Polynomial</span> 
+<span class="n">Ring</span> <span class="ow">in</span> <span class="n">v_0</span><span class="p">,</span> <span class="n">v_1</span><span class="p">,</span> <span class="n">v_2</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> <span class="p">[[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> 
+<span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">],</span> <span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">,)]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">parents</span> <span class="o">=</span> <span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">parent</span><span class="p">()</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">system_with_u</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">algebraic_equations</span><span class="p">()]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="nb">all</span><span class="p">(</span><span class="n">el</span> <span class="o">==</span> <span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">Multivariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">u_0</span><span class="p">,</span> <span class="n">u_1</span><span class="p">,</span> <span class="n">u_2</span><span class="p">,</span> <span class="n">u_3</span> <span class="n">over</span> <span class="n">Multivariate</span> <span class="n">Polynomial</span> 
+<span class="n">Ring</span> <span class="ow">in</span> <span class="n">v_0</span><span class="p">,</span> <span class="n">v_1</span><span class="p">,</span> <span class="n">v_2</span><span class="p">,</span> <span class="n">v_3</span><span class="p">,</span> <span class="n">v_4</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> <span class="p">[[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> 
+<span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">],</span> <span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">,)]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.algebraic_variables">
+<span class="sig-name descname"><span class="pre">algebraic_variables</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.algebraic_variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to retrieve the algebraic variables in the system.</p>
+<p>This method computes the number of algebraic variables that appear on the system. This means,
+gathering each appearance of the differential variables and filter them by the variables of the system.</p>
+<p>OUTPUT:</p>
+<p>A tuple containing the algebraic variables appearing in the system (as differential polynomials)</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">algebraic_variables</span><span class="p">()</span>
+<span class="p">(</span><span class="n">u_0</span><span class="p">,</span> <span class="n">u_1</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">x</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">algebraic_variables</span><span class="p">()</span>
+<span class="p">(</span><span class="n">v_0</span><span class="p">,</span> <span class="n">v_1</span><span class="p">,</span> <span class="n">v_2</span><span class="p">,</span> <span class="n">u_0</span><span class="p">,</span> <span class="n">u_1</span><span class="p">,</span> <span class="n">u_2</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">x</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span><span class="n">u</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">algebraic_variables</span><span class="p">()</span>
+<span class="p">(</span><span class="n">u_0</span><span class="p">,</span> <span class="n">u_1</span><span class="p">,</span> <span class="n">u_2</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.build_sp1">
+<span class="sig-name descname"><span class="pre">build_sp1</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">DSystem.extend_by_operation&gt;</span></em><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.build_sp1" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias for method <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.extend_by_operation" title="dalgebra.dpolynomial.dpolynomial_system.DSystem.extend_by_operation"><code class="xref py py-func docutils literal notranslate"><span class="pre">extend_by_operation()</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.change_variables">
+<span class="sig-name descname"><span class="pre">change_variables</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.change_variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that creates a new system with new set of main variables.</p>
+<p>This method returns an equivalent system as <code class="docutils literal notranslate"><span class="pre">self</span></code>, i.e., with the same 
+equations and with the same parent. Bu now we fix a different set of 
+variables as main variables of the system.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">variables</span></code>: set of new variables for the system. See <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem" title="dalgebra.dpolynomial.dpolynomial_system.DSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">DSystem</span></code></a>
+to see the format for this input.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>A <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem" title="dalgebra.dpolynomial.dpolynomial_system.DSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">DSystem</span></code></a> with the same equations but main variables given by <code class="docutils literal notranslate"><span class="pre">variables</span></code>.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">bR</span> <span class="o">=</span> <span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">];</span> <span class="n">x</span> <span class="o">=</span> <span class="n">bR</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">bR</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">eq1</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">x</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">eq2</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">eq1</span><span class="p">,</span><span class="n">eq2</span><span class="p">],</span> <span class="n">variables</span><span class="o">=</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">change_variables</span><span class="p">(</span><span class="n">u</span><span class="p">)</span>
+<span class="n">System</span> <span class="n">over</span> <span class="p">[</span><span class="n">Ring</span> <span class="n">of</span> <span class="n">operator</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> 
+<span class="p">[[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">],</span> <span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">,)]]</span> <span class="k">with</span> <span class="n">variables</span> <span class="p">[(</span><span class="n">u_</span><span class="o">*</span><span class="p">,)]:</span>
+<span class="p">{</span>
+    <span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">-</span> <span class="n">v_1</span> <span class="o">==</span> <span class="mi">0</span>
+    <span class="n">u_1</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span> <span class="o">==</span> <span class="mi">0</span>
+<span class="p">}</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">change_variables</span><span class="p">([</span><span class="n">v</span><span class="p">])</span>
+<span class="n">System</span> <span class="n">over</span> <span class="p">[</span><span class="n">Ring</span> <span class="n">of</span> <span class="n">operator</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> 
+<span class="p">[[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">],</span> <span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">,)]]</span> <span class="k">with</span> <span class="n">variables</span> <span class="p">[(</span><span class="n">v_</span><span class="o">*</span><span class="p">,)]:</span>
+<span class="p">{</span>
+    <span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">-</span> <span class="n">v_1</span> <span class="o">==</span> <span class="mi">0</span>
+    <span class="n">u_1</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span> <span class="o">==</span> <span class="mi">0</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.diff_resultant">
+<span class="sig-name descname"><span class="pre">diff_resultant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">verbose</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.diff_resultant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to compute the operator resultant of this system.</p>
+<p>TODO: add explanation of resultant.</p>
+<p>This method has the optional argument <code class="docutils literal notranslate"><span class="pre">verbose</span></code> which, when given, 
+will print the logging output in the console (<code class="docutils literal notranslate"><span class="pre">sys.stdout</span></code>)</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">bound_L</span></code>: bound for the values of <code class="docutils literal notranslate"><span class="pre">Ls</span></code> for method <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.extend_by_operation" title="dalgebra.dpolynomial.dpolynomial_system.DSystem.extend_by_operation"><code class="xref py py-func docutils literal notranslate"><span class="pre">extend_by_operation()</span></code></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">operation</span></code>: index for the operation for which we want to compute the resultant.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">alg_res</span></code>: (<code class="docutils literal notranslate"><span class="pre">&quot;auto&quot;</span></code> by default) method to compute the algebraic resultant once we extended a 
+system to a valid system (see <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.is_sp2" title="dalgebra.dpolynomial.dpolynomial_system.DSystem.is_sp2"><code class="xref py py-func docutils literal notranslate"><span class="pre">is_sp2()</span></code></a>). The valid values are, currently,
+<code class="docutils literal notranslate"><span class="pre">&quot;dixon&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;sylvester&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;macaulay&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;iterative&quot;</span></code>.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>The resultant for this system.</p>
+<p>TODO: add examples</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.equation">
+<span class="sig-name descname"><span class="pre">equation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">apply</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.equation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get an equation from the system.</p>
+<p>This method allows to obtain one equation from this system. This means, obtain a 
+polynomial that is equal to zero, assuming the polynomials in <code class="docutils literal notranslate"><span class="pre">self._equations</span></code> are
+all equal to zero.</p>
+<p>This method allow to obtain the equations in <code class="docutils literal notranslate"><span class="pre">self._equations</span></code> but also the derived
+equations using the operation of the system.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">index</span></code>: the index for the equation desired.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">apply</span></code>: a collection of tuples <span class="math notranslate nohighlight">\((a,n)\)</span> indicating which operations to apply to the equation.
+In case there is only one operator, an integer means how many times to apply the only operator. 
+Otherwise, an integer means the application of that operation once.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>A polynomial with the <span class="math notranslate nohighlight">\(i\)</span>-th equation of the system. If <code class="docutils literal notranslate"><span class="pre">apply</span></code> was given, then we return
+the <span class="math notranslate nohighlight">\(i\)</span>-th equation after applying the operations as many times as requested.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">eq1</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">x</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">eq2</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">eq1</span><span class="p">,</span><span class="n">eq2</span><span class="p">],</span> <span class="n">variables</span><span class="o">=</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">-</span> <span class="n">v_1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">u_1</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span>
+</pre></div>
+</div>
+<p>If the index given is not in range, we raise a <code class="xref py py-class docutils literal notranslate"><span class="pre">IndexError</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">Traceback</span> <span class="p">(</span><span class="n">most</span> <span class="n">recent</span> <span class="n">call</span> <span class="n">last</span><span class="p">):</span>
+<span class="o">...</span>
+<span class="ne">IndexError</span><span class="p">:</span> <span class="nb">tuple</span> <span class="n">index</span> <span class="n">out</span> <span class="n">of</span> <span class="nb">range</span>
+</pre></div>
+</div>
+<p>And if we provide the <code class="docutils literal notranslate"><span class="pre">apply</span></code> information, we take the corresponding equation and
+apply all the given operations:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="n">eq1</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span> <span class="o">==</span> <span class="n">eq1</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">times</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+<p>This is specially useful when having several operators:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">A</span> <span class="o">=</span> <span class="n">DifferenceRing</span><span class="p">(</span><span class="n">DifferentialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">],</span> <span class="n">diff</span><span class="p">),</span> <span class="n">QQ</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">Hom</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s2">&quot;x&quot;</span><span class="p">])(</span><span class="s2">&quot;x+1&quot;</span><span class="p">));</span> <span class="n">x</span> <span class="o">=</span> <span class="n">A</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DPolynomialRing</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">eq1</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">x</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">eq2</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DSystem</span><span class="p">([</span><span class="n">eq1</span><span class="p">,</span><span class="n">eq2</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">x</span><span class="o">*</span><span class="n">u_0_0</span> <span class="o">-</span> <span class="n">v_1_0</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">u_0_1</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0_0</span>
+</pre></div>
+</div>
+<p>And now, we can use the <code class="docutils literal notranslate"><span class="pre">apply</span></code> argument for each operator:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="c1"># we apply the derivative</span>
+<span class="n">x</span><span class="o">*</span><span class="n">u_1_0</span> <span class="o">+</span> <span class="n">u_0_0</span> <span class="o">-</span> <span class="n">v_2_0</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="c1"># we apply the shift</span>
+<span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">u_0_1</span> <span class="o">-</span> <span class="n">v_1_1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span> <span class="o">==</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">times</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">times</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="n">system</span><span class="o">.</span><span class="n">equation</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">))</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.equations">
+<span class="sig-name descname"><span class="pre">equations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.equations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get a list of equations to the system.</p>
+<p>This method allows to obtain a list of equations from the system, i.e., a list of polynomials
+that are assumed to be equal to zero. This method can also be used to get equations
+from extended systems.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">indices</span></code>: collection of elements to be obtain. See method <code class="xref py py-func docutils literal notranslate"><span class="pre">index()</span></code> for further information.
+If the input is a <code class="docutils literal notranslate"><span class="pre">slice</span></code>, we convert it into a list. If the input is not a list or a tuple, we 
+create a list with one element and try to get that element. If <code class="docutils literal notranslate"><span class="pre">None</span></code> is given, then 
+we return all equations.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>A list of <code class="xref py py-class docutils literal notranslate"><span class="pre">DPolynomial</span></code> with the requested
+equations from this system.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">eq1</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">x</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">eq2</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">eq1</span><span class="p">,</span><span class="n">eq2</span><span class="p">],</span> <span class="n">variables</span><span class="o">=</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>If nothing is given, we return all the equations:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equations</span><span class="p">()</span>
+<span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">-</span> <span class="n">v_1</span><span class="p">,</span> <span class="n">u_1</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If only an element is given, then we return that particular element:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equations</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">(</span><span class="n">u_1</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span><span class="p">,)</span>
+</pre></div>
+</div>
+<p>Otherwise, we return the tuple with the equations required. This can be also 
+used to obtained equations after applying the operation (see <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.equation" title="dalgebra.dpolynomial.dpolynomial_system.DSystem.equation"><code class="xref py py-func docutils literal notranslate"><span class="pre">equation()</span></code></a>):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equations</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">)])</span>
+<span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">-</span> <span class="n">v_1</span><span class="p">,</span> <span class="n">x</span><span class="o">*</span><span class="n">u_1</span> <span class="o">+</span> <span class="n">u_0</span> <span class="o">-</span> <span class="n">v_2</span><span class="p">,</span> <span class="n">u_4</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_3</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">)</span><span class="o">*</span><span class="n">v_2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This method also allows the use of <code class="xref py py-class docutils literal notranslate"><span class="pre">slice</span></code> to provide the indices for equations:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">equations</span><span class="p">(</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span><span class="kc">None</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span> <span class="c1"># reversing the equations</span>
+<span class="p">(</span><span class="n">u_1</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span><span class="p">,</span> <span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">-</span> <span class="n">v_1</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.extend_by_operation">
+<span class="sig-name descname"><span class="pre">extend_by_operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Ls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">operation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.extend_by_operation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that build an extended system that satisfies SP1.</p>
+<p>The condition SP1 is defined in the paper <a class="reference external" href="https://dx.doi.org/10.1016/j.laa.2013.01.016">doi:10.1016/j.laa.2013.01.016</a> (Section 3) in regard with a 
+system of differential polynomial: let <span class="math notranslate nohighlight">\(\mathcal{P} = \{f_1,\ldots,f_m\}\)</span>. We say that an extended set of 
+differential polynomials <span class="math notranslate nohighlight">\(SP \subset \partial(\mathcal{P})\)</span> is SP1 for some <span class="math notranslate nohighlight">\(L_1,\ldots,L_m \in \mathbb{N}\)</span> if it can be written as:</p>
+<div class="math notranslate nohighlight">
+\[PS = \left\{\partial^{k}(f_i) \mid k \in \{0,\ldots,L_i\}, i=1,\ldots,m\right\}\]</div>
+<p>This method provides a way to build an extended system from <code class="docutils literal notranslate"><span class="pre">self</span></code> using the operator of the base ring 
+that satisfies condition SP1 for a fixed set of values of <span class="math notranslate nohighlight">\(L_1,\ldots,L_m\)</span>.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Ls</span></code>: list or tuple of non-negative integers of length <code class="docutils literal notranslate"><span class="pre">self.size()</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">operation</span></code>: index of the operation with respect to which we want to extend the system.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>Another <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem" title="dalgebra.dpolynomial.dpolynomial_system.DSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">DSystem</span></code></a> extending <code class="docutils literal notranslate"><span class="pre">self</span></code> with the operation in the base ring that satisfies 
+SP1 for the given list of <span class="math notranslate nohighlight">\(L_i\)</span>.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">equations</span><span class="p">()</span>
+<span class="p">(</span><span class="n">u_1</span> <span class="o">-</span> <span class="n">u_0</span><span class="p">,)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">equations</span><span class="p">()</span>
+<span class="p">(</span><span class="n">u_1</span> <span class="o">-</span> <span class="n">u_0</span><span class="p">,</span> <span class="n">u_2</span> <span class="o">-</span> <span class="n">u_1</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">5</span><span class="p">])</span><span class="o">.</span><span class="n">equations</span><span class="p">()</span>
+<span class="p">(</span><span class="n">u_1</span> <span class="o">-</span> <span class="n">u_0</span><span class="p">,</span> <span class="n">u_2</span> <span class="o">-</span> <span class="n">u_1</span><span class="p">,</span> <span class="n">u_3</span> <span class="o">-</span> <span class="n">u_2</span><span class="p">,</span> <span class="n">u_4</span> <span class="o">-</span> <span class="n">u_3</span><span class="p">,</span> <span class="n">u_5</span> <span class="o">-</span> <span class="n">u_4</span><span class="p">,</span> <span class="n">u_6</span> <span class="o">-</span> <span class="n">u_5</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">x</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span><span class="n">u</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">equations</span><span class="p">()</span>
+<span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u_2</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span><span class="p">,</span> <span class="n">u_1</span> <span class="o">-</span> <span class="n">v_2</span> <span class="o">+</span> <span class="n">v_1</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">equations</span><span class="p">()</span>
+<span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u_2</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span><span class="p">,</span>
+<span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u_3</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">u_2</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">u_1</span> <span class="o">+</span> <span class="n">u_0</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_1</span> <span class="o">+</span> <span class="n">v_0</span><span class="p">,</span>
+<span class="n">u_1</span> <span class="o">-</span> <span class="n">v_2</span> <span class="o">+</span> <span class="n">v_1</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">equations</span><span class="p">()</span>
+<span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u_2</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span><span class="p">,</span>
+<span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u_3</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">u_2</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">u_1</span> <span class="o">+</span> <span class="n">u_0</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_1</span> <span class="o">+</span> <span class="n">v_0</span><span class="p">,</span>
+<span class="n">u_1</span> <span class="o">-</span> <span class="n">v_2</span> <span class="o">+</span> <span class="n">v_1</span><span class="p">,</span>
+<span class="n">u_2</span> <span class="o">-</span> <span class="n">v_3</span> <span class="o">+</span> <span class="n">v_2</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.is_DifferenceSystem">
+<span class="sig-name descname"><span class="pre">is_DifferenceSystem</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.is_DifferenceSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="k">class</span> <span class="nc">Foo</span><span class="p">:</span>
+<span class="o">....</span><span class="p">:</span>     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="o">....</span><span class="p">:</span>         <span class="bp">self</span><span class="o">.</span><span class="n">_x</span> <span class="o">=</span> <span class="n">x</span>
+<span class="o">....</span><span class="p">:</span>     <span class="nd">@cached_method</span>
+<span class="o">....</span><span class="p">:</span>     <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="o">....</span><span class="p">:</span>         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_x</span><span class="o">^</span><span class="mi">2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span> <span class="o">=</span> <span class="n">Foo</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">cache</span><span class="p">)</span>
+<span class="kc">None</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">f</span><span class="p">()</span>
+<span class="mi">4</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">cache</span>
+<span class="mi">4</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.is_DifferentialSystem">
+<span class="sig-name descname"><span class="pre">is_DifferentialSystem</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.is_DifferentialSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="k">class</span> <span class="nc">Foo</span><span class="p">:</span>
+<span class="o">....</span><span class="p">:</span>     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="o">....</span><span class="p">:</span>         <span class="bp">self</span><span class="o">.</span><span class="n">_x</span> <span class="o">=</span> <span class="n">x</span>
+<span class="o">....</span><span class="p">:</span>     <span class="nd">@cached_method</span>
+<span class="o">....</span><span class="p">:</span>     <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="o">....</span><span class="p">:</span>         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_x</span><span class="o">^</span><span class="mi">2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span> <span class="o">=</span> <span class="n">Foo</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">cache</span><span class="p">)</span>
+<span class="kc">None</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">f</span><span class="p">()</span>
+<span class="mi">4</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">cache</span>
+<span class="mi">4</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.is_difference">
+<span class="sig-name descname"><span class="pre">is_difference</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.is_difference" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.is_differential">
+<span class="sig-name descname"><span class="pre">is_differential</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.is_differential" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.is_homogeneous">
+<span class="sig-name descname"><span class="pre">is_homogeneous</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.is_homogeneous" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method checks whether the system is homogeneous in the indicated variables.</p>
+<p>This method relies on the method <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.algebraic_equations" title="dalgebra.dpolynomial.dpolynomial_system.DSystem.algebraic_equations"><code class="xref py py-func docutils literal notranslate"><span class="pre">algebraic_equations()</span></code></a> and the method <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.is_homogeneous" title="dalgebra.dpolynomial.dpolynomial_system.DSystem.is_homogeneous"><code class="xref py py-func docutils literal notranslate"><span class="pre">is_homogeneous()</span></code></a>
+from the polynomial class in Sage.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.is_linear">
+<span class="sig-name descname"><span class="pre">is_linear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.is_linear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that checks whether a system is linear in its variables.</p>
+<p>See method <code class="xref py py-func docutils literal notranslate"><span class="pre">is_linear()</span></code> for further
+information on how this is computed.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.is_sp2">
+<span class="sig-name descname"><span class="pre">is_sp2</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.is_sp2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that checks the condition SP2.</p>
+<p>The condition SP2 is defined in the paper <a class="reference external" href="https://dx.doi.org/10.1016/j.laa.2013.01.016">doi:10.1016/j.laa.2013.01.016</a> (Section 3) in regard with a 
+system of differential polynomial: let <span class="math notranslate nohighlight">\(\mathcal{P} = \{f_1,\ldots,f_m\}\)</span> be a system of differentially algebraic equations
+in the differential variables <span class="math notranslate nohighlight">\(\mathcal{U} = \{u_1,\ldots, u_n}\)</span>. We say that the system satisfies the condition SP2
+if and only if the number of variables is valid to compute a resultant algebraically.</p>
+<p>This quantity changing depending on whether the equations are homogeneous (same number of variables and equations)
+or not (one more equations than variables).</p>
+<p>It is interesting to remark that the algebraic variables of a differential polynomial are the total amount of
+variables that appears in it before the differential relation. Namely, the result of method 
+<code class="xref py py-func docutils literal notranslate"><span class="pre">variables()</span></code>
+provides the algebraic variables for a differential polynomial.</p>
+<p>OUTPUT:</p>
+<p><code class="docutils literal notranslate"><span class="pre">True</span></code> if the system satisfies the condition SP2, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">x</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span><span class="n">u</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">is_sp2</span><span class="p">()</span>
+<span class="kc">False</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">is_sp2</span><span class="p">()</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+<p>WARNING: for this method it is crucial to know that the result depends directly on the set variables for 
+the system. Namely, having different set of active variables change the output of this method for <em>the same</em> 
+differential system:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">same_system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">x</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">x</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">is_sp2</span><span class="p">()</span>
+<span class="kc">False</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">extend_by_operation</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">is_sp2</span><span class="p">()</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.maximal_linear_variables">
+<span class="sig-name descname"><span class="pre">maximal_linear_variables</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.maximal_linear_variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="k">class</span> <span class="nc">Foo</span><span class="p">:</span>
+<span class="o">....</span><span class="p">:</span>     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="o">....</span><span class="p">:</span>         <span class="bp">self</span><span class="o">.</span><span class="n">_x</span> <span class="o">=</span> <span class="n">x</span>
+<span class="o">....</span><span class="p">:</span>     <span class="nd">@cached_method</span>
+<span class="o">....</span><span class="p">:</span>     <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="o">....</span><span class="p">:</span>         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_x</span><span class="o">^</span><span class="mi">2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span> <span class="o">=</span> <span class="n">Foo</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">cache</span><span class="p">)</span>
+<span class="kc">None</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">f</span><span class="p">()</span>
+<span class="mi">4</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">cache</span>
+<span class="mi">4</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.order">
+<span class="sig-name descname"><span class="pre">order</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gen</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">operation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.order" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to return the order of the system.</p>
+<p>The order of a system is defined as the maximal order of their equations. This 
+method allows a generator to be given and then the order w.r.t. this variable will 
+be computed. For further information, check 
+<code class="xref py py-func docutils literal notranslate"><span class="pre">order()</span></code>.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.parameters">
+<span class="sig-name descname"><span class="pre">parameters</span></span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.parent">
+<span class="sig-name descname"><span class="pre">parent</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.parent" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.size">
+<span class="sig-name descname"><span class="pre">size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.size" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.solve_linear">
+<span class="sig-name descname"><span class="pre">solve_linear</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.solve_linear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to try and solve a linear system.</p>
+<p>This method tries to solve a system with operator polynomials if the variables given are linear within the system.</p>
+<p>This method is incomplete and may fail in several cases. We only solve “triangular” systems. Otherwise, we raise 
+a <code class="xref py py-class docutils literal notranslate"><span class="pre">NotImplementedError</span></code> with the corresponding issue.</p>
+<p>OUTPUT:</p>
+<p>A dictionary that be fed into the eval method of elements in <code class="docutils literal notranslate"><span class="pre">self.parent()</span></code>.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">a</span><span class="p">,</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DPolynomialRing</span><span class="p">(</span><span class="n">DifferentialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span><span class="p">:</span><span class="mi">0</span><span class="p">))</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">b</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span> <span class="o">=</span> <span class="n">DSystem</span><span class="p">([</span>
+<span class="o">....</span><span class="p">:</span>      <span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="mi">3</span><span class="o">*</span><span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+<span class="o">....</span><span class="p">:</span>      <span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">3</span><span class="o">*</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="o">....</span><span class="p">:</span> <span class="p">],</span> <span class="n">variables</span><span class="o">=</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span><span class="o">.</span><span class="n">solve_linear</span><span class="p">()</span>
+<span class="p">{</span><span class="n">u_</span><span class="o">*</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="o">/</span><span class="mi">4</span><span class="p">)</span><span class="o">*</span><span class="n">a_1</span><span class="p">,</span> <span class="n">v_</span><span class="o">*</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">a_0</span><span class="p">}</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span> <span class="o">=</span> <span class="n">DSystem</span><span class="p">([</span>
+<span class="o">....</span><span class="p">:</span>      <span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">b</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="mi">3</span><span class="o">*</span><span class="n">a</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+<span class="o">....</span><span class="p">:</span>      <span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">3</span><span class="o">*</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="o">....</span><span class="p">:</span> <span class="p">],</span> <span class="n">variables</span><span class="o">=</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">sol</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">solve_linear</span><span class="p">();</span> <span class="n">sol</span>
+<span class="p">{</span><span class="n">u_</span><span class="o">*</span><span class="p">:</span> <span class="p">(</span><span class="mi">3</span><span class="o">/</span><span class="mi">4</span><span class="o">*</span><span class="n">b</span> <span class="o">-</span> <span class="mi">3</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">a_1</span><span class="p">,</span> <span class="n">v_</span><span class="o">*</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">a_0</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>We can check that this solutions satisfy all the equations of the systems to be zero:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="nb">all</span><span class="p">(</span><span class="n">equation</span><span class="p">(</span><span class="n">dic</span><span class="o">=</span><span class="n">sol</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">equation</span> <span class="ow">in</span> <span class="n">S</span><span class="o">.</span><span class="n">equations</span><span class="p">())</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.subsystem">
+<span class="sig-name descname"><span class="pre">subsystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.subsystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that creates a subsystem for a given set of equations.</p>
+<p>This method create a new <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem" title="dalgebra.dpolynomial.dpolynomial_system.DSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">DSystem</span></code></a> with the given variables in <code class="docutils literal notranslate"><span class="pre">indices</span></code>
+(see <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.equations" title="dalgebra.dpolynomial.dpolynomial_system.DSystem.equations"><code class="xref py py-func docutils literal notranslate"><span class="pre">equations()</span></code></a> to see the format of this input) and setting as 
+main variables those given in <code class="docutils literal notranslate"><span class="pre">variables</span></code> (see in <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem" title="dalgebra.dpolynomial.dpolynomial_system.DSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">DSystem</span></code></a> the format for 
+this input).</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">indices</span></code>: list or tuple of indices to select the subsystem. (see <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.equations" title="dalgebra.dpolynomial.dpolynomial_system.DSystem.equations"><code class="xref py py-func docutils literal notranslate"><span class="pre">equations()</span></code></a> 
+to see the format of this input).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">variables</span></code>: list of variables for the new system. If <code class="docutils literal notranslate"><span class="pre">None</span></code> is given, we use the 
+variables of <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>A new <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem" title="dalgebra.dpolynomial.dpolynomial_system.DSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">DSystem</span></code></a> with the new given equations and the variables stated in the input.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">bR</span> <span class="o">=</span> <span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">];</span> <span class="n">x</span> <span class="o">=</span> <span class="n">bR</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">bR</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">eq1</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">x</span> <span class="o">-</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">eq2</span> <span class="o">=</span> <span class="n">u</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">x</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span> <span class="o">=</span> <span class="n">DifferentialSystem</span><span class="p">([</span><span class="n">eq1</span><span class="p">,</span><span class="n">eq2</span><span class="p">],</span> <span class="n">variables</span><span class="o">=</span><span class="p">[</span><span class="n">u</span><span class="p">,</span><span class="n">v</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">subsystem</span><span class="p">([(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">)])</span>
+<span class="n">System</span> <span class="n">over</span> <span class="p">[</span><span class="n">Ring</span> <span class="n">of</span> <span class="n">operator</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> 
+<span class="p">[[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">],</span> <span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">,)]]</span> <span class="k">with</span> <span class="n">variables</span> <span class="p">[(</span><span class="n">u_</span><span class="o">*</span><span class="p">,</span> <span class="n">v_</span><span class="o">*</span><span class="p">)]:</span>
+<span class="p">{</span>
+    <span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">-</span> <span class="n">v_1</span> <span class="o">==</span> <span class="mi">0</span>
+    <span class="n">x</span><span class="o">*</span><span class="n">u_1</span> <span class="o">+</span> <span class="n">u_0</span> <span class="o">-</span> <span class="n">v_2</span> <span class="o">==</span> <span class="mi">0</span>
+    <span class="n">u_4</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_3</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="mi">3</span><span class="p">)</span><span class="o">*</span><span class="n">v_2</span> <span class="o">==</span> <span class="mi">0</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This method is used when using the <code class="docutils literal notranslate"><span class="pre">__getitem__</span></code> notation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="c1"># same system but with equations changed in order</span>
+<span class="n">System</span> <span class="n">over</span> <span class="p">[</span><span class="n">Ring</span> <span class="n">of</span> <span class="n">operator</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> 
+<span class="p">[[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">],</span> <span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">,)]]</span> <span class="k">with</span> <span class="n">variables</span> <span class="p">[(</span><span class="n">u_</span><span class="o">*</span><span class="p">,</span> <span class="n">v_</span><span class="o">*</span><span class="p">)]:</span>
+<span class="p">{</span>
+    <span class="n">u_1</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span> <span class="o">==</span> <span class="mi">0</span>
+    <span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">-</span> <span class="n">v_1</span> <span class="o">==</span> <span class="mi">0</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Setting up the argument <code class="docutils literal notranslate"><span class="pre">variables</span></code> allows to change the variables considered for the system:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">system</span><span class="o">.</span><span class="n">subsystem</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="p">[</span><span class="n">u</span><span class="p">])</span>
+<span class="n">System</span> <span class="n">over</span> <span class="p">[</span><span class="n">Ring</span> <span class="n">of</span> <span class="n">operator</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> 
+<span class="p">[[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">],</span> <span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">,)]]</span> <span class="k">with</span> <span class="n">variables</span> <span class="p">[(</span><span class="n">u_</span><span class="o">*</span><span class="p">,)]:</span>
+<span class="p">{</span>
+    <span class="n">x</span><span class="o">*</span><span class="n">u_0</span> <span class="o">-</span> <span class="n">v_1</span> <span class="o">==</span> <span class="mi">0</span>
+    <span class="n">u_1</span> <span class="o">+</span> <span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">v_0</span> <span class="o">==</span> <span class="mi">0</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DSystem.variables">
+<span class="sig-name descname"><span class="pre">variables</span></span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem.variables" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DifferentialSystem">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dalgebra.dpolynomial.dpolynomial_system.</span></span><span class="sig-name descname"><span class="pre">DifferentialSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">equations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DifferentialSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem" title="dalgebra.dpolynomial.dpolynomial_system.DSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.dpolynomial.dpolynomial_system.DSystem</span></code></a></p>
+<p>Class representing a differential system.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DifferentialSystem.extend_by_derivation">
+<span class="sig-name descname"><span class="pre">extend_by_derivation</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">DSystem.extend_by_operation&gt;</span></em><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DifferentialSystem.extend_by_derivation" title="Permalink to this definition">¶</a></dt>
+<dd><p>new alias for <code class="xref py py-func docutils literal notranslate"><span class="pre">extend_by_operation()</span></code></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DifferenceSystem">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dalgebra.dpolynomial.dpolynomial_system.</span></span><span class="sig-name descname"><span class="pre">DifferenceSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">equations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DifferenceSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem" title="dalgebra.dpolynomial.dpolynomial_system.DSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.dpolynomial.dpolynomial_system.DSystem</span></code></a></p>
+<p>Class representing a difference system.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.DifferenceSystem.extend_by_difference">
+<span class="sig-name descname"><span class="pre">extend_by_difference</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">DSystem.extend_by_operation&gt;</span></em><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.DifferenceSystem.extend_by_difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>new alias for <code class="xref py py-func docutils literal notranslate"><span class="pre">extend_by_operation()</span></code></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_system.RWOSystem">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dpolynomial.dpolynomial_system.</span></span><span class="sig-name descname"><span class="pre">RWOSystem</span></span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_system.RWOSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias for DSystem (used for backward compatibility)</p>
+<p>alias of <a class="reference internal" href="#dalgebra.dpolynomial.dpolynomial_system.DSystem" title="dalgebra.dpolynomial.dpolynomial_system.DSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.dpolynomial.dpolynomial_system.DSystem</span></code></a></p>
+</dd></dl>
+
 </section>
 
 
@@ -54,6 +713,11 @@
     <h4>Previous topic</h4>
     <p class="topless"><a href="dpolynomial_element.html"
                           title="previous chapter">Element structures for Infinite Polynomials over rings with operators</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="../hierarchies.html"
+                          title="next chapter">Integrable Hierarchies</a></p>
   </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
@@ -82,6 +746,12 @@
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../hierarchies.html" title="Integrable Hierarchies"
+             >next</a> |</li>
         <li class="right" >
           <a href="dpolynomial_element.html" title="Element structures for Infinite Polynomials over rings with operators"
              >previous</a> |</li>

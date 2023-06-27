@@ -1042,7 +1042,7 @@ class DSystem:
                 sage: sol = S.solve_linear(); sol
                 {u_*: (3/4*b - 3/2)*a_1, v_*: (-3/2)*a_0}
 
-            We can check that this solutions satify all the equations of the systems to be zero::
+            We can check that this solutions satisfy all the equations of the systems to be zero::
 
                 sage: all(equation(dic=sol) == 0 for equation in S.equations())
                 True

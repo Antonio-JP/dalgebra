@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Rings with Operators: Category, Factory and Wrapper &#8212; Differential Algebra in Sage 0.0.4.2+is-29 documentation</title>
+    <title>Rings with Operators: Category, Factory and Wrapper &#8212; Differential Algebra in Sage 0.0.4.4 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/classic.css" />
     
@@ -14,6 +14,7 @@
     <script src="_static/jquery.js"></script>
     <script src="_static/underscore.js"></script>
     <script src="_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -26,6 +27,9 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
         <li class="right" >
           <a href="dpolynomial.html" title="Infinite Polynomials of Rings with Operators"
              accesskey="N">next</a> |</li>
@@ -42,8 +46,610 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <section id="rings-with-operators-category-factory-and-wrapper">
-<h1>Rings with Operators: Category, Factory and Wrapper<a class="headerlink" href="#rings-with-operators-category-factory-and-wrapper" title="Permalink to this headline">¶</a></h1>
+  <section id="module-dalgebra.dring">
+<span id="rings-with-operators-category-factory-and-wrapper"></span><h1>Rings with Operators: Category, Factory and Wrapper<a class="headerlink" href="#module-dalgebra.dring" title="Permalink to this headline">¶</a></h1>
+<p>Module with all structures for defining rings with operators.</p>
+<p>Let <span class="math notranslate nohighlight">\(\sigma: R \rightarrow R\)</span> be an additive homomorphism, i.e., for all elements <span class="math notranslate nohighlight">\(r,s \in R\)</span>,
+the map satisfies <span class="math notranslate nohighlight">\(\sigma(r+s) = \sigma(r) + \sigma(s)\)</span>. We define the pair <span class="math notranslate nohighlight">\((R, \sigma)\)</span> as a <em>d-ring</em>.</p>
+<p>Similarly, if we have a set of additive maps <span class="math notranslate nohighlight">\(\sigma_1,\ldots,\sigma_n : R \rightarrow R\)</span>,
+we define the <em>ring</em> <span class="math notranslate nohighlight">\(R\)</span> <em>with operators</em> <span class="math notranslate nohighlight">\((\sigma_1,\ldots,\sigma_n)\)</span> (or simply, <em>d-ring</em>) as the tuple 
+<span class="math notranslate nohighlight">\((R, \{\sigma_1,\ldots,\sigma_n\})\)</span>.</p>
+<p>This module provides the framework to define d-rings with as many operators as 
+the user wants and we also provide a Wrapper class so we can extend existing ring structures that 
+already exist in <a class="reference external" href="https://www.sagemath.org">SageMath</a>.</p>
+<p>The factory <code class="xref py py-func docutils literal notranslate"><span class="pre">DRing()</span></code> allows the creation of these rings with operators and will determine 
+automatically in which specified category a ring will belong. For example, we can create the differential
+ring <span class="math notranslate nohighlight">\((\mathbb{Q}[x], \partial_x)\)</span> or the difference ring <span class="math notranslate nohighlight">\((\mathbb{Q}[x], x \mapsto x + 1)\)</span> with the 
+following code:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dQx</span> <span class="o">=</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">())</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">sQx</span> <span class="o">=</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">](</span><span class="n">p</span><span class="p">)(</span><span class="n">x</span><span class="o">=</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Once the rings are created, we can create elements within the ring and apply the corresponding operator:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">x</span> <span class="o">=</span> <span class="n">dQx</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">operation</span><span class="p">()</span>
+<span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span> <span class="o">=</span> <span class="n">sQx</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">operation</span><span class="p">()</span>
+<span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>We can also create the same ring with both operators together:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">dsQx</span> <span class="o">=</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">(),</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">](</span><span class="n">p</span><span class="p">)(</span><span class="n">x</span><span class="o">=</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span> <span class="o">=</span> <span class="n">dsQx</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">operation</span><span class="p">(</span><span class="n">operation</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">operation</span><span class="p">(</span><span class="n">operation</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>However, these operators have no structure by themselves: <a class="reference external" href="https://www.sagemath.org">SageMath</a> is not able to distinguish the type 
+of the operators if they are defined using lambda expressions or callables. This can be seen by the fact that
+the factory can not detect the equality on two identical rings:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">dQx</span> <span class="ow">is</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">())</span>
+<span class="kc">False</span>
+</pre></div>
+</div>
+<p>To avoid this behavior, we can set the types by providing an optional list called <code class="docutils literal notranslate"><span class="pre">types</span></code> whose elements are 
+strings with values:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">homomorphism</span></code>: the operator is interpret as a homomorphism/shift/difference operator.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">derivation</span></code>: the operator is considered as a derivation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">skew</span></code>: the operator is considered as a skew-derivation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">none</span></code>: the operator will only be considered as an additive Map without further structure.</p></li>
+</ul>
+<p>We can see that, when setting this value, the ring is detected to be equal:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">dQx</span> <span class="o">=</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">(),</span> <span class="n">types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;derivation&quot;</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dQx</span> <span class="ow">is</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">(),</span> <span class="n">types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;derivation&quot;</span><span class="p">])</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="c1"># Since we have one variable, the built-in `diff` also work</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dQx</span> <span class="ow">is</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="n">diff</span><span class="p">,</span> <span class="n">types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;derivation&quot;</span><span class="p">])</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="c1"># We can also use elements in the derivation module</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dQx</span> <span class="ow">is</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">.</span><span class="n">derivation_module</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span> <span class="n">types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;derivation&quot;</span><span class="p">])</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+<p>Also, we can detect this equality when adding operators sequentially instead of at once:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">dsQx</span> <span class="o">=</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> 
+<span class="o">....</span><span class="p">:</span>     <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">(),</span> 
+<span class="o">....</span><span class="p">:</span>     <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">](</span><span class="n">p</span><span class="p">)(</span><span class="n">x</span><span class="o">=</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> 
+<span class="o">....</span><span class="p">:</span>     <span class="n">types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;derivation&quot;</span><span class="p">,</span> <span class="s2">&quot;homomorphism&quot;</span><span class="p">]</span>
+<span class="o">....</span><span class="p">:</span> <span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dsQx</span> <span class="ow">is</span> <span class="n">DRing</span><span class="p">(</span><span class="n">dQx</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">](</span><span class="n">p</span><span class="p">)(</span><span class="n">x</span><span class="o">=</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;homomorphism&quot;</span><span class="p">])</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+<p>For specific types of operators as <em>derivations</em> or <em>homomorphism</em>, there are other functions where the <code class="docutils literal notranslate"><span class="pre">types</span></code> argument can be skipped
+taking the corresponding value by default:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">dQx</span> <span class="ow">is</span> <span class="n">DifferentialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">())</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dsQx</span> <span class="ow">is</span> <span class="n">DifferenceRing</span><span class="p">(</span><span class="n">DifferentialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">()),</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">](</span><span class="n">p</span><span class="p">)(</span><span class="n">x</span><span class="o">=</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+<p>We can also have more complexes structures with different types of operators:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">QQ</span><span class="p">[]</span> <span class="c1"># x is the usual variable, y is an exponential</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">derivation_module</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">();</span> <span class="n">d</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">+</span> <span class="n">y</span><span class="o">*</span><span class="n">dy</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">DR</span> <span class="o">=</span> <span class="n">DifferentialRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="c1"># We add a special homomorphism where the two generators are squared but QQ is fixed</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">DSR</span> <span class="o">=</span> <span class="n">DifferenceRing</span><span class="p">(</span><span class="n">DR</span><span class="p">,</span> <span class="n">R</span><span class="o">.</span><span class="n">Hom</span><span class="p">(</span><span class="n">R</span><span class="p">)([</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="p">,</span> <span class="n">y</span><span class="o">^</span><span class="mi">2</span><span class="p">]))</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">DSR</span><span class="o">.</span><span class="n">noperators</span><span class="p">()</span>
+<span class="mi">2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">DSR</span><span class="o">.</span><span class="n">operator_types</span><span class="p">()</span>
+<span class="p">(</span><span class="s1">&#39;derivation&#39;</span><span class="p">,</span> <span class="s1">&#39;homomorphism&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We can see that these operator <strong>do not commute</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">x</span> <span class="o">=</span> <span class="n">DSR</span><span class="p">(</span><span class="n">x</span><span class="p">);</span> <span class="n">y</span> <span class="o">=</span> <span class="n">DSR</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">difference</span><span class="p">()</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="mi">2</span><span class="o">*</span><span class="n">x</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span><span class="o">.</span><span class="n">difference</span><span class="p">()</span>
+<span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">y</span><span class="o">.</span><span class="n">difference</span><span class="p">()</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="mi">2</span><span class="o">*</span><span class="n">y</span><span class="o">^</span><span class="mi">2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">y</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span><span class="o">.</span><span class="n">difference</span><span class="p">()</span>
+<span class="n">y</span><span class="o">^</span><span class="mi">2</span>
+</pre></div>
+</div>
+<p>Finally, this module also allows the definition of skew-derivations for any ring. This requires the use 
+of derivation modules with twist (see <a class="reference external" href="https://doc.sagemath.org/html/en/reference/rings/sage/rings/derivation.html">sage.rings.derivations</a>):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">QQ</span><span class="p">[]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">s</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">Hom</span><span class="p">(</span><span class="n">R</span><span class="p">)([</span><span class="n">x</span><span class="o">-</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="o">+</span><span class="n">y</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">td</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">derivation_module</span><span class="p">(</span><span class="n">twist</span><span class="o">=</span><span class="n">s</span><span class="p">)(</span><span class="n">x</span><span class="o">-</span><span class="n">y</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">tR</span> <span class="o">=</span> <span class="n">DRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">td</span><span class="p">,</span> <span class="n">types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;homomorphism&quot;</span><span class="p">,</span> <span class="s2">&quot;skew&quot;</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="n">tR</span><span class="o">.</span><span class="n">gens</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">skew</span><span class="p">()</span> <span class="o">==</span> <span class="n">x</span><span class="o">.</span><span class="n">skew</span><span class="p">()</span><span class="o">*</span><span class="n">y</span> <span class="o">+</span> <span class="n">x</span><span class="o">.</span><span class="n">shift</span><span class="p">()</span><span class="o">*</span><span class="n">y</span><span class="o">.</span><span class="n">skew</span><span class="p">()</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">y</span><span class="p">)</span><span class="o">.</span><span class="n">skew</span><span class="p">()</span> <span class="o">==</span> <span class="n">x</span><span class="o">.</span><span class="n">skew</span><span class="p">()</span><span class="o">*</span><span class="n">y</span><span class="o">.</span><span class="n">shift</span><span class="p">()</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">y</span><span class="o">.</span><span class="n">skew</span><span class="p">()</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+<p>AUTHORS:</p>
+<ul class="simple">
+<li><p>Antonio Jimenez-Pastor (<a class="reference external" href="https://github.com/Antonio-JP">GitHub</a>)</p></li>
+</ul>
+<dl class="py class">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dalgebra.dring.</span></span><span class="sig-name descname"><span class="pre">DRings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.categories.category.Category</span></code></p>
+<p>Category for representing d-rings.</p>
+<p>Let <span class="math notranslate nohighlight">\(\sigma: R \rightarrow R\)</span> be an additive homomorphism, i.e., for all elements <span class="math notranslate nohighlight">\(r,s \in R\)</span>,
+the map satisfies <span class="math notranslate nohighlight">\(\sigma(r+s) = \sigma(r) + \sigma(s)\)</span>. We define the <em>ring</em> <span class="math notranslate nohighlight">\(R\)</span> <em>with operator</em>
+<span class="math notranslate nohighlight">\(\sigma\)</span> as the pair <span class="math notranslate nohighlight">\((R, \sigma)\)</span>.</p>
+<p>Similarly, if we have a set of additive maps <span class="math notranslate nohighlight">\(\sigma_1,\ldots,\sigma_n : R \rightarrow R\)</span>.
+Then we define the <em>ring</em> <span class="math notranslate nohighlight">\(R\)</span> <em>with operators</em> <span class="math notranslate nohighlight">\((\sigma_1,\ldots,\sigma_n)\)</span> as the tuple 
+<span class="math notranslate nohighlight">\((R, (\sigma_1,\ldots,\sigma_n))\)</span>.</p>
+<p>This category defines the basic methods for these rings and their elements</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ElementMethods</span></span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.derivative">
+<span class="sig-name descname"><span class="pre">derivative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">derivation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.derivative" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a derivation to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
+<p>This method applies repeatedly a derivation defined in the parent of <code class="docutils literal notranslate"><span class="pre">self</span></code>.
+See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.derivative" title="dalgebra.dring.DRings.ParentMethods.derivative"><code class="xref py py-func docutils literal notranslate"><span class="pre">derivative()</span></code></a> for further information.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.difference">
+<span class="sig-name descname"><span class="pre">difference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">difference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a difference to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
+<p>This method applies repeatedly a difference defined in the parent of <code class="docutils literal notranslate"><span class="pre">self</span></code>.
+See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.difference" title="dalgebra.dring.DRings.ParentMethods.difference"><code class="xref py py-func docutils literal notranslate"><span class="pre">difference()</span></code></a> for further information.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.inverse_operation">
+<span class="sig-name descname"><span class="pre">inverse_operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.inverse_operation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply the inverse operation to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
+<p>This method applies repeatedly the inverse operation defined in the parent of <code class="docutils literal notranslate"><span class="pre">self</span></code>.
+See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.inverse_operation" title="dalgebra.dring.DRings.ParentMethods.inverse_operation"><code class="xref py py-func docutils literal notranslate"><span class="pre">inverse_operation()</span></code></a> for further information.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.is_constant">
+<span class="sig-name descname"><span class="pre">is_constant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.is_constant" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to check whether an element is a constant with respect to one operator.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">operation</span></code>: index defining the operation we want to check.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>A boolean value with <code class="docutils literal notranslate"><span class="pre">True</span></code> is the element is a constant (see 
+<a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.constant_ring" title="dalgebra.dring.DRings.ParentMethods.constant_ring"><code class="xref py py-func docutils literal notranslate"><span class="pre">constant_ring()</span></code></a> for further information
+on what is a constant depending on the type of operator).</p>
+<p>REMARK: this method do not require the implementation on <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.constant_ring" title="dalgebra.dring.DRings.ParentMethods.constant_ring"><code class="xref py py-func docutils literal notranslate"><span class="pre">constant_ring()</span></code></a>
+on its parent structure.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span> <span class="o">=</span> <span class="n">DifferentialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="n">diff</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">p</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">is_constant</span><span class="p">()</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">p</span> <span class="o">=</span> <span class="n">R</span><span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">3</span> <span class="o">-</span> <span class="mi">3</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">is_constant</span><span class="p">()</span>
+<span class="kc">False</span>
+</pre></div>
+</div>
+<p>Some interesting constants may arise unexpectedly when adding other derivations:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">QQ</span><span class="p">[]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">derivation_module</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">();</span> <span class="n">d</span> <span class="o">=</span> <span class="n">y</span><span class="o">*</span><span class="n">dx</span> <span class="o">-</span> <span class="n">x</span><span class="o">*</span><span class="n">dy</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dR</span> <span class="o">=</span> <span class="n">DifferentialRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="n">dR</span><span class="o">.</span><span class="n">gens</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">is_constant</span><span class="p">()</span>
+<span class="kc">False</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">y</span><span class="o">.</span><span class="n">is_constant</span><span class="p">()</span>
+<span class="kc">False</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">is_constant</span><span class="p">()</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.operation">
+<span class="sig-name descname"><span class="pre">operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.operation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply an operation to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
+<p>This method applies repeatedly an operation defined in the parent of <code class="docutils literal notranslate"><span class="pre">self</span></code>.
+See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.operation" title="dalgebra.dring.DRings.ParentMethods.operation"><code class="xref py py-func docutils literal notranslate"><span class="pre">operation()</span></code></a> for further information.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.shift">
+<span class="sig-name descname"><span class="pre">shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.shift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for <a class="reference internal" href="#dalgebra.dring.DRings.ElementMethods.difference" title="dalgebra.dring.DRings.ElementMethods.difference"><code class="xref py py-func docutils literal notranslate"><span class="pre">difference()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.skew">
+<span class="sig-name descname"><span class="pre">skew</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">skew</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.skew" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a skew-derivation to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
+<p>This method applies repeatedly a difference defined in the parent of <code class="docutils literal notranslate"><span class="pre">self</span></code>.
+See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.skew" title="dalgebra.dring.DRings.ParentMethods.skew"><code class="xref py py-func docutils literal notranslate"><span class="pre">skew()</span></code></a> for further information.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.MorphismMethods">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">MorphismMethods</span></span><a class="headerlink" href="#dalgebra.dring.DRings.MorphismMethods" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ParentMethods</span></span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.all_operators_commute">
+<span class="sig-name descname"><span class="pre">all_operators_commute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.all_operators_commute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to check whether all operators of the ring commute.</p>
+<p>This method is not deterministic (meaning that it may return <code class="docutils literal notranslate"><span class="pre">True</span></code> even
+when the two operators do not fully commute) but it tries to check in a fix number
+of random elements if the two operators actually commute.</p>
+<p>It also try to see if the operators commute in the generators of the ring.</p>
+<p>See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.operators_commute" title="dalgebra.dring.DRings.ParentMethods.operators_commute"><code class="xref py py-func docutils literal notranslate"><span class="pre">operators_commute()</span></code></a> for further information</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">points</span></code>: number of random points to be selected.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">args</span></code>: arguments to be passed to the <code class="docutils literal notranslate"><span class="pre">random_element</span></code> method.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">kwds</span></code>: arguments to be passed to the <code class="docutils literal notranslate"><span class="pre">random_element</span></code> method.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p><code class="docutils literal notranslate"><span class="pre">True</span></code> if all the tests indicates the operators commute, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">x</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">QQ</span><span class="p">[];</span> <span class="n">d</span> <span class="o">=</span> <span class="n">diff</span><span class="p">;</span> <span class="n">s</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">Hom</span><span class="p">(</span><span class="n">R</span><span class="p">)(</span><span class="n">x</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dsR</span> <span class="o">=</span> <span class="n">DifferenceRing</span><span class="p">(</span><span class="n">DifferentialRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">d</span><span class="p">),</span> <span class="n">s</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dsR</span><span class="o">.</span><span class="n">all_operators_commute</span><span class="p">()</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">QQ</span><span class="p">[]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dx</span><span class="p">,</span><span class="n">dy</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">derivation_module</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">();</span> <span class="n">d</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">+</span> <span class="n">y</span><span class="o">*</span><span class="n">dy</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">s</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">Hom</span><span class="p">(</span><span class="n">R</span><span class="p">)([</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">y</span><span class="o">^</span><span class="mi">2</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dsR</span> <span class="o">=</span> <span class="n">DifferenceRing</span><span class="p">(</span><span class="n">DifferentialRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="n">d</span><span class="p">),</span> <span class="n">s</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dsR</span><span class="o">.</span><span class="n">all_operators_commute</span><span class="p">()</span>
+<span class="kc">False</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.apply_operations">
+<span class="sig-name descname"><span class="pre">apply_operations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">operations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_ordered</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.apply_operations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that apply several operations to an element in a specific way.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">element</span></code>: an element in <code class="docutils literal notranslate"><span class="pre">self</span></code> to whom the operations will be applied</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">operations</span></code>: list or tuple indicating the operations to be applied. If <code class="docutils literal notranslate"><span class="pre">_ordered</span></code> is given to 
+<code class="docutils literal notranslate"><span class="pre">True</span></code>, then the elements are interpreted as a list of operations that will be applied in 
+the specific order that appears in <code class="docutils literal notranslate"><span class="pre">operations</span></code>. Otherwise, the input must be a list/tuple of 
+exactly <code class="docutils literal notranslate"><span class="pre">self.noperations()</span></code> indicating how many times each operation is applied.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>The result of applying the operators to <code class="docutils literal notranslate"><span class="pre">element</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.constant_ring">
+<span class="sig-name descname"><span class="pre">constant_ring</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.constant_ring" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to obtain the constant ring of a given operation.</p>
+<p>The meaning of a ring of constants depends on the type of operator that 
+we are considering:</p>
+<ul class="simple">
+<li><p>“homomorphism”: the elements that are fixed by the operator.</p></li>
+<li><p>“derivation”: the elements that goes to zero with the operator.</p></li>
+<li><p>“skew”: the elements that goes to zero with the operator.</p></li>
+<li><p>“none”: it makes no sense to talk about constant for these operators.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.derivations">
+<span class="sig-name descname"><span class="pre">derivations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.derivations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to filter the derivations out of a d-ring.</p>
+<p>Derivations are a particular type of operators. With this method we 
+provide a similar interface as with the generic operators but just with
+derivation.</p>
+<p>Similarly, this class offers access to homomorphisms and skew derivations.</p>
+<p>When no derivation is declared for a ring, an empty tuple is returned.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.derivative">
+<span class="sig-name descname"><span class="pre">derivative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">derivation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.derivative" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to apply a derivation over an element.</p>
+<p>This method applies a derivation over a given element in the same way an operator
+is applied by the method <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.operation" title="dalgebra.dring.DRings.ParentMethods.operation"><code class="xref py py-func docutils literal notranslate"><span class="pre">operation()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.difference">
+<span class="sig-name descname"><span class="pre">difference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">difference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to apply a difference over an element.</p>
+<p>This method applies a difference over a given element in the same way an operator
+is applied by the method <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.operation" title="dalgebra.dring.DRings.ParentMethods.operation"><code class="xref py py-func docutils literal notranslate"><span class="pre">operation()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.differences">
+<span class="sig-name descname"><span class="pre">differences</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.differences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to filter the differences out of a d-ring.</p>
+<p>Differences are a particular type of operators. With this method we 
+provide a similar interface as with the generic operators but just with
+difference.</p>
+<p>Similarly, this class offers access to derivations and skew derivations.</p>
+<p>When no difference is declared for a ring, an empty tuple is returned.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.has_derivations">
+<span class="sig-name descname"><span class="pre">has_derivations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.has_derivations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to know if there are derivations defined over the ring.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.has_differences">
+<span class="sig-name descname"><span class="pre">has_differences</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.has_differences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to know if there are differences defined over the ring.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.has_skews">
+<span class="sig-name descname"><span class="pre">has_skews</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.has_skews" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to know if there are skew-derivations defined over the ring.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.inverse_operation">
+<span class="sig-name descname"><span class="pre">inverse_operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.inverse_operation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.is_difference">
+<span class="sig-name descname"><span class="pre">is_difference</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.is_difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to check whether a ring is difference, i.e, all operators are homomorphisms.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.is_differential">
+<span class="sig-name descname"><span class="pre">is_differential</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.is_differential" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to check whether a ring is differential, i.e, all operators are derivations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.is_skew">
+<span class="sig-name descname"><span class="pre">is_skew</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.is_skew" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to check whether a ring is skewed, i.e, all operators are skew-derivations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.linear_operator_ring">
+<span class="sig-name descname"><span class="pre">linear_operator_ring</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.linear_operator_ring" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get the operator ring of <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>When we consider a d-ring, we can always consider a new (usually non-commutative)
+ring where we extend <code class="docutils literal notranslate"><span class="pre">self</span></code> polynomially with all the operators and its elements represent
+new operators created from the operators defined over <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>This ring is the ring of linear operators over the ground ring.</p>
+<p>This method return this new structure.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.nderivations">
+<span class="sig-name descname"><span class="pre">nderivations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.nderivations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get the number of derivations defined over a ring</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.ndifferences">
+<span class="sig-name descname"><span class="pre">ndifferences</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.ndifferences" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get the number of differences defined over a ring</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.noperators">
+<span class="sig-name descname"><span class="pre">noperators</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.noperators" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get the number of operators defined over a ring</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.nskews">
+<span class="sig-name descname"><span class="pre">nskews</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.nskews" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get the number of skew-derivations defined over a ring</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.operation">
+<span class="sig-name descname"><span class="pre">operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.operation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to apply an operator over an element.</p>
+<p>This method takes an element of <code class="docutils literal notranslate"><span class="pre">self</span></code> and applies one of the operators defined over <code class="docutils literal notranslate"><span class="pre">self</span></code>
+over such element. This operator is given by its index, hence raising a <code class="xref py py-class docutils literal notranslate"><span class="pre">IndexError</span></code> if
+the index is not in the valid range.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">element</span></code>: an element over the operator of this ring will be applied.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">operator</span></code> (<span class="math notranslate nohighlight">\(0\)</span> by default) the index of the operator that will be applied.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>If the index is incorrect, an <code class="xref py py-class docutils literal notranslate"><span class="pre">IndexError</span></code> is raised. Otherwise this method 
+returns <span class="math notranslate nohighlight">\(f(x)\)</span> where <span class="math notranslate nohighlight">\(x\)</span> is the <code class="docutils literal notranslate"><span class="pre">element</span></code> and <span class="math notranslate nohighlight">\(f\)</span> is the operator defined by <code class="docutils literal notranslate"><span class="pre">operator</span></code>.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dQx</span> <span class="o">=</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">())</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">sQx</span> <span class="o">=</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">sdQx</span> <span class="o">=</span> <span class="n">DRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">]</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">())</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">p</span> <span class="o">=</span> <span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">](</span><span class="n">x</span><span class="o">^</span><span class="mi">3</span> <span class="o">-</span> <span class="mi">3</span><span class="o">*</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">3</span><span class="o">*</span><span class="n">x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">dQx</span><span class="o">.</span><span class="n">operation</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+<span class="mi">3</span><span class="o">*</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">6</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> <span class="mi">3</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">sQx</span><span class="o">.</span><span class="n">operation</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+<span class="n">x</span><span class="o">^</span><span class="mi">3</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">sdQx</span><span class="o">.</span><span class="n">operation</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+<span class="n">Traceback</span> <span class="p">(</span><span class="n">most</span> <span class="n">recent</span> <span class="n">call</span> <span class="n">last</span><span class="p">):</span>
+<span class="o">...</span>
+<span class="ne">IndexError</span><span class="p">:</span> <span class="n">An</span> <span class="n">index</span> <span class="k">for</span> <span class="n">the</span> <span class="n">operation</span> <span class="n">must</span> <span class="n">be</span> <span class="n">provided</span> <span class="n">when</span> <span class="n">having</span> <span class="n">several</span> <span class="n">operations</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">sdQx</span><span class="o">.</span><span class="n">operation</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">x</span><span class="o">^</span><span class="mi">3</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">sdQx</span><span class="o">.</span><span class="n">operation</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="mi">3</span><span class="o">*</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span> <span class="o">-</span> <span class="mi">6</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> <span class="mi">3</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">sdQx</span><span class="o">.</span><span class="n">operation</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">Traceback</span> <span class="p">(</span><span class="n">most</span> <span class="n">recent</span> <span class="n">call</span> <span class="n">last</span><span class="p">):</span>
+<span class="o">...</span>
+<span class="ne">IndexError</span><span class="p">:</span> <span class="o">...</span> <span class="n">index</span> <span class="n">out</span> <span class="n">of</span> <span class="nb">range</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.operator_types">
+<span class="sig-name descname"><span class="pre">operator_types</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.operator_types" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get the types of the operators.</p>
+<p>The only condition for <span class="math notranslate nohighlight">\(\sigma: R \rightarrow R\)</span> to be a valid operator is that it is 
+an additive homomorphism. However, the behavior of <span class="math notranslate nohighlight">\(\sigma\)</span> with respect to the multiplication
+of <span class="math notranslate nohighlight">\(R\)</span> categorize <span class="math notranslate nohighlight">\(\sigma\)</span> into several possibilities:</p>
+<ul class="simple">
+<li><p>“none”: no condition is known over this method. This will disallow some extension operations.</p></li>
+<li><p>“homomorphism”: the map <span class="math notranslate nohighlight">\(\sigma\)</span> is an homomorphism, i.e., for all <span class="math notranslate nohighlight">\(r, s \in R\)</span> it satisfies
+<span class="math notranslate nohighlight">\(\sigma(rs) = \sigma(r)\sigma(s)\)</span>.</p></li>
+<li><p>“derivative”: the map <span class="math notranslate nohighlight">\(\sigma\)</span> satisfies Leibniz rule, i.e., for all <span class="math notranslate nohighlight">\(r, s \in R\)</span> it satisfies
+<span class="math notranslate nohighlight">\(\sigma(rs) = \sigma(r)s + r\sigma(s)\)</span>.</p></li>
+<li><p>“skew”: the map <span class="math notranslate nohighlight">\(\sigma\)</span> satisfies the skew-Leibniz rule, i.e., there is an homomorphism <span class="math notranslate nohighlight">\(\delta\)</span> 
+such for all <span class="math notranslate nohighlight">\(r, s \in R\)</span> it satisfies <span class="math notranslate nohighlight">\(\sigma(rs) = \sigma(r)s + \delta(r)\sigma(s)\)</span>.</p></li>
+</ul>
+<p>This method returns a tuple (sorted as the output of <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.operators" title="dalgebra.dring.DRings.ParentMethods.operators"><code class="xref py py-func docutils literal notranslate"><span class="pre">operators()</span></code></a>) with the types of each of the 
+operators.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.operators">
+<span class="sig-name descname"><span class="pre">operators</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.operators" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get the collection of operators that are defined over the ring.</p>
+<p>These operators are maps from <code class="docutils literal notranslate"><span class="pre">self</span></code> to <code class="docutils literal notranslate"><span class="pre">self</span></code> that compute the application
+of each operator over the elements of <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.operators_commute">
+<span class="sig-name descname"><span class="pre">operators_commute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">op1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.operators_commute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to check whether two operators of the ring commute.</p>
+<p>This method is not deterministic (meaning that it may return <code class="docutils literal notranslate"><span class="pre">True</span></code> even
+when the two operators do not fully commute) but it tries to check in a fix number
+of random elements if the two operators actually commute.</p>
+<p>It also try to see if the operators commute in the generators of the ring.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">op1</span></code>: index of the first operator to check.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">op2</span></code>: index of the second operator to check.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">points</span></code>: number of random points to be selected.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">args</span></code>: arguments to be passed to the <code class="docutils literal notranslate"><span class="pre">random_element</span></code> method.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">kwds</span></code>: arguments to be passed to the <code class="docutils literal notranslate"><span class="pre">random_element</span></code> method.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p><code class="docutils literal notranslate"><span class="pre">True</span></code> if all the tests indicates the operators commute, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.shift">
+<span class="sig-name descname"><span class="pre">shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.shift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.difference" title="dalgebra.dring.DRings.ParentMethods.difference"><code class="xref py py-func docutils literal notranslate"><span class="pre">difference()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.skew">
+<span class="sig-name descname"><span class="pre">skew</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skew</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.skew" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to apply a skew-derivation over an element.</p>
+<p>This method applies a skew-derivation over a given element in the same way an operator
+is applied by the method <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.operation" title="dalgebra.dring.DRings.ParentMethods.operation"><code class="xref py py-func docutils literal notranslate"><span class="pre">operation()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.skews">
+<span class="sig-name descname"><span class="pre">skews</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.skews" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to filter the skew-derivations out of a d-ring.</p>
+<p>Differences are a particular type of operators. With this method we 
+provide a similar interface as with the generic operators but just with
+difference.</p>
+<p>Similarly, this class offers access to homomorphisms and derivations.</p>
+<p>When no skew-derivation is declared for a ring, an empty tuple is returned.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.super_categories">
+<span class="sig-name descname"><span class="pre">super_categories</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.super_categories" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="dalgebra.dring.DFractionField">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dalgebra.dring.</span></span><span class="sig-name descname"><span class="pre">DFractionField</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">R</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">element_class=&lt;class</span> <span class="pre">'dalgebra.dring.DFractionFieldElement'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category=Join</span> <span class="pre">of</span> <span class="pre">Category</span> <span class="pre">of</span> <span class="pre">quotient</span> <span class="pre">fields</span> <span class="pre">and</span> <span class="pre">Category</span> <span class="pre">of</span> <span class="pre">d</span> <span class="pre">rings</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DFractionField" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.rings.fraction_field.FractionField_generic</span></code></p>
+<p>Class to represent a generic field of fractions of a d-ring.</p>
+<p>This class extends naturally the operations over the base ring and creates a natural extension for 
+fraction field to be used in the framework of difference and differential algebra.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">R</span></code>: the ring that will be transformed into a field of fractions. Must be in the category
+<a class="reference internal" href="#dalgebra.dring.DRings" title="dalgebra.dring.DRings"><code class="xref py py-class docutils literal notranslate"><span class="pre">DRings</span></code></a> and also return <code class="docutils literal notranslate"><span class="pre">True</span></code> to the method <code class="docutils literal notranslate"><span class="pre">is_integral_domain()</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">element_class</span></code>: (optional) class for the elements of the field of fractions. It is not recommended
+to provide anything here.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">category</span></code>: (optional) base category to be use for these fields. By default it is the joint category 
+from quotient fields and d-rings.</p></li>
+</ul>
+<p>Methods implemented from DRings:</p>
+<ul class="simple">
+<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">DRings.parent_class.operators()</span></code></p></li>
+<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">DRings.parent_class.operator_types()</span></code></p></li>
+<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">DRings.parent_class.constant_ring()</span></code>: it tries to compute the field of fractions of the base ring</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DFractionField.constant_ring">
+<span class="sig-name descname"><span class="pre">constant_ring</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DFractionField.constant_ring" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DFractionField.operator_types">
+<span class="sig-name descname"><span class="pre">operator_types</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DFractionField.operator_types" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DFractionField.operators">
+<span class="sig-name descname"><span class="pre">operators</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DFractionField.operators" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.dring.DifferentialRing">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dring.</span></span><span class="sig-name descname"><span class="pre">DifferentialRing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">operators</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DifferentialRing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that calls the <code class="xref py py-class docutils literal notranslate"><span class="pre">DRingFactory</span></code> with types always as “derivation”.</p>
+<p>See documentation on <code class="xref py py-class docutils literal notranslate"><span class="pre">DRingFactory</span></code> for further information.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.dring.DifferenceRing">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dring.</span></span><span class="sig-name descname"><span class="pre">DifferenceRing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">operators</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DifferenceRing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that calls the <code class="xref py py-class docutils literal notranslate"><span class="pre">DRingFactory</span></code> with types always as “homomorphism”.</p>
+<p>See documentation on <code class="xref py py-class docutils literal notranslate"><span class="pre">DRingFactory</span></code> for further information.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dalgebra.dring.RingsWithOperators">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dring.</span></span><span class="sig-name descname"><span class="pre">RingsWithOperators</span></span><a class="headerlink" href="#dalgebra.dring.RingsWithOperators" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias for DRings (used for backward-compatibility)</p>
+<p>alias of <a class="reference internal" href="#dalgebra.dring.DRings" title="dalgebra.dring.DRings"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.dring.DRings</span></code></a></p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="dalgebra.dring.RingWithOperators">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dring.</span></span><span class="sig-name descname"><span class="pre">RingWithOperators</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">&lt;dalgebra.dring.DRingFactory</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#dalgebra.dring.RingWithOperators" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias fod DRing (used for backward-compatibility)</p>
+</dd></dl>
+
 </section>
 
 
@@ -90,6 +696,9 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
         <li class="right" >
           <a href="dpolynomial.html" title="Infinite Polynomials of Rings with Operators"
              >next</a> |</li>

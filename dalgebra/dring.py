@@ -2,7 +2,7 @@ r'''
     Module with all structures for defining rings with operators.
 
     Let `\sigma: R \rightarrow R` be an additive homomorphism, i.e., for all elements `r,s \in R`,
-    the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the pair `(R, \sigma)`as a *d-ring*. 
+    the map satisfies `\sigma(r+s) = \sigma(r) + \sigma(s)`. We define the pair `(R, \sigma)` as a *d-ring*. 
 
     Similarly, if we have a set of additive maps `\sigma_1,\ldots,\sigma_n : R \rightarrow R`,
     we define the *ring* `R` *with operators* `(\sigma_1,\ldots,\sigma_n)` (or simply, *d-ring*) as the tuple 
@@ -138,27 +138,28 @@ r'''
 
 from __future__ import annotations
 
-import logging
-
-from ore_algebra.ore_algebra import OreAlgebra, OreAlgebra_generic
+from collections.abc import Sequence
 from sage.all import ZZ, latex, Parent
-from sage.categories.all import Morphism, Category, Rings, CommutativeRings, CommutativeAdditiveGroups
+from sage.categories.all import Morphism, Category, Rings, CommutativeRings, CommutativeAdditiveGroups, QuotientFields
 from sage.categories.morphism import IdentityMorphism, SetMorphism # pylint: disable=no-name-in-module
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.misc.all import abstract_method, cached_method
+from sage.rings.fraction_field import FractionField_generic
+from sage.rings.fraction_field_element import FractionFieldElement # pylint: disable=no-name-in-module
 from sage.rings.morphism import RingHomomorphism_im_gens # pylint: disable=no-name-in-module
 from sage.rings.ring import Ring, CommutativeRing #pylint: disable=no-name-in-module
 from sage.rings.derivation import RingDerivationModule
 from sage.structure.element import parent, Element #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 from sage.symbolic.ring import SR #pylint: disable=no-name-in-module
-from typing import Callable, Collection
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 
 _Rings = Rings.__classcall__(Rings)
 _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
 _CommutativeAdditiveGroups = CommutativeAdditiveGroups.__classcall__(CommutativeAdditiveGroups)
+_QuotientFields = QuotientFields.__classcall__(QuotientFields)
 
 ####################################################################################################
 ###
@@ -190,7 +191,7 @@ class DRings(Category):
         ##########################################################
         ### 'generic'
         @abstract_method
-        def operators(self) -> Collection[Morphism]:
+        def operators(self) -> Sequence[Morphism]:
             r'''
                 Method to get the collection of operators that are defined over the ring.
 
@@ -251,6 +252,33 @@ class DRings(Category):
             elif operator is None: raise IndexError("An index for the operation must be provided when having several operations")
             return self.operators()[operator](element)
 
+        def apply_operations(self, element: Element, operations: list[int] | tuple[int], *, _ordered = False):
+            r'''
+                Method that apply several operations to an element in a specific way.
+
+                INPUT:
+
+                * ``element``: an element in ``self`` to whom the operations will be applied
+                * ``operations``: list or tuple indicating the operations to be applied. If ``_ordered`` is given to 
+                  ``True``, then the elements are interpreted as a list of operations that will be applied in 
+                  the specific order that appears in ``operations``. Otherwise, the input must be a list/tuple of 
+                  exactly ``self.noperations()`` indicating how many times each operation is applied.
+
+                OUTPUT:
+
+                The result of applying the operators to ``element``.
+            '''
+            result = element
+            if _ordered:
+                for operation in operations:
+                    result = self.operation(result, operation)
+            else:
+                if len(operations) != self.noperators():
+                    raise TypeError(f"The operations must be as many as operations (expected {self.noperators()}, got {len(operations)})")
+                for operation, i in enumerate(operations):
+                    result = result.operation(operation, times=i)
+            return result
+
         def inverse_operation(self, element: Element, operator: int = None) -> Element:
             raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
 
@@ -278,7 +306,7 @@ class DRings(Category):
 
         ### 'derivation'
         @cached_method
-        def derivations(self) -> Collection[DerivationMap]:
+        def derivations(self) -> Sequence[DerivationMap]:
             r'''
                 Method to filter the derivations out of a d-ring.
 
@@ -323,7 +351,7 @@ class DRings(Category):
 
         ### 'difference'
         @cached_method
-        def differences(self) -> Collection[Morphism]:
+        def differences(self) -> Sequence[Morphism]:
             r'''
                 Method to filter the differences out of a d-ring.
 
@@ -374,7 +402,7 @@ class DRings(Category):
 
         ### 'skews'
         @cached_method
-        def skews(self) -> Collection[Morphism]:
+        def skews(self) -> Sequence[Morphism]:
             r'''
                 Method to filter the skew-derivations out of a d-ring.
 
@@ -723,7 +751,7 @@ class DRingFactory(UniqueFactory):
         # checking the arguments
         if len(operators) < 1:
             raise ValueError("At least one operator must be given.")
-        elif len(operators) == 1 and isinstance(operators[0], Collection):
+        elif len(operators) == 1 and isinstance(operators[0], Sequence):
             operators = operators[0]
         operators = list(operators)
         types = list(kwds.pop("types", len(operators)*["none"]))
@@ -774,7 +802,7 @@ class DRingFactory(UniqueFactory):
                 der_module = base.derivation_module()
                 new_operator = DerivationMap(
                     base, 
-                    sum((operator(base_gen)*der_gen for (base_gen,der_gen) in zip(base.gens(),der_module.gens())), der_module.zero())
+                    sum((base(operator(base_gen))*der_gen for (base_gen,der_gen) in zip(base.gens(),der_module.gens())), der_module.zero())
                 )
             elif ttype == "skew":
                 if not isinstance(parent(operator), RingDerivationModule):
@@ -804,7 +832,7 @@ def DifferentialRing(base : CommutativeRing, *operators : Callable):
     if len(operators) < 1:
         logger.info("No operation is given: we set a zero derivative.")
         operators = [lambda p : 0]
-    elif len(operators) == 1 and isinstance(operators[0], Collection):
+    elif len(operators) == 1 and isinstance(operators[0], Sequence):
         operators = operators[0]
 
     return DRing(base, *operators, types=len(operators)*["derivation"])
@@ -819,7 +847,7 @@ def DifferenceRing(base: CommutativeRing, *operators : Callable):
     if len(operators) < 1:
         logger.info("No operation is given: we set an identity map.")
         operators = [base.Hom(base).one()]
-    elif len(operators) == 1 and isinstance(operators[0], Collection):
+    elif len(operators) == 1 and isinstance(operators[0], Sequence):
         operators = operators[0]
 
     return DRing(base, *operators, types=len(operators)*["homomorphism"])
@@ -865,7 +893,11 @@ class DRing_WrapperElement(Element):
     def _div_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
-        return self.parent().element_class(self.parent(), self.wrapped / x.wrapped) 
+        value = self.wrapped / x.wrapped
+        if value in self.parent().wrapped:
+            return self.parent().element_class(self.parent(), value) 
+        else:
+            return self.parent().fraction_field()._element_class(self.parent().fraction_field(), value.numerator(), value.denominator())
     def _floordiv_(self, x) -> DRing_WrapperElement:
         if parent(x) != self.parent(): # this should not happened
             x = self.parent().element_class(self.parent(), self.parent().base()(x))
@@ -877,7 +909,11 @@ class DRing_WrapperElement(Element):
     def __pow__(self, n) -> DRing_WrapperElement:
         return self.parent().element_class(self.parent(), self.wrapped ** n)
     def __invert__(self) -> DRing_WrapperElement:
-        return self.parent().element_class(self.parent(), ~self.wrapped)
+        value = ~self.wrapped
+        if value in self.parent().wrapped:
+            return self.parent().element_class(self.parent(), value)
+        else:
+            return self.parent().fraction_field().element_class(self.parent().fraction_field(), value)
     def __eq__(self, x) -> bool:
         if x is None: return False
 
@@ -899,8 +935,31 @@ class DRing_WrapperElement(Element):
         if other in self.parent():
             other = self.parent()(other)
         return self.wrapped.divides(other.wrapped)
+    
+    def numerator(self):
+        try:
+            numer = self.wrapped.numerator()
+            if numer.parent() == self.parent().wrapped:
+                destiny = self.parent()
+            else:
+                destiny = DRing(numer.parent(), *[operator.function for operator in self.parent().operators()], types=self.parent().operator_types())
+            return destiny.element_class(destiny, numer)
+        except Exception as e:
+            raise AttributeError(f"'numerator' not an attribute for {self.__class__}. Reason: {e}")
+    def denominator(self):
+        try:
+            denom = self.wrapped.denominator()
+            if denom.parent() == self.parent().wrapped:
+                destiny = self.parent()
+            else:
+                destiny = DRing(denom.parent(), *[operator.function for operator in self.parent().operators()], types=self.parent().operator_types())
+            return destiny.element_class(destiny, denom)
+        except Exception as e:
+            raise AttributeError(f"'denominator' not an attribute for {self.__class__}. Reason: {e}")
 
     ## Other magic methods
+    def __bool__(self) -> bool:
+        return bool(self.wrapped)
     def __hash__(self) -> int:
         return hash(self.wrapped)
     def __str__(self) -> str:
@@ -910,7 +969,7 @@ class DRing_WrapperElement(Element):
     def _latex_(self) -> str:
         return latex(self.wrapped)
 
-class DRing_Wrapper(CommutativeRing):
+class DRing_Wrapper(Parent):
     r'''
         Class for wrapping a Commutative ring and add operators over it.
 
@@ -934,8 +993,8 @@ class DRing_Wrapper(CommutativeRing):
 
     def __init__(self, 
         base : CommutativeRing, 
-        *operators : Morphism | Collection[Morphism],
-        types : Collection[str] = None, 
+        *operators : Morphism | Sequence[Morphism],
+        types : Sequence[str] = None, 
         category = None
     ):
         #########################################################################################################
@@ -991,9 +1050,9 @@ class DRing_Wrapper(CommutativeRing):
 
         #########################################################################################################
         ### CALLING THE SUPER AND ARRANGING SOME CONVERSIONS
-        super().__init__(base.base(), category=tuple(categories))
         self.__wrapped = base
-
+        super().__init__(base.base(), category=tuple(categories))
+        
         # registering conversion to simpler structures
         current = self.__wrapped
         self_to_wrap = DRing_Wrapper_SimpleMorphism(self, current)
@@ -1019,7 +1078,8 @@ class DRing_Wrapper(CommutativeRing):
 
         #########################################################################################################
         ### CREATING CACHED VARIABLES
-        self.__linear_operator_ring : OreAlgebra_generic = None
+        self.__linear_operator_ring = None
+        self.__fraction_field : DFractionField = None
 
     @property
     def wrapped(self) -> CommutativeRing: return self.__wrapped
@@ -1028,7 +1088,7 @@ class DRing_Wrapper(CommutativeRing):
 
     def operator_types(self) -> tuple[str]: return self.__types
 
-    def linear_operator_ring(self) -> OreAlgebra_generic:
+    def linear_operator_ring(self):
         r'''
             Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
 
@@ -1086,6 +1146,7 @@ class DRing_Wrapper(CommutativeRing):
                 sage: U = DifferenceRing(B, ns); U.linear_operator_ring()
                 Univariate Ore algebra in S over Multivariate Polynomial Ring in x, y over Rational Field
         '''
+        from ore_algebra.ore_algebra import OreAlgebra
         if self.__linear_operator_ring == None:
             ## We need the operators to commute
             if not self.all_operators_commute():
@@ -1163,6 +1224,16 @@ class DRing_Wrapper(CommutativeRing):
         return None
 
     # Rings methods
+    def fraction_field(self):
+        try:
+            if self.is_field():
+                return self
+        except NotImplementedError:
+            pass
+
+        if self.__fraction_field is None:
+            self.__fraction_field = DFractionField(self)
+        return self.__fraction_field
     def characteristic(self) -> int:
         return self.wrapped.characteristic()
 
@@ -1227,11 +1298,79 @@ class DRing_Wrapper(CommutativeRing):
 
 ####################################################################################################
 ###
+### DEFINING A GENERIC FIELD OF FRACTIONS FOR D-RINGS
+###
+####################################################################################################
+class DFractionFieldElement(FractionFieldElement):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def derivative(self, derivation: int = None, times: int = 1):
+        r'''Overriden method to force the use of the DRings structure'''
+        return DRings.ElementMethods.derivative(self, derivation, times)
+    
+class DFractionField(FractionField_generic):
+    r'''
+        Class to represent a generic field of fractions of a d-ring.
+
+        This class extends naturally the operations over the base ring and creates a natural extension for 
+        fraction field to be used in the framework of difference and differential algebra.
+
+        INPUT:
+
+        * ``R``: the ring that will be transformed into a field of fractions. Must be in the category
+          :class:`DRings` and also return ``True`` to the method ``is_integral_domain()``.
+        * ``element_class``: (optional) class for the elements of the field of fractions. It is not recommended
+          to provide anything here.
+        * ``category``: (optional) base category to be use for these fields. By default it is the joint category 
+          from quotient fields and d-rings.
+
+        Methods implemented from DRings:
+
+        * :func:`DRings.parent_class.operators`
+        * :func:`DRings.parent_class.operator_types`
+        * :func:`DRings.parent_class.constant_ring`: it tries to compute the field of fractions of the base ring
+    '''
+    def __init__(self, R, element_class=DFractionFieldElement, category=(_DRings & _QuotientFields)):
+        ## Checking ``R`` is appropriate
+        if not R in _DRings:
+            raise TypeError(f"The base ring must be in the category of d-rings. Got {R}.")
+        if not R.is_integral_domain():
+            raise TypeError(f"The base ring must be an integral domain. Got {R}")
+
+        super().__init__(R, element_class, category)
+
+        ## We extend the operators from the base ring
+        self.__operators = []
+        for operator, ttype in zip(R.operators(), R.operator_types()):
+            if ttype == "homomorphism":
+                func = AdditiveMap(self, lambda p : operator(p.numerator()) / operator(p.denominator()))
+            elif ttype == "derivation":
+                func = AdditiveMap(self, lambda p : (operator(p.numerator())*p.denominator() - p.numerator()*operator(p.denominator())) / (p.denominator()**2))
+            elif ttype == "skew":
+                twist = operator.twist # this is necessary to know
+                func = AdditiveMap(self, lambda p : (operator(p.numerator())*p.denominator() - p.numerator()*operator(p.denominator())) / (p.denominator() * twist(p.denominator())))
+            self.__operators.append(func)
+
+    def operators(self) -> Sequence[AdditiveMap]:
+        return self.__operators
+    
+    def operator_types(self) -> Sequence[str]:
+        return self.base().operator_types()
+    
+    def constant_ring(self):
+        try:
+            return self.base().constant_ring().fraction_field()
+        except Exception as e:
+            raise e
+
+####################################################################################################
+###
 ### DEFINING THE CONSTRUCTION FUNCTOR AND SIMPLE MORPHISM
 ###
 ####################################################################################################
 class DRingFunctor(ConstructionFunctor):
-    def __init__(self, operators: Collection[Morphism], types: Collection[str]):
+    def __init__(self, operators: Sequence[Morphism], types: Sequence[str]):
         if len(operators) != len(types):
             raise ValueError("The length of the operators and types must coincide.")
         self.__operators = tuple(operators)
@@ -1253,26 +1392,40 @@ class DRingFunctor(ConstructionFunctor):
     def __merge_skews(self, f: SkewMap, g: SkewMap):
         Mf = f.function.parent(); Mg = g.function.parent()
         # we try to merge the base ring of the modules
-        R = pushout(Mf.base(), Mg.base())
+        R = pushout(Mf.domain(), Mg.domain())
         
-        if R == Mf.base(): 
+        if R == Mf.domain(): 
             M = Mf; twist = f.twist
-        elif R == Mg.base():
+        elif R == Mg.domain():
             M = Mg; twist = g.twist
         else:
             raise AssertionError("We can only extend to one parent, no mix between them")
             
         # we try and cast both derivation into M
-        df = M(f.function); dg = M(g.function)
+        df = M(f.function) if f.function in M else M([f.function(v) for v in M.domain().gens()])
+        dg = M(g.function) if g.function in M else M([g.function(v) for v in M.domain().gens()])
+        
         if df - dg == 0: 
             if isinstance(f, DerivationMap):
-                return DerivationMap(M.base(), df)
+                return DerivationMap(M.domain(), df)
             else: # general skew case
-                return SkewMap(M.base(), twist, df)
+                return SkewMap(M.domain(), twist, df)
         return None
 
     def __merge_homomorphism(self, f, g):
-        raise NotImplementedError("Merging of homomorphisms not implemented")
+        Mf = f.parent(); Mg = g.parent()
+        # we try to merge the base ring of the modules
+        R = pushout(Mf.domain(), Mg.domain())
+        
+        if R == Mf.domain(): M = Mf
+        elif R == Mg.domain(): M = Mg
+        else: raise AssertionError("We can only extend to one parent, no mix between them")    
+        
+        # we try and cast both derivation into M
+        df = M(f) if f in M else M([f(v) for v in M.domain().gens()])
+        dg = M(g) if g in M else M([g(v) for v in M.domain().gens()])
+        
+        return df if df == dg else None
 
     def merge(self, other):
         if isinstance(other, DRingFunctor):
@@ -1305,7 +1458,7 @@ class DRingFunctor(ConstructionFunctor):
         return None # Following definition of merge in ConstructionFunctor
 
     @property
-    def operators(self) -> Collection[Morphism]:  return self.__operators
+    def operators(self) -> Sequence[Morphism]:  return self.__operators
     @property
     def types(self): return self.__types
 
@@ -1402,6 +1555,6 @@ class WrappedMap(AdditiveMap):
         return super()._latex_()
 
 __all__ = [
-    "DRings", "DRing", "DifferentialRing", "DifferenceRing", # names imported
+    "DRings", "DRing", "DFractionField", "DifferentialRing", "DifferenceRing", # names imported
     "RingsWithOperators", "RingWithOperators" # deprecated names (backward compatibilities)
 ]
