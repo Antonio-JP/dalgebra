@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
     with Profile() as profile:
         start = time()
-        quasi_commuting_schr(n,m,method=method)
+        almost_commuting_schr(n,m,method=method)
         total = time()-start
     
     stats = Stats(profile)
