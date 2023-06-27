@@ -35,6 +35,9 @@ jobs:
     - name: Install pylint
       run: |
         sage -pip install pylint
+    - name: SageMath version
+      run: |
+        sage --version
     - name: Linting code for repository
       run: |
         sage -sh -c "pylint ./dalgebra --disable=all --enable=F,unreachable,duplicate-key,unnecessary-semicolon,\
@@ -64,6 +67,9 @@ jobs:
     - name: Install package
       run: |
         sage -pip install --upgrade .
+    - name: SageMath version
+      run: |
+        sage --version
     - name: Running sage tests
       run: |
         sage -t dalgebra
