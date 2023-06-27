@@ -20,7 +20,7 @@ jobs:
   linting: # Job for lint the repository
     runs-on: ubuntu-latest
     container: 
-        image: sagemath/sagemath:latest # sagemath/sagemath:9.3.beta8 # old version to allow proper working on github machines
+        image: sagemath/sagemath:9.3.beta8 # old version to allow proper working on github machines
         options: --user root
     steps:
     - uses: actions/checkout@v3
