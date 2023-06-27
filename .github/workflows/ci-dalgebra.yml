@@ -53,7 +53,7 @@ jobs:
   testing: # Job for running the automatic tests in Sagemath
     runs-on: ubuntu-latest
     container: 
-        image: sagemath/sagemath:9.3.beta8 # old version to allow proper working on github machines
+        image: sagemath/sagemath:latest # sagemath/sagemath:9.3.beta8 # old version to allow proper working on github machines
         options: --user root
     steps:
     - uses: actions/checkout@v3
