@@ -35,6 +35,7 @@ setup(
     keywords = "SageMath difference/differential algebra",
     packages = ["dalgebra",
                 "dalgebra.dpolynomial",
+                "dalgebra.hierarchies",
                 "dalgebra.logging"],
     setup_requires   = [],
     install_requires = readfile("requirements.txt").split("\n"),

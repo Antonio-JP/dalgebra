@@ -28,7 +28,7 @@ r'''
     we need that the coefficients of `P` satisfy `ord(P) + 1` conditions. 
 
     It was shown in the article by G. Wilson that, if we set `w(u_i) = n-i`, then for every `m \in \mathbb{N}` there is a unique
-    operator `P_m \in K\{z\}` in normal form of order `m` (i.e, `P_m = z^{(m)} + p_{2}z^{(m-2)}) + \ldots + p_m`) such that
+    operator `P_m \in K\{z\}` in normal form of order `m` (i.e, `P_m = z^{(m)} + p_{2}z^{(m-2)} + \ldots + p_m`) such that
 
     * The coefficient `p_i` is homogeneous of weight `i`.
     * `P_m` alsmost commutes with `L`.
@@ -38,29 +38,128 @@ r'''
     commutator of `L`. These sequences of conditions are called **integrable hierarchies** for a given value of `n = ord(L)`.
 
     This module provides algorithms and methods to quickly generate the hierarchies in a method :func:`almost_commuting_schr`, which takes
-    the values for `n = \text{ord}(L)` and `m = \text{ord}(P_m)` and computes the `m`-th step in the corresponding hierarchy.
+    the values for `n = \text{ord}(L)` and `m = \text{ord}(P_m)` and computes the `m`-th step in the corresponding hierarchy. Let us 
+    show one example when we consider `L` of order 3 and `P_5` of order 5::
 
-    EXAMPLES::
+        sage: from dalgebra import *
+        sage: from dalgebra.hierarchies import *
+        sage: n = 3; m = 5 # Preparing variables for an example
+        sage: R = DifferentialPolynomialRing(QQ, [f"p{i+2}" for i in range(m-1)] + [f"u{i}" for i in range(n-1)] + ["z"])
+        sage: p,u,z = R.gens()[:m-1], R.gens()[m-1:m+n-2], R.gens()[-1]
+        sage: L = z[n] + sum(z[i]*u[i][0] for i in range(n-1))
+        sage: P = z[m] + sum(z[m-i]*p[i-2][0] for i in range(2,m+1))
+        sage: L
+        u0_0*z_0 + u1_0*z_1 + z_3
+        sage: P
+        p2_0*z_3 + p3_0*z_2 + p4_0*z_1 + p5_0*z_0 + z_5
 
-        sage: from dalgebra.hierarchies.hierarchies import *
-        sage: 
+    Now we can compute the commutator `[L, P_5]` and, then create a system of differential equations with the highest order coefficients of the commutator::
 
-    TODO:
+        sage: C = L(z=P) - P(z=L)
+        sage: C.orders(), len(C.monomials())
+        ((3, 3, 3, 3, 5, 5, 5), 38)
+        sage: system = DifferentialSystem([C.coefficient(z[i]) for i in range(n-1, C.order(z)+1)], variables=p)
+        sage: system
+        System over [Ring of operator polynomials in (p2, p3, p4, p5, u0, u1, z) over Differential Ring [[Rational Field], (0,)]] with variables [(p2_*, p3_*, p4_*, p5_*)]:
+        {
+            (-3)*p2_0*u0_1 + (-3)*p2_0*u1_2 + p3_1*u1_0 + (-2)*p3_0*u1_1 + p3_3 + 3*p4_2 + 3*p5_1 + (-10)*u0_3 + (-5)*u1_4 == 0
+            p2_1*u1_0 + (-3)*p2_0*u1_1 + p2_3 + 3*p3_2 + 3*p4_1 + (-10)*u0_2 + (-10)*u1_3 == 0
+            3*p2_2 + 3*p3_1 + (-5)*u0_1 + (-10)*u1_2 == 0
+            3*p2_1 + (-5)*u1_1 == 0
+        }
 
-    1. Add methods to have specific hierarchies.
-    2. Incorporate methods to reduce the equations for higher hierarchies.
+    At this state we can simply call a differential solver to find the solution to this system which will provide formulas for the 
+    variables `p_i` in term of `u_i`::
+
+        sage: sols = system.solve_linear()
+        sage: sols[p[0]] # p2
+        5/3*u1_0
+        sage: sols[p[1]] # p3
+        5/3*u0_0 + 5/3*u1_1
+        sage: sols[p[2]] # p4
+        5/9*u1_0^2 + 5/3*u0_1 + 10/9*u1_2
+        sage: sols[p[3]] # p5
+        10/9*u0_0*u1_0 + 10/9*u0_2
+
+    And, as expected by the Theorem from Wilson, we can see these solutions are homogeneous with appropriate weights::
+
+        sage: weight = R.weight_func({u[i]: n-i for i in range(n-1)}, [1]) # Creating the weight function with w(u_i) = n-i
+        sage: all(weight.is_homogeneous(sols[p]) for p in sols) # all coefficients are homogeneous
+        True
+        sage: weight(sols[p[0]]) # weight of p2 (must be 2)
+        2
+        sage: weight(sols[p[1]]) # weight of p3 (must be 3)
+        3
+        sage: weight(sols[p[2]]) # weight of p4 (must be 4)
+        4
+        sage: weight(sols[p[3]]) # weight of p5 (must be 5)
+        5
+
+    If we now plug these solutions into the original `P_5`, we can recompute the commutator with `L` and check it has order
+    `n-2 = 1`. The last two coefficients that remain will be the conditions on the differential variables `u_0, u_1`::
+
+        sage: P_eval = P(dic=sols); C_eval = L(z=P_eval) - P_eval(z=L)
+        sage: C_eval.order(z)
+        1
+        sage: C_eval.coefficient(z[0])
+        5/9*u0_1*u1_0^2 + 10/9*u0_0*u1_1*u1_0 + 5/9*u0_3*u1_0 + (-5/3)*u0_2*u0_0 + 5/3*u0_2*u1_1 + 
+        (-5/3)*u0_1^2 + 20/9*u0_1*u1_2 + 10/9*u0_0*u1_3 + 1/9*u0_5
+        sage: C_eval.coefficient(z[1])
+        5/9*u1_1*u1_0^2 + (-10/3)*u0_1*u0_0 + 5/3*u0_1*u1_1 + 5/3*u0_0*u1_2 + 5/9*u1_3*u1_0 + 5/9*u1_2*u1_1 + 1/9*u1_5
+
+    This module provide a simple method that perform all thes eoperations in one go. More precisely, the 
+    method :func:`almost_commuting_schr` receives as input the values of `n` and `m`, the names for the 
+    variables `u` and `z` and return two things: the evaluated `P_m`, i.e., after computing the almost commuting
+    conditions and evaluating the polynomial `P_m`; and the coefficients of the commutator `[L, P_m]`::
+
+        sage: Q, (c0,c1) = almost_commuting_schr(3,5)
+        sage: Q == P_eval
+        True
+        sage: c0 == C_eval.coefficient(z[0])
+        True
+        sage: c1 == C_eval.coefficient(z[1])
+        True
+
+    **Special hierarchies**
+    -----------------------------------------
+    
+    There are special hierarchies that are specially important for its use in different results. These are 
+    the KdV hierarchy (when `n = 2`) and the Boussinesq hierarchies (when `n=3`). We provide in this module 
+    methods as shortcuts to compute these hierarchies.
+
+    For example, for the **kdv hierarchy** we can ge the odd elements (i.e., the non-trivial cases)::
+
+        sage: for n in range(4): print(kdv(2*n+1))
+        -u_1
+        (-3/2)*u_1*u_0 + (-1/4)*u_3
+        (-15/8)*u_1*u_0^2 + (-5/8)*u_3*u_0 + (-5/4)*u_2*u_1 + (-1/16)*u_5
+        (-35/16)*u_1*u_0^3 + (-35/32)*u_3*u_0^2 + (-35/8)*u_2*u_1*u_0 + (-35/32)*u_1^3 + (-7/32)*u_5*u_0 + (-21/32)*u_4*u_1 + (-35/32)*u_3*u_2 + (-1/64)*u_7
+
+    For the **Boussinesq hierarchy**, for a given value of `m`, we have two polynomials, the one corresponding to the 
+    constant coefficient in `[L,P_m]` and the coefficient of ``z[1]``::
+
+        sage: for i in range(2): print(boussinesq(5, i))
+        5/9*u0_1*u1_0^2 + 10/9*u0_0*u1_1*u1_0 + 5/9*u0_3*u1_0 + (-5/3)*u0_2*u0_0 + 5/3*u0_2*u1_1 + (-5/3)*u0_1^2 + 20/9*u0_1*u1_2 + 10/9*u0_0*u1_3 + 1/9*u0_5
+        5/9*u1_1*u1_0^2 + (-10/3)*u0_1*u0_0 + 5/3*u0_1*u1_1 + 5/3*u0_0*u1_2 + 5/9*u1_3*u1_0 + 5/9*u1_2*u1_1 + 1/9*u1_5
+
+    **Things remaining TODO**
+    -----------------------------------------
+
+    1. Incorporate methods to reduce the equations for higher hierarchies.
+    
+    **Elements provided by the module**
+    -----------------------------------------
 '''
 from functools import reduce
 from sage.all import ZZ, QQ, matrix, vector
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
-from typing import Callable
 
 from ..dring import DifferentialRing
 from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
 from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing_dense
 from ..dpolynomial.dpolynomial_system import DSystem
 
-def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", method: (str | Callable) ="diff"):
+def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", method ="diff"):
     r'''
         Method to compute an element on the almost-commuting basis.
 
@@ -98,7 +197,7 @@ def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", 
         * ``name_u`` (optional): base name for the `u` variables that will appear in `L_n` and in the output `P_m`.
         * ``name_z`` (optional): base name for the differential variable to represent `\partial`.
         * ``method`` (optional): method to decide how to solve the arising differential system. Currently 
-          the methods ``diff`` (see :func:`__almost_commuting_diff`) and ``linear`` (see :func:`__almost__commuting_linear`).
+          the methods ``"diff"`` (see :func:`__almost_commuting_diff`) and ``"linear"`` (see :func:`__almost__commuting_linear`).
 
         OUTPUT: 
 
