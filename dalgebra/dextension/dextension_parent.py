@@ -235,7 +235,7 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
         return DExtension(R, [[self.operation(i, g) for i in range(self.noperators())] for g in self.gens()], names=self.variable_names())
 
     def base_ring(self):
-        return self.base().sage_ring()
+        raise NotImplementedError(f"Think how to implement this method")
 
     #################################################
     ### Magic python methods
