@@ -171,6 +171,31 @@ class DPolynomialGen (InfinitePolynomialGen):
         * ``parent``: a :class:`.dpolynomial_ring.DifferentialPolynomialRing_dense` where ``self`` will generate its elements.
           This will indicate also the amount of indices allow to generate a variable.
         * ``name``: main part of the name for the generated variables.
+
+        REMARK:
+
+        A d-polynomial generator can act, when use in arithmetic operations as the first element it generates::
+
+            sage: from dalgebra import *
+            sage: R.<u,v> = DPolynomialRing(DifferentialRing(QQ['x'], diff)); x = R('x')
+            sage: x*u - v[1]
+            x*u_0 - v_1
+
+        Observe that the objects are not equal by themselves, but when computing with :class:`DPolynomialGen`
+        they are automatically casted::
+
+            sage: u[0] == u
+            False
+            sage: u[0] - u
+            0
+            sage: u * v[1] + u[1] * v[0]
+            u_1*v_0 + u_0*v_1
+            sage: (u**2).derivative() // u
+            2*u_1
+            sage: (u*v).derivative() % u
+            u_1*v_0
+
+        This is done to simplify the reading of the code for the user when using these objects.
     '''
     def __init__(self, parent: Parent, name: str):
         from .dpolynomial_ring import is_DPolynomialRing
@@ -270,6 +295,53 @@ class DPolynomialGen (InfinitePolynomialGen):
 
     def __hash__(self):
         return hash(self._name)
+    
+    ###################################################################################
+    ### Arithmetic methods
+    ###################################################################################
+    def __add__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] + x
+    def __radd__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x + self[0]
+    def __neg__(self):
+        return -self[0]
+    def __sub__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] - x
+    def __rsub__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x - self[0]
+    def __mul__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] * x
+    def __rmul__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x * self[0]
+    def __lmul__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] * x
+    def __mod__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] % x
+    def __rmod__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x % self[0]
+    def __div__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] / x
+    def __rdiv__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x / self[0]
+    def __floordiv__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return self[0] // x
+    def __rfloordiv__(self, x):
+        if isinstance(x, DPolynomialGen): x = x[0]
+        return x // self[0]
+    def __pow__(self, n):
+        return self[0]**n
 
 RWOPolynomialGen = DPolynomialGen #: alias for DPolynomialGen (used for backward compatibility)
 #######################################################################################
@@ -539,38 +611,6 @@ class DPolynomial (InfinitePolynomial_dense):
         return self.lorders(operation)[index]
 
     @cached_method
-    def initial(self, gen : DPolynomialGen = None, operation: int = -1) -> DPolynomial:
-        r'''
-            Computes the leading polynomial of an infinite polynomial.
-
-            This method computes the leading term of the infinite polynomial
-            when the generator given in ``gen`` is consider the *most important* 
-            variable of the polynomial and then it is ordered by its order.
-
-            INPUT:
-
-            * ``gen``: the generator we want to focus. May be omitted when there is only one generator.
-            * ``operation``: index of the operator we want to check. If `-1` is given, then the combined
-              order of all operators is returned (only useful when having several operators).
-
-            TODO add tests
-        '''
-        parent = self.parent()
-
-        if parent.ngens() == 1 or gen is None: gen = parent.gens()[0]
-
-        if (not isinstance(gen, DPolynomialGen)) or (not gen in parent.gens()):
-            raise TypeError(f"The generator must be a valid generator from {parent}")
-        
-        o = self.order(gen, operation)
-        monomials = self.monomials()
-        coefficients = self.coefficients()
-
-        return parent(sum(coeff*mon for (mon, coeff) in zip(monomials, coefficients) if mon.order(gen,operation) == o))
-
-    lc = initial #: alias for initial (also called "leading coefficient")
-
-    @cached_method
     def infinite_variables(self) -> tuple[DPolynomialGen]:
         r'''
             Method to compute which generators of the parent appear in ``self``.
@@ -660,6 +700,17 @@ class DPolynomial (InfinitePolynomial_dense):
             ) <= 1 
         for t in self.monomials())
 
+    def is_variable(self) -> bool:
+        r'''
+            Method that checks whether a polynomial is simply a variable
+        '''
+        variables = self.variables()
+        if len(variables) > 1: return False
+
+        v = variables[0]
+        if self.degree(v) > 1: return False
+        return self.coefficient(v) == self.parent().one()
+
     def as_linear_operator(self):
         r'''
             Method to convert this operator to a linear operator. 
@@ -723,6 +774,9 @@ class DPolynomial (InfinitePolynomial_dense):
         R = self.parent().polynomial_ring()
         return R(self.polynomial()).divides(R(self.parent()(other).polynomial()))
 
+    def is_unit(self):
+        return self.degree() == 0
+
     def degree(self, x=None, std_grading=False) -> int: 
         r'''Overriding :func:`degree` to fit the setting of D'''
         R = self.parent().polynomial_ring()
@@ -760,19 +814,25 @@ class DPolynomial (InfinitePolynomial_dense):
         return self.parent().element_class(self.parent(), super()._rmul_(x))
     def _lmul_(self, x):
         return self.parent().element_class(self.parent(), super()._lmul_(x))
+    def __invert__(self) -> DPolynomial:
+        if self.degree() == 0:
+            return self.parent()(~self.coefficients()[0])
+        raise ArithmeticError(f"{self} not a unit")
     def _mod_(self, x):
         return self - (self // x)*x
-        #return self.parent().element_class(self.parent(), self.polynomial() % x.polynomial())
     def _div_(self, x):
-        return self.parent().element_class(self.parent(), self.polynomial() / x.polynomial())
+        F = self.parent().fraction_field()
+        result = F._element_class(F, self, x, reduce=True)
+        result = self.parent()(result) if result in self.parent() else result   
+        return result
     def _floordiv_(self, x):
         R = self.parent().polynomial_ring()
-        return self.parent().element_class(self.parent(), R(self.polynomial()) // R(self.parent()(x.polynomial())))
+        return self.parent().element_class(self.parent(), R(self.polynomial()) // R(x.polynomial()))
     def __pow__(self, n):
         return self.parent().element_class(self.parent(), super().__pow__(n))
 
     ###################################################################################
-    ### Other computations
+    ### Sylvester methods
     ###################################################################################
     def sylvester_resultant(self, other : DPolynomial, gen: DPolynomialGen = None) -> DPolynomial:
         r'''
@@ -790,6 +850,9 @@ class DPolynomial (InfinitePolynomial_dense):
         '''
         return self.parent().sylvester_matrix(self, other, gen, k)
 
+    ###################################################################################
+    ### Solving methods
+    ###################################################################################
     def solve(self, gen: DPolynomialGen) -> Element:
         r'''
             Finds (if possible) a solution of ``gen`` using ``self == 0``.
@@ -842,6 +905,76 @@ class DPolynomial (InfinitePolynomial_dense):
         coeff = self.coefficient(gen[self.order(gen)])
         rem = -self + coeff*gen[self.order(gen)]
         return (rem/coeff).inverse_operation(0, times=self.order(gen))
+
+    ###################################################################################
+    ### Weight methods
+    ###################################################################################
+    def weight(self, weight=None):
+        r'''
+            Computes the weight of a d-polynomial.
+
+            This method computes the weight of a d-polynomial for a given weight function. These 
+            weight functions can be given as an actual :class:`~dalgebra.dpolynomial.dpolynomial_ring.WeightFunction`
+            or the same arguments as this class have.
+        '''
+        from .dpolynomial_ring import WeightFunction
+        if not isinstance(weight, WeightFunction):
+            weight = self.parent().weight_func(*weight)
+        
+        return weight(self)
+    
+    def is_homogeneous(self, weight=None):
+        r'''
+            Checks whether a d-polynomial is homogeneous. If a weight is given, this will be used for homogeneous.
+        '''
+        if weight == None:
+            return self.polynomial().is_homogeneous()
+        
+        from .dpolynomial_ring import WeightFunction
+        if not isinstance(weight, WeightFunction):
+            weight = self.parent().weight_func(*weight)
+
+        return weight.is_homogeneous(self)
+    
+    ###################################################################################
+    ### Ranking methods
+    ###################################################################################
+    def __check_ranking_argument(self, ranking, ordering=None, ttype="orderly"):
+        from .dpolynomial_ring import RankingFunction
+        if ranking == None: ranking = self.parent().ranking()
+        elif not isinstance(ranking, RankingFunction): ranking = self.parent().ranking(ordering, ttype)
+        return ranking
+    
+    def monic(self, ranking, ordering=None, ttype="orderly"):
+        r'''Method to get the monic polynomial w.r.t. a ranking'''
+        return self.__check_ranking_argument(ranking, ordering, ttype).monic(self)
+
+    def leader(self, ranking=None, ordering=None, ttype="orderly"):
+        r'''
+            Gets the leader of ``self`` w.r.t. a ranking.
+        '''
+        return self.__check_ranking_argument(ranking,ordering,ttype).leader(self)
+    
+    def rank(self, ranking=None, ordering=None, ttype="orderly"):
+        r'''
+            Gets the rank of ``self`` w.r.t. a ranking.
+        '''
+        return self.__check_ranking_argument(ranking,ordering,ttype).rank(self)
+    
+    def initial(self, ranking=None, ordering=None, ttype="orderly"):
+        r'''
+            Gets the leader of ``self`` w.r.t. a ranking.
+        '''
+        return self.__check_ranking_argument(ranking,ordering,ttype).initial(self)
+    
+    def separant(self, ranking=None, ordering=None, ttype="orderly"):
+        r'''
+            Gets the leader of ``self`` w.r.t. a ranking.
+        '''
+        return self.__check_ranking_argument(ranking,ordering,ttype).separant(self)
+    
+    ### Some aliases
+    lc = initial #: alias for initial (also called "leading coefficient")
 
     ###################################################################################
     ### Other magic methods

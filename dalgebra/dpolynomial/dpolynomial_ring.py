@@ -42,8 +42,9 @@ import logging
 from itertools import product
 from functools import reduce
 
-from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent, parent, matrix
-from sage.categories.all import Morphism, Category, CommutativeAlgebras
+from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent, parent, matrix, vector
+from sage.categories.all import Morphism, Category, CommutativeAlgebras, Sets
+from sage.categories.morphism import SetMorphism # pylint: disable=no-name-in-module
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.rings.polynomial.polynomial_ring import is_PolynomialRing
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -56,10 +57,11 @@ from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-mod
 from typing import Collection
 
 from .dpolynomial_element import DPolynomial, DPolynomialGen, IndexBijection
-from ..dring import DRings, AdditiveMap, DifferentialRing, DifferenceRing, DRing_Wrapper
+from ..dring import DRings, DFractionField, AdditiveMap, DifferentialRing, DifferenceRing, DRing_Wrapper
 
 logger = logging.getLogger(__name__)
 _DRings = DRings.__classcall__(DRings)
+_Sets = Sets.__classcall__(Sets)
 
 ## Factories for all structures
 class DPolynomialRingFactory(UniqueFactory):
@@ -100,7 +102,7 @@ class DPolynomialRingFactory(UniqueFactory):
         return DPolynomialRing_dense(base, names)
 
 DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing")
-RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing (used for backward compatility)
+RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing (used for backward compatibility)
 def DifferentialPolynomialRing(base, *names : str, **kwds):
     if not base in _DRings:
         base = DifferentialRing(base, diff)
@@ -318,6 +320,8 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             for operation, ttype in enumerate(self.base().operator_types())
         ])
         self.__cache : list[dict[DPolynomial, DPolynomial]] = [dict() for _ in range(len(self.__operators))]
+        self.__cache_ranking : dict[tuple[tuple[DPolynomial], str], RankingFunction] = dict()
+        self.__fraction_field : DFractionField = None
 
     #################################################
     ### Coercion methods
@@ -365,7 +369,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         return None
     
     @cached_method
-    def gen(self, i: int = None) -> DPolynomialGen:
+    def gen(self, i: int | str = None) -> DPolynomialGen:
         r'''
             Override method to create the `i^{th}` generator (see method 
             :func:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse.gen`).
@@ -377,7 +381,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             INPUT:
 
-            * ``i``: index of the required generator.
+            * ``i``: index or name of the required generator.
 
             OUTPUT:
 
@@ -402,7 +406,20 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
                 a_*
                 sage: S.gen(1)
                 b_*
+
+            This method also allow the name of the generator as input::
+
+                sage: S.gen('a')
+                a_*
+                sage: S.gen('b')
+                b_*
+                sage: S.gen('t')
+                Traceback (most recent call last):
+                ...
+                ValueError: tuple.index(x): x not in tuple
         '''
+        if isinstance(i, str):
+            i = self._names.index(i)
         if(not(i in ZZ) or (i < 0 or i > len(self._names))):
             raise ValueError("Invalid index for generator")
         
@@ -523,6 +540,17 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         '''
         return DPolynomialRing(R, self.variable_names())
 
+    def fraction_field(self):
+        try:
+            if self.is_field():
+                return self
+        except NotImplementedError:
+            pass
+
+        if self.__fraction_field is None:
+            self.__fraction_field = DFractionField(self)
+        return self.__fraction_field
+
     #################################################
     ### Magic python methods
     #################################################
@@ -619,7 +647,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             * ``element``: element (that must be in ``self``) to be evaluated
             * ``args``: list of arguments that will be linearly related with the generators
               of ``self`` (like they are given by ``self.gens()``)
-            * ``dic``: dictionary mapping generators to polynomials. This alllows an input equivalent to 
+            * ``dic``: dictionary mapping generators to polynomials. This allows an input equivalent to 
               the argument in ``kwds`` but where the keys of the dictionary are :class:`DPOlynomialGen`.
             * ``kwds``: dictionary for providing values to the generators of ``self``. The 
               name of the keys must be the names of the generators (as they can be got using 
@@ -950,92 +978,8 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         raise NotImplementedError("[inverse_skew] Skew-derivation operation not yet implemented")
             
     #################################################
-    ### Other computation methods
+    ### Sylvester methods
     #################################################
-    def as_linear_operator(self, element: DPolynomial) -> Element:
-        r'''
-            Method that tries to convert an operator polynomial into a linear operator.
-
-            This method tries to create a linear operator coming from a :class:`DPolynomial`.
-            In the case where we have an :class:`DPolynomial` `p(u) \in R\{u\}` (for `R` a ring with operators) 
-            we can interpret the polynomial `p(u)` as an operator over any extension of `R` that acts
-            by substituting `u` by the element the operator acts on. If `p` is linear, then it represents
-            what it is called a linear operator.
-
-            These linear operators may be represented more efficiently in other structures (see :func:`linear_operator_ring`
-            for further information). This method transforms the elements of ``self`` that can be seen as linear
-            operators to this ring structure.
-
-            Conversely, a :class:`DPolynomialRing_dense` can transform elements from its ring of linear operators
-            (i.e., the output of :func:`linear_operator_ring`) to linear :class:`DPolynomial`.
-
-            This method checks that ``self`` has the appropriate structure (i.e., it has only one infinite variable)
-            and also the ``element`` has the appropriate shape: it is linear without a constant term.
-
-            REMARK: **this method is equivalent to the method :func:`~.dpolynomial_ring_element.DPolynomial.as_linear_operator`
-            since it calls this method directly**
-
-            INPUT:
-
-            * ``element``: a :class:`DPolynomial` in ``self`` to be casted to a linear operator.
-            
-            OUTPUT:
-
-            An element in ``self.linear_operator_ring()`` if this ring can be built.
-
-            EXAMPLES::
-
-                sage: from dalgebra import *
-                sage: R.<y> = DifferentialPolynomialRing(QQ[x]); x = R.base()(x)
-                sage: p1 = y[2] - (x^2 - 1)*y[1] - y[0] # linear operator of order 2
-                sage: p1.as_linear_operator()
-                D^2 + (-x^2 + 1)*D - 1
-                sage: R(p1.as_linear_operator()) == p1
-                True
-                
-            If the operator polynomial is not linear or has a constant term, this method raises a :class:`TypeError`::
-
-                sage: p2 = x*y[2]*y[0] - (x^3 + 3)*y[1]^2 # non-linear operator
-                sage: p2.as_linear_operator()
-                Traceback (most recent call last):
-                ...
-                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
-                sage: p3 = y[2] - (x^2 - 1)*y[1] - y[0] + x^3 # linear operator but inhomogeneous
-                sage: p3.as_linear_operator()
-                Traceback (most recent call last):
-                ...
-                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
-
-            This also work when having several operators in the same ring::
-
-                sage: S.<u> = DPolynomialRing(DifferenceRing(DifferentialRing(QQ[x], diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = S.base()(x)
-                sage: p4 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2] 
-                sage: p4.as_linear_operator()
-                -D^2*S^2 + x*D*S + (x^3 - 3*x)*D + 2
-                sage: S(p4.as_linear_operator()) == p4
-                True
-
-            However, when having several infinite variables this method can not work even when the operator is clearly linear::
-
-                sage: T.<a,b> = DifferentialPolynomialRing(QQ[x]); x = T.base()(x)
-                sage: p5 = a[0] - b[1]
-                sage: p5.as_linear_operator()
-                Traceback (most recent call last):
-                ...
-                NotImplementedError: Impossible to generate ring of linear operators with 2 variables
-
-        '''
-        linear_operator_ring = self.linear_operator_ring() # it ensures the structure is alright for building this
-        element = self(element) # making sure the element is in ``self``
-
-        if not element.is_linear() or 1 in element.polynomial().monomials():
-            raise TypeError("Linear operator can only be built from an homogeneous linear operator polynomial.")
-
-        coeffs = element.coefficients(); monoms = element.monomials(); y = self.gens()[0]
-        base_ring = linear_operator_ring.base(); gens = linear_operator_ring.gens()
-
-        return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
-
     def sylvester_resultant(self, P: DPolynomial, Q: DPolynomial, gen: DPolynomialGen = None) -> DPolynomial:
         r'''
             Method to compute the Sylvester resultant of two operator polynomials.
@@ -1259,7 +1203,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
 
     def sylvester_subresultant_sequence(self, P: DPolynomial, Q: DPolynomial, gen: DPolynomialGen = None) -> tuple[DPolynomial]:
         r'''
-            Method that gets the subresultant sequence in form of a linear d-polynmomial.
+            Method that gets the subresultant sequence in form of a linear d-polynomial.
 
             As described in :func:`sylvester_subresultant`, when we build the `k`-Sylvester matrix of two linear 
             d-polynomials, we obtain a non-square matrix and, in order to compute a determinant, we need to remove `k`
@@ -1330,6 +1274,113 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             raise TypeError(f"[sylvester_checking] The polynomial {Q} is not linear w.r.t. {gen}")
 
         return P,Q,gen
+
+    #################################################
+    ### Weighting and Ranking methods
+    #################################################
+    def weight_func(self, weight_vars, weight_operators) -> WeightFunction:
+        r'''
+            TODO: add documentation to this method
+        '''
+        return WeightFunction(self, weight_vars, weight_operators)
+    
+    def ranking(self, ordering: list[DPolynomialGen] | tuple[DPolynomialGen] = None, ttype: str = "orderly") -> RankingFunction:
+        r'''
+            Method to create a ranking for this ring.
+
+            This method creates a ranking for ``self`` using the arguments as in :class:`RankingFunction`.
+        '''
+        if ordering != None and isinstance(ordering, list): ordering = tuple(ordering)
+        if not (ordering, ttype) in self.__cache_ranking:
+            self.__cache_ranking[(ordering, ttype)] = RankingFunction(self, ordering, ttype)
+        return self.__cache_ranking[(ordering, ttype)]
+
+    #################################################
+    ### Other computation methods
+    #################################################
+    def as_linear_operator(self, element: DPolynomial) -> Element:
+        r'''
+            Method that tries to convert an operator polynomial into a linear operator.
+
+            This method tries to create a linear operator coming from a :class:`DPolynomial`.
+            In the case where we have an :class:`DPolynomial` `p(u) \in R\{u\}` (for `R` a ring with operators) 
+            we can interpret the polynomial `p(u)` as an operator over any extension of `R` that acts
+            by substituting `u` by the element the operator acts on. If `p` is linear, then it represents
+            what it is called a linear operator.
+
+            These linear operators may be represented more efficiently in other structures (see :func:`linear_operator_ring`
+            for further information). This method transforms the elements of ``self`` that can be seen as linear
+            operators to this ring structure.
+
+            Conversely, a :class:`DPolynomialRing_dense` can transform elements from its ring of linear operators
+            (i.e., the output of :func:`linear_operator_ring`) to linear :class:`DPolynomial`.
+
+            This method checks that ``self`` has the appropriate structure (i.e., it has only one infinite variable)
+            and also the ``element`` has the appropriate shape: it is linear without a constant term.
+
+            REMARK: **this method is equivalent to the method :func:`~.dpolynomial_ring_element.DPolynomial.as_linear_operator`
+            since it calls this method directly**
+
+            INPUT:
+
+            * ``element``: a :class:`DPolynomial` in ``self`` to be casted to a linear operator.
+            
+            OUTPUT:
+
+            An element in ``self.linear_operator_ring()`` if this ring can be built.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<y> = DifferentialPolynomialRing(QQ[x]); x = R.base()(x)
+                sage: p1 = y[2] - (x^2 - 1)*y[1] - y[0] # linear operator of order 2
+                sage: p1.as_linear_operator()
+                D^2 + (-x^2 + 1)*D - 1
+                sage: R(p1.as_linear_operator()) == p1
+                True
+                
+            If the operator polynomial is not linear or has a constant term, this method raises a :class:`TypeError`::
+
+                sage: p2 = x*y[2]*y[0] - (x^3 + 3)*y[1]^2 # non-linear operator
+                sage: p2.as_linear_operator()
+                Traceback (most recent call last):
+                ...
+                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
+                sage: p3 = y[2] - (x^2 - 1)*y[1] - y[0] + x^3 # linear operator but inhomogeneous
+                sage: p3.as_linear_operator()
+                Traceback (most recent call last):
+                ...
+                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
+
+            This also work when having several operators in the same ring::
+
+                sage: S.<u> = DPolynomialRing(DifferenceRing(DifferentialRing(QQ[x], diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = S.base()(x)
+                sage: p4 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2] 
+                sage: p4.as_linear_operator()
+                -D^2*S^2 + x*D*S + (x^3 - 3*x)*D + 2
+                sage: S(p4.as_linear_operator()) == p4
+                True
+
+            However, when having several infinite variables this method can not work even when the operator is clearly linear::
+
+                sage: T.<a,b> = DifferentialPolynomialRing(QQ[x]); x = T.base()(x)
+                sage: p5 = a[0] - b[1]
+                sage: p5.as_linear_operator()
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: Impossible to generate ring of linear operators with 2 variables
+
+        '''
+        linear_operator_ring = self.linear_operator_ring() # it ensures the structure is alright for building this
+        element = self(element) # making sure the element is in ``self``
+
+        if not element.is_linear() or 1 in element.polynomial().monomials():
+            raise TypeError("Linear operator can only be built from an homogeneous linear operator polynomial.")
+
+        coeffs = element.coefficients(); monoms = element.monomials(); y = self.gens()[0]
+        base_ring = linear_operator_ring.base(); gens = linear_operator_ring.gens()
+
+        return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
 
 def is_DPolynomialRing(element):
     r'''
@@ -1408,6 +1459,725 @@ class DPolynomialSimpleMorphism (Morphism):
             return self.codomain()(p.coefficients()[0])
 
         return self.codomain()(str(p))
+
+class WeightFunction(SetMorphism):
+    r'''
+        Class to represent a weight or grading function for a ring of d-polynomials.
+
+        Let `\mathcal{R} = (R,\Delta)\{a_1,\ldots,a_m\}` be a ring of d-polynomials and let `\mathcal{T}`
+        be the monoid of monomials of `\mathcal{R}`. We say that a function `w: \mathcal{T} \rightarrow \mathbb{N}`
+        if a weight function if it is a monoid homomorphism, i.e., `w(st) = w(s) + w(t)`.
+
+        With this definition, it is clear that we can write the set `\mathcal{R}` a direct sum of the abelian groups where we keep in each 
+        summand the monomials of a fixed weight:
+
+        .. MATH::
+
+            \mathcal{R} = \bigoplus_{i \in \mathbb{N}} \mathcal{R}_i,
+
+        where `\mathcal{R}_i = \langle t\ :\ t\in T\text{ with }w(t) = i\rangle_R`. We call each layer `\mathcal{R}_i` the set of 
+        `i`-homogeneous polynomials w.r.t. the weight function `w(\cdot)`.
+
+        In order to define a weight function, we only need to define for each of the generators of `\mathcal{T}`. It 
+        is interesting to remark that, for a ring of d-polynomials, we have an infinite amount of generators. In order to simplify 
+        the implementation, we require two information:
+
+        * A list of base weights `(w_1,\ldots,w_m)` such that `w(a_i) = w_i`.
+        * A list of extending weights `(W_1,\ldots,W_n)` such that for 
+        
+        .. MATH::
+        
+            w(\sigma_j^k(a_i)) = \left\{\begin{array}{ll}
+                w_i + kW_j & \text{if w_i \neq 0},\\
+                0 & \text{otherwise}.
+            \end{array}\right.
+
+        INPUT:
+
+        * ``dpoly_ring``: a :class:`DPolynomialRing` over which we will base the weight function.
+        * ``base_weights``: a list, tuple or dictionary indicating the base weights. If a variable is not provided, we consider it with weight 0.
+        * ``operator_weights``: a list or tuple indicating how each operation extends the weights (i.e., a list with the `W_i`).
+
+        TODO:
+
+        * Add reference to weight functions in differential setting.
+        * Add reference to weight functions in difference setting.
+    '''
+    def __init__(self, dpoly_ring: DPolynomialRing_dense, base_weights: list[int] | tuple[int] | dict[str|DPolynomialGen, int], operator_weights: list[int] |tuple[int]):
+        if isinstance(base_weights, (list,tuple)): # we got a list of weights
+            if not len(base_weights) == dpoly_ring.ngens():
+                raise TypeError(f"[WeightFunction] A weight must be define for all generators (got {len(base_weights)}, expected {dpoly_ring.ngens()})")
+            if any(el < 0 for el in base_weights):
+                raise ValueError(f"[WeightFunction] Weights must be always non-negative.")
+        elif isinstance(base_weights, dict):
+            base_weights = [int(base_weights.get(v, base_weights.get(v.variable_name, base_weights.get(str(v), 0)))) for v in dpoly_ring.gens()]
+            if any(el < 0 for el in base_weights):
+                raise ValueError(f"[WeightFunction] Weights must be always non-negative.")
+        else:
+            raise TypeError("[WeightFunction] Weights must be given as lists or dictionaries.")
+        self.__base_weights = base_weights
+
+        if not isinstance(operator_weights, (list,tuple)): # we got a list of weights
+            raise TypeError("[WeightFunction] Extension of weights must be given as lists.")
+        if not len(operator_weights) == dpoly_ring.noperators():
+            raise TypeError(f"[WeightFunction] A weight must be define for all operations (got {len(operator_weights)}, expected {dpoly_ring.noperators()})")
+        if any(el <= 0 for el in operator_weights):
+            raise ValueError(f"[WeightFunction] Weights must be always positive.")
+        self.__operator_weights = operator_weights
+
+        super().__init__(dpoly_ring.Hom(ZZ, _Sets), self.weight)
+
+    def parent(self) -> DPolynomialRing_dense:
+        r'''
+            Return the base ring of d-polynomials
+        '''
+        return self.domain()
+
+    def weight(self, element: DPolynomial) -> int:
+        r'''
+            Method to weight an element of the parent
+
+            This method compute the actual weight of a d-polynomial. If the element is a monomial, we return the corresponding weight
+            for the monoid as defined by its base weights. Otherwise, we return the maximal weight of the monomials appearing in ``self``.
+
+            INPUT:
+
+            * ``element``: a :class:`DPolynomial` in the base ring of the weight function.
+
+            OUTPUT:
+
+            The weight of the element following the usual definitions.
+
+            TODO: 
+
+            * Add examples
+        '''
+        monomials = element.monomials()
+        if len(monomials) == 0:
+            return ZZ(0)
+        elif len(monomials) > 1:
+            return max(self(m) for m in monomials)
+        else:
+            m = monomials[0] # we treat the monomial by itself
+            if m == 1:
+                return ZZ(0)
+            return sum(
+                (self.__base_weights[i] + sum(j*w for (j,w) in zip(gen.index(variable, as_tuple=True), self.__operator_weights)))*m.degree(variable)
+                for variable in m.variables() 
+                for (i,gen) in enumerate(self.parent().gens()) if variable in gen
+            )
+    
+    @cached_method
+    def weighted_variables(self, weight: int) -> set[DPolynomial]:
+        r'''
+            Method that generates the variables with a given weight.
+
+            INPUT:
+
+            * ``weight``: the value of the weight we want to generate
+
+            OUTPUT:
+
+            A set of :class:`DPolynomial` with variables of the given weight.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B.<c,x> = QQ[]
+                sage: R.<a,b> = DPolynomialRing(DifferenceRing(DifferentialRing(B, lambda p : diff(p,x)), B.Hom(B)([c,x+1])))
+                sage: w = R.weight_func([1,2],[2,1])
+                sage: w.weighted_variables(0)
+                set()
+                sage: w.weighted_variables(1)
+                {a_0_0}
+                sage: w.weighted_variables(2)
+                {b_0_0, a_0_1}
+                sage: w.weighted_variables(3)
+                {b_0_1, a_1_0, a_0_2}
+                sage: w.weighted_variables(4)
+                {b_1_0, b_0_2, a_1_1, a_0_3}
+                sage: w.weighted_variables(5)
+                {b_1_1, b_0_3, a_2_0, a_1_2, a_0_4}
+                sage: w.weighted_variables(6)
+                {b_2_0, b_1_2, b_0_4, a_2_1, a_1_3, a_0_5}
+                sage: [len(w.weighted_variables(i)) for i in range(20)]
+                [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+                sage: w = R.weight_func([1,3],[1,1])
+                sage: [len(w.weighted_variables(i)) for i in range(20)]
+                [0, 1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36]
+        '''
+        if weight <= 0: return set()
+        ## recursive part
+        recursive = set()
+        for i in range(self.parent().noperators()):
+            recursive = recursive.union([v.operation(i) for v in self.weighted_variables(weight - self.__operator_weights[i])])
+        
+        ## adding the special case if needed
+        return recursive.union(set([v[0] for (v,i) in zip(self.parent().gens(), self.__base_weights) if i == weight]))
+
+    @cached_method
+    def homogeneous_monomials(self, weight: int) -> set[DPolynomial]:
+        r'''
+            Method that generates the homogeneous monomials of weight ``weight``.
+
+            This uses a recursive approach using the basic formulas on how to compute the 
+            weights of monomials.
+
+            INPUT:
+
+            * ``weight``: the value of the weight we want to generate.
+
+            OUTPUT:
+
+            A set of :class:`DPolynomial` with monomials of the given weight.
+
+            REMARK: 
+
+            If a generator has weight zero, it won't appear in the set generated wince we could have infinitely many monomials, and we 
+            are looking for finite sets.
+
+            TODO: add examples
+        '''
+        if weight < 0:
+            return set()
+        elif weight == 0:
+            return set([self.parent().one()])
+        else:
+            ## operation part
+            result = set()
+            for (operator, ttype, op_weight) in zip(self.parent().operators(), self.parent().operator_types(), self.__operator_weights):
+                if ttype == "derivation":
+                    logger.debug(f"Adding derivations of monomials of weights {weight-1}")
+                    to_add = sum([operator(mon).monomials() for mon in self.homogeneous_monomials(weight - op_weight)], [])
+                elif ttype == "homomorphism":
+                    cweight = weight - op_weight; i = 1
+                    while cweight >= 0:
+                        logger.debug(f"Adding shifts of monomials of weights {cweight} with degree {i}")
+                        to_add = sum([operator(mon).monomials() for mon in self.homogeneous_monomials(cweight) if mon.degree() == i], [])
+                        i += 1; cweight -= op_weight
+                else:
+                    cweight = weight - 1
+                    while cweight >= 0:
+                        logger.debug(f"Adding operation of monomials of weights {cweight} that has weight {weight}")
+                        to_add = sum([[m for m in operator(mon).monomials() if self(m) == weight] for mon in self.homogeneous_monomials(cweight)], [])
+                        cweight -= 1
+                logger.debug(f"Adding {len(to_add)} elements")
+                result.update(to_add)
+                        
+            ## multiplication part
+            for i in range(1,weight//2 + 1):
+                logger.debug(f"Adding product of monomials of weights {i} and {weight-i}")
+                to_add = [tl*th for (tl,th) in product(self.homogeneous_monomials(i), self.homogeneous_monomials(weight-i))]
+                logger.debug(f"Adding {len(to_add)} elements")
+                result.update(to_add)
+
+            ## special cases for the variables
+            to_add = [v[0] for i,v in enumerate(self.parent().gens()) if self.__base_weights[i] == weight]
+            logger.debug(f"Special cases added: {len(to_add)}")
+            result.update(to_add)
+
+            return result
+
+    def is_homogeneous(self, element: DPolynomial) -> bool:
+        r'''
+            Method that check if a polynomial is homogeneous w.r.t. this weight or not.
+        '''
+        if element == 0:
+            return True
+        mons = self.parent()(element).monomials()
+        w = self(mons[0])
+        return all(self(m) == w for m in mons[1:])
+    
+    def as_vector(self, element: DPolynomial) -> Element:
+        element = self.parent()(element)
+        if not self.is_homogeneous(element):
+            raise ValueError("[WeightFunction] Vector representation only valid for homogeneous d-polynomials")
+        
+        w = self(element)
+        mons = self.homogeneous_monomials(w)
+        return vector([element.coefficient(m) for m in mons])
+    
+    def operation_from_vector(self, vector: Element, weight: int, operation: int):
+        r'''
+            Method that applies an operation to a vector.
+
+            This method takes a vector, interpret it as an homogeneous element (hence the need to specifying the weight)
+            and applies the corresponding operation to it. When the result is again homogeneous, we return the new vector.
+
+            INPUT:
+
+            * ``vector``: a vector with a parent that can be casted into ``self.parent()``.
+            * ``weight``: the weight assigned to the vector. We need the dimension to be appropriate.
+            * ``operation``: the operation to be applied. We will check the result is homogeneous again.
+
+            OUTPUT:
+
+            A new vector with the result of applying the given operation to the vector when interpret as a homogeneous d-polynomial.
+
+            TODO: add examples
+        '''
+        mons = self.homogeneous_monomials(weight)
+        if len(vector) != len(mons):
+            raise TypeError(f"[WeightFunction] The given vector is not of appropriate dimension (got {len(vector)}, expected {len(mons)})")
+        
+        element = sum(c*m for (c,m) in zip(vector, mons))
+        element = element.operation(operation)
+        if not self.is_homogeneous(element):
+            raise ValueError("[WeightFunction] After operation, the result is not homogeneous")
+
+        return self.as_vector(element)
+
+class RankingFunction:
+    r'''
+        Class for representing a ranking function over a ring of d-polynomials.
+
+        Let `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` be a ring of d-polynomials with `n` operators and `m` d-variables.
+        A ranking is a total order over the set of all the variables that satisfies the two axioms:
+
+        * `t < \sigma_j(t)` for all monomial `t \in \mathcal{T}`.
+        * If `t \leq s` then `\sigma_j(t) \leq \sigma_j(s)` for all monomials `s, t \in \mathcal{T}`.
+
+        A ranking is the analog of a term ordering used in Gröbner bases algorithms. However, rankings order the monomials in 
+        `\mathcal{T}` that is a monoid infinitely generated with some extra properties that relate the operations with the variables.
+    
+        In particular, we say that a ranking `\leq` of `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` is an elimination ranking 
+        between two d-variables `u, v` (say `u < v`) if they satisfy `\sigma^\alpha(u) < \sigma^\beta(v)` for all `\alpha,\beta\in \mathbb{N}^n`.
+
+        We also say that `\leq` of `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` is an orderly ranking on `u_1,\ldots, u_n` if 
+        `\sigma^\alpha(u_i) < \sigma^\beta(u_j)` for all `\alpha,\beta \in \mathbb{N}^n` with `|\alpha| < |\beta|`.
+        
+        Once a ranking is fully define, the following methods are automatically defined for non-constant d-polynomials:
+
+        * ``leader``: given `p(u) \in R\{u\}`, the leader is the actual variable that is maximal on the polynomial
+        * ``rank``: given `p(u) \in R\{u\}`, the rank is the biggest monomial involving the leader variable.
+        * ``initial``: given `p(u) \in R\{u\}`, the initial is the coefficient of the rank of the polynomial.
+        * ``separant``: given `p(u) \in R\{u\}`, the separant is the derivative of `p(u)` w.r.t. the leader variable.
+
+        INPUT:
+
+        * ``parent``: a :class:`DPolynomialRing_dense` where the ranking will be applied.
+        * ``ordering``: a list or tuple of :class:`DPolynomialGen` that will include the variables of a :class:`DPolynomialRing_dense`
+          that will be incorporated to the ranking and the base ordering between the base variables.
+        * ``ttype``: the type of ranking to be created. Currently, only "elimination" or "orderly" are allowed:
+          - "elimination": the ranking will be the elimination ranking where the ``ordering`` determines the order of the variables.
+          - "orderly": generates the orderly ranking where ``ordering`` provides the basic ordering between variables.
+
+        TODO: add examples
+    '''
+    def __init__(self, parent: DPolynomialRing_dense, ordering: list[DPolynomialGen] | tuple[DPolynomialGen] = None, ttype: str = "orderly"):
+        ## Processing arguments
+        if not isinstance(parent, DPolynomialRing_dense):
+            raise TypeError(f"[ranking] The parent must be a ring of d-polynomials, but got {type(parent)}")
+        if ordering is None:
+            ordering = parent.gens()
+        elif not isinstance(ordering, (list,tuple)):
+            raise TypeError(f"[ranking] The base ordering must be given as a list or tuple of generators, but got {type(ordering)}")
+        elif any(g not in parent.gens() for g in ordering):
+            raise ValueError(f"[ranking] The base ordering must be given as a list of generators (DPolynomialGen) (got {ordering})")
+        
+        if not ttype in ("elimination", "orderly"):
+            raise ValueError(f"[ranking] The type of a ranking must be either 'elimination' or 'orderly'. Got {ttype}")
+        
+        ## Storing the information required for the ranking function
+        self.__parent = parent
+        self.base_order : list[DPolynomialGen] | tuple[DPolynomialGen] = ordering
+        self.type : str = ttype
+
+    def parent(self) -> DPolynomialRing_dense:
+        return self.__parent
+
+    def compare_variables(self, u: DPolynomial, v: DPolynomial):
+        r'''
+            Method to compare two variables.
+
+            This method implements the actual ranking order. It compares two variables
+            and returns which one is bigger as follows: the output is positive if `u > v`,
+            the output is negative is `u < v` and the output is 0 if `u = v`.
+
+            INPUT:
+
+            * ``u``: first d-polynomial to be compared.
+            * ``v``: second d-polynomial to be compared.
+
+            OUTPUT:
+
+            This method behaves like the :func:`cmp` method in Python 2.x, returning a negative element if `u < v`, 
+            a positive element if `u > v` and 0 if they are equal.
+        '''
+        u = self.parent()(u); v = self.parent()(v)
+        if not u.is_variable(): raise TypeError(f"[ranking] Comparing something that is not a variable: [[{u} < {v}]]?")
+        if not v.is_variable(): raise TypeError(f"[ranking] Comparing something that is not a variable: [[{u} < {v}]]?")
+
+        gu = None; gv = None
+        for g in self.base_order:
+            if u in g: gu = g
+            if v in g: gv = g
+            if gu != None and gv != None: break
+        else:
+            raise ValueError(f"[ranking] Comparing a variable that is not ordered (allow {self.base_order}): [[{u} < {v}]]?")
+        
+        if self.type == "elimination":
+            if self.base_order.index(gu) < self.base_order.index(gv):
+                return -1
+            elif self.base_order.index(gu) > self.base_order.index(gv):
+                return 1
+            else:
+                return gu.index(u, False) - gu.index(v, False)
+        elif self.type == "orderly":
+            ord_u = u.order(gu); ord_v = v.order(gv)
+            if ord_u < ord_v: return -1
+            elif ord_u > ord_v: return 1
+            else:
+                ind_u = gu.index(u, False); ind_v = gv.index(v, False)
+                if ind_u < ind_v: return -1
+                elif ind_u > ind_v: return 1
+                else:
+                    return self.base_order.index(gu) - self.base_order.index(gv)
+        else:
+            raise NotImplementedError(f"[ranking] Method 'compare' not yet implemented for type {self.type}")
+
+    def compare(self, p: DPolynomial, q: DPolynomial):
+        r'''
+            Method that compares two d-polynomials.
+
+            This method is the critical step of a ranking function. It takes two variables in 
+            a ring of d-polynomials, i.e., two variables in a :class:`DPolynomialRing_dense`
+            and compare which one is bigger in terms of this ranking function.
+
+            When the inputs are d-polynomials (not only variables) we proceed to extend
+            the ranking to the whole d-polynomial as follows:
+
+            1. We sort by the leaders.
+            2. If the leaders coincide, we sort by degree on the leader (i.e., by rank)
+            3. If the rank coincide, we sort by initials (recursively).
+            4. If we compare two elements without ranking (i.e., with leaders 1) we say they are equal.
+
+            INPUT:
+
+            * ``p``: first d-polynomial to be compared.
+            * ``q``: second d-polynomial to be compared.
+
+            OUTPUT:
+
+            This method behaves like the :func:`cmp` method in Python 2.x, returning a negative element if `p < q`, 
+            a positive element if `p > q` and 0 if they are equal or we can not compare them.
+
+            TODO: add examples
+        '''
+        u = self.leader(p); v = self.leader(q)
+        # special cases when the leader are 1
+        if u == 1 and v == 1:
+            return 0
+        elif u == 1:
+            return -1
+        elif v == 1:
+            return 1
+
+        # both have a non-constant leader
+        cmp_leaders = self.compare_variables(u,v)
+        if cmp_leaders != 0: return cmp_leaders
+
+        # here the leader are the same
+        cmp_rank = p.degree(u) - q.degree(u)
+        if cmp_rank != 0:
+            return cmp_rank
+        
+        # here the rank are equal
+        return self.compare(self.initial(p), self.initial(q))
+
+    ################################################################################
+    ### Basic extraction methods from d-polynomials
+    ################################################################################
+    @cached_method
+    def leader(self, element: DPolynomial) -> DPolynomial:
+        r'''
+            Method to get the leader variable from a d-polynomial.
+
+            This method computes the leader variable for the current ranking function. The leader is the maximal
+            variable that appear in a d-polynomial. If there is no variable appearing, we say the leader is the 
+            monomial `1`.
+
+            INPUT: 
+
+            * ``element``: the d-polynomial to get the leader.
+
+            OUTPUT:
+
+            A variable of ``self.parent()`` or `1` if no variables to compare appear in ``element``.
+
+            TODO: add examples
+        '''
+        element = self.parent()(element)
+
+        ## we get the variables that must be ordered
+        variables = [self.parent()(v) for v in element.variables() if any(v in g for g in self.base_order)]
+        if len(variables) == 0: # if nothing is there, the leader is the `1`
+            return self.parent().one()
+        
+        max_var = variables[0]
+        for new_var in variables[1:]:
+            if self.compare_variables(max_var, new_var) < 0: # max_var < new_var
+                max_var = new_var
+        return max_var
+        
+    @cached_method
+    def rank(self, element: DPolynomial) -> DPolynomial:
+        r'''
+            Method to get the rank from a d-polynomial.
+
+            This method computes the rank for the current ranking function. The rank is the maximal
+            variable that appear in a d-polynomial to the highest degree. If there is no variable appearing, we say the rank is the 
+            monomial `1`.
+
+            INPUT: 
+
+            * ``element``: the d-polynomial to get the rank.
+
+            OUTPUT:
+
+            A variable of ``self.parent()`` or `1` if no variables to compare appear in ``element``.
+
+            TODO: add examples
+        '''
+        element = self.parent()(element)
+
+        max_var = self.leader(element)
+        deg = element.degree(max_var) if max_var != self.parent().one() else 1
+        return max_var**deg
+
+    @cached_method
+    def initial(self, element: DPolynomial) -> DPolynomial:
+        r'''
+            Method to get the initial from a d-polynomial.
+
+            This method computes the initial for the current ranking function. The initial is the coefficient
+            that multiplies the rank of a d-polynomial. If there is no variable appearing, we say the initial 
+            the whole d-polynomial.
+
+            INPUT: 
+
+            * ``element``: the d-polynomial to get the initial.
+
+            OUTPUT:
+
+            The initial of ``element`` with respect to ``self``.
+
+            TODO: add examples
+        '''
+        element = self.parent()(element)
+
+        return element.coefficient(self.rank(element))
+
+    @cached_method
+    def separant(self, element: DPolynomial) -> DPolynomial:
+        r'''
+            Method to get the separant from a d-polynomial.
+
+            This method computes the separant for the current ranking function. The separant is the partial
+            derivative w.r.t. the leader variable of a d-polynomial. If there is no variable appearing, we 
+            define the separant to be zero.
+
+            INPUT: 
+
+            * ``element``: the d-polynomial to get the separant.
+
+            OUTPUT:
+
+            The separant of ``element`` with respect to ``self``
+
+            TODO: add examples
+        '''
+        element = self.parent()(element)
+
+        max_var = self.leader(element)
+        return self.parent()(element.polynomial().derivative(max_var.polynomial())) if max_var != self.parent().one() else self.parent().zero()
+
+    def pseudo_quo_rem(self, p: DPolynomial, q: DPolynomial) -> tuple[DPolynomial, dict[tuple,tuple[DPolynomial,DPolynomial]], DPolynomial]:
+        r'''
+            Compute a pseudo-operational division of `p` and `q`.
+
+            The output of this method will be a tuple `(a,b,r)` such that :
+            
+            * `ap + bq = r`,
+            * `r < q`.
+
+            In this case, the operations can be applied to `q` but not to `a`.
+        '''
+        if self.compare(p, q) < 0: # base case: we are done
+            return (1, dict(), p)
+        
+        N = self.parent().noperators()
+        
+        ## Here we have p > q.        
+        ####################################################################
+        ### In this part we will get:
+        ###   - a
+        ###   - b
+        ###   - r
+        ### such that `ap = b(q) + r` with `r < p`
+        ####################################################################
+        lp = self.leader(p); lq = self.leader(q)
+        original_q = q
+        comparison = self.compare_variables(lp, lq)
+        if comparison < 0: # impossible condition
+            raise TypeError("[ranking] Impossible condition reached: 'l(p) < l(q) when p > q'")
+        elif comparison == 0: # same leader --> we need to multiply by the leader to match degrees
+            a = lp**(q.degree(lp)-p.degree(lp)) * self.initial(q)
+            b = {tuple(N*[0]): (self.initial(p), 1)}
+            r = a*p - self.initial(p)*q
+        else: # different variables are the leader. Two cases:
+            vp = lp.infinite_variables()[0]; vq = lq.infinite_variables()[0]
+            if vp == vq: # the same variable --> we need to apply an operator to p
+                ip = vp.index(lp, as_tuple=True); iq = vp.index(lq, as_tuple=True)
+                operation = tuple([ip[i] - iq[i] for i in range(len(ip))])
+                if any(el < 0 for el in operation):
+                    raise TypeError("[ranking] Impossible condition reached: inverse operation from 'l(q)' to 'l(p)' when 'p > q'")
+                prev = 1
+            else: # different variables: we multiply `p` by `vq` and apply again
+                operation = vp.index(lp, as_tuple=True)
+                prev = vp[0]
+            q = self.parent().apply_operations(prev*q, operation, _ordered=False)
+            a = lp**(q.degree(lp)-p.degree(lp)) * self.initial(q)
+            b = {operation: (self.initial(p), prev)}
+            r = a*p - self.initial(p)*q
+            
+        ####################################################################
+        ### In this part we will get:
+        ###   - a
+        ###   - b
+        ###   - r
+        ### such that `ap = b(q) + r` with `r < p`
+        ####################################################################
+        ra, rb, r = self.pseudo_quo_rem(r, original_q)
+        fa = a*ra
+        fb = {k: (ra*v[0], v[1]) for (k,v) in b.items()}
+        fb.update(rb)
+
+        return fa, fb, r
+    
+    def smallest(self, p: DPolynomial, q: DPolynomial) -> tuple[DPolynomial, DPolynomial]:
+        r'''
+            Method that return a variation of the arguments so they have the same leading term.
+
+            The leading term for a given ranking is defined as the :func:`rank` times :func:`initial`
+            of a d-polynomial. For any given pair of d-polynomials, there is a minimal rank 
+            that is greater or euqal to both polynomials `p` and `q`.
+
+            Then, this method returns an extension of both polynomials (i.e., the returned d-polynomials
+            are obtained by multiplication and applying operations only) with that common bigger rank.
+            Hence, the difference between the two polynomials has smaller rank than the common smallest 
+            rank of the two polynomials.
+        '''
+        if self.compare(p, q) > 0: # we return the inverse call to this function
+            return tuple(list(self.smallest(q,p))[::-1])
+        
+        lp = self.leader(p); lq = self.leader(q)
+        comparison = self.compare_variables(lp, lq)
+        if comparison > 0: # impossible condition
+            raise TypeError("[ranking] Impossible condition reached: 'l(p) > l(q) when p < q'")
+        elif comparison == 0: # same leader --> we need to multiply by the leader to match degrees
+            p = lp**(q.degree(lp)-p.degree(lp)) * p
+            return self.monic(self.initial(q)*p), self.monic(self.initial(p)*q)
+        else: # different variables are the leader. Two cases:
+            vp = lp.infinite_variables()[0]; vq = lp.infinite_variables()[0]
+            if vp == vq: # the same variable --> we need to apply an operator to p
+                ip = vp.index(lp, as_tuple=True); iq = vp.index(lq, as_tuple=True)
+                try:
+                    for i in range(len(ip)):
+                        p = p.operation(i, times=iq[i]-ip[i]) # this must be always be positive
+                except ValueError:
+                    raise TypeError("[ranking] Impossible condition reached: inverse operation from 'l(p)' to 'l(q)' when 'p < q'")
+                return self.smallest(p,q) # we repeat with the changed `p`
+            else: # different variables: we multiply `p` by `vq` and apply again
+                return self.smallest(vq*p, q)
+
+    def S(self, p: DPolynomial, q: DPolynomial) -> DPolynomial:
+        r'''Computes the S-polynomial of two d-polynomials for the given ranking'''
+        sp, sq = self.smallest(p, q)
+        return sp - sq
+
+    def monic(self, p: DPolynomial) -> DPolynomial:
+        r'''Return a d-polynomial where the biggest monomial has coefficient 1'''
+        mon = p.parent().one()
+        for m in p.monomials():
+            mon = m if self.compare(mon, m) < 0 else mon
+        
+        return p // p.coefficient(mon)
+
+    ################################################################################
+    ### Sorting methods
+    ################################################################################
+    def __merge(self, left, right):
+        # If the first array is empty, then nothing needs
+        # to be merged, and you can return the second array as the result
+        if len(left) == 0:
+            return right
+
+        # If the second array is empty, then nothing needs
+        # to be merged, and you can return the first array as the result
+        if len(right) == 0:
+            return left
+
+        result = []
+        index_left = index_right = 0
+
+        # Now go through both arrays until all the elements
+        # make it into the resultant array
+        while len(result) < len(left) + len(right):
+            # The elements need to be sorted to add them to the
+            # resultant array, so you need to decide whether to get
+            # the next element from the first or the second array
+            if self.compare(left[index_left],right[index_right]) <= 0:
+                result.append(left[index_left])
+                index_left += 1
+            else:
+                result.append(right[index_right])
+                index_right += 1
+
+            # If you reach the end of either array, then you can
+            # add the remaining elements from the other array to
+            # the result and break the loop
+            if index_right == len(right):
+                result.extend(left[index_left:])
+                break
+
+            if index_left == len(left):
+                result.extend(right[index_right:])
+                break
+
+        return result
+    
+    def sort(self, elements: list[DPolynomial], reverse: bool = False) -> list[DPolynomial]:
+        r'''
+            Method to sort a list of d-polynomials following a ranking.
+
+            This method allows to sort a list of d-polynomials using the leader as the main 
+            sorting key and, in case of a tie, we will use the recursive use of ranking 
+            into the initial of the d-polynomial.
+
+            This is an implementation of Merge-sort (see :wiki:`Merge_sort`).
+
+            INPUT: 
+
+            * ``elements``: list of d-polynomials to be sorted.
+            * ``reverse``: a boolean indicating if we want the first element to be the biggest (``True``)
+              or the smallest (``False`` - default).
+        '''
+        # Base case when the list is empty or with just 1 element
+        if len(elements) <= 1:
+            return elements
+        middle = len(elements)//2
+        left = self.sort(elements[:middle]); right = self.sort(elements[middle:])
+
+        result = self.__merge(left, right)
+        if reverse: result.reverse()
+        return result
+    
+    def __repr__(self) -> str:
+        return f"{self.type.capitalize()} ranking over {self.parent()} where [{' < '.join([repr(el) for el in self.base_order])}]"
+    
+    def _latex_(self) -> str:
+        return r"\mathbf{" + ("OrdR" if self.type == "orderly" else "ElimR") + r"}(" + "<".join(latex(v) for v in self.base_order) + r")"
 
 __all__ = [
     "DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing", # names imported

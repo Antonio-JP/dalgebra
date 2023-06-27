@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Parent structures for Infinite Polynomials over rings with operators &#8212; Differential Algebra in Sage 0.0.4.2+is-29 documentation</title>
+    <title>Parent structures for Infinite Polynomials over rings with operators &#8212; Differential Algebra in Sage 0.0.4.4 documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/classic.css" />
     
@@ -27,6 +27,9 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
           <a href="dpolynomial_element.html" title="Element structures for Infinite Polynomials over rings with operators"
              accesskey="N">next</a> |</li>
         <li class="right" >
@@ -43,8 +46,60 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <section id="parent-structures-for-infinite-polynomials-over-rings-with-operators">
-<h1>Parent structures for Infinite Polynomials over rings with operators<a class="headerlink" href="#parent-structures-for-infinite-polynomials-over-rings-with-operators" title="Permalink to this headline">¶</a></h1>
+  <section id="module-dalgebra.dpolynomial.dpolynomial_ring">
+<span id="parent-structures-for-infinite-polynomials-over-rings-with-operators"></span><h1>Parent structures for Infinite Polynomials over rings with operators<a class="headerlink" href="#module-dalgebra.dpolynomial.dpolynomial_ring" title="Permalink to this headline">¶</a></h1>
+<p>File for the ring structure of Differential polynomials</p>
+<p>This file contains all the parent structures for Differential polynomials
+and all the coercion associated classes. Mainly, this module provides the 
+class <code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRing_dense</span></code>, which is the main parent class defining
+a ring of differential polynomials.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span> 
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> 
+<span class="n">sage</span><span class="p">:</span> <span class="n">p</span> <span class="o">=</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">^</span><span class="mi">2</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span> <span class="n">p</span>
+<span class="o">-</span><span class="n">y_2</span><span class="o">*</span><span class="n">y_1</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y_1</span><span class="o">^</span><span class="mi">2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span>
+<span class="n">Ring</span> <span class="n">of</span> <span class="n">operator</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> <span class="p">[[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> 
+<span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">],</span> <span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">,)]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">derivative</span><span class="p">()</span>
+<span class="o">-</span><span class="n">y_3</span><span class="o">*</span><span class="n">y_1</span> <span class="o">-</span> <span class="n">y_2</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y_2</span><span class="o">*</span><span class="n">y_1</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">y_1</span><span class="o">^</span><span class="mi">2</span>
+</pre></div>
+</div>
+<p>AUTHORS:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Antonio Jimenez-Pastor (2021-05-19): initial version</p></li>
+</ul>
+</div></blockquote>
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_ring.DifferentialPolynomialRing">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dpolynomial.dpolynomial_ring.</span></span><span class="sig-name descname"><span class="pre">DifferentialPolynomialRing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">names</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_ring.DifferentialPolynomialRing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_ring.DifferencePolynomialRing">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dpolynomial.dpolynomial_ring.</span></span><span class="sig-name descname"><span class="pre">DifferencePolynomialRing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">names</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_ring.DifferencePolynomialRing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_ring.is_DPolynomialRing">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dpolynomial.dpolynomial_ring.</span></span><span class="sig-name descname"><span class="pre">is_DPolynomialRing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_ring.is_DPolynomialRing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to check whether an object is a ring of infinite polynomial with an operator.</p>
+</dd></dl>
+
+<dl class="py data">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_ring.RWOPolynomialRing">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dpolynomial.dpolynomial_ring.</span></span><span class="sig-name descname"><span class="pre">RWOPolynomialRing</span></span><em class="property"><span class="w"> </span><span class="pre">=</span> <span class="pre">&lt;dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRingFactory</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_ring.RWOPolynomialRing" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias for DPolynomialRing (used for backward compatibility)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dpolynomial_ring.is_RWOPolynomialRing">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dpolynomial.dpolynomial_ring.</span></span><span class="sig-name descname"><span class="pre">is_RWOPolynomialRing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dpolynomial_ring.is_RWOPolynomialRing" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias for is_DPolynomialRing (used for backward compatibility)</p>
+</dd></dl>
+
 </section>
 
 
@@ -91,6 +146,9 @@
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
         <li class="right" >
           <a href="dpolynomial_element.html" title="Element structures for Infinite Polynomials over rings with operators"
              >next</a> |</li>

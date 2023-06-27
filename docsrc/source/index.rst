@@ -16,6 +16,16 @@ List of Packages
    dring
    dpolynomial
 
+List of Application Modules
+====================================
+
+In the following modules we include some applications of this software in particular problems.
+
+.. toctree::
+   :maxdepth: 1
+
+   hierarchies
+
 
 Indices and Tables
 ==================

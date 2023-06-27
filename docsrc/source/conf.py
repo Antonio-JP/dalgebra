@@ -130,8 +130,10 @@ extlinks = {
     'wolf': ('https://mathworld.wolfram.com/%s.html', 'Wolfram MathWorld: '),
     'sagemod': ('https://doc.sagemath.org/html/en/reference/%s', 'Sage doc: '),
     'sageref': ('https://doc.sagemath.org/html/en/reference/%s.html', 'Sage doc: '),
+    'fungrim': ('https://fungrim.org/entry/%s', 'Fungrim:'),
+    'fungrimT': ('https://fungrim.org/topic/%s', 'Fungrim:'),
     'git': ('https://github.com/%s', 'GitHub: '),
-    'issue': ('https://github.com/Antonio-JP/pseries_basis/issues/%s', 'Issue:'),
+    'issue': ('https://github.com/Antonio-JP/dalgebra/issues/%s', 'Issue:'),
     'tag': ('https://github.com/Antonio-JP/dalgebra/tree/%s', 'Tag:'),
     'home': ('https://github.com/Antonio-JP/dalgebra%s', 'Git:dalgebra'),
     'hdoc': ('https://antonio-jp.github.io/dalgebra%s', 'Doc:dalgebra')
