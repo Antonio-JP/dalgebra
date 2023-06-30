@@ -24,4 +24,3 @@ AUTHORS:
 
 from .dextension_parent import *
 from .dextension_element import *
-from .dextension_field import *

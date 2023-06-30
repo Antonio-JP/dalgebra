@@ -1217,7 +1217,7 @@ class DRing_Wrapper(Parent):
     # Rings methods
     def fraction_field(self):
         try:
-            if self.is_field():
+            if self.wrapped.is_field():
                 return self
         except NotImplementedError:
             pass
@@ -1420,6 +1420,7 @@ class DRingFunctor(ConstructionFunctor):
 
     def merge(self, other):
         if isinstance(other, DRingFunctor):
+            print(self, "--->", other)
             # we create a copy of the operators of self
             new_operators = [el for el in self.__operators]; new_types = [el for el in self.__types]
             self_operators = list(zip(self.__operators, self.__types))
