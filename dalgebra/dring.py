@@ -953,6 +953,17 @@ class DRing_WrapperElement(Element):
         except Exception as e:
             raise AttributeError(f"'denominator' not an attribute for {self.__class__}. Reason: {e}")
 
+    def gcd(self, other: DRing_WrapperElement) -> DRing_WrapperElement:
+        try:
+            other = self.parent()(other) # trying to cast other to be in ``self.parent()``
+            g = self.wrapped.gcd(other.wrapped) # computing gcd in the wrapped level
+            return self.parent().element_class(self.parent(), g)
+        except AttributeError:
+            raise AttributeError(f"[DRing] Wrapped element {self.wrapped} do no have method `gcd`")
+        
+    def is_unit(self) -> bool:
+        return self.wrapped.is_unit()
+    
     ## Other magic methods
     def __bool__(self) -> bool:
         return bool(self.wrapped)
@@ -1234,6 +1245,9 @@ class DRing_Wrapper(Parent):
     def ngens(self) -> int:
         return self.wrapped.ngens()
 
+    def gen(self, i: int) -> DRing_WrapperElement:
+        return self.gens()[i]
+
     ## Representation methods
     def __repr__(self) -> str:
         begin = "Differential " if self.is_differential() else "Difference " if self.is_difference() else ""
@@ -1381,26 +1395,41 @@ class DRingFunctor(ConstructionFunctor):
         return self.__class__ == other.__class__ and self.__operators == other.__operators and self.__types == other.__types
 
     def __merge_skews(self, f: SkewMap, g: SkewMap):
+        r'''
+            Method to merge to skew derivations.
+
+            Currently, we only allow to mix two derivations `df` and `dg` when the pushout domain
+            of both derivations is one of the domains of the derivations (i.e., we check for extension,
+            but not for mixing derivations).
+
+            In order to do so we do the following:
+
+            1. We compute the ``pushout`` (`R`) of the domains of `df` and `dg`.
+            2. We check `R` is the domain of `df` or `dg`. Let `S` be the other domain.
+            3. We compute `df` and `dg`restricted to `S` by getting its representation over its generators.
+            4. We check equality on the two restricted derivations.
+            5. If they coincide, then we return the functor with the corresponding derivation.
+        '''
         Mf = f.function.parent(); Mg = g.function.parent()
         # we try to merge the base ring of the modules
         R = pushout(Mf.domain(), Mg.domain())
         
         if R == Mf.domain(): 
-            M = Mf; twist = f.twist
+            MR = Mf; twist = f.twist; goal = f.function; MS = Mg
         elif R == Mg.domain():
-            M = Mg; twist = g.twist
+            MR = Mg; twist = g.twist; goal = g.function; MS = Mf
         else:
             raise AssertionError("We can only extend to one parent, no mix between them")
             
-        # we try and cast both derivation into M
-        df = M(f.function) if f.function in M else M([f.function(v) for v in M.domain().gens()])
-        dg = M(g.function) if g.function in M else M([g.function(v) for v in M.domain().gens()])
+        # we try and cast both derivation into MS
+        df = MS(f.function) if f.function in MS else MS([f.function(v) for v in MS.domain().gens()]) if len(MS.gens()) > 0 else MS()
+        dg = MS(g.function) if g.function in MS else MS([g.function(v) for v in MS.domain().gens()]) if len(MS.gens()) > 0 else MS()
         
-        if df - dg == 0: 
+        if df - dg == 0: # this is the comparison on the restricted derivation
             if isinstance(f, DerivationMap):
-                return DerivationMap(M.domain(), df)
+                return DerivationMap(MR.domain(), goal)
             else: # general skew case
-                return SkewMap(M.domain(), twist, df)
+                return SkewMap(MR.domain(), twist, goal)
         return None
 
     def __merge_homomorphism(self, f, g):
@@ -1420,7 +1449,6 @@ class DRingFunctor(ConstructionFunctor):
 
     def merge(self, other):
         if isinstance(other, DRingFunctor):
-            print(self, "--->", other)
             # we create a copy of the operators of self
             new_operators = [el for el in self.__operators]; new_types = [el for el in self.__types]
             self_operators = list(zip(self.__operators, self.__types))
@@ -1435,16 +1463,18 @@ class DRingFunctor(ConstructionFunctor):
                                     merged = self.__merge_skews(operator, self_op)
                                     if merged != None:
                                         used_self.add(i)
+                                        new_operators[i] = merged
                                         break # we found an operator repeated
                                 elif ttype == "homomorphism":
                                     merged = self.__merge_homomorphism(operator, self_op)
                                     if merged != None:
                                         used_self.add(i)
+                                        new_operators[i] = merged
                                         break # we found an operator repeated
                             except (AssertionError, NotImplementedError):
                                 pass
                 else: # we need to add the operator to the final list
-                    new_operators.append(operator); new_types.append(ttype)
+                    new_operators.append(merged); new_types.append(ttype)
 
             return DRingFunctor(new_operators, new_types)
         return None # Following definition of merge in ConstructionFunctor
