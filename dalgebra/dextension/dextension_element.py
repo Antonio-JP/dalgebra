@@ -24,9 +24,7 @@ from __future__ import annotations
 
 from sage.all import Parent, ZZ
 from sage.rings.polynomial.multi_polynomial_element import MPolynomial_polydict
-from sage.structure.element import Element #pylint: disable=no-name-in-module
-
-from typing import Collection
+from ..dring import DRings
 
 #######################################################################################
 ###
@@ -49,48 +47,19 @@ class DExtension_element (MPolynomial_polydict):
         * ``parent``: the parent structure where the element will belong.
         * ``x``: representation of ``self`` that will be set for defining ``self``.
     '''
-    def __init__(self, parent : Parent, x : Element):
+    def __init__(self, parent : Parent, x):
         super().__init__(parent, x)
 
     #######################################################################################
-    ### METHODS OF DRINGS
+    ### METHODS OF DRINGS THAT APPEAR IN MPOLYNOMIAL_POLYDICT
     #######################################################################################
     def derivative(self, derivation: int = None, times: int = 1) -> DExtension_element:
-        if(not times in ZZ or times < 0):
-                raise ValueError("The argument ``times`` must be a non-negative integer")
-
-        if(times == 0):
-            return self
-        elif(times == 1):
-            return self.parent().derivative(self, derivation)
-        else:
-            return self.parent().derivative(self.derivative(derivation=derivation, times=times-1), derivation) 
-    #######################################################################################
-    ### Properties methods (is_...)
-    #######################################################################################
-    def as_linear_operator(self):
-        r'''
-            Method to convert this operator to a linear operator. 
-            
-            See method :func:`~.dpolynomial_ring.DPolynomialRing_dense.as_linear_operator`.
-        '''
-        return self.parent().as_linear_operator(self)
-
-    # def degree(self, x=None, std_grading=False) -> int: 
-    #     r'''Overriding :func:`degree` to fit the setting of D'''
-    #     R = self.parent().polynomial_ring()
-    #     if x != None and x.parent() == self.parent():
-    #         x = R(x.polynomial())
+        return DRings.ElementMethods.derivative(self, derivation, times)
         
-    #     return R(self.polynomial()).degree(x, std_grading)
-
-    def coefficient(self, degrees) -> DExtension_element:
-        return self.base()(super().coefficient(degrees))
-    
-    def monomials(self) -> list[DExtension_element]:
-        return [self.parent()(m) for m in super().monomials()]
-    
-    ###################################################################################
+    def is_constant(self, operation: int = 0):
+        return DRings.ElementMethods.is_constant(self, operation)
+       
+    ##################################################################################
     ### Arithmetic methods
     ###################################################################################
     # def _add_(self, x):

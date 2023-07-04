@@ -1182,14 +1182,8 @@ class DRing_Wrapper(Parent):
         raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
 
     ## Coercion methods
-    def _has_coerce_map_from(self, S) -> bool:
-        r'''
-            Return ``True`` if it is possible to have a coercion map from `S` to ``self``.
-        '''
-        if isinstance(S, DRing_Wrapper):
-            return self.wrapped._has_coerce_map_from(S.wrapped) # the operators do not matter for coercing elements
-        else:
-            return self.wrapped._has_coerce_map_from(S)
+    def _coerce_map_from_(self, S):
+        return pushout(self, S) == self
 
     def _element_constructor_(self, x) -> DRing_WrapperElement:
         r'''

@@ -1406,7 +1406,7 @@ class DPolyRingFunctor (ConstructionFunctor):
     def __init__(self, variables):
         self.__variables = variables
         super().__init__(_DRings,_DRings)
-        self.rank = 11 # just above PolynomialRing and DRingFunctor
+        self.rank = 12 # just above PolynomialRing and DRingFunctor and DExtension
         
     ### Methods to implement        
     def _apply_functor(self, x):
