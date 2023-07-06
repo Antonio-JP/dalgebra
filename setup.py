@@ -34,6 +34,7 @@ setup(
     ], # classifiers list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
     keywords = "SageMath difference/differential algebra",
     packages = ["dalgebra",
+                "dalgebra.dextension",
                 "dalgebra.dpolynomial",
                 "dalgebra.hierarchies",
                 "dalgebra.logging"],

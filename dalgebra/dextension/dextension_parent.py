@@ -105,7 +105,7 @@ class DExtensionFactory(UniqueFactory):
             if any(base_name in names for base_name in base_names):
                 raise ValueError(f"[DExtensionFactory - base] repeated name in the base ring and the requested new variables")
             names = base_names + list(names)
-            values_operations = [[str(g.operation(i) for i in range(noperators))] for g in base.gens()] + list(values_operations)
+            values_operations = [[str(g.operation(i)) for i in range(noperators)] for g in base.gens()] + list(values_operations)
             base = base.base()
 
         aux_R = PolynomialRing(base.wrapped if hasattr(base, "wrapped") else base, names) # use to better capture the nature of the values.

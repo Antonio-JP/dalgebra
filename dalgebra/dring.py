@@ -347,7 +347,8 @@ class DRings(Category):
                 This method applies a derivation over a given element in the same way an operator
                 is applied by the method :func:`~DRings.ParentMethods.operation`.
             '''
-            if derivation is None and self.nderivations() == 1: derivation = 0
+            if self.nderivations() == 0: raise TypeError("Derivations not defined for this ring.")
+            elif derivation is None and self.nderivations() == 1: derivation = 0
             elif derivation is None: raise IndexError("An index for the derivation must be provided when having several derivations")
             return self.derivations()[derivation](element)
 
@@ -392,7 +393,8 @@ class DRings(Category):
                 This method applies a difference over a given element in the same way an operator
                 is applied by the method :func:`~DRings.ParentMethods.operation`.
             '''
-            if difference is None and self.ndifferences() == 1: difference = 0
+            if self.ndifferences() == 0: raise TypeError("Differences not defined for this ring.")
+            elif difference is None and self.ndifferences() == 1: difference = 0
             elif difference is None: raise IndexError("An index for the difference must be provided when having several differences")
             return self.differences()[difference](element)
         
@@ -443,7 +445,8 @@ class DRings(Category):
                 This method applies a skew-derivation over a given element in the same way an operator
                 is applied by the method :func:`~DRings.ParentMethods.operation`.
             '''
-            if skew is None and self.nskews() == 1: skew = 0
+            if self.nskews() == 0: raise TypeError("Skew-derivations not defined for this ring.")
+            elif skew is None and self.nskews() == 1: skew = 0
             elif skew is None: raise IndexError("An index for the skew must be provided when having several skews")
             return self.skews()[skew](element)
         
