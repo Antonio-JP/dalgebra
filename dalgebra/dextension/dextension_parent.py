@@ -80,15 +80,15 @@ class DExtensionFactory(UniqueFactory):
                 raise TypeError(f"[DExtensionFactory - single] for more than one operation ({noperators}) or one generator ({ngens}) more values are required")
         elif all(not is_sequence(vals) for vals in values_operations): # just a list input
             if noperators == 1 and ngens == 1 and len(values_operations) != 1:
-                raise TypeError(f"[DExtensionFactory - list] For 1 operation and 1 genertor required a list on length 1 (got {len(values_operations)})")
-            elif noperators == 1 and ngens == 1: # we conver the input into a list of lists
+                raise TypeError(f"[DExtensionFactory - list] For 1 operation and 1 generator required a list on length 1 (got {len(values_operations)})")
+            elif noperators == 1 and ngens == 1: # we convert the input into a list of lists
                 values_operations = [values_operations]
             elif noperators == 1: # we interpret the list as images for the only operation
                 values_operations = [[el] for el in values_operations]
             elif ngens == 1: # we interpret the list as the image fot the first generator
                 values_operations = [values_operations]
         
-        # Now values_operations must be a list of `ngens` lists with `noperations` elements each
+        # Now values_operations must be a list of `ngens` lists with `noperators` elements each
         if not is_sequence(values_operations):
             raise TypeError(f"[DExtensionFactory] 'values_operations' must be a list")
         elif len(values_operations) != ngens:
@@ -102,7 +102,7 @@ class DExtensionFactory(UniqueFactory):
         ## Special case when `base` is already a DExtension
         if isinstance(base, DExtension_parent):
             base_names = [str(g) for g in base.gens()]
-            if any(bname in names for bname in base_names):
+            if any(base_name in names for base_name in base_names):
                 raise ValueError(f"[DExtensionFactory - base] repeated name in the base ring and the requested new variables")
             names = base_names + list(names)
             values_operations = [[str(g.operation(i) for i in range(noperators))] for g in base.gens()] + list(values_operations)
@@ -184,12 +184,12 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
             sage: R1 is R2
             True
     '''
-    Element = DExtension_element # TODO: add the class for elements
+    Element = DExtension_element 
 
     def __init__(self, base : Parent, values_operations: dict[str,Sequence[Any]], names : Sequence[str], category=_DRings):
         ## Calling previous classes __init__ methods
         MPolynomialRing_polydict_domain.__init__(self, base.wrapped if hasattr(base, "wrapped") else base, len(names), names, "degrevlex")
-        IntegralDomain.__init__(self, self.base_ring(), names, category=self.category() & category)
+        self._refine_category_(category)
         self.__base = base
 
         ## Setting the generators to proper type
@@ -206,7 +206,7 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
             len(values_operations) != ngens or 
             any((not is_sequence(values) or len(values) != noperators) for values in values_operations.values())
         ):      
-            raise TypeError("The structure for the values for the opearations does not match the number of operations and variables.") 
+            raise TypeError("The structure for the values for the operations does not match the number of operations and variables.") 
 
         # Registering conversion to simpler structures
         current = self.base()

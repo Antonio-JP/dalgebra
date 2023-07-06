@@ -264,7 +264,7 @@ class DRings(Category):
                 * ``operations``: list or tuple indicating the operations to be applied. If ``_ordered`` is given to 
                   ``True``, then the elements are interpreted as a list of operations that will be applied in 
                   the specific order that appears in ``operations``. Otherwise, the input must be a list/tuple of 
-                  exactly ``self.noperations()`` indicating how many times each operation is applied.
+                  exactly ``self.noperators()`` indicating how many times each operation is applied.
 
                 OUTPUT:
 
@@ -1093,6 +1093,17 @@ class DRing_Wrapper(Parent):
 
     def operator_types(self) -> tuple[str]: return self.__types
 
+    def constant_ring(self, operation: int = 0) -> Parent:
+        operation_type = self.operator_types()[operation]
+        if operation_type == "homomorphism":
+            if self.operators()[operation].function == self.wrapped.Hom(self.wrapped).one():
+                return self.wrapped
+        elif operation_type in ("skew", "derivation"):
+            if self.operators()[operation].function.function == 0:
+                return self.wrapped
+            
+        raise NotImplementedError(f"Constant ring do not implemented for {self} (operation {operation})")
+
     def linear_operator_ring(self):
         r'''
             Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
@@ -1311,7 +1322,7 @@ class DFractionFieldElement(FractionFieldElement):
         super().__init__(*args, **kwargs)
 
     def derivative(self, derivation: int = None, times: int = 1):
-        r'''Overriden method to force the use of the DRings structure'''
+        r'''Overridden method to force the use of the DRings structure'''
         return DRings.ElementMethods.derivative(self, derivation, times)
     
 class DFractionField(FractionField_generic):
@@ -1363,7 +1374,7 @@ class DFractionField(FractionField_generic):
     def operator_types(self) -> Sequence[str]:
         return self.base().operator_types()
     
-    def constant_ring(self):
+    def constant_ring(self, operation: int = 0) -> Parent:
         try:
             return self.base().constant_ring().fraction_field()
         except Exception as e:
