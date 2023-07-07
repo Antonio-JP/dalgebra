@@ -656,7 +656,7 @@ class DRings(Category):
         ##########################################################
         ### BOOLEAN METHODS
         ##########################################################
-        def is_constant(self, operation: int = 0):
+        def d_constant(self, operation: int = 0):
             r'''
                 Method to check whether an element is a constant with respect to one operator.
 
@@ -678,10 +678,10 @@ class DRings(Category):
                     sage: from dalgebra import *
                     sage: R = DifferentialRing(QQ[x], diff)
                     sage: p = R(3)
-                    sage: p.is_constant()
+                    sage: p.d_constant()
                     True
                     sage: p = R(x^3 - 3*x + 1)
-                    sage: p.is_constant()
+                    sage: p.d_constant()
                     False
 
                 Some interesting constants may arise unexpectedly when adding other derivations::
@@ -690,11 +690,11 @@ class DRings(Category):
                     sage: dx, dy = R.derivation_module().gens(); d = y*dx - x*dy
                     sage: dR = DifferentialRing(R, d)
                     sage: x,y = dR.gens()
-                    sage: x.is_constant()
+                    sage: x.d_constant()
                     False
-                    sage: y.is_constant()
+                    sage: y.d_constant()
                     False
-                    sage: (x^2 + y^2).is_constant()
+                    sage: (x^2 + y^2).d_constant()
                     True
             '''
             ttype = self.parent().operator_types()[operation]
@@ -1197,7 +1197,7 @@ class DRing_Wrapper(Parent):
 
     ## Coercion methods
     def _coerce_map_from_(self, S):
-        return pushout(self, S) == self
+        return self.wrapped._coerce_map_from_(S) != None
 
     def __call__(self, x, *args, **kwds):
         result = self.wrapped(x, *args, **kwds)

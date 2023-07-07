@@ -903,7 +903,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
     def __inverse_homomorphism(self, element: DPolynomial, operation: int):
         solution = self.zero()
         for coeff, monomial in zip(element.coefficients(), element.monomials()):
-            coeff = coeff.inverse_operation(operation) if not coeff.is_constant() else coeff
+            coeff = coeff.inverse_operation(operation) if not coeff.d_constant() else coeff
             variables = monomial.variables()
             new_mon = self.one()
             for v in variables:
@@ -928,7 +928,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             for coeff, monomial in zip(element.coefficients(), element.monomials()):
                 if monomial == 1:
                     raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
-                coeff = coeff.inverse_operation(operation) if not coeff.is_constant() else coeff
+                coeff = coeff.inverse_operation(operation) if not coeff.d_constant() else coeff
                 var = monomial.variables()[0] # we know there is only 1
                 for g in element.infinite_variables():
                     if var in g:
