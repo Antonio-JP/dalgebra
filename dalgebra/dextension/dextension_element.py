@@ -55,10 +55,7 @@ class DExtension_element (MPolynomial_polydict):
     #######################################################################################
     def derivative(self, derivation: int = None, times: int = 1) -> DExtension_element:
         return DRings.ElementMethods.derivative(self, derivation, times)
-        
-    def is_constant(self, operation: int = 0):
-        return DRings.ElementMethods.is_constant(self, operation)
-       
+               
     ##################################################################################
     ### Arithmetic methods
     ###################################################################################
