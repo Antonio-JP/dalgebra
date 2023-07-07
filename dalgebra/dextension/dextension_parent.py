@@ -22,11 +22,13 @@ from __future__ import annotations
 import logging
 
 from collections.abc import Sequence
+from functools import reduce
 from itertools import chain, islice
 
 from sage.all import cached_method, Parent, latex, prod, PolynomialRing, QQ, ZZ
 from sage.categories.all import Morphism, IntegralDomains
 from sage.categories.pushout import ConstructionFunctor
+from sage.graphs.digraph import DiGraph
 from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_polydict_domain
 from sage.rings.ring import IntegralDomain, Ring #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
@@ -64,6 +66,8 @@ class DExtensionFactory(UniqueFactory):
     def create_key(self, base: Parent, values_operations: Sequence[Sequence[Any]], *names : str, **kwds):
         ## Checking the argument "names"
         names = kwds["names"] if len(names) == 0 and "names" in kwds else names
+        ## Checking argument "_recursive" (private argument)
+        _recursive = kwds.get("_recursive", False)
         
         ## Checking the ``base`` ring is a d-ring
         if not base in _DRings:
@@ -100,7 +104,7 @@ class DExtensionFactory(UniqueFactory):
         
         # We transform the images of the operations into rational elements in ``self``
         ## Special case when `base` is already a DExtension
-        if isinstance(base, DExtension_parent):
+        if isinstance(base, DExtension_parent) and not _recursive:
             base_names = [str(g) for g in base.gens()]
             if any(base_name in names for base_name in base_names):
                 raise ValueError(f"[DExtensionFactory - base] repeated name in the base ring and the requested new variables")
@@ -277,12 +281,54 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
         super_call = super().__call__(x, check)
         return self.element_class(self, super_call.dict()) if hasattr(super_call,"dict") else super_call
 
+    def _coerce_map_from_(self, S):
+        from sage.categories.pushout import pushout
+        if not isinstance(S, DExtension_parent):
+            try:
+                return super()._coerce_map_from_(S)
+            except:
+                return None
+        
+        try:
+            return pushout(self, S) == self
+        except:
+            return None
+
     def _pushout_(self, other):
+        r'''
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferenceRing(DifferentialRing(QQ))
+                sage: Q.<x,y,z> = DExtension(B, [[1, 'x+1'],[0,'y'],['z','y*z']]) # y = e, z = e^x
+                sage: R = Q.univariate_ring(x)
+        '''
         from sage.categories.pushout import pushout
         from sage.rings.polynomial.multi_polynomial_ring import is_MPolynomialRing
 
         # Special case when comparing with a polynomial ring with same variables as ``self``
-        if is_MPolynomialRing(other):
+        if isinstance(other, DExtension_parent):
+            R = self.base(); S = other.base()
+            try:
+                newB = pushout(self, S)
+                if newB == S: return other
+            except: pass
+            try:
+                newB = pushout(R, other)
+                if newB == R: return self
+            except: pass
+            try:
+                if ((self.noperators(), self.ngens(), self.variable_names()) == (other.noperators(), other.ngens(), other.variable_names())):
+                    newB = pushout(R,S)
+                    aux_output = PolynomialRing(newB, self.variable_names())
+                    for name in self.variable_names():
+                        img_self = [aux_output(str(el)) for el in self.operations_on_gen(self(name))]
+                        img_other = [aux_output(str(el)) for el in other.operations_on_gen(other(name))]
+                        if any(a != b for a,b in zip(img_self,img_other)):
+                            return None # impossible to do pushout in canonical way. Falling back to other implementations
+                    return DExtension(newB, [[str(el) for el in self.operations_on_gen(g)] for g in self.gens()], names=self.variable_names()) 
+            except: pass
+        elif is_MPolynomialRing(other):
             true_base = self.base_ring().wrapped if hasattr(self.base_ring(), "wrapped") else self.base_ring()
             if ((self.ngens(), self.variable_names()) == (other.ngens(), other.variable_names())):
                 return DExtension(pushout(self.base(), other.base_ring()), [self.operations_on_gen(g) for g in self.gens()], names=self.variable_names())
@@ -301,7 +347,7 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
         if not R in _DRings:
             raise TypeError(f"[change_ring] The new ring must be a d-ring (got: {R})")
         
-        return DExtension(R, [self.operations_on_gen(g) for g in self.gens()], names=self.variable_names())
+        return DExtension(R, [[str(el) for el in self.operations_on_gen(g)] for g in self.gens()], names=self.variable_names())
 
     #################################################
     ### Magic python methods
@@ -310,7 +356,7 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
         return hash(self.__hash)
 
     def __repr__(self) -> str:
-        return f"DExtension({self.base()}, [{','.join(f'{g} -> {self.operations_on_gen(g)}' for g in self.gens())})"
+        return f"DExtension({self.base()}, [{','.join(f'{g} -> {self.operations_on_gen(g)}' for g in self.gens())}]"
 
     def _latex_(self):
         raise r"\left(" + super()._latex_() + ",".join([f"{latex(g)} \\mapsto [{','.join(self.operation(i,g) for i in range(self.noperators()))}]" for g in self.gens()]) + r"\right)"
@@ -340,6 +386,62 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
             K = DFractionField(self)
             self.__fraction_field = K
         return self.__fraction_field
+
+    def remove_var(self, *var):
+        r'''
+            Remove variables preserving the d-structure if possible.
+
+            If not possible, we raise a TypeError.
+
+            TODO: Check if it is possible to create coercion and conversion maps 
+            between ``self`` and the resulting ring from this method.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferenceRing(DifferentialRing(QQ))
+                sage: Q.<x,y,z> = DExtension(B, [[1, 'x+1'],[0,'y'],['z','y*z']]) # y = e, z = e^x
+                sage: Q
+                DExtension(Ring [[Rational Field], (0, Hom({1: 1}))], [x -> (1, x + 1),y -> (0, y),z -> (z, y*z))
+                sage: Q.remove_var(x)
+                DExtension(Ring [[Rational Field], (0, Hom({1: 1}))], [y -> (0, y),z -> (z, y*z))
+                sage: Q.remove_var(z)
+                DExtension(Ring [[Rational Field], (0, Hom({1: 1}))], [x -> (1, x + 1),y -> (0, y))
+                sage: Q.remove_var(x,z)
+                DExtension(Ring [[Rational Field], (0, Hom({1: 1}))], [y -> (0, y))
+                sage: Q.remove_var(z,x)
+                DExtension(Ring [[Rational Field], (0, Hom({1: 1}))], [y -> (0, y))
+                sage: Q.remove_var(y)
+                Traceback (most recent call last):
+                ...
+                TypeError: Impossible to remove [y] from DExtension...
+                sage: Q.remove_var(y,z)
+                DExtension(Ring [[Rational Field], (0, Hom({1: 1}))], [x -> (1, x + 1))
+                sage: Q.remove_var(x,y,z)
+                Ring [[Rational Field], (0, Hom({1: 1}))]
+        '''
+        var = [self(v) for v in var] # casting to elements in ``self``
+        rem_vars = [v for v in self.gens() if not v in var] # getting list of remaining variables
+        ## Extreme case: we remove all variables
+        if len(rem_vars) == 0:
+            return self.base()
+
+        rem_ops = [self.operations_on_gen(v) for v in rem_vars]
+
+        if any((v not in rem_vars) for imgs in rem_ops for el in imgs for v in el.variables()):
+            raise TypeError(f"Impossible to remove {var} from {self} since operations over {rem_vars} require of these variables.")
+        
+        return DExtension(self.base(), [[str(el) for el in imgs] for imgs in rem_ops], names=[str(v) for v in rem_vars])
+
+    def univariate_ring(self, var):
+        if not var in self.gens():
+            raise ValueError(f"Variable {var} not in {self}")
+        return DExtension(
+            self.remove_var(var), 
+            [tuple(str(el) for el in self.operations_on_gen(var))],
+            names=[str(var)],
+            _recursive=True
+        )
 
     #################################################
     ### Method from DRing category
@@ -431,6 +533,30 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
     def __inverse_skew(self, element: DExtension_element, operation: int):
         raise NotImplementedError("[DExtension] __inverse_skew not implemented")
     
+    #################################################
+    ### Specific methods for DExtensions
+    #################################################
+    @cached_method
+    def dependency_graph(self, operation: int = None) -> DiGraph:
+        r'''
+            Method that return a graph of dependency between the variables of a d-Extension.
+
+            This method build a directed graph where the vertices are the variables that are created 
+            in this d-extension and the edge `(u,v)` is in the graph if the variable `v` appears 
+            in the image by an operator (any if ``operation`` is ``None``) applied to `u`.
+        '''
+        vertices = self.gens()
+        edges = []
+        for u in vertices:
+            if operation is None:
+                deps = tuple(reduce(lambda p,q: p.union(q), (set(el.variables()) for el in self.operations_on_gen(u))))
+            else:
+                deps = self.operations_on_gen(u)[operation].variables()
+            for v in deps:
+                if v != u: edges.append((u,v))
+        
+        return DiGraph((vertices, edges), format="vertices_and_edges", immutable=True)
+
 def is_DExtension(element):
     r'''
         Method to check whether an object is a ring of infinite polynomial with an operator.
@@ -450,7 +576,7 @@ class DExtensionFunctor(ConstructionFunctor):
         self.values = values
 
     def _apply_functor(self, R):
-        return DExtension(R, self.vars, [self.values[v] for v in self.vars])
+        return DExtension(R, [[str(el) for el in self.values[v]] for v in self.vars], names=self.vars, _recursive=True)
 
     def __eq__(self, other):
         if isinstance(other, DExtensionFunctor):

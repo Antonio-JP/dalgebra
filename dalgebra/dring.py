@@ -1261,6 +1261,15 @@ class DRing_Wrapper(Parent):
 
     def gen(self, i: int) -> DRing_WrapperElement:
         return self.gens()[i]
+    
+    def __getattr__(self, attr):
+        r'''Generic wrapping method for methods not by default in the category of ``self``'''
+        if hasattr(self.wrapped, attr):
+            el = getattr(self.wrapped, attr)
+            if el in self.wrapped:
+                return self(el)
+            return el
+        raise AttributeError(f"{self.__class__} object has no attribute {attr}")
 
     ## Representation methods
     def __repr__(self) -> str:
@@ -1327,6 +1336,12 @@ class DFractionFieldElement(FractionFieldElement):
     def derivative(self, derivation: int = None, times: int = 1):
         r'''Overridden method to force the use of the DRings structure'''
         return DRings.ElementMethods.derivative(self, derivation, times)
+    
+    def variables(self):
+        try:
+            return tuple(set(self.numerator().variables()).union(set(self.denominator().variables())))
+        except AttributeError:
+            raise AttributeError("'DFractionFieldElement' object has no attribute 'variables'")
     
 class DFractionField(FractionField_generic):
     r'''
