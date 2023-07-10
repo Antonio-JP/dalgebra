@@ -10,13 +10,13 @@
 * [x] For univariate polynomials: pseudo-polynomial division -> check where is in SageMath.
 * [x] For integral domains where `quo_rem` is implemented: GCD -> check the `gcd` and use it
 * [x] For integral domains where `quo_rem` is implemented: extended GCD -> must be done somewhere.
-* For euclidean domains: partial fraction decomposition -> check where in SageMath
-* For euclidean domains: full partial fraction decomposition -> check where in SageMath
-* For univariate/multivariate polynomials: content and primitive parts -> check in SageMath
-* Check for squarefree factorization on SageMath -> guarantee it for univariate polynomials (Yun's and Musser's implementation)
+* [x] For euclidean domains: partial fraction decomposition -> check where in SageMath
+* [x] For euclidean domains: full partial fraction decomposition -> check where in SageMath
+* [x] For univariate/multivariate polynomials: content and primitive parts -> check in SageMath
+* [x] Check for squarefree factorization on SageMath -> guarantee it for univariate polynomials (Yun's and Musser's implementation)
 
-* Check method `remove_var` from `DExtension` -> useful to transform things into univariate polynomials.
-* Check method `polynomial` to go to univariate polynomials -> it must go to a specific `DExtension` going over the DExtension factory.
+* [x] Check method `remove_var` from `DExtension` -> useful to transform things into univariate polynomials.
+* [x] Check method `polynomial` to go to univariate polynomials -> it must go to a specific `DExtension` going over the DExtension factory.
 * Check for a flattening morphism from these special `Dextension` to those created from the factory.
 
 ## Chapter 2 of Bronstein's: rational function integration
