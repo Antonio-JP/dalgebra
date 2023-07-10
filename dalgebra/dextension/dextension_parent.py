@@ -192,7 +192,7 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
 
     def __init__(self, base : Parent, values_operations: dict[str,Sequence[Any]], names : Sequence[str], category=_DRings):
         ## Calling previous classes __init__ methods
-        MPolynomialRing_polydict_domain.__init__(self, base.wrapped if hasattr(base, "wrapped") else base, len(names), names, "degrevlex")
+        MPolynomialRing_polydict_domain.__init__(self, base.wrapped if hasattr(base, "wrapped") else base, len(names), names, "lex")
         self._refine_category_(category)
         self.__base = base
 
@@ -278,8 +278,16 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
         from sage.all import parent
         if parent(x) is self: # avoiding weird recursions on the coercion system (?)
             return x
-        super_call = super().__call__(x, check)
-        return self.element_class(self, super_call.dict()) if hasattr(super_call,"dict") else super_call
+        try:
+            super_call = super().__call__(x, check)
+            parent = self
+        except TypeError as e:
+            if hasattr(self, "_DExtension_parent__values"):
+                parent = self.change_ring(self.base().fraction_field())
+                if parent == self: raise e
+                super_call = parent(x, check=check)
+            else: raise e
+        return self.element_class(parent, super_call.dict()) if hasattr(super_call,"dict") else super_call
 
     def _coerce_map_from_(self, S):
         from sage.categories.pushout import pushout

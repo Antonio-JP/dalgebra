@@ -22,9 +22,13 @@ AUTHORS:
 
 from __future__ import annotations
 
+import logging
+
 from sage.all import Parent, ZZ
 from sage.rings.polynomial.multi_polynomial_element import MPolynomial_polydict
 from ..dring import DRings
+
+logger = logging.getLogger(__name__)
 
 def _GCD(*elements):
     try:
@@ -70,6 +74,12 @@ class DExtension_element (MPolynomial_polydict):
     def __init__(self, parent : Parent, x):
         x = x.dict() if hasattr(x, "dict") else x
         super().__init__(parent, x)
+        ## reducing coefficients
+        for coeff in self.coefficients():
+            if hasattr(coeff, "reduce"):
+                try:
+                    coeff.reduce()
+                except: pass
 
     #######################################################################################
     ### METHODS OF DRINGS THAT APPEAR IN MPOLYNOMIAL_POLYDICT
@@ -77,6 +87,16 @@ class DExtension_element (MPolynomial_polydict):
     def derivative(self, derivation: int = None, times: int = 1) -> DExtension_element:
         return DRings.ElementMethods.derivative(self, derivation, times)
     
+    #######################################################################################
+    ### Special getter methods (need changes from MPolynomial_Polydict)
+    #######################################################################################
+    def leading_coefficient(self):
+        return self.lc()
+    
+    def lt(self):
+        r'''Get the leading term of the polynomial'''
+        return self.parent().element_class(self.parent(), super().lt().dict())
+
     # #######################################################################################
     # ### Methods specific for DExtension_element
     # #######################################################################################
@@ -121,13 +141,7 @@ class DExtension_element (MPolynomial_polydict):
                 sage: p.polynomial(x).monic().parent()
                 DExtension(Fraction Field of DExtension(Differential Ring [[Rational Field], (0,)], [y -> (y,)], [x -> (1,)]
         '''
-        output = (1/self.lc())*self
-        try:
-            from sage.rings.fraction_field_element import FractionFieldElement
-            reduced = {k: v.reduce() if isinstance(v, FractionFieldElement) else v for (k,v) in output.dict().items()}
-            output = self.parent().element_class(self.parent(), reduced)
-        except: pass
-        return output
+        return (1/self.lc())*self
     
     def quo_rem(self, right):
         r'''
@@ -152,11 +166,6 @@ class DExtension_element (MPolynomial_polydict):
                 sage: p = x^4 - 2*x^3 - 6*x^2 + 12*x + 15
                 sage: q = x^3 + x^2 - 4*x - 4
         '''
-        ## Checking arguments are of correct type
-        if self.parent().ngens() > 1: # if multiple variable we fall back to default implementation
-            ## TODO: implement something for multiple variables
-            return super().quo_rem(right)
-        
         ## Casting ``right`` to the same parent
         right = self.parent()(str(right))
         # try:
@@ -164,6 +173,22 @@ class DExtension_element (MPolynomial_polydict):
         # except: ## TODO: Using the str casting for now. In the future this should not be necessary
         #     right = self.parent()(str(right))
 
+        ## Checking arguments are of correct type
+        if self.parent().ngens() > 1: # if multiple variable we fall back to default implementation
+            try:
+                return super().quo_rem(right)
+            except: # Falling back to a basic quo remainder
+                logger.warning(f"[Quo-Rem] Falling to basic quo_rem implementation")
+                # Trying a simple reduction using the idea from Gröbner basis
+                Q = 0; R = self; b = right
+                lt_R = R.lt(); lt_b = b.lt(); to_Q = lt_R//lt_b
+                while to_Q != 0:
+                    Q += to_Q
+                    R -= to_Q*right
+                    lt_R = R.lt(); to_Q = lt_R // lt_b
+
+                return (Q,R)
+        
         ## Running the Euclidean algorithm
         x = self.parent().gens()[0] # getting the variable
         Q = 0; R = self; d = R.degree() - right.degree()
@@ -247,10 +272,12 @@ class DExtension_element (MPolynomial_polydict):
         a = self; b = right
         a1 = self.parent().one(); b1 = self.parent().zero()
         while b != 0:
+            logger.debug(f"[xgcd_half] Starting iteration: {a=}, {b=}, {a1=}, {b1=}")
             (q,r) = a.quo_rem(b)
             a,b = b,r
             a1, b1 = b1, a1-q*b1
-
+        
+        logger.debug(f"[xgcd_half] Finished loop: {a=}, {a1=}")
         # we return the monic gcd, just as a default behavior
         lc = a.lc()
         a1 = (1/lc)*a1; a = a.monic() 
