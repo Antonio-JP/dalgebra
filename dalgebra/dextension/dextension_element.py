@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import logging
 
-from sage.all import Parent, ZZ
+from sage.all import Parent, prod, ZZ
 from sage.rings.polynomial.multi_polynomial_element import MPolynomial_polydict
 from ..dring import DRings
 
@@ -100,7 +100,7 @@ class DExtension_element (MPolynomial_polydict):
     # #######################################################################################
     # ### Methods specific for DExtension_element
     # #######################################################################################
-    def polynomial(self, var):
+    def polynomial(self, var) -> DExtension_element:
         r'''
             Overriding method :func:`~sage.rings.polynomial.multi_polynomial.MPolynomial.polynomial`.
 
@@ -112,7 +112,7 @@ class DExtension_element (MPolynomial_polydict):
     def content(self):
         return self.parent().base()(_GCD(*self.coefficients()))
         
-    def monic(self):
+    def monic(self) -> DExtension_element:
         r'''
             Return the monic equivalent of ``self``, i.e., with leading coefficient 1.
 
@@ -143,7 +143,7 @@ class DExtension_element (MPolynomial_polydict):
         '''
         return (1/self.lc())*self
     
-    def quo_rem(self, right):
+    def quo_rem(self, right) -> tuple[DExtension_element,DExtension_element]:
         r'''
             Method for Euclidean division on univariate polynomials.
 
@@ -199,7 +199,7 @@ class DExtension_element (MPolynomial_polydict):
             d = R.degree() - right.degree()
         return (Q, R)
 
-    def pseudo_quo_rem(self,right):
+    def pseudo_quo_rem(self,right) -> tuple[DExtension_element,DExtension_element]:
         r'''
             Method for Euclidean division on univariate polynomials.
 
@@ -242,7 +242,7 @@ class DExtension_element (MPolynomial_polydict):
         b_pow_N = b**N
         return (b_pow_N*Q, b_pow_N*R)
 
-    def xgcd_half(self, right):
+    def xgcd_half(self, right) -> tuple[DExtension_element,DExtension_element]:
         r'''
             Method for computing half the Extended GCD algorithm.
 
@@ -283,7 +283,7 @@ class DExtension_element (MPolynomial_polydict):
         a1 = (1/lc)*a1; a = a.monic() 
         return (a1,a)
         
-    def xgcd(self, right):
+    def xgcd(self, right) -> tuple[DExtension_element,DExtension_element,DExtension_element]:
         r'''
             Method for extended GCD implementation using Euclidean division.
 
@@ -313,7 +313,7 @@ class DExtension_element (MPolynomial_polydict):
         assert r == 0
         return (s,t,g)
     
-    def diophantine_half(self, right, sol):
+    def diophantine_half(self, right, sol) -> DExtension_element:
         r'''
             Method to compute with Euclidean division the diophantine solution to the equation
 
@@ -354,7 +354,7 @@ class DExtension_element (MPolynomial_polydict):
             _,s = s.quo_rem(b)
         return s
         
-    def diophantine(self, right, sol):
+    def diophantine(self, right, sol) -> tuple[DExtension_element,DExtension_element]:
         r'''
             Method to compute with Euclidean division the diophantine solution to the equation
 
@@ -391,8 +391,193 @@ class DExtension_element (MPolynomial_polydict):
         assert r == 0
         return (s,t)
 
+    def partial_fraction(self, *factors, _check_coprime=True) -> tuple[DExtension_element, tuple[DExtension_element,...]]:
+        r'''
+            Method for computing a partial fraction decomposition for a polynomial
 
+            This method is currently implemented for 1 variable. Consider using method :func:`polynomial` 
+            to reduce the polynomial to one variable before calling this method.
 
+            This method can be called in two different ways: 
 
+            * ``factors`` are tuples `(d, e)` and we will consider the full partial fraction decomposition.
+            * ``factors`` are simply elements `d`. We will consider the non-full partial fraction decomposition.
+
+            The non-full approach will consider a set of factors `d_1,\ldots, d_n` that are pairwise co-prime 
+            (check method :func:`gcd` and argument ``_check_coprime``) and will compute a set of coefficients 
+            `a_0,\ldots, a_n` such that
+
+            .. MATH::
+
+                \frac{self}{d_1 \cdots d_n} = a_0 + \sum_{i=1}^n \frac{a_i}{d_i},
+
+            where `\deg(a_i) < \deg(d_i)`.
+
+            The full partial fraction decomposition work similar, but consider poweres of the factors of the 
+            denominator. Namely, if we provide co-prime factors `d_1,\ldots,d_n` and corresponding exponents 
+            `e_1,\ldots,e_n`, this method will produce a set of elements `a_0` and `a_{i,j}` for `i = 1,\ldots,n` 
+            and `j = 1,\ldots, e_i` such that:
+
+            .. MATH::
+            
+                \frac{self}{d_1^{e_1}\cdots c_n^{e_n}} = a_0 + \sum_{i=1}^n \sum_{j=1}^e_i \frac{a_{i,j}}{d_i^j}
+
+            To comply for both ways of implementing this method, we always return a tuple with `n+1` element. The first
+            element will be the value for `a_0`. Then the `i`-th element will be a tuple of length `e_i` (length 1 if 
+            using the non-full approach).
+
+            INPUT:
+
+            * ``factors``: a list of elements or tuples (`d_i` or `(d_i, e_i)`) for the different factors of the denominator.
+            * ``_check_coprime``: (optional - ``True``) we check whether the factors are coprime or not.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ)
+                sage: Q.<x> = DExtension(B, [[1]]) # (Q[x], dx)
+                sage: a = x^2 + 3*x
+                sage: a.partial_fraction(x+1, x^2-2*x+1)
+                (0, (-1/2,), (3/2*x + 1/2,))
+                sage: a.partial_fraction(x+1, (x-1,2))
+                (0, (-1/2,), (3/2, 2))
+
+            TODO: add examples from Bronstein's book
+        '''
+        if not self.parent().ngens() == 1:
+            raise NotImplementedError(f"Partial fraction decomposition not implemented for multivariate polynomials")
+        
+        ## Processing the input
+        final_input = []
+        for factor in factors:
+            if isinstance(factor, (tuple, list)):
+                if len(factor) != 2:
+                    raise TypeError(f"[PFD] Incorrect format for PFD. We allow tuples of 2 elements, got {factor}")
+                final_input.append((self.parent()(str(factor[0])), ZZ(factor[1])))
+                if final_input[-1][-1] <= 0:
+                    raise ValueError(f"[PFD] Got a negative exponent for one factor. Only positive exponents are allowed.")
+            else:
+                final_input.append((self.parent()(str(factor)), 1))
+        
+        if _check_coprime:
+            for i in range(len(final_input)):
+                for j in range(i+1, len(final_input)):
+                    if final_input[i][0].gcd(final_input[j][0]) != 1:
+                        raise ValueError(f"[PFD] Factors {final_input[i][0]} and {final_input[j][0]} are not co-prime")
+
+        if len(final_input) == 0: # checking error in input (no input)
+            raise TypeError(f"[PFD] No factors given for partial fraction decomposition")
+
+        if all(factor[1] == 1 for factor in final_input): # non-full approach
+            prod_from2 : DExtension_element = prod((factor[0] for factor in final_input[1:]), z=self.parent().one())
+            full_prod : DExtension_element = final_input[0][0] * prod_from2
+            a0, r = self.quo_rem(full_prod)
+            if len(factors) == 1:
+                return tuple([a0, tuple([r])])
+            else:
+                a1, t = prod_from2.diophantine(final_input[0][0], r)
+                partial_decomposition = t.partial_fraction(*final_input[1:], _check_coprime=False)
+                b = partial_decomposition[0]; others = partial_decomposition[1:]
+                return tuple([a0+b, tuple([a1]), *others])
+        else:
+            non_full_decomposition = self.partial_fraction(*[factor[0]**factor[1] for factor in final_input], _check_coprime=False)
+            output = [non_full_decomposition[0]]
+            for i,factor in enumerate(final_input):
+                a_i = non_full_decomposition[i+1][0]
+                new_a_i = []
+                for j in range(factor[1], 0, -1):
+                    a_i, to_add = a_i.quo_rem(factor[0])
+                    new_a_i.insert(0, to_add)
+                output.append(tuple(new_a_i))
+            return tuple(output)
+            
+    def partial(self, variable=None):
+        r'''Computes the partial derivative w.r.t. the given variable'''
+        if variable is None and self.parent().ngens() > 1:
+            raise ValueError(f"Required variable to compute the partial derivative (more than 1 generator)")
+        elif variable is None:
+            ind = 0
+        else:
+            variable = self.parent()(str(variable))
+            if not variable in self.parent().gens():
+                raise ValueError(f"The given variable ({variable}) is not a generator of {self.parent()}")
+            ind = self.parent().gens().index(variable)
+
+        new_dict = {}
+        for k,v in self.dict().items():
+            if k[ind] > 0:
+                k = list(k); k[ind]-=1; k = tuple(k)
+                new_dict[k] = (k[ind]+1)*v
+        return self.parent().element_class(self.parent(), new_dict)
+    
+    def kappa(self, operation=None):
+        r'''Compute the `\kappa` operation over an element. This is define by applying the operation over the coefficients.'''
+        if operation is None and self.parent().noperators() > 1:
+            raise ValueError(f"Required operation to compute the kappa operation (more than 1 operation)")
+        elif operation is None:
+            operation = 0
+        else:
+            operation = ZZ(operation)
+            if operation < 0:
+                raise IndexError("Incorrect index for operation: negative index")
+            elif operation >= self.parent().noperators():
+                raise IndexError("Incorrect index for operation: index too big")
+            
+        return self.parent().element_class(self.parent(), {k:v.operation(operation) for (k,v) in self.dict() if not v.is_constant(operation)})
+        
+    def squarefree(self, *, _algorithm="musser"):
+        r'''
+            Method to compute a squarefree factoriazion of ``self``.
+
+            This method only works for univariate polynomials.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ)
+                sage: Q.<x> = DExtension(B, [[1]]) # (Q[x], dx)
+                sage: A = x^8 + 6*x^6 + 12*x^4 + 8*x^2
+                sage: A.squarefree()
+                ((1, 1), (x, 2), (x^2 + 2, 3))
+                sage: prod(factor**exp for (factor,exp) in A.squarefree()) == A
+                True
+                sage: A.squarefree(_algorithm="yun")
+                ((1, 1), (x, 2), (x^2 + 2, 3))
+                sage: 
+        '''
+        if self.parent().ngens() > 1:
+            raise TypeError(f"Squarefree factorization only implemented for univariate polynomials")
+        
+        if _algorithm == "musser":
+            c = self.content(); S = self//c
+            S_ = S.gcd(S.partial())
+            S_star = S//S_
+            A = []
+
+            while S_.degree() > 0:
+                Y = S_star.gcd(S_)
+                A.append(S_star//Y)
+                S_star, S_ = Y, S_//Y
+
+            A.append(S_star)
+            A[0]*=c*S_
+            return tuple([(factor, exp+1) for exp,factor in enumerate(A)])
+        elif _algorithm == "yun":
+            c = self.content(); S = self//c
+            S_x = S.partial(); S_ = S.gcd(S_x); S_star = S//S_; Y = S_x//S_
+            A = []
+            Z = Y - S_star.partial()
+            while Z != 0:
+                A.append(S_star.gcd(Z))
+                S_star, Y = S_star//A[-1], Z//A[-1]
+                Z = Y - S_star.partial()
+            A.append(S_star)
+            A[0] *= c
+            return tuple([(factor, exp+1) for exp,factor in enumerate(A)])
+        else:
+            raise NotImplementedError(f"[Squarefree] algorithm '{_algorithm}' not implemented for squarefree decomposition")
+        
+    def squarefree_decomposition(self):
+        return self.squarefree()
 
 __all__ = []
