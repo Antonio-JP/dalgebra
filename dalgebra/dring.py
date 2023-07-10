@@ -920,11 +920,6 @@ class DRing_WrapperElement(Element):
         if isinstance(r, DRing_Wrapper):
             return self.wrapped == r(x).wrapped
         return r(self) == r(x)
-
-    def is_zero(self) -> bool:
-        return self.wrapped == 0
-    def is_one(self) -> bool:
-        return self.wrapped == 1
     
     ## Other methods from rings and element
     def divides(self, other) -> bool:
@@ -964,8 +959,14 @@ class DRing_WrapperElement(Element):
         except AttributeError:
             raise AttributeError(f"[DRing] Wrapped element {self.wrapped} do no have method `gcd`")
         
-    def is_unit(self) -> bool:
-        return self.wrapped.is_unit()
+    def __getattr__(self, attr):
+        r'''Generic wrapping method for methods not by default in the category of ``self``'''
+        if hasattr(self.wrapped, attr):
+            el = getattr(self.wrapped, attr)
+            if el in self.parent().wrapped:
+                return self.parent()(el)
+            return el
+        raise AttributeError(f"{self.__class__} object has no attribute {attr}")
     
     ## Other magic methods
     def __bool__(self) -> bool:
@@ -1197,7 +1198,7 @@ class DRing_Wrapper(Parent):
 
     ## Coercion methods
     def _coerce_map_from_(self, S):
-        return self.wrapped._coerce_map_from_(S) != None
+        return self.wrapped == S or self.wrapped._coerce_map_from_(S) != None
 
     def __call__(self, x, *args, **kwds):
         result = self.wrapped(x, *args, **kwds)
@@ -1228,6 +1229,8 @@ class DRing_Wrapper(Parent):
         return DRingFunctor([operator.function for operator in self.operators()], self.operator_types()), self.wrapped
 
     def _pushout_(self, other):
+        if other == self.wrapped:
+            return self
         scons, sbase = self.construction()
         if isinstance(other, DRing_Wrapper):
             ocons, obase = other.construction()
