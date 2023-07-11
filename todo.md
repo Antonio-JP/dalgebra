@@ -22,10 +22,10 @@
 ## Chapter 2 of Bronstein's: rational function integration
 
 * Use the framework above to implement a simple integrator of rational functions.
-  * Bernoulli Algorithm
-  * Hermite Reduction
-  * Horowitz-Ostrogradsky Algorithm
-  * Rothstein-Trager Algorithm
+  * [x] Bernoulli Algorithm
+  * [x] Hermite Reduction
+  * [o] Horowitz-Ostrogradsky Algorithm
+  * [x] Rothstein-Trager Algorithm
   * Lazard-Rioboo-Trager Algorithm
   * Czichowski Algorithm (it uses Gröbner basis)
   * Newton-Leibniz-Bernoulli (`LaurentSeries` & `FullPartialFraction` & `IntegrateRationalFunction`)

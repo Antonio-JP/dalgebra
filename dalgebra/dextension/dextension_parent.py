@@ -231,7 +231,9 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
         self.__fraction_field = None
         # Storing the values for the operations
         self.__values = [{g: self.fraction_field()(values_operations[str(g)][i]) for g in self.gens()} for i in range(self.noperators())]
-        # raise RuntimeError
+        
+        # Removing conversion to singular
+        self._has_singular = False
 
     #################################################
     ### Getting information methods
@@ -519,10 +521,15 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
         raise NotImplementedError("[DExtension] __init__ not implemented")
 
     def inverse_operation(self, element: DExtension_element, operation: int = 0) -> DExtension_element:
-        if not element in self:
-            raise TypeError(f"[inverse_operation] Impossible to apply operation to {element}")
-        element = self(element)
+        try:
+            element = self(str(element)) if element not in self else element
+        except:
+            try:
+                element = self.fraction_field()(str(element)) if element not in self.fraction_field() else element
+            except:
+                raise TypeError(f"[inverse_operation] Impossible to apply operation to {element}")
 
+        
         if self.operator_types()[operation] == "homomorphism":
             return self.__inverse_homomorphism(element, operation)
         elif self.operator_types()[operation] == "derivation":
@@ -536,6 +543,10 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
         raise NotImplementedError("[DExtension] __inverse_homomorphism not implemented")
     
     def __inverse_derivation(self, element: DExtension_element, operation: int):
+        logger.info(f"[integral] Deciding case for integration...")
+        if self.__is_RationalFunctions(operation):
+            logger.info(f"[integral] Integrating a rational function over a field of constants")
+            return self.__integrate_rational_function(element)
         raise NotImplementedError("[DExtension] __inverse_derivation not implemented")
    
     def __inverse_skew(self, element: DExtension_element, operation: int):
@@ -564,6 +575,120 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
                 if v != u: edges.append((u,v))
         
         return DiGraph((vertices, edges), format="vertices_and_edges", immutable=True)
+
+    #################################################
+    ### Methods for integration
+    #################################################
+    def __is_RationalFunctions(self, operation: int) -> bool:
+        return (
+            self.ngens() == 1 and # only one generator
+            self.gens()[0].operation(operation) == 1 and # the generator has derivative 1
+            hasattr(self.base(), "wrapped") and # the base ring is just a wrapped ring
+            self.base().wrapped == QQ # of the rational ring
+        )
+    
+    def __integrate_rational_function(self, rational, *, _reduce_log = False):
+        r'''
+            Method that computes the integral of a rational function.
+        '''
+        ## Casting the ``rational`` to ``self`` or the field of fractions
+        try:
+            f = self(str(rational)) if not rational in self else rational
+        except:
+            f = self.fraction_field()(str(rational)) if not rational in self.fraction_field() else rational
+
+        logger.info(f"[integrate-rational] Computing the hermite reduction for {f=}")
+        g,h = f.numerator().hermite_reduce(f.denominator())
+        logger.info(f"[integrate-rational] \t {g=}")
+        logger.info(f"[integrate-rational] \t {h=}")
+        Q,R = h.numerator().quo_rem(h.denominator())
+        output = g + self.__integrate_polynomial(Q)
+
+        logger.info(f"[integrate-rational] Pure integrable part:\n\t{output}")
+
+        log_parts = []
+        if R != 0:
+            logger.info(f"[integrate-rational] Computing the logarithmic parts...")
+            log_parts = self.__integrate_rational_log_part(R, h.denominator()) # this extends the ring
+            logger.info(f"[integrate-rational] Computed logarithmic parts")
+
+        if _reduce_log:
+            logger.info(f"[integrate-rational] Reducing to arctangents...")
+            log_parts = [self.__log_to_real(log_part) for log_part in log_parts]
+            logger.info(f"[integrate-rational] Computed reduction")
+
+        if len(log_parts) > 0:
+            pass # need to implement the extension
+
+        logger.info(f"[integrate-rational] Finished integration")
+        return output
+    
+    def __integrate_polynomial(self, polynomial, *, constant=0):
+        r'''
+            Method that integrates a polynomial when the operation over the variable is the partial derivation.
+        '''
+        p = self(str(polynomial)) if not polynomial in self else self(polynomial)
+        logger.info(f"[integrate-polynomial] {p=}")
+        c = self(constant)
+        assert c.derivative() == 0
+
+        new_dict = {(k[0]+1,) : v/(k[0]+1) for (k,v) in p.dict()}
+        new_dict[(0,)] = c
+
+        output = self.element_class(self, new_dict)
+        logger.info(f"[integrate-polynomial] Result: {output}")
+        return output
+
+    def __integrate_rational_log_part(self, numerator, denominator):
+        r'''
+            Method that tries and compute an extension using logarithms from a rational function to integrate it.
+
+            This method receives a rational function in in the format ``numerator/denominator`` where 
+            the degree of the numerator is smaller that the degree of denominator, the denominator is 
+            squarefree and coprime with the numerator.
+
+            This method returns a list of pairs  `((Q_i(t), S_i(t,x),\ldots)` such that
+
+            .. MATH::
+
+                \int\frac{numerator}{denominator}dx = \sum_{i}\sum_{a|Q_i(a) = 0}a\log(S_i(a,x))
+
+            This method uses Lazard-Rioboo-Trager algorithm taken from Bronstein's book, Chapter 2, page 51.
+        '''
+        A = self(str(numerator)) if numerator not in self else numerator
+        D = self(str(denominator)) if denominator not in self else denominator
+
+        logger.info(f"[integrate-log-part] {A=}; {D=}")
+
+        ## We need to create a new indeterminate to compute a subresultant sequence
+        E = DExtension(self, [[0 for _ in range(self.noperators())] for _ in range(self.ngens())], names=["t_a"])
+        x,t = E.gens()
+        EA, ED = E(A), E(D)
+        res, R = ED.subresultant_prs(EA-t*ED.partial(x), x); k = len(R)-1
+        logger.info(f"[integrate-log-part] Resultant: {res}")
+        logger.info(f"[integrate-log-part] PRS:")
+        for i in range(len(R)):
+            logger.info(f"[integrate-log-part] \t R_{i} = {R[i]}")
+
+        Q = res.polynomial(t).squarefree() 
+        logger.info(f"[integrate-log-part] Squarefree of resultant:\n\t{Q}")
+        S = []
+        for (factor, i) in Q:
+            if factor.degree() > 0: # non-trivial factor
+                if i == D.degree(): 
+                    S_to_add = D
+                else:
+                    S_to_add = [r for r in R if r.degree() == i][0]
+                    A_ = E(str(S_to_add)).polynomial(x).lc().squarefree()
+                    for (A_factor, j) in A_:
+                        S_to_add = S_to_add // (A_factor.gcd(factor))**j
+                S.append((factor, S_to_add))
+        
+        logger.info(f"[integrate-log-part] Logarithmic parts:")
+        for i, (Q_, S_) in enumerate(S):
+            logger.info(f"[integrate-log-part] {i+1} \n\t - Q: {Q_}\n\t - S: {S_}")
+
+        return S
 
 def is_DExtension(element):
     r'''

@@ -352,6 +352,12 @@ class DRings(Category):
             elif derivation is None: raise IndexError("An index for the derivation must be provided when having several derivations")
             return self.derivations()[derivation](element)
 
+        def integral(self, element: Element, derivation: int = None) -> Element:
+            if self.nderivations() == 0: raise TypeError("Derivations not defined for this ring.")
+            elif derivation is None and self.nderivations() == 1: derivation = 0
+            elif derivation is None: raise IndexError("An index for the derivation must be provided when having several derivations")
+            return self.inverse_operation(element, self.operators().index(self.derivations()[derivation]))
+
         ### 'difference'
         @cached_method
         def differences(self) -> Sequence[Morphism]:
@@ -612,6 +618,17 @@ class DRings(Category):
                 return self.parent().derivative(self, derivation)
             else:
                 return self.parent().derivative(self.derivative(derivation=derivation, times=times-1), derivation)
+
+        def integrate(self, derivation: int = None, times: int = 1) -> Element:
+            if(not times in ZZ or times < 0):
+                raise ValueError("The argument ``times`` must be a non-negative integer")
+
+            if(times == 0):
+                return self
+            elif(times == 1):
+                return self.parent().integral(self, derivation)
+            else:
+                return self.parent().integral(self.integrate(derivation=derivation, times=times-1), derivation)
 
         def difference(self, difference: int = None, times: int = 1) -> Element:
             r'''
@@ -1231,6 +1248,8 @@ class DRing_Wrapper(Parent):
     def _pushout_(self, other):
         if other == self.wrapped:
             return self
+        elif other is SR:
+            return pushout(SR, self.wrapped)
         scons, sbase = self.construction()
         if isinstance(other, DRing_Wrapper):
             ocons, obase = other.construction()
@@ -1400,6 +1419,9 @@ class DFractionField(FractionField_generic):
             return self.base().constant_ring().fraction_field()
         except Exception as e:
             raise e
+        
+    def inverse_operation(self, element, operator: int = 0):
+        return self.base().inverse_operation(element, operator)
 
 ####################################################################################################
 ###

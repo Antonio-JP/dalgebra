@@ -157,7 +157,7 @@ This package has been developed with the financial support of the following inst
 # ****************************************************************************
 
 ## Configuring logger for this package
-import logging
+import logging, sys
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
@@ -167,8 +167,9 @@ formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', datefmt
 # first we strip the __init__p.py from __file__, then we add the relative path
 path_to_logging = __file__[:-__file__[-1::-1].find('/')] + "logging/dalgebra.log" 
 fh = logging.FileHandler(path_to_logging)
-fh.setFormatter(formatter)
-logger.addHandler(fh)
+ch = logging.StreamHandler(sys.stderr)
+fh.setFormatter(formatter); ch.setFormatter(formatter)
+logger.addHandler(fh); logger.addHandler(ch)
 logger.propagate = False
 
 from .dring import * # basic ring structures
