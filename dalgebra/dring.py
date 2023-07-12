@@ -767,8 +767,9 @@ class DRingFactory(UniqueFactory):
         # checking the arguments
         if len(operators) < 1:
             raise ValueError("At least one operator must be given.")
-        elif len(operators) == 1 and isinstance(operators[0], Sequence):
-            operators = operators[0]
+        # elif len(operators) == 1 and isinstance(operators[0], Sequence):
+        #     # operators = operators[0]
+        #     operators = [operators]
         operators = list(operators)
         types = list(kwds.pop("types", len(operators)*["none"]))
 
@@ -779,6 +780,12 @@ class DRingFactory(UniqueFactory):
         
         # we convert the input into a common standard to create an appropriate key
         for (i, (operator, ttype)) in enumerate(zip(operators, types)):
+            if isinstance(operator, (list,tuple)):
+                if len(operator) != base.ngens():
+                    raise ValueError(f"Incorrect size for list format for operator: expected size {base.ngens()}, got {len(operator)}")
+                _operator = operator
+                operator = lambda v : _operator[base.gens().index(base(v))]
+
             if ttype == "none":
                 ## We decide the structure depending on the type of object
                 if operator in base.Hom(base): # it is an homomorphism - we do nothing
@@ -808,7 +815,10 @@ class DRingFactory(UniqueFactory):
             elif ttype == "homomorphism":
                 def hom_from_callable(base, func):
                     if base.ngens() > 0 and (not 1 in base.gens()):
-                        base_map = hom_from_callable(base.base(), func)
+                        try:
+                            base_map = hom_from_callable(base.base(), func)
+                        except ValueError:
+                            base_map = None
                     else:
                         base_map = None
                     hom_set = base.Hom(base)
@@ -848,8 +858,8 @@ def DifferentialRing(base : CommutativeRing, *operators : Callable):
     if len(operators) < 1:
         logger.info("No operation is given: we set a zero derivative.")
         operators = [lambda p : 0]
-    elif len(operators) == 1 and isinstance(operators[0], Sequence):
-        operators = operators[0]
+    # elif len(operators) == 1 and isinstance(operators[0], Sequence):
+    #     operators = operators[0]
 
     return DRing(base, *operators, types=len(operators)*["derivation"])
 
@@ -863,8 +873,8 @@ def DifferenceRing(base: CommutativeRing, *operators : Callable):
     if len(operators) < 1:
         logger.info("No operation is given: we set an identity map.")
         operators = [base.Hom(base).one()]
-    elif len(operators) == 1 and isinstance(operators[0], Sequence):
-        operators = operators[0]
+    # elif len(operators) == 1 and isinstance(operators[0], Sequence):
+    #     operators = operators[0]
 
     return DRing(base, *operators, types=len(operators)*["homomorphism"])
 
@@ -929,7 +939,7 @@ class DRing_WrapperElement(Element):
         if value in self.parent().wrapped:
             return self.parent().element_class(self.parent(), value)
         else:
-            return self.parent().fraction_field().element_class(self.parent().fraction_field(), value)
+            return self.parent().fraction_field().element_class(self.parent().fraction_field(), self.parent().one(), self)
     def __eq__(self, x) -> bool:
         if x is None: return False
 
@@ -976,6 +986,9 @@ class DRing_WrapperElement(Element):
         except AttributeError:
             raise AttributeError(f"[DRing] Wrapped element {self.wrapped} do no have method `gcd`")
         
+    def is_unit(self) -> bool:
+        return self.wrapped.is_unit()
+
     def __getattr__(self, attr):
         r'''Generic wrapping method for methods not by default in the category of ``self``'''
         if hasattr(self.wrapped, attr):
