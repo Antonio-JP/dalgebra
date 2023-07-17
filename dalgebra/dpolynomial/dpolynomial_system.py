@@ -835,7 +835,13 @@ class DSystem:
         elif self.size() != 2:
             raise TypeError(f"The Sylvester algorithm only works with 2 equations (not {self.size()})")
         
-        return self.parent().sylvester_resultant(self.equation(0), self.equation(1), self.variables[0])
+        logger.info(f"Computing Sylvester resultant between these two polynomials:")
+        logger.info(f"\t{self.equation(0)}")
+        logger.info(f"\t{self.equation(1)}")
+        output = self.parent().sylvester_resultant(self.equation(0), self.equation(1), self.variables[0])
+        logger.info(f"Resulting equation: {output}")
+
+        return output
 
     def __macaulay(self, bound: int, operation: int) -> DPolynomial:
         r'''
@@ -850,9 +856,10 @@ class DSystem:
 
         logger.info("Getting the homogenize version of the equations...")
         equs = [el.homogenize() for el in self.extend_by_operation(L, operation).algebraic_equations()]
-        ring = equs[0].parent()
+        ring = reduce(lambda p,q: pushout(p,q), (equ.parent() for equ in equs[1:]), equs[0].parent())
+        
         logger.info("Computing the Macaulay resultant...")
-        return ring.macaulay_resultant(equs)
+        return ring.macaulay_resultant([ring(equ) for equ in equs])
   
     def __iterative(self, bound: int, operation: int, alg_res: str = "auto") -> DPolynomial:
         r'''
@@ -874,12 +881,16 @@ class DSystem:
             # indices with the smallest equations
             smallest_equations = sorted(range(system.size()), key=lambda p:len(system.equation(p).monomials()))
             base_cases = smallest_equations[:len(lin_vars)]
-            new_equations = [
+            new_equations = [ # if the equation don't have the variables: we keep it intact. Otherwise, we compute the resultant
+                self.parent()(system.equation(i)) if not any(v in lv for lv in lin_vars for v in system.equation(i).variables()) else
                 self.parent()(system.subsystem(base_cases + [i]).diff_resultant(bound, operation))
                 for i in smallest_equations[len(lin_vars):]
             ]
             logger.info("##########################################################")
             logger.info(f"Computed {len(new_equations)} equations for the remaining {len(variables)-len(lin_vars)} variables")
+            logger.info(f"These are the remaining equations:")
+            for equ in new_equations:
+                logger.info(f"\t{equ}")
             rem_variables = [el for el in variables if (not el in lin_vars)]
             logger.info(f"We now remove {rem_variables}")
             system = self.__class__(new_equations, self.parent(), rem_variables)
@@ -938,7 +949,7 @@ class DSystem:
                 # getting th degrees of each variable in each equation
                 degrees = [[equ.degree(v) for equ in alg_equs] for v in alg_vars]
                 # the best variable to remove is the one that appears the least
-                num_appearances = [len(alg_equs)-degrees[i].count(0) for i in range(len(alg_vars))]
+                num_appearances = [len(alg_equs)-degrees[i].count(0)-degrees[i].count(-1) for i in range(len(alg_vars))]
                 logger.info(f"\tNumber of appearance for each variable: {num_appearances}. Number of equations: {len(alg_equs)}")
                 iv = last_index(num_appearances,min(num_appearances))
                 v = alg_vars.pop(iv)
@@ -946,6 +957,8 @@ class DSystem:
 
                 # the "pivot" equation is the one with minimal degree in "v"
                 logger.info(f"\tPicking the best 'pivot' to eliminate {v}...")
+                for i in range(len(alg_equs)):
+                    logger.info(f"\t{alg_equs[i]}")
                 pivot = alg_equs.pop(degrees[iv].index(min([el for el in degrees[iv] if el > 0])))
                 R = pivot.parent()
                 pivot = self.__iterative_to_univariate(pivot, v)

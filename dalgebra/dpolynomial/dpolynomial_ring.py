@@ -1189,17 +1189,28 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         elif N >= 0 and (k < 0 or k > N):
             raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
         
+        part_without_gen = lambda Poly : sum(c*m for (c,m) in zip(Poly.coefficients(), Poly.monomials()) if m.order(gen) == -1)
+        homogeneous = any(part_without_gen(poly) != 0 for poly in (P,Q))
+
+        if homogeneous and k > 0:
+            raise NotImplementedError(f"[sylvester_matrix] The case of inhomogeneous operators and positive {k=} is not implemented.")
+
+        extra = 1 if homogeneous else 0
+        logger.info(f"Sylvester data: {n=}, {m=}, {k=}, {homogeneous=}")
+
         # Building the extension
-        extended_P: list[DPolynomial] = [P.operation(times=i) for i in range(m-k)]
-        extended_Q: list[DPolynomial] = [Q.operation(times=i) for i in range(n-k)]
+        extended_P: list[DPolynomial] = [P.operation(times=i) for i in range(m-k+extra)]
+        extended_Q: list[DPolynomial] = [Q.operation(times=i) for i in range(n-k+extra)]
 
         # Building the Sylvester matrix (n+m-1-k) , (n+m-1-k)
         fR = self.polynomial_ring() # guaranteed common parent for all polynomials
-        cols = [fR(gen[pos].polynomial()) for pos in range(n+m-k)]
+        cols = [fR(gen[pos].polynomial()) for pos in range(n+m-k+extra)]
         equations = [fR(equation.polynomial()) for equation in extended_P + extended_Q]
 
         # Returning the matrix
-        return matrix([[self(equation.coefficient(m)) for m in cols] for equation in equations])
+        output = matrix([([part_without_gen(self(equation))] if homogeneous else []) + [self(equation.coefficient(m)) for m in cols] for equation in equations])
+        logger.info(f"Obtained following matrix:\n{output}")
+        return output
 
     def sylvester_subresultant_sequence(self, P: DPolynomial, Q: DPolynomial, gen: DPolynomialGen = None) -> tuple[DPolynomial]:
         r'''
