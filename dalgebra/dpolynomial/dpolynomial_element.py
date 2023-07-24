@@ -991,8 +991,10 @@ class DPolynomial (InfinitePolynomial_dense):
         original = latex(self.polynomial())
         if self.parent().noperators() > 1:
             import re
-            sub_match = lambda match : "_{" + str(IndexBijection(self.parent().noperators())(int(match.groups()[0]))) + "}"
-            original = re.sub(r"_{(\d+)}", sub_match, original)
+            for v in self.infinite_variables():
+                name = v.variable_name()
+                sub_match = lambda match : name + "_{" + str(IndexBijection(self.parent().noperators())(int(match.groups()[0]))) + "}"
+                original = re.sub(name + r"_{(\d+)}", sub_match, original)
         return original
 
 RWOPolynomial = DPolynomial #: alias for DPolynomial (used for backward compatibility)
