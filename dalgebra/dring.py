@@ -460,6 +460,22 @@ class DRings(Category):
         ### OTHER METHODS
         ##########################################################
         @abstract_method
+        def to_sage(self) -> Ring:
+            r'''
+                Method to remove the d-structure from this ring.
+
+                This method returns an equivalent ring in SageMath whose elements
+                are equivalent to self but without the D-structure imposed in this 
+                structure.
+
+                This method only works in some specific extensions for DRings.
+
+                This method is associated with the corresponding method
+                :func:`to_sage` on the elemens.
+            '''
+            raise NotImplementedError("Method 'operator_ring' need to be implemented")
+
+        @abstract_method
         def linear_operator_ring(self) -> Ring:
             r'''
                 Method to get the operator ring of ``self``.
@@ -723,6 +739,18 @@ class DRings(Category):
                 raise ValueError(f"The operation {operation} has not a good type defined")
 
             return result
+            
+        ##########################################################
+        ### OTHER METHODS
+        ##########################################################
+        def to_sage(self):
+            r'''
+                Transform ``self`` to a SageMath object (if possible) without any d-structure.
+            '''
+            try:
+                return self.parent().to_sage()(self)
+            except:
+                return self.parent().to_sage()(str(self))
             
     # methods that all morphisms involving differential rings must implement
     class MorphismMethods: 
@@ -1216,7 +1244,10 @@ class DRing_Wrapper(Parent):
 
             self.__linear_operator_ring = OreAlgebra(self.wrapped, *operators)
         return self.__linear_operator_ring
-        
+
+    def to_sage(self):
+        return self.wrapped
+
     def inverse_operation(self, element: DRing_WrapperElement, operator: int = None) -> DRing_WrapperElement:
         if self.operator_types()[operator] == "homomorphism":
             try:

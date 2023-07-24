@@ -448,7 +448,7 @@ class DSystem:
         return tuple(filtered)
 
     @cached_method
-    def algebraic_equations(self):
+    def algebraic_equations(self, *, _sage=True):
         r'''
             Method to get the equivalent algebraic equations.
 
@@ -530,11 +530,12 @@ class DSystem:
 
         '''
         equations = [el.polynomial() for el in self.equations()]
+        
         ## Usual pushout leads to a CoercionException due to management of variables
         ## We do the pushout by ourselves by looking into the generators and creating the best 
         ## possible polynomial ring with the maximal possible derivatives
         max_orders = reduce(lambda p, q : [max(p[i],q[i]) for i in range(len(p))], [equ.orders() for equ in self.equations()])
-        base_ring = self.parent().base()
+        base_ring = self.parent().base().to_sage() if _sage else self.parent().base()
         gens = self.parent().gens()
         variables = []
         parameters = []
@@ -830,6 +831,7 @@ class DSystem:
             should always return a product of the Macaulay resultant (see :func:`__macaulay`).
         '''
         # Checking the conditions
+        
         if len(self.variables) > 1:
             raise TypeError(f"The Sylvester algorithm only works with 1 variable (not {len(self.variables)})")
         elif self.size() != 2:
@@ -858,6 +860,8 @@ class DSystem:
         equs = [el.homogenize() for el in self.extend_by_operation(L, operation).algebraic_equations()]
         ring = reduce(lambda p,q: pushout(p,q), (equ.parent() for equ in equs[1:]), equs[0].parent())
         
+        logger.info(f"Computing the Macaulay resultant over {ring} for:\n\t" + "\n\t".join(str(el) for el in equs))
+
         logger.info("Computing the Macaulay resultant...")
         return ring.macaulay_resultant([ring(equ) for equ in equs])
   
