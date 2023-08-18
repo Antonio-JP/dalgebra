@@ -150,7 +150,7 @@ r'''
     **Elements provided by the module**
     -----------------------------------------
 '''
-from functools import reduce
+from functools import reduce, lru_cache
 from sage.all import ZZ, QQ, matrix, vector
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 
@@ -158,6 +158,35 @@ from ..dring import DifferentialRing
 from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
 from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing_dense
 from ..dpolynomial.dpolynomial_system import DSystem
+
+@lru_cache(maxsize=64)
+def schr_L(n: int, name_u: str = "u", name_z: str = "z"):
+    r'''
+        Method to create the generic Scrödinger operator of order `n`.
+
+        This operator is written with the generic formula:
+
+        .. MATH::
+
+            L_n = \partial^n + u_{n-2}\partial^{n-2} + \ldots + u_1\partial + u_0,
+
+        where all the elements `u_i` are differential variables.
+
+        INPUT:
+
+        * ``n``: the order of the Schrödinger operator `L_n`.
+        * ``name_u`` (optional): base name for the `u` variables that will appear in `L_n` and in the output `P_m`.
+        * ``name_z`` (optional): base name for the differential variable to represent `\partial`.
+    '''
+    if (not n in ZZ) or ZZ(n) <= 0:
+        raise ValueError(f"[almost] The value {n = } must be a positive integer")
+    if name_u == name_z:
+        raise ValueError(f"[almost] The names for the differential variables must be different. Given {name_u} and {name_z}")
+    
+    names_u = [f"{name_u}{i}" for i in range(n-1)] if n > 2 else [name_u] if n == 2 else []
+    output_ring = DifferentialPolynomialRing(QQ, names_u + [name_z])
+    output_z = output_ring.gen('z'); output_u = [output_ring.gen(name) for name in names_u]
+    return output_z[n] + sum(output_u[i][0]*output_z[i] for i in range(n-1))
 
 def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", method ="diff"):
     r'''
@@ -329,4 +358,4 @@ def boussinesq(m, i):
         __BOUSSINESQ[m] = almost_commuting_schr(3, m)[1]
     return __BOUSSINESQ[m][i]
 
-__all__ = ["almost_commuting_schr", "kdv", "boussinesq"]
+__all__ = ["schr_L", "almost_commuting_schr", "kdv", "boussinesq"]

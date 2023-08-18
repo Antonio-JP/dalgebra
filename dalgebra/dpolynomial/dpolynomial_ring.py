@@ -753,12 +753,16 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             R = pushout(R, parent(value))
         
         final_input = {key : R(value) for key,value in final_input.items()} # updating input to the output ring
+        logger.debug(f"[eval] This is the final input for the polynomial: {final_input}")
 
         ### Building the elements to be used in evaluation
         evaluation_dict = {}
         for variable in element.variables():
+            logger.debug(f"[eval] Checking variable {variable}")
             for gen in gens:
+                logger.debug(f"[eval] Checking if {variable} in {repr(gen)}")
                 if variable in gen: # we found the generator of this variable
+                    logger.debug(f"[eval] Found generator {repr(gen)} for variable {variable}")
                     operations = gen.index(variable)
                     if gen in final_input:
                         if self.noperators() == 1:
@@ -767,9 +771,11 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
                             value = final_input[gen]
                             for (i, times) in enumerate(operations):
                                 value = value.operation(operation=i, times=times)
-                        evaluation_dict[str(variable)] = R(value)
+                        logger.debug(f"[eval] Adding value: '{str(variable)}': {R(str(value))}")
+                        evaluation_dict[str(variable)] = R(str(value))
                     else:
-                        evaluation_dict[str(variable)] = R(gen[operations])
+                        logger.debug(f"[eval] Adding variable: '{str(variable)}': {R(str(gen[operations]))}")
+                        evaluation_dict[str(variable)] = R(str(gen[operations]))
                     break
         # extending the dictionary to all variables in element.polynomial().
         for variable in element.polynomial().parent().gens():
