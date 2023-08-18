@@ -1014,6 +1014,14 @@ class DRing_WrapperElement(Element):
         except AttributeError:
             raise AttributeError(f"[DRing] Wrapped element {self.wrapped} do no have method `gcd`")
         
+    def lcm(self, other):
+        try:
+            other = self.parent()(other)
+            output = self.wrapped.lcm(other.wrapped)
+            return self.parent().element_class(self.parent(), output)
+        except AttributeError:
+            raise AttributeError(f"[DRing] Wrapped element {self.wrapped} do no have method `lcm`")
+        
     def is_unit(self) -> bool:
         return self.wrapped.is_unit()
 
@@ -1021,9 +1029,10 @@ class DRing_WrapperElement(Element):
         r'''Generic wrapping method for methods not by default in the category of ``self``'''
         if hasattr(self.wrapped, attr):
             el = getattr(self.wrapped, attr)
-            if el in self.parent().wrapped:
+            try:
                 return self.parent()(el)
-            return el
+            except TypeError:
+                return el
         raise AttributeError(f"{self.__class__} object has no attribute {attr}")
     
     ## Other magic methods

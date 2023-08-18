@@ -831,6 +831,8 @@ class DPolynomial (InfinitePolynomial_dense):
     def __pow__(self, n):
         return self.parent().element_class(self.parent(), super().__pow__(n))
 
+    def numerator(self):
+        return self * self.denominator()
     ###################################################################################
     ### Sylvester methods
     ###################################################################################

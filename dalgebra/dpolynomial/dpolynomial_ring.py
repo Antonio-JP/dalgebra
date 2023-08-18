@@ -105,13 +105,13 @@ DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial_ring.
 RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing (used for backward compatibility)
 def DifferentialPolynomialRing(base, *names : str, **kwds):
     if not base in _DRings:
-        base = DifferentialRing(base, diff)
+        base = DifferentialRing(base, kwds.pop("derivation", diff))
     if not base.is_differential():
         raise TypeError("The base ring must be a differential ring")
     return DPolynomialRing(base, *names, **kwds)
 def DifferencePolynomialRing(base, *names : str, **kwds):
     if not base in _DRings:
-        base = DifferenceRing(base, base.Hom(base).one())
+        base = DifferenceRing(base, kwds.pop("difference", base.Hom(base).one()))
     if not base.is_difference():
         raise TypeError("The base ring must be a difference ring")
     return DPolynomialRing(base, *names, **kwds)
