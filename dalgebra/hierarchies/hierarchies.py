@@ -150,8 +150,13 @@ r'''
     **Elements provided by the module**
     -----------------------------------------
 '''
+import logging
+
+logger = logging.getLogger(__name__)
+
 from functools import reduce, lru_cache
-from sage.all import ZZ, QQ, matrix, vector
+from sage.all import diff, ideal, matrix, parent, QQ, vector, ZZ
+from sage.categories.pushout import pushout
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 
 from ..dring import DifferentialRing
@@ -159,8 +164,13 @@ from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
 from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing_dense
 from ..dpolynomial.dpolynomial_system import DSystem
 
+#################################################################################################
+###
+### METHODS FOR COMPUTING GENRIC HIERARCHIES
+###
+#################################################################################################
 @lru_cache(maxsize=64)
-def schr_L(n: int, name_u: str = "u", name_z: str = "z"):
+def schr_L(n: int, name_u: str = "u", name_z: str = "z") -> DPolynomial:
     r'''
         Method to create the generic Scrödinger operator of order `n`.
 
@@ -340,6 +350,11 @@ def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPo
 
         return ansatz_evaluated
 
+#################################################################################################
+###
+### SPECIAL HIERARCHIES
+###
+#################################################################################################
 __KDV = dict()
 def kdv(m: int):
     r'''
@@ -350,7 +365,7 @@ def kdv(m: int):
     return __KDV[m][0]
 
 __BOUSSINESQ = dict()
-def boussinesq(m, i):
+def boussinesq(m: int, i: int):
     r'''
         Boussinesq hierarchy (TODO: add reference)
     '''
@@ -358,4 +373,137 @@ def boussinesq(m, i):
         __BOUSSINESQ[m] = almost_commuting_schr(3, m)[1]
     return __BOUSSINESQ[m][i]
 
-__all__ = ["schr_L", "almost_commuting_schr", "kdv", "boussinesq"]
+#################################################################################################
+###
+### METHODS FOR COMPUTING SPECIAL TYPE SOLUTIONS
+###
+#################################################################################################
+def GetEquationsForSolution(n: int, m: int, U: list | dict, extract, flag_name = "c"):
+    r'''
+        Method to get the equations for a specific type of solutions for non-trivial commutator.
+
+        INPUT:
+
+        * ``n``: the order of the basic operator `L` (see :func:`almost_commuting_schr`).
+        * ``m``: the order bound of the commutator to look (see :func:`almost_commuting_schr`).
+        * ``U``: special values for the generic coefficients of `L`. It is given as a list of 
+          elements where `u_i* = U[i]`. It can also be a dictionary with integers as keys.
+        * ``extract``: a method to extract from the final set of values the equations for 
+          the obtained operator to actually commute. These equations will include any variable 
+          within the given functions ``U`` and the flag of constants created.
+        * ``flag_name``: name use for the variables used in the flag of constants.
+
+        OUTPUT:
+
+        A pair `(P, H)` where `P` is an operator of order at most `m` such that it **commutes** with `L_n` (see method 
+        :func:`schr_L`) for the given set of ``U`` whenever the equations in `H` all vanish. The equations
+        on `H` are only *algebraic* equations.
+    '''
+    ## Checking the arguments of the method
+    if not n in ZZ or n < 2: raise ValueError(f"[GEFS] The value for `n` must be a integer greater than 1")
+    if not m in ZZ or m < n: raise ValueError(f"[GEFS] The value for `m` must be a integer greater than `n`")
+    if isinstance(U, (list,tuple)):
+        if len(U) != n-1: raise ValueError(f"[GEFS] The size of the given functions ``U`` must be of length `n-1` ({n-1})")
+        U = {i: U[i] for i in range(len(U))}
+    elif not isinstance(U, dict):
+        raise TypeError(f"[GEFS] The argument ``U`` must be a list or a dictionary")
+    elif any(el not in ZZ for el in U.keys()) or min(U.keys()) < 0 or max(U.keys()) > n-2:
+        raise KeyError(f"[GEFS] The argument ``U`` as dictionary must have integers as keys between 0 and `n-2` ({n-2})")
+    
+    if not callable(extract): raise TypeError(f"[GEFS] The argument ``extract`` must be a callable.")
+
+    ## Analyzing the functions in ``U``
+    logger.debug(f"[GEFS] Computing common parent for the ansatz functions")
+    parent_us = reduce(lambda p, q: pushout(p,q), (parent(v) for v in U.values()))
+    
+    ### Computing the generic `L` operator
+    logger.debug(f"[GEFS] Computing the generic L_{n} operator...")
+    L = schr_L(n)
+    u = L.parent().gens()[:n-1]
+    logger.debug(f"[GEFS] {L=}")
+
+    ### Coputing the almost commuting basis up to order `m` and the hierarchy up to this point
+    logger.debug(f"[GEFS] ++ Computing the basis of almost commuting and the hierachies...")
+    Ps = [L.parent().one()]; Hs = [(n-1)*[L.parent().zero()]]
+    for i in range(1, m+1):
+        ## TODO: should we remove the i with m%n = 0?
+        nP, nH = almost_commuting_schr(n, i)
+        Ps.append(nP); Hs.append(nH)
+        logger.debug(f"[GEFS]    Computed for order {i}")
+    
+    logger.debug(f"[GEFS] -- Computed the basis of almost commuting and the hierarchies")
+
+    ## Adding the appropriate number of flag constants
+    logger.debug(f"[GEFS] Creating the ring for having the flag of constants...")
+    C = [f"c_{i}" for i in range(len(Ps))]
+    base = parent_us.wrapped
+    if base != QQ and base.is_field(): base = base.base() # we get now a polynomial ring or rationals
+    if base.is_field(): ## rational case, no variable there already
+        diff_base = DifferentialRing(PolynomialRing(base, C), lambda _ : 0)
+    else: # we had variables before
+        old_vars = list(base.variable_names())
+        dict_imgs = {v : parent_us(v).derivative() for v in old_vars}; dict_imgs.update({v : 0 for v in C})
+        diff_base = DifferentialRing(PolynomialRing(base.base(), old_vars + C), lambda v : dict_imgs[str(v)])
+        
+    logger.debug(f"[GEFS] Ring with flag-constants: {diff_base=}")
+    C = [diff_base(C[i]) for i in range(len(C))]
+    U = {u[i]: diff_base(U[i]) for i in U}
+
+    logger.debug(f"[GEFS] Computing the guessed commutator...")
+    P = sum(c*p(dic=U) for (c,p) in zip(C, Ps)) # this is the evaluated operator that will commute
+    logger.debug(f"[GEFS] Computing the commuting equations...")
+    H = [sum(C[i]*Hs[i][j](dic=U) for i in range(len(C))) for j in range(n-1)] # the equations that need to be 0
+    logger.debug(f"[GEFS] Extracting the algebraic equation from the commuting equations...")
+    H = sum([extract(h) for h in H], []) # extract the true equations from 
+
+    return L(dic=U), P, ideal(H)
+
+def generate_polynomial_ansatz(base, n: int, d: int, var_name: str = "x", ansatz_var: str = "b") -> list[DPolynomial]:
+    r'''
+        Generate a list of ansatz for the generic `u` for a generic Schrödinger operator of order `n`
+
+        INPUT:
+
+        * ``base``: the base ring of constants to be used.
+        * ``n``: the order of the Schrödinger operator to be considered.
+        * ``d``: degree of the ansatz generated
+        * ``var_name``: name of the variable to be used as a polynomial element. We will make its derivative to be `1`.
+    '''
+    logger.debug(f"[GenPolyAn] Generating the variables for the constant coefficients and the polynomial variable")
+    var_names = [f"{ansatz_var}_{i}_{j}" for i in range(n-1) for j in range(d+1)] + [var_name] 
+    logger.debug(f"[GenPolyAn] Creating the differential ring for the ansatz...")
+    base = PolynomialRing(base, var_names)
+    base_diff = DifferentialRing(base, lambda p : diff(p, base(var_name)))
+    logger.debug(f"[GenPolyAn] {base_diff=}")
+
+    logger.debug(f"[GenPolyAn] Creating the list of functions that will act as U's...")
+    B = [[base_diff(f"{ansatz_var}_{i}_{j}") for j in range(d+1)] for i in range(n-1)]
+    X = [base_diff(var_name)**j for j in range(d+1)]
+    
+    logger.debug(f"[GenPolyAn] Returning the ansatz functions")
+    return [sum(b*x for (b,x) in zip(row, X)) for row in B]
+
+def generate_polynomial_equations(H: DPolynomial, var_name: str = "x"):
+    r'''Method to extract equations assuming a polynomial ansatz'''
+    logger.debug(f"[GenPolyEqus] Getting equations (w.r.t. {var_name}) from: {H=}...")
+    H = H.coefficients()[0].wrapped # this removes the diff. variable and the diff. structure remaining only the ansatz variables and the polynomial varaible
+    B = parent(H) # this is the algebraic structure
+    x = B(var_name) # this is the polynomial variable that will be removed
+
+    return list(H.polynomial(x).coefficients())
+
+def PolynomialCommutator(n: int, m: int, d: int):
+    logger.debug(f"[PolyComm] Computing equations for polynomial commutators for L_{n} up to order {m} and degree {d}.")
+    logger.debug(f"[PolyComm] --- Generating the ansatz polynomials...")
+    U = generate_polynomial_ansatz(QQ, n, d)
+    logger.debug(f"[PolyComm] --- Generated the ansatz functions:\n\t{U=}")
+    logger.debug(f"[PolyComm] --- Computing the equations necessary for the ansatz to commute with L_{n}...")
+    L, P, H = GetEquationsForSolution(n, m, U, generate_polynomial_equations)
+    return L,P,H
+
+
+__all__ = [
+    "schr_L", "almost_commuting_schr", 
+    "kdv", "boussinesq",
+    "GetEquationsForSolution", "PolynomialCommutator"
+]
