@@ -738,13 +738,15 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             raise ValueError(f"Too many argument for evaluation: given {len(args)}, expected (at most) {self.ngens()}")
 
         final_input : dict[DPolynomialGen, Element] = {gens[i] : args[i] for i in range(len(args))}
+        other_input : dict = dict()
         for key in kwds:
             if(not key in names):
-                raise TypeError(f"Invalid name for argument {key}")
-            gen = gens[names.index(key)]
-            if(gen in final_input):
-                raise TypeError(f"Duplicated value for generator {gen}")
-            final_input[gen] = kwds[key]
+                other_input[key] = kwds[key]
+            else:
+                gen = gens[names.index(key)]
+                if(gen in final_input):
+                    raise TypeError(f"Duplicated value for generator {gen}")
+                final_input[gen] = kwds[key]
 
         ### Deciding final parent
         rem_names = [name for (name,gen) in zip(names,gens) if gen not in final_input]
@@ -761,6 +763,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             logger.debug(f"[eval] Checking variable {variable}")
             for gen in gens:
                 logger.debug(f"[eval] Checking if {variable} in {repr(gen)}")
+                
                 if variable in gen: # we found the generator of this variable
                     logger.debug(f"[eval] Found generator {repr(gen)} for variable {variable}")
                     operations = gen.index(variable)
@@ -781,6 +784,9 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         for variable in element.polynomial().parent().gens():
             if not variable in element.variables(): # only those that do not appear
                 evaluation_dict[str(variable)] = R.zero() # we can add anything here, since they do not show up
+
+        evaluation_dict.update(other_input)
+        logger.debug(f"[eval] Final evaluation performed:\n\t**DICT={evaluation_dict}\n\t**POLY={element.polynomial()}")
 
         return R(element.polynomial()(**evaluation_dict))
         

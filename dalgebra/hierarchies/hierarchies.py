@@ -378,7 +378,7 @@ def boussinesq(m: int, i: int):
 ### METHODS FOR COMPUTING SPECIAL TYPE SOLUTIONS
 ###
 #################################################################################################
-def GetEquationsForSolution(n: int, m: int, U: list | dict, extract, flag_name = "c"):
+def GetEquationsForSolution(n: int, m: int, U: list | dict, extract, flag_name = "c", **kwds):
     r'''
         Method to get the equations for a specific type of solutions for non-trivial commutator.
 
@@ -399,6 +399,10 @@ def GetEquationsForSolution(n: int, m: int, U: list | dict, extract, flag_name =
         :func:`schr_L`) for the given set of ``U`` whenever the equations in `H` all vanish. The equations
         on `H` are only *algebraic* equations.
     '''
+    to_log = "logger" in kwds
+    if to_log:
+        old_level = logger.getEffectiveLevel()
+        logger.setLevel(kwds.pop("logger"))
     ## Checking the arguments of the method
     if not n in ZZ or n < 2: raise ValueError(f"[GEFS] The value for `n` must be a integer greater than 1")
     if not m in ZZ or m < n: raise ValueError(f"[GEFS] The value for `m` must be a integer greater than `n`")
@@ -427,7 +431,7 @@ def GetEquationsForSolution(n: int, m: int, U: list | dict, extract, flag_name =
     Ps = [L.parent().one()]; Hs = [(n-1)*[L.parent().zero()]]
     for i in range(1, m+1):
         ## TODO: should we remove the i with m%n = 0?
-        nP, nH = almost_commuting_schr(n, i)
+        nP, nH = almost_commuting_schr(n, i, method=kwds.pop("method", "diff"))
         Ps.append(nP); Hs.append(nH)
         logger.debug(f"[GEFS]    Computed for order {i}")
     
@@ -455,6 +459,8 @@ def GetEquationsForSolution(n: int, m: int, U: list | dict, extract, flag_name =
     H = [sum(C[i]*Hs[i][j](dic=U) for i in range(len(C))) for j in range(n-1)] # the equations that need to be 0
     logger.debug(f"[GEFS] Extracting the algebraic equation from the commuting equations...")
     H = sum([extract(h) for h in H], []) # extract the true equations from 
+
+    if to_log: logger.setLevel(old_level)
 
     return L(dic=U), P, ideal(H)
 

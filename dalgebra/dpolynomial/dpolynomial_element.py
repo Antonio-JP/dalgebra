@@ -227,7 +227,7 @@ class DPolynomialGen (InfinitePolynomialGen):
             value of ``self._name``.
         '''
         try:
-            element = self._parent(element)
+            element = self._parent(str(element))
         except:
             return False
         if not element.is_generator():
@@ -797,7 +797,7 @@ class DPolynomial (InfinitePolynomial_dense):
         return P(R(self.polynomial()).coefficient(monomial))
     
     def monomials(self) -> list[DPolynomial]:
-        return [self.parent()(m) for m in self.polynomial().monomials()]
+        return [self.parent()(str(m)) for m in self.polynomial().monomials()]
     
     ###################################################################################
     ### Arithmetic methods
