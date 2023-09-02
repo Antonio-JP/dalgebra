@@ -13,14 +13,14 @@ r'''
     -----------------------------------------
 
     Let us consider an algebraically closed field of characteristic zero `C` and the field of d-polynomials defined by `n-2` 
-    differential varuables `u_0,\ldots,u_{n-2}`. Let us consider the linear differential operator:
+    differential variables `u_0,\ldots,u_{n-2}`. Let us consider the linear differential operator:
 
 
     .. MATH::
 
         L = \partial^n + u_{n-2}\partial^{n-2}  + \ldots + u_1\partial + u_0.
 
-    This operator `L` can be written in terms of d-polynomilas in the ring `K\{z\} = C\{u_0,\ldots,u_{n-2},z\}`. We say that 
+    This operator `L` can be written in terms of d-polynomials in the ring `K\{z\} = C\{u_0,\ldots,u_{n-2},z\}`. We say that 
     another operator `P \in K\{z\}` *almost commutes with `L`* if and only if the commutator of `L` with `P` (`[L,P]`) has order
     at most `\text{ord}(L) - 2`. 
 
@@ -31,7 +31,7 @@ r'''
     operator `P_m \in K\{z\}` in normal form of order `m` (i.e, `P_m = z^{(m)} + p_{2}z^{(m-2)} + \ldots + p_m`) such that
 
     * The coefficient `p_i` is homogeneous of weight `i`.
-    * `P_m` alsmost commutes with `L`.
+    * `P_m` almost commutes with `L`.
 
     If we consider all the `P_m`, we obtain a basis of the operators that almost commute with `L`. Moreover, the remaining coefficients
     of `[L,P_m]` provide extra differential conditions that the coefficients of `P_m` have to satisfy in order to have an actual 
@@ -107,7 +107,7 @@ r'''
         sage: C_eval.coefficient(z[1])
         5/9*u1_1*u1_0^2 + (-10/3)*u0_1*u0_0 + 5/3*u0_1*u1_1 + 5/3*u0_0*u1_2 + 5/9*u1_3*u1_0 + 5/9*u1_2*u1_1 + 1/9*u1_5
 
-    This module provide a simple method that perform all thes eoperations in one go. More precisely, the 
+    This module provide a simple method that perform all these operations in one go. More precisely, the 
     method :func:`almost_commuting_schr` receives as input the values of `n` and `m`, the names for the 
     variables `u` and `z` and return two things: the evaluated `P_m`, i.e., after computing the almost commuting
     conditions and evaluating the polynomial `P_m`; and the coefficients of the commutator `[L, P_m]`::
@@ -166,13 +166,13 @@ from ..dpolynomial.dpolynomial_system import DSystem
 
 #################################################################################################
 ###
-### METHODS FOR COMPUTING GENRIC HIERARCHIES
+### METHODS FOR COMPUTING GENERIC HIERARCHIES
 ###
 #################################################################################################
 @lru_cache(maxsize=64)
 def schr_L(n: int, name_u: str = "u", name_z: str = "z") -> DPolynomial:
     r'''
-        Method to create the generic Scrödinger operator of order `n`.
+        Method to create the generic Schrödinger operator of order `n`.
 
         This operator is written with the generic formula:
 
@@ -246,57 +246,84 @@ def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", 
 
             [L_n, P_m] = T_0 + T_1\partial + \ldots + T_{n-2}\partial^{n-2}
     '''
-    if (not n in ZZ) or ZZ(n) <= 0:
-        raise ValueError(f"[almost] The value {n = } must be a positive integer")
-    if (not m in ZZ) or ZZ(m) <= 0:
-        raise ValueError(f"[almost] The value {m = } must be a positive integer")
-    if name_u == name_z:
-        raise ValueError(f"[almost] The names for the differential variables must be different. Given {name_u} and {name_z}")
-    
-    names_u = [f"{name_u}{i}" for i in range(n-1)] if n > 2 else [name_u] if n == 2 else []
-    output_ring = DifferentialPolynomialRing(QQ, names_u + [name_z])
-    output_z = output_ring.gen('z'); output_u = [output_ring.gen(name) for name in names_u]
-    
-    if n == 1: # special case where `L = \partial`
-        ## Clearly, `\partial^n` and `\partial^m` always commute for all `n` and `m`
-        ## Then, the `P_m = \partial^m`.
-        output_ring = DifferentialPolynomialRing(QQ, [name_z]); z = output_ring.gens()[0]
-        return (z[m], tuple())
-    elif m == 1: # special case where we do not care about the for computing `P_1`
-        z = output_z; u = output_u
-        L = output_z[n] + sum(u[i][0]*z[i] for i in range(n-1))
-        P = z[1]
-        C = L(dic={z:P}) - P(dic={z:L}); T = tuple([C.coefficient(z[i]) for i in range(C.order(z)+1)])
-        return (P, T)
-    elif m%n == 0: # special case: the order of the required almost-commutator is divisible by order of base operator
-        ## Since `L_n` always commute with itself, so it does `L_n^k` for any `k`. 
-        z = output_z; u = output_u
-        Ln = output_z[n] + sum(u[i][0]*z[i] for i in range(n-1))
-        Pm = reduce(lambda p, q: p(dic={z:q}), (m//n)*[Ln])
-        return (Pm, tuple((n-1)*[output_ring.zero()]))
-    else: # generic case, there are some computations to be done
-        name_p = "p" if not "p" in [name_u, name_z] else "q" if not "q" in [name_u, name_z] else "r"
-        method = __almost_commuting_diff if method == "diff" else __almost_commuting_linear if method == "linear" else method
-        ## building the operators `L_n` and `P_m`
-        names_p = [f"{name_p}{i}" for i in range(m-1)] if m > 2 else [name_p]
+    output = __file_cache(n,m,name_u,name_z)
+    if not output:
+        if (not n in ZZ) or ZZ(n) <= 0:
+            raise ValueError(f"[almost] The value {n = } must be a positive integer")
+        if (not m in ZZ) or ZZ(m) <= 0:
+            raise ValueError(f"[almost] The value {m = } must be a positive integer")
+        if name_u == name_z:
+            raise ValueError(f"[almost] The names for the differential variables must be different. Given {name_u} and {name_z}")
+        
+        names_u = [f"{name_u}{i}" for i in range(n-1)] if n > 2 else [name_u] if n == 2 else []
+        output_ring = DifferentialPolynomialRing(QQ, names_u + [name_z])
+        output_z = output_ring.gen('z'); output_u = [output_ring.gen(name) for name in names_u]
+        
+        if n == 1: # special case where `L = \partial`
+            ## Clearly, `\partial^n` and `\partial^m` always commute for all `n` and `m`
+            ## Then, the `P_m = \partial^m`.
+            output_ring = DifferentialPolynomialRing(QQ, [name_z]); z = output_ring.gens()[0]
+            return (z[m], tuple())
+        elif m == 1: # special case where we do not care about the for computing `P_1`
+            z = output_z; u = output_u
+            L = output_z[n] + sum(u[i][0]*z[i] for i in range(n-1))
+            P = z[1]
+            C = L(dic={z:P}) - P(dic={z:L}); T = tuple([C.coefficient(z[i]) for i in range(C.order(z)+1)])
+            return (P, T)
+        elif m%n == 0: # special case: the order of the required almost-commutator is divisible by order of base operator
+            ## Since `L_n` always commute with itself, so it does `L_n^k` for any `k`. 
+            z = output_z; u = output_u
+            Ln = output_z[n] + sum(u[i][0]*z[i] for i in range(n-1))
+            Pm = reduce(lambda p, q: p(dic={z:q}), (m//n)*[Ln])
+            output = (Pm, tuple((n-1)*[output_ring.zero()]))
+        else: # generic case, there are some computations to be done
+            name_p = "p" if not "p" in [name_u, name_z] else "q" if not "q" in [name_u, name_z] else "r"
+            method = __almost_commuting_diff if method == "diff" else __almost_commuting_linear if method == "linear" else method
+            ## building the operators `L_n` and `P_m`
+            names_p = [f"{name_p}{i}" for i in range(m-1)] if m > 2 else [name_p]
 
-        R = DifferentialPolynomialRing(QQ, names_u + names_p + [name_z])
-        z = R.gen(name_z); u = [R.gen(name) for name in names_u]; p = [R.gen(name) for name in names_p]
-        Ln = z[n] + sum(u[i][0]*z[i] for i in range(n-1))
-        Pm = z[m] + sum(p[i][0]*z[i] for i in range(m-1))
+            R = DifferentialPolynomialRing(QQ, names_u + names_p + [name_z])
+            z = R.gen(name_z); u = [R.gen(name) for name in names_u]; p = [R.gen(name) for name in names_p]
+            Ln = z[n] + sum(u[i][0]*z[i] for i in range(n-1))
+            Pm = z[m] + sum(p[i][0]*z[i] for i in range(m-1))
 
-        ## building the commutator
-        C = Ln(dic={z:Pm}) - Pm(dic={z:Ln})
+            ## building the commutator
+            C = Ln(dic={z:Pm}) - Pm(dic={z:Ln})
 
-        ## getting equations for almost-commutation and the remaining with 
-        equations = [C.coefficient(z[i]) for i in range(n-1, C.order(z)+1)]
-        T = [C.coefficient(z[i]) for i in range(n-1)]
+            ## getting equations for almost-commutation and the remaining with 
+            equations = [C.coefficient(z[i]) for i in range(n-1, C.order(z)+1)]
+            T = [C.coefficient(z[i]) for i in range(n-1)]
 
-        solve_p = method(R, equations, u, p)
-        Pm = output_ring(Pm(dic=solve_p))
-        T = tuple([output_ring(el(dic=solve_p)) for el in T])
+            solve_p = method(R, equations, u, p)
+            Pm = output_ring(Pm(dic=solve_p))
+            T = tuple([output_ring(el(dic=solve_p)) for el in T])
 
-        return (Pm,T)
+            output = (Pm,T)
+        
+        __save_file_cache(n,m,name_u,name_z, output)
+    return output
+
+def __file_cache(n,m,name_u,name_z):
+    from os.path import exists, dirname, join
+    import pickle
+    FILE_DIR = dirname(__file__) if __name__ != "__main__" else "./"
+
+    file = join(FILE_DIR, f"{n}_{m}_{name_u}_{name_z}.dmp")
+    if exists(file):
+        try:
+            with open(file, "rb") as file:
+                output = pickle.load(file)
+            return output
+        except Exception as e:
+            logger.debug(f"[file_cache] Error while loading: {e}")
+    return False
+
+def __save_file_cache(n,m,name_u,name_z,output):
+    from os.path import dirname, join
+    import pickle
+    FILE_DIR = dirname(__file__) if __name__ != "__main__" else "./"
+    with open(join(FILE_DIR, f"{n}_{m}_{name_u}_{name_z}.dmp"), "wb") as file:
+        pickle.dump(output, file)
 
 def __almost_commuting_diff(parent: DPolynomialRing_dense, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]):
     r'''
@@ -358,7 +385,7 @@ def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPo
 __KDV = dict()
 def kdv(m: int):
     r'''
-        KdV hierarchy (see :wiki:`KdV_hierarchy`) is the integrable hierarchy that appears from almost commutators of a generic operator of otder 2.
+        KdV hierarchy (see :wiki:`KdV_hierarchy`) is the integrable hierarchy that appears from almost commutators of a generic operator of order 2.
     '''
     if not m in __KDV:
         __KDV[m] = almost_commuting_schr(2, m)[1]
@@ -426,8 +453,8 @@ def GetEquationsForSolution(n: int, m: int, U: list | dict, extract, flag_name =
     u = L.parent().gens()[:n-1]
     logger.debug(f"[GEFS] {L=}")
 
-    ### Coputing the almost commuting basis up to order `m` and the hierarchy up to this point
-    logger.debug(f"[GEFS] ++ Computing the basis of almost commuting and the hierachies...")
+    ### Computing the almost commuting basis up to order `m` and the hierarchy up to this point
+    logger.debug(f"[GEFS] ++ Computing the basis of almost commuting and the hierarchies...")
     Ps = [L.parent().one()]; Hs = [(n-1)*[L.parent().zero()]]
     for i in range(1, m+1):
         ## TODO: should we remove the i with m%n = 0?
@@ -492,7 +519,7 @@ def generate_polynomial_ansatz(base, n: int, d: int, var_name: str = "x", ansatz
 def generate_polynomial_equations(H: DPolynomial, var_name: str = "x"):
     r'''Method to extract equations assuming a polynomial ansatz'''
     logger.debug(f"[GenPolyEqus] Getting equations (w.r.t. {var_name}) from: {H=}...")
-    H = H.coefficients()[0].wrapped # this removes the diff. variable and the diff. structure remaining only the ansatz variables and the polynomial varaible
+    H = H.coefficients()[0].wrapped # this removes the diff. variable and the diff. structure remaining only the ansatz variables and the polynomial variable
     B = parent(H) # this is the algebraic structure
     x = B(var_name) # this is the polynomial variable that will be removed
 
@@ -507,9 +534,53 @@ def PolynomialCommutator(n: int, m: int, d: int):
     L, P, H = GetEquationsForSolution(n, m, U, generate_polynomial_equations)
     return L,P,H
 
+def analyze_ideal(I, partial_solution: list, partial_decisions: list=[], is_groebner:bool=False):
+    r'''Method that applies simple steps for analyzing an ideal without human intervention'''
+    if not isinstance(I, (list, tuple)):
+        I = I.basis
+
+    ## First we try to find alone elements (that must be zero)
+    logger.debug(f"[ideal] Looking for monomials implying a variable is zero")
+    to_eval = dict()
+    for poly in I:
+        if poly.is_monomial() and len(poly.variables()) == 1:
+            logger.debug(f"[ideal] Found variable {poly.variables()[0]} to be zero")
+            to_eval[str(poly.variables()[0])] = 0
+            partial_solution.append((str(poly.variables()[0]), 0))
+    if len(to_eval):
+        logger.debug(f"[ideal] Applying new zero variables...")
+        I = [el(**to_eval) for el in I]
+        I = [el for el in I if el != 0] # removing zeros from the ideal
+        logger.debug(f"[ideal] Applying recursively to the remaining polynomials ({len(I)})")
+        return analyze_ideal(I, partial_solution, partial_decisions)
+    
+    ## Now we try to do some simple splitting decisions
+    logger.debug(f"[ideal] Looking for monomials implying a splitting in solutions")
+    for poly in I:
+        if poly.is_monomial():
+            logger.debug(f"[ideal] Found a splitting monomial")
+            solutions = []
+            for v in poly.variables():
+                path_ideal = [el(**{str(v): 0}) for el in I]; path_ideal = [el for el in path_ideal if el != 0]
+                path_sol = partial_solution + [(str(v), 0)]
+                path_dec = partial_decisions + [(str(v), 0)]
+                logger.debug(f"[ideal] SPLITTING WITH (({v} = 0))")
+                solutions.extend(analyze_ideal(path_ideal, path_sol, path_dec))
+            return solutions
+
+    ## Now we try
+    logger.debug(f"[ideal] No easy decisions to make: go to Gröbner basis")
+    if is_groebner: # nothing remains to be done
+        logger.debug(f"[ideal] Nothing more to be done, we return")
+        return [(I, partial_solution, partial_decisions)]
+    else:
+        logger.debug(f"[ideal] Computing a GROEBNER BASIS")
+        I = ideal(I).groebner_basis()
+        return analyze_ideal(I, partial_solution, partial_decisions, True)
 
 __all__ = [
     "schr_L", "almost_commuting_schr", 
     "kdv", "boussinesq",
-    "GetEquationsForSolution", "PolynomialCommutator"
+    "GetEquationsForSolution", "PolynomialCommutator",
+    "analyze_ideal"
 ]

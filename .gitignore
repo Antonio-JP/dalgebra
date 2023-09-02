@@ -108,3 +108,4 @@ docs/_sources
 # Results files
 *.prf
 *.csv
+*.dmp
