@@ -538,15 +538,37 @@ def analyze_ideal(I, partial_solution: list, partial_decisions: list=[], is_groe
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
     if not isinstance(I, (list, tuple)):
         I = I.basis
+    if len(I) == 0:
+        return [(I, partial_solution, partial_decisions)]
+    
+    ## We copy the arguments to avoid possible collisions
+    partial_solution = partial_solution.copy()
+    partial_decisions = partial_decisions.copy()
 
     ## First we try to find alone elements (that must be zero)
-    logger.debug(f"[ideal] Looking for monomials implying a variable is zero")
+    logger.debug(f"[ideal] Looking for polynomials with direct solution")
     to_eval = dict()
     for poly in I:
-        if poly.is_monomial() and len(poly.variables()) == 1:
-            logger.debug(f"[ideal] Found variable {poly.variables()[0]} to be zero")
-            to_eval[str(poly.variables()[0])] = 0
-            partial_solution.append((str(poly.variables()[0]), 0))
+        if poly.degree() == 1 and len(poly.variables()) == 1: # polynomials of type (v - c)
+            v = poly.variables()[0]; c = poly.coefficient(v)
+            value = poly.parent()(v - poly/c)
+            if str(v) in to_eval and to_eval[str(v)] != value:
+                return [] # no solution for incompatibility of two equations
+            elif not str(v) in to_eval:
+                logger.debug(f"[ideal] Found simple polynomial ({poly}): adding solution {v} = {value}")
+                to_eval[str(v)] = value
+                partial_solution.append((str(v), value))
+        elif poly.degree() == 0 and poly != 0:
+            return []
+    logger.debug(f"[ideal] Looking for polynomials with easy simplification")
+    for poly in I:
+        if poly.degree() == 1:
+            v = poly.variables()[-1]; c = poly.coefficient(v)
+            value = poly.parent()(v - poly/c)
+            if not str(v) in to_eval:
+                logger.debug(f"[ideal] Found linear polynomial {poly}: adding solution {v} = {value}")
+                to_eval[str(v)] = value
+                partial_solution.append((str(v), value))
     if len(to_eval):
         logger.debug(f"[ideal] Applying new zero variables...")
         I = [el(**to_eval) for el in I]
@@ -571,8 +593,14 @@ def analyze_ideal(I, partial_solution: list, partial_decisions: list=[], is_groe
     ## Now we try
     logger.debug(f"[ideal] No easy decisions to make: go to Gröbner basis")
     if is_groebner: # nothing remains to be done
-        logger.debug(f"[ideal] Nothing more to be done, we return")
-        return [(I, partial_solution, partial_decisions)]
+        logger.debug(f"[ideal] We try now the primary decomposition")
+        primary_deomp = ideal(I).primary_decomposition()
+        if len(primary_deomp) == 1: # we did nothing --> we are done
+            logger.debug(f"[ideal] We did nothing: we return")
+            return [(I, partial_solution, partial_decisions)]
+        else:    
+            logger.debug(f"[ideal] Found {len(primary_deomp)} components: splitting into decisions")
+            return [analyze_ideal(primary, partial_solution, partial_decisions) for primary in primary_deomp]
     else:
         logger.debug(f"[ideal] Computing a GROEBNER BASIS")
         I = ideal(I).groebner_basis()
