@@ -534,18 +534,31 @@ def PolynomialCommutator(n: int, m: int, d: int):
     L, P, H = GetEquationsForSolution(n, m, U, generate_polynomial_equations)
     return L,P,H
 
-def analyze_ideal(I, partial_solution: list, partial_decisions: list=[], is_groebner:bool=False):
+#################################################################################################
+###
+### AUXILIAR METHODS TO SOLVE EQUATIONS
+###
+#################################################################################################
+def analyze_ideal(I, partial_solution: dict, decisions: list=[], is_groebner:bool=False):
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
     if not isinstance(I, (list, tuple)):
+        R = I.ring()
         I = I.basis
+    else: 
+        R = parent(I[0]) if len(I) > 0 else reduce(lambda p, q: pushout(p,q), (parent(el) for el in partial_solution.values())) if len(partial_solution) > 0 else QQ
+
     if len(I) == 0:
-        return [(I, partial_solution, partial_decisions)]
+        return [(I, __clean_solution(partial_solution, R), decisions)]
     
     ## We copy the arguments to avoid possible collisions
     partial_solution = partial_solution.copy()
-    partial_decisions = partial_decisions.copy()
+    decisions = decisions.copy()
 
-    ## First we try to find alone elements (that must be zero)
+    if any(poly.degree() == 0  for poly in I): ## No solution case
+        return []
+
+    ########################################################################################################### 
+    ## First we try to find easy elements (that must be a constant)
     logger.debug(f"[ideal] Looking for polynomials with direct solution")
     to_eval = dict()
     for poly in I:
@@ -553,58 +566,95 @@ def analyze_ideal(I, partial_solution: list, partial_decisions: list=[], is_groe
             v = poly.variables()[0]; c = poly.coefficient(v)
             value = poly.parent()(v - poly/c)
             if str(v) in to_eval and to_eval[str(v)] != value:
+                logger.debug(f"[ideal] Found incompatibility for ({poly}): {v} = {to_eval[str(v)]}")
                 return [] # no solution for incompatibility of two equations
             elif not str(v) in to_eval:
                 logger.debug(f"[ideal] Found simple polynomial ({poly}): adding solution {v} = {value}")
                 to_eval[str(v)] = value
-                partial_solution.append((str(v), value))
         elif poly.degree() == 0 and poly != 0:
             return []
-    logger.debug(f"[ideal] Looking for polynomials with easy simplification")
-    for poly in I:
-        if poly.degree() == 1:
-            v = poly.variables()[-1]; c = poly.coefficient(v)
-            value = poly.parent()(v - poly/c)
-            if not str(v) in to_eval:
-                logger.debug(f"[ideal] Found linear polynomial {poly}: adding solution {v} = {value}")
-                to_eval[str(v)] = value
-                partial_solution.append((str(v), value))
     if len(to_eval):
-        logger.debug(f"[ideal] Applying new zero variables...")
+        logger.debug(f"[ideal] Applying easy variables...")
         I = [el(**to_eval) for el in I]
         I = [el for el in I if el != 0] # removing zeros from the ideal
         logger.debug(f"[ideal] Applying recursively to the remaining polynomials ({len(I)})")
-        return analyze_ideal(I, partial_solution, partial_decisions)
-    
-    ## Now we try to do some simple splitting decisions
+        partial_solution.update(to_eval)
+        return analyze_ideal(I, partial_solution, decisions)
+        
+    ###########################################################################################################
+    ## Third we try an easy type of splitting
     logger.debug(f"[ideal] Looking for monomials implying a splitting in solutions")
     for poly in I:
         if poly.is_monomial():
             logger.debug(f"[ideal] Found a splitting monomial")
             solutions = []
             for v in poly.variables():
+                path_sol = partial_solution.copy()
+                path_sol[str(v)] = 0
                 path_ideal = [el(**{str(v): 0}) for el in I]; path_ideal = [el for el in path_ideal if el != 0]
-                path_sol = partial_solution + [(str(v), 0)]
-                path_dec = partial_decisions + [(str(v), 0)]
                 logger.debug(f"[ideal] SPLITTING WITH (({v} = 0))")
-                solutions.extend(analyze_ideal(path_ideal, path_sol, path_dec))
+                solutions.extend(analyze_ideal(path_ideal, path_sol, decisions + [("var", str(v), 0)]))
             return solutions
 
-    ## Now we try
-    logger.debug(f"[ideal] No easy decisions to make: go to Gröbner basis")
-    if is_groebner: # nothing remains to be done
-        logger.debug(f"[ideal] We try now the primary decomposition")
-        primary_deomp = ideal(I).primary_decomposition()
-        if len(primary_deomp) == 1: # we did nothing --> we are done
-            logger.debug(f"[ideal] We did nothing: we return")
-            return [(I, partial_solution, partial_decisions)]
-        else:    
-            logger.debug(f"[ideal] Found {len(primary_deomp)} components: splitting into decisions")
-            return [analyze_ideal(primary, partial_solution, partial_decisions) for primary in primary_deomp]
-    else:
-        logger.debug(f"[ideal] Computing a GROEBNER BASIS")
-        I = ideal(I).groebner_basis()
-        return analyze_ideal(I, partial_solution, partial_decisions, True)
+    ###########################################################################################################
+    ## Fourth we try a Groebner basis
+    logger.debug(f"[ideal] Computing a GROEBNER BASIS")
+    I_gb = ideal(I).groebner_basis()
+    if not all(poly in I_gb for poly in I): # we improved with a Gröbner basis
+        return analyze_ideal(I_gb, partial_solution, decisions)
+    
+    ###########################################################################################################
+    ## Fifth we try a primary decomposition
+    logger.debug(f"[ideal] We try now the primary decomposition")
+    primary_deomp = ideal(I).primary_decomposition()
+    if len(primary_deomp) != 1: # We were done: only one component found
+        logger.debug(f"[ideal] Found {len(primary_deomp)} components: splitting into decisions")
+        output = []
+        for primary in primary_deomp:
+            logger.debug(f"[ideal] Computing radical ideal...")
+            primary = primary.radical()
+            logger.debug(f"[ideal] Applying recursively to the radical ideal ({len(primary.basis)})")
+            output.extend(analyze_ideal(primary.radical(), partial_solution, decisions + [("prim", primary.basis)]))
+        return output
+    
+    
+    ###########################################################################################################
+    ## Second we try to find elements where we can find v = p(w)
+    logger.debug(f"[ideal] Looking for polynomials with easy simplification")
+    for poly in I:
+        for v in reversed(poly.variables()):
+            if poly.degree(v) == 1 and all(m == v or not v in m.variables() for m in poly.monomials()):
+                variable = v
+                break
+        else:
+            continue
+        c = poly.coefficient(variable)
+        value = poly.parent()(variable - poly/c)
+        if str(variable) in to_eval:
+            logger.debug(f"[ideal] Found a repeated variable: {variable}")
+        else:
+            logger.debug(f"[ideal] Found linear polynomial {poly}: adding solution {variable} = {value}")
+            to_eval[str(variable)] = value
+    if len(to_eval):
+        logger.debug(f"[ideal] Applying new reductions...")
+        I = [el(**to_eval) for el in I]
+        I = [el for el in I if el != 0] # removing zeros from the ideal
+        logger.debug(f"[ideal] Applying recursively to the remaining polynomials ({len(I)})")
+        partial_solution.update(to_eval)
+        return analyze_ideal(I, partial_solution, decisions)
+    
+    return [(I, __clean_solution(partial_solution, R), decisions)]
+
+def __clean_solution(solution: dict, parent):
+    solution = {k: parent(v) for k,v in solution.items()}
+    old_solution = None
+
+    while(solution != old_solution):
+        old_solution = solution
+        solution = {k: v(**old_solution) for (k,v) in solution.items()}
+
+    return solution
+
 
 __all__ = [
     "schr_L", "almost_commuting_schr", 
