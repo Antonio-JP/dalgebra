@@ -150,14 +150,19 @@ r'''
     **Elements provided by the module**
     -----------------------------------------
 '''
+from __future__ import annotations
+
 import logging
 
 logger = logging.getLogger(__name__)
 
 from functools import reduce, lru_cache
-from sage.all import diff, ideal, matrix, parent, QQ, vector, ZZ
+from sage.all import cached_method, diff, ideal, matrix, parent, QQ, vector, ZZ
 from sage.categories.pushout import pushout
+from sage.rings.ideal import Ideal_generic as Ideal
+from sage.rings.number_field.number_field import NumberField
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
+from typing import Any
 
 from ..dring import DifferentialRing
 from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
@@ -539,16 +544,13 @@ def PolynomialCommutator(n: int, m: int, d: int):
 ### AUXILIAR METHODS TO SOLVE EQUATIONS
 ###
 #################################################################################################
-def analyze_ideal(I, partial_solution: dict, decisions: list=[], is_groebner:bool=False):
+def analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent = None):
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
     if not isinstance(I, (list, tuple)):
-        R = I.ring()
-        I = I.basis
-    else: 
-        R = parent(I[0]) if len(I) > 0 else reduce(lambda p, q: pushout(p,q), (parent(el) for el in partial_solution.values())) if len(partial_solution) > 0 else QQ
+        I = I.gens()
 
     if len(I) == 0:
-        return [(I, __clean_solution(partial_solution, R), decisions)]
+        return [SolutionBranch(I, partial_solution, decisions, final_parent)]
     
     ## We copy the arguments to avoid possible collisions
     partial_solution = partial_solution.copy()
@@ -579,7 +581,7 @@ def analyze_ideal(I, partial_solution: dict, decisions: list=[], is_groebner:boo
         I = [el for el in I if el != 0] # removing zeros from the ideal
         logger.debug(f"[ideal] Applying recursively to the remaining polynomials ({len(I)})")
         partial_solution.update(to_eval)
-        return analyze_ideal(I, partial_solution, decisions)
+        return analyze_ideal(I, partial_solution, decisions, final_parent)
         
     ###########################################################################################################
     ## Third we try an easy type of splitting
@@ -593,7 +595,7 @@ def analyze_ideal(I, partial_solution: dict, decisions: list=[], is_groebner:boo
                 path_sol[str(v)] = 0
                 path_ideal = [el(**{str(v): 0}) for el in I]; path_ideal = [el for el in path_ideal if el != 0]
                 logger.debug(f"[ideal] SPLITTING WITH (({v} = 0))")
-                solutions.extend(analyze_ideal(path_ideal, path_sol, decisions + [("var", str(v), 0)]))
+                solutions.extend(analyze_ideal(path_ideal, path_sol, decisions + [("var", str(v), 0)], final_parent))
             return solutions
 
     ###########################################################################################################
@@ -601,7 +603,7 @@ def analyze_ideal(I, partial_solution: dict, decisions: list=[], is_groebner:boo
     logger.debug(f"[ideal] Computing a GROEBNER BASIS")
     I_gb = ideal(I).groebner_basis()
     if not all(poly in I_gb for poly in I): # we improved with a Gröbner basis
-        return analyze_ideal(I_gb, partial_solution, decisions)
+        return analyze_ideal(I_gb, partial_solution, decisions, final_parent)
     
     ###########################################################################################################
     ## Fifth we try a primary decomposition
@@ -613,8 +615,8 @@ def analyze_ideal(I, partial_solution: dict, decisions: list=[], is_groebner:boo
         for primary in primary_deomp:
             logger.debug(f"[ideal] Computing radical ideal...")
             primary = primary.radical()
-            logger.debug(f"[ideal] Applying recursively to the radical ideal ({len(primary.basis)})")
-            output.extend(analyze_ideal(primary.radical(), partial_solution, decisions + [("prim", primary.basis)]))
+            logger.debug(f"[ideal] Applying recursively to the radical ideal ({len(primary.gens())})")
+            output.extend(analyze_ideal(primary.radical(), partial_solution, decisions + [("prim", primary.gens())], final_parent))
         return output
     
     
@@ -641,20 +643,122 @@ def analyze_ideal(I, partial_solution: dict, decisions: list=[], is_groebner:boo
         I = [el for el in I if el != 0] # removing zeros from the ideal
         logger.debug(f"[ideal] Applying recursively to the remaining polynomials ({len(I)})")
         partial_solution.update(to_eval)
-        return analyze_ideal(I, partial_solution, decisions)
+        return analyze_ideal(I, partial_solution, decisions, final_parent)
     
-    return [(I, __clean_solution(partial_solution, R), decisions)]
+    return [SolutionBranch(I, partial_solution, decisions, final_parent)]
 
-def __clean_solution(solution: dict, parent):
-    solution = {k: parent(v) for k,v in solution.items()}
-    old_solution = None
+class SolutionBranch:
+    def __init__(self, I: list | Ideal, solution: dict[str,Any], decisions: list[tuple[str,str,Any] | tuple[str,Any]], base_parent = None):
+        ##################################################################
+        ## Deciding the parent
+        ##################################################################
+        if base_parent != None:
+            self.__parent = base_parent
+        elif isinstance(I, Ideal):
+            self.__parent = I.ring()
+        elif isinstance(I, (tuple,list)) and len(I) > 0:
+            self.__parent = reduce(lambda p,q: pushout(p,q), (parent(el) for el in I), QQ)
+        elif isinstance(I, (tuple, list)):
+            self.__parent = reduce(lambda p,q: pushout(p,q), (parent(el) for el in solution.values()), QQ)
+        else:
+            raise TypeError(f"The argument `I` must be an ideal or a list/tuple.")
+        
+        ##################################################################
+        ## Creating the ideal for the branch
+        ##################################################################
+        self.__I = ideal(self.__parent, I)
 
-    while(solution != old_solution):
-        old_solution = solution
-        solution = {k: v(**old_solution) for (k,v) in solution.items()}
+        ##################################################################
+        ## Storing the dictionary of partial solution
+        ##################################################################
+        self.__solution = {k : self.__parent(v) for k,v in solution.items()} # we store a copy with casted values
+        self.__solution = SolutionBranch.__clean_solution(self.__solution, self.__parent)
 
-    return solution
+        ##################################################################
+        ## Storing the list of decisions taken
+        ##################################################################
+        self.__decisions = []
+        for decision in decisions:
+            if decision[0] == "var":
+                _,var,value = decision
+                if not var in self.__solution:
+                    raise ValueError(f"Decided a variable that is not in the solution.")
+                self.__decisions.append(("var", var, self.__parent(value)))
+            elif decision[0] == "prim":
+                self.__decisions.append(decision)
+            else:
+                raise TypeError(f"Format of decision incorrect")
+            
+    ######################################################################################################
+    ### PROPERTIES OF THE CLASS
+    ######################################################################################################
+    @property
+    def I(self) -> Ideal: return self.__I
+    @property
+    def decisions(self) -> list: return self.__decisions
+    
+    def parent(self): return self.__parent
 
+    @cached_method
+    def final_parent(self):
+        ## First we create the algebraic extension
+        B = self.parent().base()
+        if self.I != ZZ(0):
+            algebraic_variables = sum((list(poly.variables()) for poly in self.I.gens()), [])
+            BB = PolynomialRing(B, algebraic_variables)
+            I = ideal(BB, self.I)
+            try:
+                B = reduce(lambda p, q : p.extension(q, names=str(q.variables()[0])), [QQ] + [poly.polynomial(poly.variables()[0]).change_ring(QQ) for poly in I.gens()])
+            except Exception as e:
+                print(f"Found an error: {e}")
+                B = BB.quotient(I, names=BB.variable_names())
+        else:
+            algebraic_variables = []
+
+        ## We now add the remaining variables as polynomial variables
+        rem_vars = [v for v in self.remaining_variables() if not v in algebraic_variables]
+        B = PolynomialRing(B, rem_vars)
+        return B
+
+    def __getitem__(self, key):
+        if not isinstance(key, str):
+            if not key in self.parent().gens(): raise KeyError(f"Only generators of {self.parent()} can be requested")
+            key = str(key)
+        return self.__solution.get(key, self.parent()(key)) # we get the value for the key or the key itself
+    
+    ######################################################################################################
+    ### UTILITY METHODS
+    ######################################################################################################
+    def eval(self, element):
+        return self.final_parent()(str(self.parent()(element)(**self.__solution)))
+    
+    def remaining_variables(self):
+        return [v for v in self.parent().gens() if not str(v) in self.__solution]
+
+    ######################################################################################################
+    ### Equality methods
+    ######################################################################################################
+    def __eq__(self, other: SolutionBranch) -> bool:
+        if not isinstance(other, SolutionBranch): return False
+        return self.I == other.I and self.__solution == other.__solution
+    
+    def __hash__(self) -> int: return hash((self.I, tuple(sorted(self.__solution.keys()))))
+
+    ######################################################################################################
+    ### STATIC METHODS OF THE CLASS
+    ######################################################################################################
+    @staticmethod
+    def __clean_solution(solution: dict, parent):
+        solution = {k: parent(v) for k,v in solution.items()}
+        old_solution = None
+
+        while(solution != old_solution):
+            old_solution = solution
+            solution = {k: v(**old_solution) for (k,v) in solution.items()}
+
+        return solution
+    
+    
 
 __all__ = [
     "schr_L", "almost_commuting_schr", 
