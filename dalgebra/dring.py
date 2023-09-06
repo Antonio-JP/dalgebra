@@ -471,7 +471,7 @@ class DRings(Category):
                 This method only works in some specific extensions for DRings.
 
                 This method is associated with the corresponding method
-                :func:`to_sage` on the elemens.
+                :func:`to_sage` on the elements.
             '''
             raise NotImplementedError("Method 'operator_ring' need to be implemented")
 
@@ -1469,7 +1469,7 @@ class DFractionField(FractionField_generic):
     
     def constant_ring(self, operation: int = 0) -> Parent:
         try:
-            return self.base().constant_ring().fraction_field()
+            return self.base().constant_ring(operation).fraction_field()
         except Exception as e:
             raise e
         
