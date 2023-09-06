@@ -160,14 +160,15 @@ from functools import reduce, lru_cache
 from sage.all import cached_method, diff, ideal, matrix, parent, QQ, vector, ZZ
 from sage.categories.pushout import pushout
 from sage.rings.ideal import Ideal_generic as Ideal
-from sage.rings.number_field.number_field import NumberField
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from typing import Any
 
-from ..dring import DifferentialRing
+from ..dring import DifferentialRing, DRings
 from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
-from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing_dense
+from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing, DPolynomialRing_dense
 from ..dpolynomial.dpolynomial_system import DSystem
+
+_DRings = DRings.__classcall__(DRings)
 
 #################################################################################################
 ###
@@ -471,7 +472,7 @@ def GetEquationsForSolution(n: int, m: int, U: list | dict, extract, flag_name =
 
     ## Adding the appropriate number of flag constants
     logger.debug(f"[GEFS] Creating the ring for having the flag of constants...")
-    C = [f"c_{i}" for i in range(len(Ps))]
+    C = [f"{flag_name}_{i}" for i in range(len(Ps))]
     base = parent_us.wrapped
     if base != QQ and base.is_field(): base = base.base() # we get now a polynomial ring or rationals
     if base.is_field(): ## rational case, no variable there already
@@ -541,7 +542,7 @@ def PolynomialCommutator(n: int, m: int, d: int):
 
 #################################################################################################
 ###
-### AUXILIAR METHODS TO SOLVE EQUATIONS
+### AUXILIARY METHODS TO SOLVE EQUATIONS
 ###
 #################################################################################################
 def analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent = None):
@@ -608,11 +609,11 @@ def analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent = 
     ###########################################################################################################
     ## Fifth we try a primary decomposition
     logger.debug(f"[ideal] We try now the primary decomposition")
-    primary_deomp = ideal(I).primary_decomposition()
-    if len(primary_deomp) != 1: # We were done: only one component found
-        logger.debug(f"[ideal] Found {len(primary_deomp)} components: splitting into decisions")
+    primary_decomp = ideal(I).primary_decomposition()
+    if len(primary_decomp) != 1: # We were done: only one component found
+        logger.debug(f"[ideal] Found {len(primary_decomp)} components: splitting into decisions")
         output = []
-        for primary in primary_deomp:
+        for primary in primary_decomp:
             logger.debug(f"[ideal] Computing radical ideal...")
             primary = primary.radical()
             logger.debug(f"[ideal] Applying recursively to the radical ideal ({len(primary.gens())})")
@@ -679,7 +680,7 @@ class SolutionBranch:
         ##################################################################
         self.__decisions = []
         for decision in decisions:
-            if decision[0] == "var":
+            if decision[0] in ("var", "arb"):
                 _,var,value = decision
                 if not var in self.__solution:
                     raise ValueError(f"Decided a variable that is not in the solution.")
@@ -687,7 +688,7 @@ class SolutionBranch:
             elif decision[0] == "prim":
                 self.__decisions.append(decision)
             else:
-                raise TypeError(f"Format of decision incorrect")
+                raise TypeError(f"Format of decision incorrect: {decision[0]}")
             
     ######################################################################################################
     ### PROPERTIES OF THE CLASS
@@ -720,6 +721,23 @@ class SolutionBranch:
         B = PolynomialRing(B, rem_vars)
         return B
 
+    @cached_method
+    def diff_parent(self, origin):
+        r'''Recreate the differential structure over the :func:`final_parent` for this solution branch.'''
+        if isinstance(origin, DPolynomialRing_dense):
+            output = DPolynomialRing(self.diff_parent(origin.base()), origin.variable_names())
+        elif origin.is_field() and origin.base() != origin:
+            output = self.diff_parent(origin.base()).fraction_field()
+        else: 
+            imgs_of_gens = {str(v): self.parent()(origin(str(v)).derivative()) for v in self.parent().gens()}
+            base = self.final_parent()
+            if any(imgs_of_gens[v] != 0 for v in (g for g in imgs_of_gens if g not in base.variable_names())):
+                raise TypeError(f"Impossible to build the differential structure: something was not constant but was assigned in the solution branch")
+            
+            imgs_of_gens = {v : imgs_of_gens[v] for v in base.variable_names()}
+            output = DifferentialRing(base, lambda p : imgs_of_gens[str(p)])
+        return output
+
     def __getitem__(self, key):
         if not isinstance(key, str):
             if not key in self.parent().gens(): raise KeyError(f"Only generators of {self.parent()} can be requested")
@@ -730,11 +748,43 @@ class SolutionBranch:
     ### UTILITY METHODS
     ######################################################################################################
     def eval(self, element):
+        if isinstance(element, DPolynomial): # case of differential polynomials
+            dR = self.diff_parent(element.parent())
+            return sum(
+                c*m for (c,m) in zip(
+                    (dR(self.eval(el)) for el in element.coefficients()),
+                    (dR(str(el)) for el in element.monomials())
+                )
+            )
+        
+        # case of coefficients
         return self.final_parent()(str(self.parent()(element)(**self.__solution)))
     
     def remaining_variables(self):
         return [v for v in self.parent().gens() if not str(v) in self.__solution]
 
+    def subsolution(self, **kwds):
+        ## We check the input of new values
+        new_values = dict()
+        for (k,v) in kwds.items():
+            if k in self.__solution:
+                raise ValueError(f"The variable {k} was already assigned")
+            v = self.parent()(v)
+            if any(g not in self.remaining_variables() for g in v.variables()):
+                raise ValueError(f"The value for a variable must only contain remaining variables")
+            new_values[k] = v
+
+        ## We create the new ideal
+        I = [el(**new_values) for el in self.I.gens()]
+        ## We create the new dictionary
+        solution = self.__solution.copy(); solution.update(new_values)
+        ## We create the new decisions
+        decisions = self.decisions.copy()
+        for (k,v) in new_values.items():
+            decisions.append(("arb", k, v))
+
+        return SolutionBranch(I, solution, decisions, self.parent())
+        
     ######################################################################################################
     ### Equality methods
     ######################################################################################################
@@ -758,11 +808,57 @@ class SolutionBranch:
 
         return solution
     
-    
+#################################################################################################
+###
+### METHODS FOR COMPUTING THE SPECTRAL CURVE
+###
+#################################################################################################
+def spectral_operators(L, P, name_lambda = "lambda_", name_mu = "mu"):
+    r'''
+        Method to create the spectral operators associated with two differential operators.
+        
+        This method assumes `L` and `P` are two linear differential operators in the same parent
+        of the form `F[\textbf{x}]\{z\}`, i.e., one differential variable, then a set of algebraic variables
+        (may or not be constant) and a base field `F` such that `\partial(F) = 0`.
 
+        To create the spectral operators we need to add algebraically the two constants `\lambda` and 
+        `\mu` to `F[\textbf{x}]` at the same level. Then we will need to add again the variable `z`.
+
+        This method will then return the two operators `L_\lambda = L - \lambda` and `P_\mu = P - \mu`.
+    '''
+    DR = L.parent()
+    if not P.parent() == DR: raise TypeError(f"[spectral] Method only implemented with same parent for operators.")
+
+    ## We extract the main polynomial ring / base field
+    PR = DR.base() # this is a wrapped of `F[x]`
+    R = PR.wrapped # we removed the differential structure
+    if R.is_field():
+        R = PolynomialRing(R, [name_lambda, name_mu])
+    else: # We assume R is a polynomial ring
+        R = R.extend_variables([name_lambda, name_mu])
+    l = R(name_lambda); m = R(name_mu)
+
+    ## At this point R is the desired algebraic base ring where `l`,`m` are the new variables.
+    ## We add now the differential structure again
+    gens_img = {str(v) : v.derivative() for v in PR.gens()}
+    gens_img[name_lambda] = 0
+    gens_img[name_mu] = 0
+    PR = DifferentialRing(R, lambda p : gens_img[str(p)])
+
+    ## We create again teh ring of differential polynomials
+    DR = DifferentialPolynomialRing(PR, DR.variable_names())
+
+    ## We cast everything to the goal ring
+    z = DR.gens()[0]
+    l = DR(l); m = DR(m)
+    L = DR(L); P = DR(P)
+
+    ## We return the spectral operators
+    return L - l*z[0], P - m*z[0]
+ 
 __all__ = [
     "schr_L", "almost_commuting_schr", 
     "kdv", "boussinesq",
     "GetEquationsForSolution", "PolynomialCommutator",
-    "analyze_ideal"
+    "analyze_ideal", "spectral_operators"
 ]

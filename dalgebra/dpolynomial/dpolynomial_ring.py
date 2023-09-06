@@ -844,9 +844,11 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
                     element = self(element)
                 else:
                     element=self(str(element))
-                    
-                if(element in self.base()):
+
+                try:
                     return self(operator(self.base()(element)))
+                except:
+                    pass
                 
                 if(not element in self.__cache[operation]):
                     generators = self.gens()
@@ -2084,7 +2086,7 @@ class RankingFunction:
 
             The leading term for a given ranking is defined as the :func:`rank` times :func:`initial`
             of a d-polynomial. For any given pair of d-polynomials, there is a minimal rank 
-            that is greater or euqal to both polynomials `p` and `q`.
+            that is greater or equal to both polynomials `p` and `q`.
 
             Then, this method returns an extension of both polynomials (i.e., the returned d-polynomials
             are obtained by multiplication and applying operations only) with that common bigger rank.
