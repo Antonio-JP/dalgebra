@@ -835,7 +835,7 @@ def spectral_operators(L, P, name_lambda = "lambda_", name_mu = "mu"):
     if R.is_field():
         R = PolynomialRing(R, [name_lambda, name_mu])
     else: # We assume R is a polynomial ring
-        R = R.extend_variables([name_lambda, name_mu])
+        R = PolynomialRing(R.base(), list(R.variable_names()) + [name_lambda, name_mu])
     l = R(name_lambda); m = R(name_mu)
 
     ## At this point R is the desired algebraic base ring where `l`,`m` are the new variables.
