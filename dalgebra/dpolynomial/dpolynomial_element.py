@@ -765,6 +765,40 @@ class DPolynomial (InfinitePolynomial_dense):
         '''
         return self.parent().eval(self, *args, dic=dic, **kwargs)
 
+    @cached_method
+    def sym_power(self, power: int, gen: DPolynomialGen = None) -> DPolynomial:
+        r'''
+            Computes the symmetric power of an operator.
+
+            Given a `d`-polynomial, we can consider two different products:
+            
+            * The algebraic product of `d`-polynomials.
+            * The operational composition (where `A\circ B \equiv A(z=B)` for `z` the `d`-variable.
+            
+            This second multiplication is, generally, not commutative. However, when the Lie-bracket 
+            between two `d`-polynomial vanishes (i.e., `[A,B] = A\circ B - B\circ A = 0`), this product
+            is commutative.
+
+            In particular, a `d`-polynomial **always** commutes with itself. Hence, we can compute the power
+            of the `d`-polynomial in any order. This power is called "symmetric power".
+
+            INPUT:
+
+            * ``power``: the power we want to compute.
+            * ``gen``: the generator that will be substituted. If not given, we will take the first generator of the parent.
+        '''
+        power = int(power)
+        if power == 0:
+            return self.parent().one()
+        elif power == 1:
+            return self
+        else:
+            H1 = self.sym_power(power//2 + power % 2, gen)
+            H2 = self.sym_power(power//2, gen)
+            gen = gen if gen != None else self.parent().gens()[0]
+            ngen = gen.variable_name()
+            return H1(**{ngen: H2})
+        
     def divides(self, other : DPolynomial) -> bool:
         r'''
             Method that checks whether a polynomial divides ``other``.

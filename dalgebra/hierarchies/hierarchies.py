@@ -855,6 +855,32 @@ def spectral_operators(L, P, name_lambda = "lambda_", name_mu = "mu"):
 
     ## We return the spectral operators
     return L - l*z[0], P - m*z[0]
+
+def BC_pair(L, P):
+    r'''
+        Algorithm BC_pair from :doi:`10.3842/sigma.2019.101` (Section 6).
+
+        This method takes as input two operators that commute and computes a pair
+        `(L,B)` that is a BC pair and its order.
+    '''
+    assert L.order() == 4, "[BC_pair] Only working for order `4` operators."
+    ## We first compute the spectral curve of L and P
+    sL, sP = spectral_operators(L, P)
+    R = sL.parent()
+    f = R.sylvester_resultant(sL, sP)
+    h = f.coefficients()[0].wrapped.factor()[0][0]
+
+    ## Now we compute the coefficient of "lambda" for the spectral curve
+    b1 = h.coefficient({h.parent()("mu"): 1})
+    M = P - sum(c*L.sym_power(m.degree()) for (c,m) in zip(b1.coefficients(), b1.monomials()))/2
+
+    ## We check if M is zero
+    if M == 0:
+        return "The given operator `P` was a polynomial in `C[L]`"
+    
+    g = 1
+    raise NotImplementedError(f"[BC_pair] Method not yet implemented")
+
  
 __all__ = [
     "schr_L", "almost_commuting_schr", 
