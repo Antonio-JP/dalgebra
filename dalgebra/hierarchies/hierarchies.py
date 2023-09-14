@@ -159,6 +159,7 @@ logger = logging.getLogger(__name__)
 from functools import reduce, lru_cache
 from sage.all import cached_method, diff, ideal, matrix, parent, QQ, vector, ZZ
 from sage.categories.pushout import pushout
+from sage.rings.fraction_field import is_FractionField
 from sage.rings.ideal import Ideal_generic as Ideal
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from typing import Any
@@ -473,14 +474,19 @@ def GetEquationsForSolution(n: int, m: int, U: list | dict, extract, flag_name =
     ## Adding the appropriate number of flag constants
     logger.debug(f"[GEFS] Creating the ring for having the flag of constants...")
     C = [f"{flag_name}_{i}" for i in range(len(Ps))]
-    base = parent_us.wrapped
-    if base != QQ and base.is_field(): base = base.base() # we get now a polynomial ring or rationals
+    base = parent_us.wrapped; was_field = False
+    if base != QQ and base.is_field(): 
+        was_field = True
+        base = base.base() # we get now a polynomial ring or rationals
     if base.is_field(): ## rational case, no variable there already
         diff_base = DifferentialRing(PolynomialRing(base, C), lambda _ : 0)
     else: # we had variables before
         old_vars = list(base.variable_names())
         dict_imgs = {v : parent_us(v).derivative() for v in old_vars}; dict_imgs.update({v : 0 for v in C})
-        diff_base = DifferentialRing(PolynomialRing(base.base(), old_vars + C), lambda v : dict_imgs[str(v)])
+        if was_field:
+            diff_base = DifferentialRing(PolynomialRing(base.base(), old_vars + C).fraction_field(), lambda v : dict_imgs[str(v)])
+        else:
+            diff_base = DifferentialRing(PolynomialRing(base.base(), old_vars + C), lambda v : dict_imgs[str(v)])
         
     logger.debug(f"[GEFS] Ring with flag-constants: {diff_base=}")
     C = [diff_base(C[i]) for i in range(len(C))]
@@ -527,9 +533,14 @@ def generate_polynomial_equations(H: DPolynomial, var_name: str = "x"):
     logger.debug(f"[GenPolyEqus] Getting equations (w.r.t. {var_name}) from: {H=}...")
     H = H.coefficients()[0].wrapped # this removes the diff. variable and the diff. structure remaining only the ansatz variables and the polynomial variable
     B = parent(H) # this is the algebraic structure
-    x = B(var_name) # this is the polynomial variable that will be removed
 
-    return list(H.polynomial(x).coefficients())
+    if B.is_field() and B != QQ: # field of fractions of polynomials
+        x = B.base()(var_name) # this is the polynomial variable that will be removed
+        output = list(H.numerator().polynomial(x).coefficients())
+    else:
+        x = B(var_name) # this is the polynomial variable that will be removed
+        output = list(H.polynomial(x).coefficients())
+    return output
 
 def PolynomialCommutator(n: int, m: int, d: int):
     logger.debug(f"[PolyComm] Computing equations for polynomial commutators for L_{n} up to order {m} and degree {d}.")
@@ -701,7 +712,10 @@ class SolutionBranch:
     def parent(self): return self.__parent
 
     @cached_method
-    def final_parent(self):
+    def final_parent(self, field=False):
+        if field:
+            return self.final_parent(False).fraction_field()
+        
         ## First we create the algebraic extension
         B = self.parent().base()
         if self.I != ZZ(0):
@@ -726,11 +740,11 @@ class SolutionBranch:
         r'''Recreate the differential structure over the :func:`final_parent` for this solution branch.'''
         if isinstance(origin, DPolynomialRing_dense):
             output = DPolynomialRing(self.diff_parent(origin.base()), origin.variable_names())
-        elif origin.is_field() and origin.base() != origin:
+        elif is_FractionField(origin) and origin in _DRings:
             output = self.diff_parent(origin.base()).fraction_field()
         else: 
-            imgs_of_gens = {str(v): self.parent()(origin(str(v)).derivative()) for v in self.parent().gens()}
-            base = self.final_parent()
+            imgs_of_gens = {str(v): self.parent()(origin(str(v)).derivative()) if v in origin else 0 for v in self.final_parent().gens()}
+            base = self.final_parent().fraction_field() if origin.is_field() else self.final_parent()
             if any(imgs_of_gens[v] != 0 for v in (g for g in imgs_of_gens if g not in base.variable_names())):
                 raise TypeError(f"Impossible to build the differential structure: something was not constant but was assigned in the solution branch")
             
@@ -758,7 +772,19 @@ class SolutionBranch:
             )
         
         # case of coefficients
-        return self.final_parent()(str(self.parent()(element)(**self.__solution)))
+        if is_FractionField(element.parent()): # case of fractions
+            numer = self.eval(element.numerator())
+            denom = self.eval(element.denominator())
+            return numer / denom
+        else: # case of polynomials
+            try:
+                element = self.parent()(element)
+            except:
+                element = self.parent().fraction_field()(element)
+            try:
+                return self.final_parent()(str(element(**self.__solution)))
+            except:
+                return self.final_parent(True)(str(element(**self.__solution)))
     
     def remaining_variables(self):
         return [v for v in self.parent().gens() if not str(v) in self.__solution]

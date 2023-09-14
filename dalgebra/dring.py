@@ -1005,6 +1005,9 @@ class DRing_WrapperElement(Element):
             return destiny.element_class(destiny, denom)
         except Exception as e:
             raise AttributeError(f"'denominator' not an attribute for {self.__class__}. Reason: {e}")
+        
+    def _derivative(self, *args, **kwds):
+        return DRings.ElementMethods.derivative(self)
 
     def gcd(self, other: DRing_WrapperElement) -> DRing_WrapperElement:
         try:
@@ -1036,6 +1039,11 @@ class DRing_WrapperElement(Element):
         raise AttributeError(f"{self.__class__} object has no attribute {attr}")
     
     ## Other magic methods
+    def __call__(self, *args, **kwds):
+        out = self.wrapped(*args, **kwds)
+        if out in self.parent().wrapped:
+            return self.parent()(out)
+        return out
     def __bool__(self) -> bool:
         return bool(self.wrapped)
     def __hash__(self) -> int:
@@ -1399,6 +1407,8 @@ class DRing_Wrapper(Parent):
         p = self.wrapped.random_element(*args,**kwds)
         return self.element_class(self, p)
 
+def is_WrappedDRing(parent: Parent) -> bool:
+    return isinstance(parent, DRing_Wrapper)
 ####################################################################################################
 ###
 ### DEFINING A GENERIC FIELD OF FRACTIONS FOR D-RINGS
@@ -1684,6 +1694,6 @@ class WrappedMap(AdditiveMap):
         return super()._latex_()
 
 __all__ = [
-    "DRings", "DRing", "DFractionField", "DifferentialRing", "DifferenceRing", # names imported
+    "DRings", "DRing", "DFractionField", "DifferentialRing", "DifferenceRing", "is_WrappedDRing", # names imported
     "RingsWithOperators", "RingWithOperators" # deprecated names (backward compatibilities)
 ]
