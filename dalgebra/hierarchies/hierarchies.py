@@ -559,6 +559,7 @@ def PolynomialCommutator(n: int, m: int, d: int):
 ### AUXILIARY METHODS TO SOLVE EQUATIONS
 ###
 #################################################################################################
+@loglevel(logger)
 def analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent = None):
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
     if not isinstance(I, (list, tuple)):
