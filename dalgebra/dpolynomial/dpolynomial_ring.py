@@ -781,9 +781,10 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
                         evaluation_dict[str(variable)] = R(str(gen[operations]))
                     break
         # extending the dictionary to all variables in element.polynomial().
-        for variable in element.polynomial().parent().gens():
-            if not variable in element.variables(): # only those that do not appear
-                evaluation_dict[str(variable)] = R.zero() # we can add anything here, since they do not show up
+        variable_names = [str(v) for v in element.variables()]
+        for variable in element.polynomial().parent().variable_names():
+            if not variable in variable_names: # only those that do not appear
+                evaluation_dict[variable] = R.zero() # we can add anything here, since they do not show up
 
         evaluation_dict.update(other_input)
         logger.debug(f"[eval] Final evaluation performed:\n\t**DICT={evaluation_dict}\n\t**POLY={element.polynomial()}")

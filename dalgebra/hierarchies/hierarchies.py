@@ -545,6 +545,7 @@ def generate_polynomial_equations(H: DPolynomial, var_name: str = "x"):
         output = list(H.polynomial(x).coefficients())
     return output
 
+@loglevel(logger)
 def PolynomialCommutator(n: int, m: int, d: int):
     logger.debug(f"[PolyComm] Computing equations for polynomial commutators for L_{n} up to order {m} and degree {d}.")
     logger.debug(f"[PolyComm] --- Generating the ansatz polynomials...")
