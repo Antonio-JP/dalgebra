@@ -23,6 +23,33 @@ import functools, logging, sys
 
 STDOUT_HANDLER = logging.StreamHandler(sys.stdout)
 
+__USED_LOGLEVEL = set()
+
+def loglevel(logger):
+    def inner(func):
+        @functools.wraps(func)
+        def wrap(*args, loglevel=False, **kwds):
+            loglevel = logging.INFO if (loglevel is True) else loglevel
+            if loglevel:
+                if logger in __USED_LOGLEVEL:
+                    # another function must has set this up, no need to remove at the end
+                    loglevel = False
+                else:
+                    # We set up the appropriate logging level
+                    old_level = logger.level
+                    __USED_LOGLEVEL.add(logger)
+                    logger.setLevel(loglevel)
+                
+            out = func(*args, **kwds)
+
+            if loglevel:
+                logger.setLevel(old_level)
+                __USED_LOGLEVEL.remove(logger)
+
+            return out
+        return wrap
+    return inner
+
 def verbose(logger):
     def inner(func):
         @functools.wraps(func)

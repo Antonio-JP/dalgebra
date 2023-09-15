@@ -156,18 +156,21 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from collections.abc import Sequence as ListType
 from functools import reduce, lru_cache
-from sage.all import cached_method, diff, ideal, matrix, parent, QQ, vector, ZZ
+from sage.all import cached_method, diff, gcd, ideal, matrix, parent, QQ, vector, ZZ
 from sage.categories.pushout import pushout
 from sage.rings.fraction_field import is_FractionField
 from sage.rings.ideal import Ideal_generic as Ideal
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
+from time import time
 from typing import Any
 
 from ..dring import DifferentialRing, DRings
 from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
 from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing, DPolynomialRing_dense
 from ..dpolynomial.dpolynomial_system import DSystem
+from ..logging.logging import loglevel
 
 _DRings = DRings.__classcall__(DRings)
 
@@ -839,6 +842,51 @@ class SolutionBranch:
 ### METHODS FOR COMPUTING THE SPECTRAL CURVE
 ###
 #################################################################################################
+@loglevel(logger)
+def SpectralCurveOverIdeal(L: DPolynomial, P: DPolynomial, branches: ListType[SolutionBranch]) -> dict[str,Any]:
+    r'''
+        Method that automatizes the computation of spectral curve and some extra data throughout the 
+        solution branches of an ideal.
+    '''
+    final_output = dict()
+    tot = len(branches)
+    for ind,branch in enumerate(branches):
+        logger.info(f"##########################################################")
+        logger.info(f"### Starting the computation on branch {ind+1}/{tot}   ###")
+        logger.debug(f"Evaluating the linear operators on the branch...")
+        data = dict()
+        Lb = branch.eval(L)
+        Pb = branch.eval(P)
+        logger.debug(f"Computing the spectral operators...")
+        L_l, P_m = spectral_operators(Lb, Pb)
+        SDR = L_l.parent()
+        logger.debug(f"Computing the differential resultant...")
+        ctime = time()
+        res = SDR.sylvester_resultant(L_l, P_m)
+        data["time_res"] = time()-ctime
+        h = res.coefficients()[0].wrapped.factor()[0]
+        data["h"] = h
+        logger.debug(f"Computed: {data['time_res']}")
+        logger.debug(f"Computing the differential subresultant sequence...")
+        ctime = time()
+        seq = SDR.sylvester_subresultant_sequence(L_l, P_m)
+        data["time_seq"] = time()-ctime
+        logger.debug(f"Computed: {data['time_seq']}")
+        logger.debug(f"Checking the first non-zero subresultant over the curve...")
+        for i, pseq in enumerate(seq):
+            coeffs = [__simplify(c.wrapped, h[0]) for c in pseq.coefficients()]
+            if any(el != 0 for el in coeffs):
+                data["first_nonzero"] = (i, sum(c*m for m,c in zip(pseq.monomials(), coeffs)))
+                logger.debug(f"Found first non-zero subresultant: {i}")
+                break
+        else:
+            logger.debug(f"All subresultants are zero???")
+        data["rk"] = gcd(Lb.order(), Pb.order())
+        logger.info(f"### Finished the computation on a branch {ind+1}/{tot} ###")
+        logger.info(f"##########################################################")
+        final_output[branch] = data
+    return final_output
+
 def spectral_operators(L, P, name_lambda = "lambda_", name_mu = "mu"):
     r'''
         Method to create the spectral operators associated with two differential operators.
@@ -858,11 +906,20 @@ def spectral_operators(L, P, name_lambda = "lambda_", name_mu = "mu"):
     ## We extract the main polynomial ring / base field
     PR = DR.base() # this is a wrapped of `F[x]`
     R = PR.wrapped # we removed the differential structure
-    if R.is_field():
+
+    ## We check if the ring `R` is a FractionField or not
+    was_fraction_field = is_FractionField(R)
+    R = R.base() if was_fraction_field else R
+
+    ## We treat the base ring `R`
+    if R.is_field(): # case R is NumberField
         R = PolynomialRing(R, [name_lambda, name_mu])
     else: # We assume R is a polynomial ring
         R = PolynomialRing(R.base(), list(R.variable_names()) + [name_lambda, name_mu])
     l = R(name_lambda); m = R(name_mu)
+
+    if was_fraction_field: # we set the type of ring to fraction_field if needed
+        R = R.fraction_field() 
 
     ## At this point R is the desired algebraic base ring where `l`,`m` are the new variables.
     ## We add now the differential structure again
@@ -881,6 +938,13 @@ def spectral_operators(L, P, name_lambda = "lambda_", name_mu = "mu"):
 
     ## We return the spectral operators
     return L - l*z[0], P - m*z[0]
+
+def __simplify(element, curve):
+    r'''Reduces the element with the generator of a curve'''
+    P = element.parent()
+    if is_FractionField(P): # element is a rational function
+        return __simplify(element.numerator(), curve) / __simplify(element.denominator(), curve)
+    return element % curve
 
 def BC_pair(L, P):
     r'''
@@ -904,13 +968,12 @@ def BC_pair(L, P):
     if M == 0:
         return "The given operator `P` was a polynomial in `C[L]`"
     
-    g = 1
     raise NotImplementedError(f"[BC_pair] Method not yet implemented")
 
  
 __all__ = [
     "schr_L", "almost_commuting_schr", 
     "kdv", "boussinesq",
-    "GetEquationsForSolution", "PolynomialCommutator",
+    "GetEquationsForSolution", "PolynomialCommutator", "SpectralCurveOverIdeal",
     "analyze_ideal", "spectral_operators"
 ]
