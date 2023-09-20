@@ -6,10 +6,29 @@ sys.path.insert(0,"..") # dalgebra is here
 from dalgebra.hierarchies.hierarchies import PolynomialCommutator, analyze_ideal
 import logging
 from time import time
-order_L = 4
-order_P = 6
-degree = 4
 
+#########################################################################################
+### SCRIPT AREA
+### Processing command input
+n = 1; order_L = None; order_P = None; degree = None
+while n < len(sys.argv):
+    if sys.argv[n].startswith("-"):
+        if sys.argv[n].endswith("L"):
+            order_L = int(sys.argv[n+1]); n+=2
+        elif sys.argv[n].endswith("P"):
+            order_P = int(sys.argv[n+1]); n+=2
+        elif sys.argv[n].endswith("d"):
+            degree = int(sys.argv[n+1]); n+=2
+        else:
+            n += 1
+    else:
+        n += 1
+if order_L is None: order_L = 2
+if order_P is None: order_P = 3
+if degree is None: degree = 2
+
+#########################################################################################
+### Code to execute
 with open(f"./[results]weil_commutator({order_L}-{order_P}-{degree}).txt", "wt") as out_file:
     out_file.writelines([
         f"####################################################################\n"
@@ -41,7 +60,7 @@ with open(f"./[results]weil_commutator({order_L}-{order_P}-{degree}).txt", "wt")
         partial_solution, 
         [("var", f"c_{order_P}", 1)] + [("var", f"c_{a*order_L}", 0) for a in range(order_P//order_L)], 
         P.parent().base().wrapped)
-    branches = [branch for branch in branches if branch.eval(P) != 0]
+    branches = list(set([branch for branch in branches if branch.eval(P) != 0])) # cleaning also repeated branches
     time_analysis = time()-ctime
 
     out_file.writelines([
@@ -67,5 +86,6 @@ with open(f"./[results]weil_commutator({order_L}-{order_P}-{degree}).txt", "wt")
         ])
         out_file.flush()
 
-
-    
+#########################################################################################
+#########################################################################################
+#########################################################################################
