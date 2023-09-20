@@ -25,7 +25,7 @@ while n < len(sys.argv):
         n += 1
 if order_L is None: order_L = 2
 if order_P is None: order_P = 3
-if degree is None: degree = 2
+if degree is None: degree = 4
 
 #########################################################################################
 ### Code to execute
