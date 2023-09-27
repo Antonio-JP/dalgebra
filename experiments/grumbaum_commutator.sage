@@ -94,7 +94,9 @@ with open(f"./[results]grunbaum_commutator({U.degree(x)}-{V.degree(x)}-{W.degree
 
     partial_solution = {f"c_{order_P}" : 1} # we set the highest constant to on to have exactly order_P
     partial_solution.update({f"c_{a*order_L}" : 0 for a in range(order_P//order_L + 1)}) # we set the coefficients of L and all its powers to zero)
+    H = [poly(**partial_solution) for poly in H.gens()]
     out_file.write(f"-- Initial conditions on the ideal: {partial_solution}\n")
+    out_file.flush()
     ctime = time()
     branches = analyze_ideal(
         H, 
@@ -103,7 +105,7 @@ with open(f"./[results]grunbaum_commutator({U.degree(x)}-{V.degree(x)}-{W.degree
         P.parent().base().wrapped,
         loglevel=logging.DEBUG
     )
-    branches = list(set([branch for branch in branches if branch.eval(P) != 0])) # cleaning also repeated branches
+    branches = list(set([branch for branch in branches])) # cleaning also repeated branches
     time_analysis = time()-ctime
 
     out_file.writelines([
@@ -119,6 +121,7 @@ with open(f"./[results]grunbaum_commutator({U.degree(x)}-{V.degree(x)}-{W.degree
             f"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n",
             f"%%% Data for branch {i+1}/{len(branches)}\n",
             f"Remaining ideal: {branch.I.gens()}\n",
+            f"Solution on coefficients: {branch._SolutionBranch__solution}\n",
             f"Remaining variables: {branch.remaining_variables()}\n",
             f"Final parent: {bL.parent()}\n"
             f"Final operator: {branch.eval(L)}\n",

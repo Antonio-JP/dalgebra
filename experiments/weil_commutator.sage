@@ -53,6 +53,7 @@ with open(f"./[results]weil_commutator({order_L}-{order_P}-{degree}).txt", "wt")
 
     partial_solution = {f"c_{order_P}" : 1} # we set the highest constant to on to have exactly order_P
     partial_solution.update({f"c_{a*order_L}" : 0 for a in range(order_P//order_L + 1)}) # we set the coefficients of L and all its powers to zero)
+    H = [poly(**partial_solution) for poly in H.gens()]
     out_file.write(f"-- Initial conditions on the ideal: {partial_solution}\n")
     ctime = time()
     branches = analyze_ideal(
@@ -76,6 +77,7 @@ with open(f"./[results]weil_commutator({order_L}-{order_P}-{degree}).txt", "wt")
             f"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n",
             f"%%% Data for branch {i+1}/{len(branches)}\n",
             f"Remaining ideal: {branch.I.gens()}\n",
+            f"Solution on coefficients: {branch._SolutionBranch__solution}\n",
             f"Remaining variables: {branch.remaining_variables()}\n",
             f"Final parent: {bL.parent()}\n"
             f"Final operator: {branch.eval(L)}\n",
