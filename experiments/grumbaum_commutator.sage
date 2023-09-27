@@ -44,15 +44,15 @@ if degree_W is None and W is None:
 if order_P is None: order_P = 5
 
 if U is None:
-    U = sum(SR(f"u_{i}")*SR("x")^i for i in range(degree_U))
+    U = sum(SR(f"u_{i}")*SR("x")^i for i in range(degree_U+1))
 else:
     U = SR(U)
 if V is None:
-    V = sum(SR(f"v_{i}")*SR("x")^i for i in range(degree_V))
+    V = sum(SR(f"v_{i}")*SR("x")^i for i in range(degree_V+1))
 else:
     V = SR(V)
 if W is None:
-    W = sum(SR(f"w_{i}")*SR("x")^i for i in range(degree_W))
+    W = sum(SR(f"w_{i}")*SR("x")^i for i in range(degree_W+1))
 else:
     W = SR(W)
 
