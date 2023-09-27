@@ -40,7 +40,13 @@ def loglevel(logger):
                     __USED_LOGLEVEL.add(logger)
                     logger.setLevel(loglevel)
                 
-            out = func(*args, **kwds)
+            try:
+                out = func(*args, **kwds)
+            except Exception as e:
+                if loglevel:
+                    logger.setLevel(old_level)
+                    __USED_LOGLEVEL.remove(logger)
+                raise e
 
             if loglevel:
                 logger.setLevel(old_level)
