@@ -81,7 +81,6 @@ with open(f"./[results]grunbaum_commutator({U.degree(x)}-{V.degree(x)}-{W.degree
     ])
     out_file.flush()
     ctime = time()
-    print([L.coefficient(z[i]) for i in range(order_L-1)])
     L,P,H = GetEquationsForSolution(order_L, order_P, [BD(str(L.coefficient(z[i]))) for i in range(order_L-1)], generate_polynomial_equations, loglevel=logging.DEBUG, method="linear")
     time_conditions = time()-ctime
     out_file.writelines([
