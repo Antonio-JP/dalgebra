@@ -158,7 +158,7 @@ logger = logging.getLogger(__name__)
 
 from collections.abc import Sequence as ListType
 from functools import reduce, lru_cache
-from sage.all import cached_method, diff, gcd, ideal, matrix, parent, QQ, vector, ZZ
+from sage.all import binomial, cached_method, diff, gcd, ideal, matrix, parent, QQ, vector, ZZ
 from sage.categories.pushout import pushout
 from sage.rings.fraction_field import is_FractionField
 from sage.rings.ideal import Ideal_generic as Ideal
@@ -208,7 +208,7 @@ def schr_L(n: int, name_u: str = "u", name_z: str = "z") -> DPolynomial:
     output_z = output_ring.gen('z'); output_u = [output_ring.gen(name) for name in names_u]
     return output_z[n] + sum(output_u[i][0]*output_z[i] for i in range(n-1))
 
-def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", method ="diff"):
+def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", method ="diff", equation_method = "direct"):
     r'''
         Method to compute an element on the almost-commuting basis.
 
@@ -288,22 +288,13 @@ def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", 
             output = (Pm, tuple((n-1)*[output_ring.zero()]))
         else: # generic case, there are some computations to be done
             name_p = "p" if not "p" in [name_u, name_z] else "q" if not "q" in [name_u, name_z] else "r"
+            equations_method = __almost_commuting_direct if method == "direct" else __almost_commuting_recursive if method == "recursive" else method
             method = __almost_commuting_diff if method == "diff" else __almost_commuting_linear if method == "linear" else method
             ## building the operators `L_n` and `P_m`
-            names_p = [f"{name_p}{i}" for i in range(m-1)] if m > 2 else [name_p]
+            R, equations, T = equations_method(output_ring, name_p)
+            p = [R(v) for v in R.variable_names() if v not in output_ring.variable_names()]
 
-            R = DifferentialPolynomialRing(QQ, names_u + names_p + [name_z])
-            z = R.gen(name_z); u = [R.gen(name) for name in names_u]; p = [R.gen(name) for name in names_p]
-            Ln = z[n] + sum(u[i][0]*z[i] for i in range(n-1))
-            Pm = z[m] + sum(p[i][0]*z[i] for i in range(m-1))
-
-            ## building the commutator
-            C = Ln(dic={z:Pm}) - Pm(dic={z:Ln})
-
-            ## getting equations for almost-commutation and the remaining with 
-            equations = [C.coefficient(z[i]) for i in range(n-1, C.order(z)+1)]
-            T = [C.coefficient(z[i]) for i in range(n-1)]
-
+            ## solving the system of equations in the new variables
             solve_p = method(R, equations, u, p)
             Pm = output_ring(Pm(dic=solve_p))
             T = tuple([output_ring(el(dic=solve_p)) for el in T])
@@ -334,6 +325,62 @@ def __save_file_cache(n,m,name_u,name_z,output):
     FILE_DIR = dirname(__file__) if __name__ != "__main__" else "./"
     with open(join(FILE_DIR, f"{n}_{m}_{name_u}_{name_z}.dmp"), "wb") as file:
         pickle.dump(output, file)
+
+def __almost_commuting_direct(parent: DPolynomialRing_dense, order_L: int, order_P: int, name_p: str, names_u, name_z: str) -> tuple[DPolynomialRing_dense, list[DPolynomial], list[DPolynomial]]:
+    names_p = [f"{name_p}{i}" for i in range(order_P-1)] if order_P > 2 else [name_p]
+
+    R = parent.append_variables(names_p)
+    z = R.gen(name_z); u = [R.gen(name) for name in names_u]; p = [R.gen(name) for name in names_p]
+    Ln = z[order_L] + sum(u[i][0]*z[i] for i in range(order_L-1))
+    Pm = z[order_P] + sum(p[i][0]*z[i] for i in range(order_P-1))
+
+    ## building the commutator
+    C = Ln(dic={z:Pm}) - Pm(dic={z:Ln})
+
+    ## getting equations for almost-commutation and the remaining with 
+    equations = [C.coefficient(z[i]) for i in range(order_L-1, C.order(z)+1)]
+    T = [C.coefficient(z[i]) for i in range(order_L-1)]
+
+    return R, equations, T
+
+@lru_cache(maxsize=128)
+def __almost_commuting_recursive(parent: DPolynomialRing_dense, order_L: int, order_P: int, name_p: str, names_u, name_z: str) -> tuple[DPolynomialRing_dense, list[DPolynomial], list[DPolynomial]]:
+    if order_P == 1:
+        u = [R.gen(name) for name in names_u]
+        return parent, [], [R.gen(name)[1] for name in names_u]
+    else:
+        R, E, T = __almost_commuting_recursive(parent, order_L, order_P - 1, name_p, names_u, name_z)
+        E = T + E # mixing into one to fit format of recursion
+
+        ## Getting the final ring
+        R = R.append_variables(f"{name_p}{order_P}")
+        u = [R.gen(name) for name in names_u]; p = [R.gen(name) for name in R.variable_names() if name != name_z and name not in names_u]
+        assert len(u) == order_L - 1; assert len(p) == order_P - 1
+        ## Casting old things to the enw ring
+        E = [R(el) for el in E]
+
+        ## Computing the new T part
+        n = order_L; m = order_P-1 # for simplicity in the next formulas
+        output = [0 for _ in range(n+m-1)]
+
+        ## Computing the recursive part
+        for l in range(len(E)):
+            output[l+1] += E[l-1]
+
+        ## Computing the influence of the new variable
+        for l in range(n-1):
+            output[l] += binomial(n,l)*p[m+1][n-l] + sum(binomial(i,l)*u[i][0]*p[m+1][i-l] for i in range(l, n-1))
+        output[n-1] += n*p[m+1][1] # special case of l = n-1
+        output[n] += p[m+1][0] # special case of l = n
+
+        ## Computing the generic influence
+        output[0] += p[m][0]*u[0][1]
+        for l in range(n-1): output[l] += sum(sum(binomial(i,k)*p[m-i][0]*u[l-k][i-k+1] for i in range(k, l+1)) for k in range(l+1))
+        for l in range(n-1, m): output[l] += sum(sum(binomial(i,k)*p[m-i][0]*u[l-k][i-k+1] for i in range(k, l+1)) for k in range(l-n+2, l+1))
+        for l in range(m,n+m-2): output[l] += sum(sum(binomial(i,k)*p[m-i][0]*u[l-k][i-k+1] for i in range(k, m+1)) for k in range(l-n+2, m+1))
+        output[n+m-2] += u[n-2][1]
+
+        return R, E[n-1:], E[:n-1]
 
 def __almost_commuting_diff(parent: DPolynomialRing_dense, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]):
     r'''
