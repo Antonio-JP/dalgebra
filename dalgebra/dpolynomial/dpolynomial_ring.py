@@ -425,7 +425,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         
         return DPolynomialGen(self, self._names[i])
                 
-    def construction(self) -> DPolyRingFunctor:
+    def construction(self) -> tuple[DPolyRingFunctor, Ring]:
         r'''
             Return the associated functor and input to create ``self``.
 
@@ -539,6 +539,13 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             A :class:`DPolynomialRing_dense` over ``R`` with the same variables as ``self``.
         '''
         return DPolynomialRing(R, self.variable_names())
+
+    def append_variables(self, *variables) -> DPolynomialRing_dense:
+        r'''Add new d-variables to the current ring'''
+        F,B = self.construction()
+        new_ring = F.append_variables(*variables)(B)
+        
+        return new_ring
 
     def fraction_field(self):
         try:
@@ -1430,13 +1437,13 @@ class DPolyRingFunctor (ConstructionFunctor):
           the input ``names`` in :class:`DifferentialPolynomialRing_dense`)
     '''
     def __init__(self, variables):
-        self.__variables = variables
+        self.__variables = set(variables)
         super().__init__(_DRings,_DRings)
         self.rank = 12 # just above PolynomialRing and DRingFunctor and DExtension
         
     ### Methods to implement        
     def _apply_functor(self, x):
-        return DPolynomialRing(x,self.variables())
+        return DPolynomialRing(x,list(self.variables()))
         
     def _repr_(self):
         return f"DPolynomialRing((*),{self.variables()})"
@@ -1453,8 +1460,15 @@ class DPolyRingFunctor (ConstructionFunctor):
             return DPolyRingFunctor(global_names)
         return None
 
-    def variables(self):
+    def variables(self) -> set[str]:
         return self.__variables
+
+    def append_variables(self, *variables) -> DPolyRingFunctor:
+        r'''Returns the same functor with more variables attached. If repeated variables are provided, we raise an error'''
+        new_vars = set(variables)
+        if len(variables) > len(new_vars) or new_vars.intersection(self.variables()):
+            raise ValueError(f"Repeated variables: impossible to extend the Functor")
+        return self.__class__(self.variables().union(new_vars))
 
 class DPolynomialToLinOperator (Morphism):
     r'''
