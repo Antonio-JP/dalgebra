@@ -19,8 +19,10 @@ quasi_commuting: $(METHODS)
 	@n=2; while [[ $$n -le $(BOUND_N) ]] ; do \
 		m=1; while [[ $$m -le $(BOUND_M) ]] ; do \
 			t=1; while [[ $$t -le $(REPEATS) ]] ; do \
-				echo -ne "++ n=$$n; m=$$m; method=$@; ($$t/$(REPEATS))\r"; \
-				sage quasi_commuting.sage $$n $$m $@ ; \
+				echo -ne "++ n=$$n; m=$$m; method=$@; equations=direct; ($$t/$(REPEATS))          \r"; \
+				sage quasi_commuting.sage $$n $$m $@ direct; \
+				echo -ne "++ n=$$n; m=$$m; method=$@; equations=recursive; ($$t/$(REPEATS))          \r"; \
+				sage quasi_commuting.sage $$n $$m $@ recursive; \
 				((t = t + 1)) ; \
 			done ; \
 			echo "" ; \
