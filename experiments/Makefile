@@ -21,11 +21,12 @@ quasi_commuting: $(METHODS)
 	@n=2; while [[ $$n -le $(BOUND_N) ]] ; do \
 		m=1; while [[ $$m -le $(BOUND_M) ]] ; do \
 			t=1; while [[ $$t -le $(REPEATS) ]] ; do \
-				tsp sage quasi_commuting.sage $$n $$m $@ direct; \
-				tsp sage quasi_commuting.sage $$n $$m $@ recursive; \
+				tsp "sage quasi_commuting.sage $$n $$m $@ direct" > nul; \
+				tsp "sage quasi_commuting.sage $$n $$m $@ recursive" > nul; \
 				((t = t + 1)) ; \
 			done ; \
 			((m = m + 1)) ; \
 		done ; \
 		((n = n + 1)) ; \
 	done
+	@echo "Done"
