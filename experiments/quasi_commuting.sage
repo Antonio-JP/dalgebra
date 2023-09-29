@@ -15,6 +15,7 @@ if __name__ == "__main__":
     method = sys.argv[3]
     equ_method = sys.argv[4]
 
+    print(f"+++ Starting execution of {n=}, {m=}, {method=}, {equ_method=}")
 
     with Profile() as profile:
         start = time()
@@ -27,3 +28,5 @@ if __name__ == "__main__":
 
     with open(f"./results/{method}_{equ_method}.csv", "a+") as file:
         file.write(f"{n};{m};{total}\n")
+        
+    print(f"--- Finished execution of {n=}, {m=}, {method=}, {equ_method=}")

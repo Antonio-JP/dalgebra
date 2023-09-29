@@ -1,5 +1,6 @@
 SHELL:=/bin/bash 
 SAGE=sage
+PARALLEL=4
 BOUND_N=5
 BOUND_M=15
 REPEATS=10
@@ -16,16 +17,14 @@ quasi_commuting: $(METHODS)
 	@echo "All methods executed"
 
 %:
+	@tsp -S $(PARALLEL)
 	@n=2; while [[ $$n -le $(BOUND_N) ]] ; do \
 		m=1; while [[ $$m -le $(BOUND_M) ]] ; do \
 			t=1; while [[ $$t -le $(REPEATS) ]] ; do \
-				echo -ne "++ n=$$n; m=$$m; method=$@; equations=direct; ($$t/$(REPEATS))          \r"; \
-				sage quasi_commuting.sage $$n $$m $@ direct; \
-				echo -ne "++ n=$$n; m=$$m; method=$@; equations=recursive; ($$t/$(REPEATS))          \r"; \
-				sage quasi_commuting.sage $$n $$m $@ recursive; \
+				tsp sage quasi_commuting.sage $$n $$m $@ direct; \
+				tsp sage quasi_commuting.sage $$n $$m $@ recursive; \
 				((t = t + 1)) ; \
 			done ; \
-			echo "" ; \
 			((m = m + 1)) ; \
 		done ; \
 		((n = n + 1)) ; \
