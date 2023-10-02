@@ -3,6 +3,7 @@ from sage.all_cmdline import *   # import sage library
 import sys
 sys.path.insert(0,"..") # dalgebra is here
 
+from datetime import datetime
 from time import time
 from cProfile import Profile
 from pstats import Stats, SortKey
@@ -19,12 +20,13 @@ if __name__ == "__main__":
 
     with Profile() as profile:
         start = time()
-        almost_commuting_schr(n,m,method=method,equation_method=equ_method,to_cache=False)
+        almost_commuting_schr(n,m,method=method,equations_method=equ_method,to_cache=False)
         total = time()-start
     
+    today = datetime.now()
     stats = Stats(profile)
     stats.sort_stats(SortKey.TIME)
-    stats.dump_stats(filename=f"./profiles/time_{method}_{equ_method}[{n=},{m=}].prf")
+    stats.dump_stats(filename=f"./profiles/({today.year:04d}-{today.month:02d}-{today.day:02d})time_{method}_{equ_method}[{n=},{m=}].prf")
 
     with open(f"./results/{method}_{equ_method}.csv", "a+") as file:
         file.write(f"{n};{m};{total}\n")

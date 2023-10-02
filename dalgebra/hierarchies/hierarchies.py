@@ -211,7 +211,7 @@ def schr_L(n: int, name_u: str = "u", name_z: str = "z") -> DPolynomial:
     output_z = output_ring.gen('z'); output_u = [output_ring.gen(name) for name in names_u]
     return output_z[n] + sum(output_u[i][0]*output_z[i] for i in range(n-1))
 
-def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", method ="diff", equation_method = "direct", to_cache=True):
+def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", method ="diff", equations_method = "direct", to_cache=True):
     r'''
         Method to compute an element on the almost-commuting basis.
 
@@ -250,6 +250,8 @@ def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", 
         * ``name_z`` (optional): base name for the differential variable to represent `\partial`.
         * ``method`` (optional): method to decide how to solve the arising differential system. Currently 
           the methods ``"diff"`` (see :func:`__almost_commuting_diff`) and ``"linear"`` (see :func:`__almost__commuting_linear`).
+        * ``equations_method`` (optional): method to decide how to create the differential system. Currently 
+          the methods ``"direct"`` (see :func:`__almost_commuting_direct`) and ``"recursive"`` (see :func:`__almost__commuting_recursive`).
 
         OUTPUT: 
 
@@ -258,6 +260,19 @@ def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", 
         .. MATH::
 
             [L_n, P_m] = T_0 + T_1\partial + \ldots + T_{n-2}\partial^{n-2}
+
+        TESTS::
+
+            sage: from dalgebra.hierarchies.hierarchies import almost_commuting_schr
+            sage: for n in range(2,5):
+            ....:     for m in range(1, 10):
+            ....:         O1 = almost_commuting_schr(n,m,method="linear", equations_method="recursive",to_cache=False)
+            ....:         O2 = almost_commuting_schr(n,m,method="diff", equations_method="recursive",to_cache=False)
+            ....:         O3 = almost_commuting_schr(n,m,method="linear", equations_method="direct",to_cache=False)
+            ....:         O4 = almost_commuting_schr(n,m,method="diff", equations_method="direct",to_cache=False)
+            ....:         assert O1 == O2, f"Error between 1 and 2 ({n=}, {m=})
+            ....:         assert O1 == O3, f"Error between 1 and 3 ({n=}, {m=})
+            ....:         assert O1 == O4, f"Error between 1 and 4 ({n=}, {m=})
     '''
     output = __file_cache(n,m,name_u,name_z) if to_cache else None
     if not output:
@@ -279,7 +294,6 @@ def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", 
             return (z[m], tuple())
         elif m == 1: # special case where we do not care about the for computing `P_1`
             z = output_z; u = output_u
-            L = output_z[n] + sum(u[i][0]*z[i] for i in range(n-1))
             P = z[1]
             C = -sum(u[i][0]*z[i] for i in range(n-1)); T = tuple([C.coefficient(z[i]) for i in range(C.order(z)+1)])
             return (P, T)
@@ -291,16 +305,16 @@ def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", 
             output = (Pm, tuple((n-1)*[output_ring.zero()]))
         else: # generic case, there are some computations to be done
             name_p = "p" if not "p" in [name_u, name_z] else "q" if not "q" in [name_u, name_z] else "r"
-            equations_method = __almost_commuting_direct if equation_method == "direct" else __almost_commuting_recursive if equation_method == "recursive" else method
+            equations_method = __almost_commuting_direct if equations_method == "direct" else __almost_commuting_recursive if equations_method == "recursive" else method
             method = __almost_commuting_diff if method == "diff" else __almost_commuting_linear if method == "linear" else method
             ## building the operators `L_n` and `P_m`
             R, equations, T = equations_method(output_ring, n, m, name_p, name_u, name_z)
             u = [R.gen(name) for name in names_u]
-            p = [R.gen(f"p{i}") for i in range(2, m+1)]
+            p = [R.gen(f"{name_p}{m-i}") for i in range(m-1)] # sortened by weight
 
             ## solving the system of equations in the new variables
             solve_p = method(R, equations, u, p)
-            Pm = output_z[m] + sum(solve_p[v] * output_z[m-i-2] for i, v in enumerate(p))
+            Pm = output_z[m] + sum(output_ring(solve_p[v]) * output_z[m-i-2] for i, v in enumerate(p))
             T = tuple([output_ring(el(dic=solve_p)) for el in T])
 
             output = (Pm,T)
@@ -396,7 +410,7 @@ def __almost_commuting_recursive(parent: DPolynomialRing_dense, order_L: int, or
 
         return R, output[n-1:], output[:n-1]
 
-def __almost_commuting_diff(parent: DPolynomialRing_dense, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]):
+def __almost_commuting_diff(parent: DPolynomialRing_dense, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
     r'''
         Method that solves the system for almost-commutation using a differential approach
 
@@ -406,12 +420,16 @@ def __almost_commuting_diff(parent: DPolynomialRing_dense, equations: list[DPoly
     S = DSystem(equations, parent=parent, variables=p)
     return S.solve_linear()
 
-def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]):
+def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
         r'''
             Method that solves the system for almost-commutation using a linear approach
 
             This method exploits the homogeneous structure that the coefficient must have in order to 
             solve the system of almost-commutation.
+
+            This method assumes the variables `u` and `p` are given in appropriate order. This means that if we think of the generic
+            operators `L_n = \partial^n + u_{n-2}\partial^{n-2} +  ... + u_0` and `P_m = \partial^m + p_{2}\partial^{m-2} + ... + p_m`
+            then we have ``u[i] = u_i`` and ``p[i] = p_{m-i}``, i.e., the lists are given in descendent weight.
         '''
         n = len(u) + 1; m = len(p) + 1
         # Creating the Weight function
@@ -422,13 +440,13 @@ def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPo
         ansatz_variables = {p[i]: [f"c_{i}_{j}" for j in range(len(hom_monoms[p[i]]))] for i in range(m-1)}
 
         # Creating the new base ring with all new constants
-        base_C = DifferentialRing(PolynomialRing(QQ, sum([name for name in ansatz_variables.values()],[])), lambda p : 0)
+        base_C = DifferentialRing(PolynomialRing(QQ, sum([name for name in ansatz_variables.values()],[])), lambda _ : 0)
         ansatz_variables = {p[i]: [base_C(el) for el in ansatz_variables[p[i]]] for i in range(m-1)}
         cs = base_C.wrapped.gens()
 
         ## Adapting the DPolynomialRing
         R = parent.change_ring(base_C)
-        to_plug = {R.gen(gen.variable_name()) : sum(coeff*R(mon) for (coeff,mon) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
+        to_plug = {R.gen(gen.variable_name()) : sum(coeff*R(mon) for (mon,coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
 
         ## Creating the new equations
         equations = [R(equ)(dic=to_plug) for equ in equations] 
@@ -440,11 +458,8 @@ def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPo
             A = matrix([[equ.coefficient(v) for v in cs] for equ in new_equations])
         b = vector([equ.constant_coefficient() for equ in new_equations])
         sols = A.solve_right(-b)
-        ansatz_evaluated = {}; done = 0
-        for i in range(m-1):
-            monoms = list(hom_monoms[p[i]])
-            ansatz_evaluated[p[i]] = sum(parent.base()(sols[done+j])*monoms[j] for j in range(len(monoms)))
-            done = len(monoms)
+        sols = {c : sol for (c, sol) in zip (cs, sols)}
+        ansatz_evaluated = {gen: sum(sols[coeff]*R(mon) for (mon, coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
 
         return ansatz_evaluated
 
