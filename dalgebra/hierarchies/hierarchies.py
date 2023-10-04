@@ -170,7 +170,7 @@ from ..dring import DifferentialRing, DRings
 from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
 from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing, DPolynomialRing_dense
 from ..dpolynomial.dpolynomial_system import DSystem
-from ..logging.logging import loglevel
+from ..logging.logging import loglevel, cache_in_file
 
 _DRings = DRings.__classcall__(DRings)
 
@@ -208,6 +208,7 @@ def schr_L(n: int, name_u: str = "u", name_z: str = "z") -> DPolynomial:
     output_z = output_ring.gen('z'); output_u = [output_ring.gen(name) for name in names_u]
     return output_z[n] + sum(output_u[i][0]*output_z[i] for i in range(n-1))
 
+@cache_in_file
 def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", method ="diff"):
     r'''
         Method to compute an element on the almost-commuting basis.
@@ -256,84 +257,58 @@ def almost_commuting_schr(n: int, m: int, name_u: str = "u", name_z: str = "z", 
 
             [L_n, P_m] = T_0 + T_1\partial + \ldots + T_{n-2}\partial^{n-2}
     '''
-    output = __file_cache(n,m,name_u,name_z)
-    if not output:
-        if (not n in ZZ) or ZZ(n) <= 0:
-            raise ValueError(f"[almost] The value {n = } must be a positive integer")
-        if (not m in ZZ) or ZZ(m) <= 0:
-            raise ValueError(f"[almost] The value {m = } must be a positive integer")
-        if name_u == name_z:
-            raise ValueError(f"[almost] The names for the differential variables must be different. Given {name_u} and {name_z}")
-        
-        names_u = [f"{name_u}{i}" for i in range(n-1)] if n > 2 else [name_u] if n == 2 else []
-        output_ring = DifferentialPolynomialRing(QQ, names_u + [name_z])
-        output_z = output_ring.gen('z'); output_u = [output_ring.gen(name) for name in names_u]
-        
-        if n == 1: # special case where `L = \partial`
-            ## Clearly, `\partial^n` and `\partial^m` always commute for all `n` and `m`
-            ## Then, the `P_m = \partial^m`.
-            output_ring = DifferentialPolynomialRing(QQ, [name_z]); z = output_ring.gens()[0]
-            return (z[m], tuple())
-        elif m == 1: # special case where we do not care about the for computing `P_1`
-            z = output_z; u = output_u
-            L = output_z[n] + sum(u[i][0]*z[i] for i in range(n-1))
-            P = z[1]
-            C = L(dic={z:P}) - P(dic={z:L}); T = tuple([C.coefficient(z[i]) for i in range(C.order(z)+1)])
-            return (P, T)
-        elif m%n == 0: # special case: the order of the required almost-commutator is divisible by order of base operator
-            ## Since `L_n` always commute with itself, so it does `L_n^k` for any `k`. 
-            z = output_z; u = output_u
-            Ln = output_z[n] + sum(u[i][0]*z[i] for i in range(n-1))
-            Pm = reduce(lambda p, q: p(dic={z:q}), (m//n)*[Ln])
-            output = (Pm, tuple((n-1)*[output_ring.zero()]))
-        else: # generic case, there are some computations to be done
-            name_p = "p" if not "p" in [name_u, name_z] else "q" if not "q" in [name_u, name_z] else "r"
-            method = __almost_commuting_diff if method == "diff" else __almost_commuting_linear if method == "linear" else method
-            ## building the operators `L_n` and `P_m`
-            names_p = [f"{name_p}{i}" for i in range(m-1)] if m > 2 else [name_p]
+    if (not n in ZZ) or ZZ(n) <= 0:
+        raise ValueError(f"[almost] The value {n = } must be a positive integer")
+    if (not m in ZZ) or ZZ(m) <= 0:
+        raise ValueError(f"[almost] The value {m = } must be a positive integer")
+    if name_u == name_z:
+        raise ValueError(f"[almost] The names for the differential variables must be different. Given {name_u} and {name_z}")
+    
+    names_u = [f"{name_u}{i}" for i in range(n-1)] if n > 2 else [name_u] if n == 2 else []
+    output_ring = DifferentialPolynomialRing(QQ, names_u + [name_z])
+    output_z = output_ring.gen('z'); output_u = [output_ring.gen(name) for name in names_u]
+    
+    if n == 1: # special case where `L = \partial`
+        ## Clearly, `\partial^n` and `\partial^m` always commute for all `n` and `m`
+        ## Then, the `P_m = \partial^m`.
+        output_ring = DifferentialPolynomialRing(QQ, [name_z]); z = output_ring.gens()[0]
+        output = (z[m], tuple())
+    elif m == 1: # special case where we do not care about the for computing `P_1`
+        z = output_z; u = output_u
+        L = output_z[n] + sum(u[i][0]*z[i] for i in range(n-1))
+        P = z[1]
+        C = L(dic={z:P}) - P(dic={z:L}); T = tuple([C.coefficient(z[i]) for i in range(C.order(z)+1)])
+        output = (P, T)
+    elif m%n == 0: # special case: the order of the required almost-commutator is divisible by order of base operator
+        ## Since `L_n` always commute with itself, so it does `L_n^k` for any `k`. 
+        z = output_z; u = output_u
+        Ln = output_z[n] + sum(u[i][0]*z[i] for i in range(n-1))
+        Pm = reduce(lambda p, q: p(dic={z:q}), (m//n)*[Ln])
+        output = (Pm, tuple((n-1)*[output_ring.zero()]))
+    else: # generic case, there are some computations to be done
+        name_p = "p" if not "p" in [name_u, name_z] else "q" if not "q" in [name_u, name_z] else "r"
+        method = __almost_commuting_diff if method == "diff" else __almost_commuting_linear if method == "linear" else method
+        ## building the operators `L_n` and `P_m`
+        names_p = [f"{name_p}{i}" for i in range(m-1)] if m > 2 else [name_p]
 
-            R = DifferentialPolynomialRing(QQ, names_u + names_p + [name_z])
-            z = R.gen(name_z); u = [R.gen(name) for name in names_u]; p = [R.gen(name) for name in names_p]
-            Ln = z[n] + sum(u[i][0]*z[i] for i in range(n-1))
-            Pm = z[m] + sum(p[i][0]*z[i] for i in range(m-1))
+        R = DifferentialPolynomialRing(QQ, names_u + names_p + [name_z])
+        z = R.gen(name_z); u = [R.gen(name) for name in names_u]; p = [R.gen(name) for name in names_p]
+        Ln = z[n] + sum(u[i][0]*z[i] for i in range(n-1))
+        Pm = z[m] + sum(p[i][0]*z[i] for i in range(m-1))
 
-            ## building the commutator
-            C = Ln(dic={z:Pm}) - Pm(dic={z:Ln})
+        ## building the commutator
+        C = Ln(dic={z:Pm}) - Pm(dic={z:Ln})
 
-            ## getting equations for almost-commutation and the remaining with 
-            equations = [C.coefficient(z[i]) for i in range(n-1, C.order(z)+1)]
-            T = [C.coefficient(z[i]) for i in range(n-1)]
+        ## getting equations for almost-commutation and the remaining with 
+        equations = [C.coefficient(z[i]) for i in range(n-1, C.order(z)+1)]
+        T = [C.coefficient(z[i]) for i in range(n-1)]
 
-            solve_p = method(R, equations, u, p)
-            Pm = output_ring(Pm(dic=solve_p))
-            T = tuple([output_ring(el(dic=solve_p)) for el in T])
+        solve_p = method(R, equations, u, p)
+        Pm = output_ring(Pm(dic=solve_p))
+        T = tuple([output_ring(el(dic=solve_p)) for el in T])
 
-            output = (Pm,T)
-        
-        __save_file_cache(n,m,name_u,name_z, output)
+        output = (Pm,T)
     return output
-
-def __file_cache(n,m,name_u,name_z):
-    from os.path import exists, dirname, join
-    import pickle
-    FILE_DIR = dirname(__file__) if __name__ != "__main__" else "./"
-
-    file = join(FILE_DIR, f"{n}_{m}_{name_u}_{name_z}.dmp")
-    if exists(file):
-        try:
-            with open(file, "rb") as file:
-                output = pickle.load(file)
-            return output
-        except Exception as e:
-            logger.debug(f"[file_cache] Error while loading: {e}")
-    return False
-
-def __save_file_cache(n,m,name_u,name_z,output):
-    from os.path import dirname, join
-    import pickle
-    FILE_DIR = dirname(__file__) if __name__ != "__main__" else "./"
-    with open(join(FILE_DIR, f"{n}_{m}_{name_u}_{name_z}.dmp"), "wb") as file:
-        pickle.dump(output, file)
 
 def __almost_commuting_diff(parent: DPolynomialRing_dense, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]):
     r'''

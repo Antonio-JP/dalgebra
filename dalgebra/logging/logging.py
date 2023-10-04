@@ -18,8 +18,7 @@ AUTHORS:
 # (at your option) any later version.
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
-
-import functools, logging, sys
+import functools, logging, os, pickle, sys
 
 STDOUT_HANDLER = logging.StreamHandler(sys.stdout)
 
@@ -84,4 +83,43 @@ def verbose(logger):
         return wrap
     return inner
 
-__all__ = ["verbose"]
+def cache_in_file(func):
+    r'''
+        Decorator for a function to cache its result on a file that detects when the 
+        result can be reused directly. It includes an atumatic detection of the 
+        version of the module allowing to easily repeat computations when needed.
+    '''
+    @functools.wraps(func)
+    def wrapped(*args, to_cache=True, **kwds):
+        if not to_cache:
+            return func(*args, **kwds)
+        else:
+            from .. import dalgebra_version
+            file_for_result = f"{func.__name__}({','.join(str(el) for el in args)})[{','.join(f'{k}_{v}' for (k,v) in kwds.items())}]_{dalgebra_version()}.dmp"
+            ## Creating if neede the folder for the cache
+            path_to_folder = os.path.join(os.path.dirname(__file__) if __name__ != "__main__" else "./", "..", "__pycache__")
+            os.makedirs(path_to_folder, exist_ok=True)
+
+            ## Creating the final file path 
+            path_to_file = os.path.join(path_to_folder, file_for_result)
+            if os.path.exists(path_to_file): # the result exists
+                try:
+                    with open(path_to_file, "rb") as file:
+                        return pickle.load(file)
+                except Exception as e:
+                    pass
+            
+            ## Calling the function
+            output = func(*args, **kwds)
+
+            ## Caching the output
+            try:
+                with open(path_to_file, "wb") as file:
+                    pickle.dump(output, file)
+            except Exception as e:
+                print(f"[FILE_CACHE] Error while caching in file: {e}")
+            return output
+
+    return wrapped
+
+__all__ = ["cache_in_file", "loglevel", "verbose"]
