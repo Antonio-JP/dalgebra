@@ -24,11 +24,12 @@ STDOUT_HANDLER = logging.StreamHandler(sys.stdout)
 
 __USED_LOGLEVEL = set()
 
-def loglevel(logger):
+def loglevel(logger : logging.Logger):
     def inner(func):
         @functools.wraps(func)
-        def wrap(*args, loglevel=False, **kwds):
+        def wrap(*args, loglevel=False, logfile=None, **kwds):
             loglevel = logging.INFO if (loglevel is True) else loglevel
+            file_handler = None
             if loglevel:
                 if logger in __USED_LOGLEVEL:
                     # another function must has set this up, no need to remove at the end
@@ -38,20 +39,22 @@ def loglevel(logger):
                     old_level = logger.level
                     __USED_LOGLEVEL.add(logger)
                     logger.setLevel(loglevel)
+
+                    # If given a file, we set up the the handler for that file
+                    if logfile != None:
+                        file_handler = logging.FileHandler(logfile)
+                        file_handler.setFormatter(FORMATTER)
+                        file_handler.setLevel(loglevel)
+                        logger.addHandler(file_handler)
                 
             try:
-                out = func(*args, **kwds)
-            except Exception as e:
-                if loglevel:
+                return func(*args, **kwds)
+            finally: # This is done 
+                if loglevel: # Removing the logger if was the original logged
                     logger.setLevel(old_level)
                     __USED_LOGLEVEL.remove(logger)
-                raise e
-
-            if loglevel:
-                logger.setLevel(old_level)
-                __USED_LOGLEVEL.remove(logger)
-
-            return out
+                if logfile != None and file_handler != None: # Removed the file handler if created
+                    logger.removeHandler(file_handler)
         return wrap
     return inner
 
@@ -121,5 +124,32 @@ def cache_in_file(func):
             return output
 
     return wrapped
+
+#################################################################################
+###
+### SETTING THE DEFAULT LOGGERS AND METHODS TO HELP MANAGING THE LOGGER
+###
+#################################################################################
+#### CREATING THE LOGGER AND FORMAT
+logger = logging.getLogger("dalgebra")
+logger.setLevel(logging.ERROR) 
+FORMATTER = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+
+GENERAL_FILE_HANDLER = logging.FileHandler(os.path.join(os.path.dirname(__file__), "dalgebra.log"))
+GENERAL_STDERR_HANDLER = logging.StreamHandler(sys.stderr)
+
+## Setting up default levels for handlers
+GENERAL_FILE_HANDLER.setLevel(logging.INFO)
+
+## Setting up the default formatter for handlers
+for handler in (GENERAL_FILE_HANDLER, GENERAL_STDERR_HANDLER): handler.setFormatter(FORMATTER)
+
+## Adding the default handlers to the main logger
+for handler in (GENERAL_FILE_HANDLER, GENERAL_STDERR_HANDLER): logger.addHandler(handler)
+logger.propagate = False
+
+#### METHODS TO MANIPULATE THE LEVELS FOR DEFAULT HANDLERS
+def logging_file_level(new_level: int): GENERAL_FILE_HANDLER.setLevel(new_level)
+def logging_stderr_level(new_level: int): GENERAL_STDERR_HANDLER.setLevel(new_level)
 
 __all__ = ["cache_in_file", "loglevel", "verbose"]

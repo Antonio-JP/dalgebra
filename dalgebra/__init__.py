@@ -156,21 +156,7 @@ This package has been developed with the financial support of the following inst
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-## Configuring logger for this package
-import logging, sys
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.ERROR)
-formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-
-#### CREATING THE HANDLERS
-# first we strip the __init__p.py from __file__, then we add the relative path
-path_to_logging = __file__[:-__file__[-1::-1].find('/')] + "logging/dalgebra.log" 
-fh = logging.FileHandler(path_to_logging)
-ch = logging.StreamHandler(sys.stderr)
-fh.setFormatter(formatter); ch.setFormatter(formatter)
-logger.addHandler(fh); logger.addHandler(ch)
-logger.propagate = False
+from .logging import * # loading the logger and related functions
 
 from .dring import * # basic ring structures
 from .dpolynomial import * # ring of difference/differential polynomials
