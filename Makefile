@@ -67,5 +67,9 @@ clean_pyc:
 	@echo "Cleaning the Python precompiled files (.pyc)"
 	@find . -name "*.pyc" -exec rm {} +
 
+clean_cache:
+	@echo "Cleaning the cached results in files"
+	@ rm -rf dalgebra/__pycache__/*.dmp
+
 .PHONY: all install develop test coverage clean clean_doc doc doc-pdf
 	

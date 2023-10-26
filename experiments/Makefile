@@ -9,8 +9,12 @@ all: quasi_commuting
 	@echo "All experiments executed"
 
 clean:
-	@rm -rf profiles/*.prf
-	@for m in $(METHODS) ; do rm results/$$m.csv ; echo "n;m;time" > results/$$m.csv ; done
+	@echo "Cleaning CSV files..."
+	@find . -name "*.csv" -type f -delete
+	@echo "Removing profiles..."
+	@find . -name "*.prf" -type f -delete
+	@echo "Removing text results..."
+	@find . -name "\[results\]*.txt" -type f -delete
 
 quasi_commuting: $(METHODS)
 	@echo "All methods executed"
