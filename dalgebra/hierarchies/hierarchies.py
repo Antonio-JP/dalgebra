@@ -171,7 +171,7 @@ from ..dring import DifferentialRing, DRings
 from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
 from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing, DPolynomialRing_dense
 from ..dpolynomial.dpolynomial_system import DSystem
-from ..logging.logging import loglevel, cache_in_file
+from ..logging.logging import loglevel, cache_in_file, cut_string
 
 _DRings = DRings.__classcall__(DRings)
 
@@ -536,7 +536,6 @@ def LoopInParallel(func, iterable, chunksize=1):
     r'''
         Method that tries to loop a function application in parallel. If no Pool is created, then we simply loop in the usual way.
     '''
-    global __ProcessesPool
     if __ProcessesPool != None:
         logger.debug(f"[LoopInParallel] Starting parallel computation of {len(iterable)} processes in {__ProcessesPool._processes}")
         return __ProcessesPool.starmap(func, iterable, chunksize)
@@ -555,7 +554,6 @@ def analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent = 
 
     StartPool(parallel) # starting (if needed) the processes pool
 
-    logger.debug(f"[IDEAL] Starting analysis of ideal.")
     logger.debug(f"[IDEAL] We start with a general overview.")
     branches = _analyze_ideal(I, partial_solution, decisions, final_parent, groebner=groebner)
 
@@ -563,9 +561,9 @@ def analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent = 
         I = I.gens()
     final_branches: set[SolutionBranch] = set()
     
-    logger.debug(f"[IDEAL] We analyze each branch has a complete solution of the original equations.")
+    logger.info(f"[IDEAL] Analyzing resulting branches ({len(branches)})...")
     while len(branches) > 0:
-        logger.debug(f"[IDEAL] Remaining branches to analyze: {len(branches)}.")
+        logger.debug(f"[IDEAL] Analyzing one of the remaining branches...")
         branch = branches.pop()
         branch_GB = branch.I.groebner_basis() # This should be efficient since the branches have passed through GB computations
         logger.debug(f"[IDEAL] We compute the original equations in the resulting branch.")
@@ -588,11 +586,10 @@ def analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent = 
                     )
                 )
     ## Filtering subsolutions
-    logger.debug(f"[IDEAL] We remove subsolutions from the final list of branches (starting with {len(final_branches)})")
+    logger.info(f"[IDEAL] Removing subsolutions (starting with {len(final_branches)})")
     output: list[SolutionBranch] = list()
     for (i,branch) in enumerate(final_branches):
-        if i%100 == 0:
-            logger.debug(f"[IDEAL] Starting with new {i}/{len(final_branches)}...")
+        (logger.info if i%100 == 0 else logger.debug)(f"[IDEAL] Starting with new {i}/{len(final_branches)}...")
         for other in output:
             if other.is_subsolution(branch):
                 logger.debug(f"[IDEAL] Detected old branch as subsolution of new: removing old")
@@ -603,7 +600,7 @@ def analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent = 
         else:
             logger.debug(f"[IDEAL] Nothing detected: we add a new branch")
             output.append(branch)
-    logger.debug(f"[IDEAL] Remaining branches: {len(output)}")
+    logger.info(f"[IDEAL] Remaining branches: {len(output)}")
     return output
 
 def _analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent = None, groebner: bool = True) -> list[SolutionBranch]:
@@ -612,7 +609,7 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent =
         I = I.gens()
 
     if len(I) == 0:
-        logger.debug(f"[ideal] !!! No more polynomials to analyze. Returning this path")
+        logger.info(f"[ideal] !!! No more polynomials to analyze. Returning this path")
         return [SolutionBranch(I, partial_solution, decisions, final_parent)]
     
     ## We copy the arguments to avoid possible collisions
@@ -620,7 +617,7 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent =
     decisions = decisions.copy()
 
     if any(poly.degree() == 0  for poly in I): ## No solution case
-        logger.debug(f"[ideal] Found a branch without a solution.")
+        logger.info(f"[ideal] Found a branch without a solution.")
         return []
 
     ########################################################################################################### 
@@ -661,7 +658,7 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent =
     logger.debug(f"[ideal] $$$ Looking for monomials implying a splitting in solutions")
     for poly in I:
         if poly.is_monomial():
-            logger.debug(f"[ideal] $$$ Found a splitting monomial")
+            logger.info(f"[ideal] $$$ Found a splitting monomial: {poly}")
             args = []
             for v in poly.variables():
                 path_sol = partial_solution.copy()
@@ -679,7 +676,7 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent =
     for poly in sorted_polynomials:
         factors = poly.factor()
         if len(factors) > 1: # we can split
-            logger.debug(f"[ideal] [[[ Found a splitting into {len(factors)} factors")
+            logger.info(f"[ideal] [[[ Found a splitting into {len(factors)} factors")
             args = []
             for factor,_ in factors:
                 path_ideal = [factor] + [p for p in I if p != poly]
@@ -716,8 +713,8 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent =
     if groebner:
         ###########################################################################################################
         ## Sixth we try a Groebner basis
-        logger.debug(f"[ideal] %%% Computing a GROEBNER BASIS of {len(I)} polynomials")
-        for (i,poly_I) in enumerate(I): logger.debug(f"[ideal] %%% \t{i:4} -> {f'{str(poly_I)[:50]}...' if len(str(poly_I)) > 50 else {poly_I}}")
+        logger.info(f"[ideal] %%% Computing a GROEBNER BASIS of {len(I)} polynomials")
+        for (i,poly_I) in enumerate(I): logger.debug(f"[ideal] %%% \t{i:4} -> {cut_string(poly_I, 50)}")
         I_gb = ideal(I).groebner_basis()
         if not all(poly in I_gb for poly in I): # we improved with a Gröbner basis
             logger.debug(f"[ideal] %%% The ideal was changed when computing a Groebner basis: we apply recursively to the GB")
@@ -725,13 +722,13 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent =
         
         ###########################################################################################################
         ## Seventh we try a primary decomposition
-        logger.debug(f"[ideal] +++ We try now the primary decomposition")
+        logger.info(f"[ideal] +++ Computing a PRIMARY DECOMPOSITION of {len(I)} polynomials")
         logger.debug(f"[ideal] +++ First, we compute the radical")
         I = ideal(I).radical().gens() # Computing the radical of the original ideal
         logger.debug(f"[ideal] +++ Now, we compute the primary decomposition.")
         primary_decomp = ideal(I).primary_decomposition()
         if len(primary_decomp) != 1: # We are not done: several component found
-            logger.debug(f"[ideal] +++ Found {len(primary_decomp)} components: splitting into decisions")
+            logger.info(f"[ideal] +++ Found {len(primary_decomp)} components: splitting into decisions")
             args = []
             for primary in primary_decomp:
                 logger.debug(f"[ideal] --- Computing radical ideal of primary component")
@@ -741,7 +738,7 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list=[], final_parent =
 
             return sum((solutions for solutions in LoopInParallel(_analyze_ideal, args)), [])
         
-    logger.debug(f"[ideal] !!! Reached ending point for analyzing an ideal. Returning this path")
+    logger.info(f"[ideal] !!! Reached ending point for analyzing an ideal. Returning this path")
     
     return [SolutionBranch(I, partial_solution, decisions, final_parent)]
 

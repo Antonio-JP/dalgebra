@@ -24,6 +24,19 @@ STDOUT_HANDLER = logging.StreamHandler(sys.stdout)
 
 __USED_LOGLEVEL = set()
 
+def cut_string(string, size):
+    if not isinstance(string, str): string = str(string)
+    if len(string) <= size: return string
+    return string[:size] + "..."
+
+def print_args(size, *args, **kwds):
+    output = ""
+    if len(args):
+        output += f"\n\t* args: {[cut_string(el, size) for el in args]}"
+    if len(kwds):
+        output += f"\n\t* kwds: {dict([(k, cut_string(v, size)) for (k,v) in kwds.items()])}"
+    return output
+
 def loglevel(logger : logging.Logger):
     def inner(func):
         @functools.wraps(func)
@@ -48,7 +61,10 @@ def loglevel(logger : logging.Logger):
                         logger.addHandler(file_handler)
                 
             try:
-                return func(*args, **kwds)
+                logger.info(f"[{func.__name__}] {''.rjust(50, '+')}\n{' Starting  execution '.ljust(15, '+').rjust(15,'+')}{print_args(20, *args, **kwds)}")
+                output = func(*args, **kwds)
+                logger.info(f"[{func.__name__}]{' Execution completed '.ljust(15, '-').rjust(15,'-')}{print_args(20, *args, **kwds)}\n{''.rjust(50,'-')}")
+                return output
             finally: # This is done 
                 if loglevel: # Removing the logger if was the original logged
                     logger.setLevel(old_level)
@@ -89,7 +105,7 @@ def verbose(logger):
 def cache_in_file(func):
     r'''
         Decorator for a function to cache its result on a file that detects when the 
-        result can be reused directly. It includes an atumatic detection of the 
+        result can be reused directly. It includes an automatic detection of the 
         version of the module allowing to easily repeat computations when needed.
     '''
     @functools.wraps(func)
@@ -99,7 +115,7 @@ def cache_in_file(func):
         else:
             from .. import dalgebra_version
             file_for_result = f"{func.__name__}({','.join(str(el) for el in args)})[{','.join(f'{k}_{v}' for (k,v) in kwds.items())}]_{dalgebra_version()}.dmp"
-            ## Creating if neede the folder for the cache
+            ## Creating if needed the folder for the cache
             path_to_folder = os.path.join(os.path.dirname(__file__) if __name__ != "__main__" else "./", "..", "__pycache__")
             os.makedirs(path_to_folder, exist_ok=True)
 
@@ -109,7 +125,7 @@ def cache_in_file(func):
                 try:
                     with open(path_to_file, "rb") as file:
                         return pickle.load(file)
-                except Exception as e:
+                except Exception:
                     pass
             
             ## Calling the function
