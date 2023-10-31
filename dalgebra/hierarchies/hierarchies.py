@@ -391,7 +391,6 @@ def almost_commuting_wilson(n: int, m: int, name_u: str = "u", name_z: str = "z"
         ## Solving the system with the corresponding method
         solve_p = solver(R, equations, u, p)
         Pm = output_z[m] + sum(output_ring(solve_p[v]) * output_z[m-i-2] for i, v in enumerate(p))
-        raise RuntimeError
         T = tuple([output_ring(el(dic=solve_p)) for el in T])
         
         output = (Pm,T)
