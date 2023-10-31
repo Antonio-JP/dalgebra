@@ -773,7 +773,10 @@ class DPolynomial (InfinitePolynomial_dense):
             raise ValueError(f"The two objects must be DPolynomials")
         other = self.parent()(other)
 
-        gen = gen if gen != None else self.parent().gens()[0]
+        if isinstance(gen, str):
+            gen = self.parent().gen(gen)
+        else:
+            gen = gen if gen != None else self.parent().gens()[0]
         ngen = gen.variable_name()
 
         return self(**{ngen: other}) - other(**{ngen: self})
