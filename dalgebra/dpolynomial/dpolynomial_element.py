@@ -765,6 +765,19 @@ class DPolynomial (InfinitePolynomial_dense):
         '''
         return self.parent().eval(self, *args, dic=dic, **kwargs)
 
+    def lie_bracket(self, other: DPolynomial, gen: DPolynomialGen = None) -> DPolynomial:
+        r'''
+            Computes the Lie-bracket (or commutator) of ``self`` with other :Class:`DPolynomial`.
+        '''
+        if not other in self.parent():
+            raise ValueError(f"The two objects must be DPolynomials")
+        other = self.parent()(other)
+
+        gen = gen if gen != None else self.parent().gens()[0]
+        ngen = gen.variable_name()
+
+        return self(**{ngen: other}) - other(**{ngen: self})
+
     @cached_method
     def sym_power(self, power: int, gen: DPolynomialGen = None) -> DPolynomial:
         r'''

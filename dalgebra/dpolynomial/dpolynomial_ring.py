@@ -96,20 +96,20 @@ class DPolynomialRingFactory(UniqueFactory):
         # Now the names are appropriate and the base is correct
         return (base, names)
 
-    def create_object(self, _, key):
+    def create_object(self, _, key) -> DPolynomialRing_dense:
         base, names = key
 
         return DPolynomialRing_dense(base, names)
 
 DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing")
 RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing (used for backward compatibility)
-def DifferentialPolynomialRing(base, *names : str, **kwds):
+def DifferentialPolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_dense:
     if not base in _DRings:
         base = DifferentialRing(base, kwds.pop("derivation", diff))
     if not base.is_differential():
         raise TypeError("The base ring must be a differential ring")
     return DPolynomialRing(base, *names, **kwds)
-def DifferencePolynomialRing(base, *names : str, **kwds):
+def DifferencePolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_dense:
     if not base in _DRings:
         base = DifferenceRing(base, kwds.pop("difference", base.Hom(base).one()))
     if not base.is_difference():
