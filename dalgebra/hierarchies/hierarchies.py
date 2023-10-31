@@ -344,10 +344,10 @@ def almost_commuting_wilson(n: int, m: int, name_u: str = "u", name_z: str = "z"
             sage: from dalgebra.hierarchies.hierarchies import almost_commuting_wilson
             sage: for n in range(2,3):
             ....:     for m in range(1, 10):
-            ....:         O1 = almost_commuting_wilson(n,m,method="linear", equations_method="recursive",to_cache=False)
-            ....:         O2 = almost_commuting_wilson(n,m,method="diff", equations_method="recursive",to_cache=False)
-            ....:         O3 = almost_commuting_wilson(n,m,method="linear", equations_method="direct",to_cache=False)
-            ....:         O4 = almost_commuting_wilson(n,m,method="diff", equations_method="direct",to_cache=False)
+            ....:         O1 = almost_commuting_wilson(n,m,solver="linear", equation_gens="recursive",to_cache=False)
+            ....:         O2 = almost_commuting_wilson(n,m,solver="diff",   equation_gens="recursive",to_cache=False)
+            ....:         O3 = almost_commuting_wilson(n,m,solver="linear", equation_gens="direct",to_cache=False)
+            ....:         O4 = almost_commuting_wilson(n,m,solver="diff",   equation_gens="direct",to_cache=False)
             ....:         assert O1 == O2, f"Error between 1 and 2 ({n=}, {m=})
             ....:         assert O1 == O3, f"Error between 1 and 3 ({n=}, {m=})
             ....:         assert O1 == O4, f"Error between 1 and 4 ({n=}, {m=})
