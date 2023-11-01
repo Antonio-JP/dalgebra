@@ -169,9 +169,12 @@ def GetEquationsForSolution(m : int,
     diff_base = parent_us.add_constants(*C)
         
     logger.debug(f"[GEFS] Ring with flag-constants: {diff_base=}")
-    L = L.change_ring(diff_base); z = L.parent().gen(name_partial)
+    u = [L.coefficient(z[i]).change_ring(diff_base) for i in range(n-1)]
+    L = L.change_ring(diff_base)
+    u = [L.parent().gen(el.infinite_variables()[0].variable_name()) for el in u]
     C = [diff_base(C[i]) for i in range(len(C))]
-    U = {L.coefficient(z[i]).infinite_variables()[0]: diff_base(U[i]) for i in U}
+    print(u)
+    U = {u[i]: diff_base(U.get(i, 0)) for i in range(n-1)}
 
     ### Computing the almost commuting basis up to order `m` and the hierarchy up to this point
     logger.debug(f"[GEFS] ++ Computing the basis of almost commuting and the hierarchies...")
