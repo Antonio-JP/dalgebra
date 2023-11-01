@@ -655,8 +655,8 @@ def GetEquationsForSolution(n: int, m: int, U: list | dict, extract, flag_name =
     
     ### Computing the generic `L` operator
     logger.debug(f"[GEFS] Computing the generic L_{n} operator...")
-    L = generic_normal(n)
-    u = L.parent().gens()[:n-1]
+    L = generic_normal(n); z = L.parent().gen("z")
+    u = [L.coefficient(z[i]) for i in range(n-1)]
     logger.debug(f"[GEFS] {L=}")
 
     ### Computing the almost commuting basis up to order `m` and the hierarchy up to this point
@@ -664,7 +664,7 @@ def GetEquationsForSolution(n: int, m: int, U: list | dict, extract, flag_name =
     Ps = [L.parent().one()]; Hs = [(n-1)*[L.parent().zero()]]
     for i in range(1, m+1):
         ## TODO: should we remove the i with m%n = 0?
-        nP, nH = almost_commuting_wilson(n, i, method=kwds.pop("method", "diff"))
+        nP, nH = almost_commuting_wilson(n, i, solver=kwds.pop("method", "integral"))
         Ps.append(nP); Hs.append(nH)
         logger.debug(f"[GEFS]    Computed for order {i}")
     
