@@ -1,6 +1,7 @@
 import os, sys
 sys.path.insert(0,"..") # dalgebra is here
 
+from functools import partial
 from io import TextIOWrapper
 from sage.all import SR, diff, QQ
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -142,7 +143,7 @@ def run_execution(
         order_P, 
         n = order_L, 
         U = [BD(str(L.coefficient(z[i]))) for i in range(order_L-1)], 
-        extract=generate_polynomial_equations, 
+        extract=partial(generate_polynomial_equations, var_name = str(x)), 
         loglevel=logging.DEBUG, 
         logfile=logfile
     )

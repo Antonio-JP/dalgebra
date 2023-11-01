@@ -360,7 +360,7 @@ def almost_commuting_wilson(n: int, m: int, name_u: str = "u", name_z: str = "z"
         output = (output_z[m], tuple())
     elif m == 1: # Special case
         ## This case is simpler because there is a unique operator in normal form of order 1: \partial
-        ## Moreover, [L, \partial] = -\kappa_\partial(L), i.e., the coefficients of the commutator are simply the derivatives of the coefficiets of L
+        ## Moreover, [L, \partial] = -\kappa_\partial(L), i.e., the coefficients of the commutator are simply the derivatives of the coefficients of L
         P = output_z[1]
         T = tuple([output_u[-(i+1)][1] for i in range(n-1)]) # (u_n', u_{n-1}',..., u_2')
         output = (P, T)
@@ -389,9 +389,9 @@ def __almost_commuting_direct(parent: DPolynomialRing_dense, order_L: int, order
     r'''
         Direct method to compute the equations to solve for Wilson's almost commuting basis.
 
-        This method computes the euqation by creating the operators `L` and `P`, computing its commutator `C = [L,P]` and extracting its coefficients.
+        This method computes the equation by creating the operators `L` and `P`, computing its commutator `C = [L,P]` and extracting its coefficients.
 
-        This method receives the usual input for methods that create the equtions:
+        This method receives the usual input for methods that create the equations:
 
         * ``parent``: a basic :class:`DPolynomialRing_dense` that must contain the `u` variables and the `\partial` variable.
         * ``order_L``: the value we are using as order of the generic operator `L`.
@@ -431,9 +431,9 @@ def __almost_commuting_recursive(parent: DPolynomialRing_dense, order_L: int, or
     r'''
         Recursive method to compute the equations to solve for Wilson's almost commuting basis.
 
-        This method computes the equations using the main recusive structure given by `[L, P_{m+1}] = [L, P_m]\partial + P_m[L, \partial] + [L, p_{m+1}]`.
+        This method computes the equations using the main recursive structure given by `[L, P_{m+1}] = [L, P_m]\partial + P_m[L, \partial] + [L, p_{m+1}]`.
 
-        This method receives the usual input for methods that create the equtions:
+        This method receives the usual input for methods that create the equations:
 
         * ``parent``: a basic :class:`DPolynomialRing_dense` that must contain the `u` variables and the `\partial` variable.
         * ``order_L``: the value we are using as order of the generic operator `L`.

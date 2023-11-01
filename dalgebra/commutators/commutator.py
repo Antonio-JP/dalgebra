@@ -1,7 +1,7 @@
 r'''    
     Computing non-trivial centralizers.
 
-    This module contains the main functionality used for computng non-trivial centralizers of linear differential operators.
+    This module contains the main functionality used for computing non-trivial centralizers of linear differential operators.
 
     This software has been used in the presentation in ISSAC'23 "Computing almost-commuting basis of Ordinary Differential
     Operators", by A. Jiménez-Pastor, S.L. Rueda and M.A. Zurro in Tromsø, Norway.
@@ -21,7 +21,7 @@ r'''
     This operator `L` can be written in terms of d-polynomials in the ring `K\{z\} = C\{u_2,\ldots,u_{n},z\}`. We say that 
     another operator `P \in K\{z\}` *commutes with `L`* if and only if the commutator of `L` with `P` (`[L,P]`) is zero. 
     
-    In the ring of differential polynomials `K\{z\}`, every operator commutes since we are considering the multilpication
+    In the ring of differential polynomials `K\{z\}`, every operator commutes since we are considering the multiplication
     as usual polynomials. However, if we consider the elements of `K\{z\}` as operators in `z`, we can see them acting via
     substitution in any differential extension of `K`. This action defines a new product operation in `K\{z\}`:
 
