@@ -25,12 +25,13 @@ from collections.abc import Sequence
 from functools import reduce
 from itertools import chain, islice
 
-from sage.all import cached_method, Parent, latex, prod, PolynomialRing, QQ, ZZ
+from sage.all import cached_method, Parent, latex, prod, QQ, ZZ
 from sage.categories.all import Morphism, IntegralDomains
 from sage.categories.pushout import ConstructionFunctor
 from sage.graphs.digraph import DiGraph
 from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_polydict_domain
-from sage.rings.ring import IntegralDomain, Ring #pylint: disable=no-name-in-module
+from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
+from sage.rings.ring import Ring #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 from typing import Collection, Any
@@ -341,7 +342,7 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
         elif is_MPolynomialRing(other):
             true_base = self.base_ring().wrapped if hasattr(self.base_ring(), "wrapped") else self.base_ring()
             if ((self.ngens(), self.variable_names()) == (other.ngens(), other.variable_names())):
-                return DExtension(pushout(self.base(), other.base_ring()), [self.operations_on_gen(g) for g in self.gens()], names=self.variable_names())
+                return DExtension(pushout(true_base, other.base_ring()), [self.operations_on_gen(g) for g in self.gens()], names=self.variable_names())
         return None
 
     def construction(self) -> DExtensionFunctor:
@@ -664,7 +665,7 @@ class DExtension_parent(MPolynomialRing_polydict_domain):
         E = DExtension(self, [[0 for _ in range(self.noperators())] for _ in range(self.ngens())], names=["t_a"])
         x,t = E.gens()
         EA, ED = E(A), E(D)
-        res, R = ED.subresultant_prs(EA-t*ED.partial(x), x); k = len(R)-1
+        res, R = ED.subresultant_prs(EA-t*ED.partial(x), x)
         logger.info(f"[integrate-log-part] Resultant: {res}")
         logger.info(f"[integrate-log-part] PRS:")
         for i in range(len(R)):

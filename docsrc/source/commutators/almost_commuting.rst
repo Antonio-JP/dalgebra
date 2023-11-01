@@ -3,7 +3,7 @@
 Integrable hierarchies and almost commuting operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra.hierarchies.hierarchies
+.. automodule:: dalgebra.commutators.almost_commuting
    :members:
    :undoc-members:
    :show-inheritance:

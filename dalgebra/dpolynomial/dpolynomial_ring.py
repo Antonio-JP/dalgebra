@@ -344,17 +344,21 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             p = super()._element_constructor_(x)
             return self.element_class(self, p)
         except (ValueError, NameError) as error: # if it is not a normal element, we try as linear operators
-            try: # trying to get the ring of linear operators
-                operator_ring = self.linear_operator_ring()
-                if x in operator_ring:
-                    x = operator_ring(x).polynomial()
-                    y = self.gens()[0]
-                    if self.noperators() == 1: # x is a univariate polynomial
-                        return sum(self.base()(x.monomial_coefficient(m))*y[m.degree()] for m in x.monomials())
-                    else:
-                        return sum(self.base()(c)*y[tuple(m.degrees())] for (c,m) in zip(x.coefficients(), x.monomials()))
-            except NotImplementedError:
-                raise NotImplementedError(f"Ring of linear operator rings not implemented. Moreover: {error}")
+            try:
+                p = self.base()._element_constructor_(x)
+                return self(p)
+            except (ValueError, NameError) as error:
+                try: # trying to get the ring of linear operators
+                    operator_ring = self.linear_operator_ring()
+                    if x in operator_ring:
+                        x = operator_ring(x).polynomial()
+                        y = self.gens()[0]
+                        if self.noperators() == 1: # x is a univariate polynomial
+                            return sum(self.base()(x.monomial_coefficient(m))*y[m.degree()] for m in x.monomials())
+                        else:
+                            return sum(self.base()(c)*y[tuple(m.degrees())] for (c,m) in zip(x.coefficients(), x.monomials()))
+                except NotImplementedError:
+                    raise NotImplementedError(f"Ring of linear operator rings not implemented. Moreover: {error}")
 
     def _pushout_(self, other):
         scons, sbase = self.construction()
@@ -781,11 +785,19 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
                             value = final_input[gen]
                             for (i, times) in enumerate(operations):
                                 value = value.operation(operation=i, times=times)
-                        logger.debug(f"[eval] Adding value: '{str(variable)}': {R(str(value))}")
-                        evaluation_dict[str(variable)] = R(str(value))
+                        try:
+                            to_add = R(value)
+                        except:
+                            to_add = R(str(value))
+                        logger.debug(f"[eval] Adding value: '{str(variable)}': {to_add}")
+                        evaluation_dict[str(variable)] = to_add
                     else:
-                        logger.debug(f"[eval] Adding variable: '{str(variable)}': {R(str(gen[operations]))}")
-                        evaluation_dict[str(variable)] = R(str(gen[operations]))
+                        try:
+                            to_add = R(gen[operations])
+                        except:
+                            to_add = R(str(gen[operations]))
+                        logger.debug(f"[eval] Adding variable: '{str(variable)}': {to_add}")
+                        evaluation_dict[str(variable)] = to_add
                     break
         # extending the dictionary to all variables in element.polynomial().
         variable_names = [str(v) for v in element.variables()]
@@ -896,6 +908,9 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         return AdditiveMap(self, func) 
     
+    def add_constants(self, *new_constants: str) -> DPolynomialRing_dense:
+        return DPolynomialRing(self.base().add_constants(*new_constants), self.variable_names())
+
     def linear_operator_ring(self) -> Ring:
         r'''
             Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.

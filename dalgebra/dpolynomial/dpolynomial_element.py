@@ -700,6 +700,52 @@ class DPolynomial (InfinitePolynomial_dense):
             ) <= 1 
         for t in self.monomials())
 
+    def is_normal_form(self, variable: DPolynomialGen = None) -> bool:
+        r'''
+            Method that check whether a operator is in normal form or not.
+
+            For `A(z)` and operator in terms of the d-variable `z`, we say it is in normal form if:
+
+            * `A(z)` is linear in `z` and its operations.
+            * The leading coefficient (in terms of order) w.r.t. `z` is 1.
+            * The second highest order coefficient w.r.t. `z` is 0.
+
+            As a special case, a polynomial z[0]*C is in normal form if C == 1.
+
+            EXAMPLE::
+
+                sage: from dalgebra import *
+                sage: R.<x> = QQ[]; DR = DifferentialRing(R, diff); T.<a,z> = DifferentialPolynomialRing(DR)
+                sage: p = z[3] + 1 # case with constant term
+                sage: p.is_normal_form(z)
+                False
+                sage: p = z[3] + z[0] # case for easy True
+                sage: p.is_normal_form(z)
+                True
+                sage: p = 2*z[0] # case for d = 0
+                sage: p.is_normal_form(z)
+                False
+                sage: p = z[0]
+                sage: p.is_normal_form(z)
+                True
+
+            We can try also more complex type of expressions:
+
+                sage: p = z[4] + (a[2]^2 + a[1]*a[0]*x)*z[2] - z[1] + (x^2-1)*z[0]
+                sage: p.is_normal_form(z)
+                True
+                sage: (p + z[3]).is_normal_form(z)
+                False
+                sage: (a[1]*p).is_normal_form(z)
+                False
+        '''
+        variable = variable if variable != None else self.parent().gens()[0]
+
+        if self.is_linear(variable) and self.constant_coefficient() == 0:
+            d = self.order(variable)
+            return (d == 0 and self == variable[0]) or (d > 0 and self.coefficient(variable[d]) == 1 and self.coefficient(variable[d-1]) == 0)
+        return False
+
     def is_variable(self) -> bool:
         r'''
             Method that checks whether a polynomial is simply a variable
@@ -849,6 +895,10 @@ class DPolynomial (InfinitePolynomial_dense):
     def monomials(self) -> list[DPolynomial]:
         return [self.parent()(str(m)) for m in self.polynomial().monomials()]
     
+    def change_ring(self, R) -> DPolynomial:
+        new_ring = self.parent().change_ring(R)
+        return sum((new_ring(str(m))*new_ring(c) for (c,m) in zip(self.coefficients(), self.monomials())), new_ring.zero())
+
     ###################################################################################
     ### Arithmetic methods
     ###################################################################################

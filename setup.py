@@ -36,7 +36,7 @@ setup(
     packages = ["dalgebra",
                 "dalgebra.dextension",
                 "dalgebra.dpolynomial",
-                "dalgebra.hierarchies",
+                "dalgebra.commutators",
                 "dalgebra.logging"],
     setup_requires   = [],
     install_requires = readfile("requirements.txt").split("\n"),

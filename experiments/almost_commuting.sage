@@ -10,7 +10,7 @@ from pstats import Stats, SortKey
 import tracemalloc
 import os, csv
 
-from dalgebra.hierarchies.hierarchies import almost_commuting_wilson, generic_normal
+from dalgebra.commutators.almost_commuting import almost_commuting_wilson, generic_normal
 
 def print_help():
     PAD_SIZE = os.get_terminal_size()[0]

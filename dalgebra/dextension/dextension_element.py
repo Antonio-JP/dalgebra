@@ -513,7 +513,9 @@ class DExtension_element (MPolynomial_polydict):
         new_dict = {}
         for k,v in self.dict().items():
             if k[ind] > 0:
-                k = list(k); k[ind]-=1; k = tuple(k)
+                k = list(k)
+                k[ind]-=1
+                k = tuple(k)
                 new_dict[k] = (k[ind]+1)*v
         return self.parent().element_class(self.parent(), new_dict)
     

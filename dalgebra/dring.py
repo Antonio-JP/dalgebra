@@ -578,7 +578,16 @@ class DRings(Category):
                 * "none": it makes no sense to talk about constant for these operators.
             '''
             raise NotImplementedError("Method 'constant_ring' not implemented")
-            
+
+        @abstract_method
+        def add_constants(self, *new_constants: str) -> Parent:
+            r'''
+                Method to add new constants (given by name) in a DRing.
+
+                This new constant acts as a transcendental element that is constant **for all** operations.
+            '''   
+            raise NotImplementedError("Method 'add_constants' not implemented")
+
     ## Defining methods for the Element structures of this category
     class ElementMethods: #pylint: disable=no-member
         ##########################################################
@@ -872,6 +881,9 @@ class DRingFactory(UniqueFactory):
     def create_object(self, _, key):
         base, operators, types = key
 
+        if isinstance(base, FractionField_generic):
+            return DRing(base.base(), operators, types=types).fraction_field()
+
         return DRing_Wrapper(base, *operators, types=types)
 DRing = DRingFactory("dalgebra.dring.DRing")
 RingWithOperators = DRing #: alias fod DRing (used for backward-compatibility)
@@ -1006,7 +1018,7 @@ class DRing_WrapperElement(Element):
         except Exception as e:
             raise AttributeError(f"'denominator' not an attribute for {self.__class__}. Reason: {e}")
         
-    def _derivative(self, *args, **kwds):
+    def _derivative(self, *args, **kwds): #pylint: disable=unused-argument
         return DRings.ElementMethods.derivative(self)
 
     def gcd(self, other: DRing_WrapperElement) -> DRing_WrapperElement:
@@ -1182,6 +1194,43 @@ class DRing_Wrapper(Parent):
                 return self.wrapped
             
         raise NotImplementedError(f"Constant ring do not implemented for {self} (operation {operation})")
+    
+    def add_constants(self, *new_constants: str) -> DRing_Wrapper:
+        from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
+        from sage.rings.polynomial.polynomial_ring import is_PolynomialRing
+        from sage.rings.polynomial.multi_polynomial_ring import is_MPolynomialRing
+        ## We first try to see if the wrapped ring/field was a polynomial ring or not
+        if self.wrapped.is_field() and (is_PolynomialRing(self.wrapped.base()) or is_MPolynomialRing(self.wrapped.base())):
+            base = self.wrapped.base()
+        else:
+            base = self.wrapped
+
+        ## If base is a field, then there is nothing to be done: we create the polynomial ring
+        if base.is_field():
+            new_base = PolynomialRing(base, new_constants)
+        else: ## In this case, base is a polynomial ring. We need to add the variables here
+            if is_PolynomialRing(base): # univariate case
+                new_base = base.extend_variables(new_constants)
+            else: # multivariate case
+                new_base = PolynomialRing(base.base(), base.variable_names() + new_constants)
+        
+        ## We now extend all operations defined
+        operations = list()
+        old_gens = [str(v) for v in new_base.gens() if str(v) not in new_constants]
+        for (operator, ttype) in zip(self.operators(), self.operator_types()):
+            if ttype == "homomorpshims":
+                operations.append(new_base.Hom(new_base)([operator(self(v)) for v in old_gens] + [new_base(c) for c in new_constants])) # extension by identity
+            elif ttype in ("derivation","skew"):
+                imgs_on_gens = [new_base(operator(self(v))) for v in old_gens] + len(new_constants)*[new_base.zero()]
+                ## Extending the twist of the derivation
+                if operator.function.twist == base.Hom(base).one(): # actual derivation
+                    operations.append(new_base.derivation(imgs_on_gens))
+                else:
+                    new_twist = new_base.Hom(new_base)([[operator.function.twist(base(v)) for v in old_gens] + [new_base(c) for c in new_constants]])
+                    operations.append(new_base.derivation(imgs_on_gens, twist=new_twist)) # extension by zero
+            else:
+                raise TypeError("Impossible to create constants when they are not defined.")
+        return DRing(new_base, *operations, types=self.operator_types())
 
     def linear_operator_ring(self):
         r'''
@@ -1483,6 +1532,9 @@ class DFractionField(FractionField_generic):
         except Exception as e:
             raise e
         
+    def add_constants(self, *new_constans: str) -> DFractionField:
+        return self.base().add_constants(*new_constans).fraction_field()
+
     def inverse_operation(self, element, operator: int = 0):
         return self.base().inverse_operation(element, operator)
 

@@ -3,7 +3,8 @@
 import sys
 sys.path.insert(0,"..") # dalgebra is here
 
-from dalgebra.hierarchies.hierarchies import PolynomialCommutator, analyze_ideal
+from dalgebra.commutators.commutator import PolynomialCommutator
+from dalgebra.commutators.ideals import analyze_ideal
 import logging
 from time import time
 
