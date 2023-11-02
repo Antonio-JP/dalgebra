@@ -46,7 +46,7 @@ class SolutionBranch_SpectralData(TypedDict):
 
 #################################################################################################
 ###
-### METHODS FOR OBTAIING SPECTRAL CURVES
+### METHODS FOR OBTAINING SPECTRAL CURVES
 ###
 ################################################################################################
 @loglevel(logger)

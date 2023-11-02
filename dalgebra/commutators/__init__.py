@@ -9,7 +9,7 @@ r'''
     This module is split into 3 main subpackages:
 
     * :mod:`almost_commuting`: contains all necessary functions to compute the almost-commuting 
-      basis described by Wilson (in *Algebraic crves and soluton equations* (1985)). These computations
+      basis described by Wilson (in *Algebraic curves and soliton equations* (1985)). These computations
       also allows the computation of integrable hierarchies.
     * :mod:`ideals`: contains method that can analyze and study algebraic ideals. This is an auxiliary 
       subpackage that is useful for other packages in the module.

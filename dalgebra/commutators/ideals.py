@@ -39,7 +39,7 @@ _DRings = DRings.__classcall__(DRings)
 
 #################################################################################################
 ###
-### AUXILIAR STRUCTURES AND CODE TO RUN IN PARALLEL
+### AUXILIARY STRUCTURES AND CODE TO RUN IN PARALLEL
 ###
 #################################################################################################
 __ProcessesPool = None

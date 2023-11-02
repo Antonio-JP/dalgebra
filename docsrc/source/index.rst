@@ -24,7 +24,7 @@ In the following modules we include some applications of this software in partic
 .. toctree::
    :maxdepth: 1
 
-   hierarchies
+   commutators
 
 
 Indices and Tables
