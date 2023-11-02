@@ -5,7 +5,7 @@ from datetime import datetime
 from time import process_time
 from cProfile import Profile
 from contextlib import nullcontext
-from pandas import read_csv
+from pandas import read_csv, DataFrame
 from pstats import Stats, SortKey
 import tracemalloc
 import os, csv
@@ -18,10 +18,14 @@ def print_help():
     print("--- TIME TEST FOR ALMOST_COMMUTING_WILSON  ".ljust(PAD_SIZE, "-"))
     print("".ljust(PAD_SIZE, "-"))
     print("Usage of the command:")
-    print("\tsage almost_commuting.sage [-table | (-run|-prf) <n> <m> <get_equs> <solver>]")
+    print("\tsage almost_commuting.sage [-table <<args>> | (-run|-prf) <n> <m> <get_equs> <solver>]")
     print("")
     print("where the arguments can be:")
-    print("\t* -table: prints the table of executed results so far")
+    print("\t* -table: prints the table of executed results so far. It allows optional arguments:")
+    print("\t\t+ -n <N>: prints results with n=N")
+    print("\t\t+ -m <M>: prints results with m=M")
+    print("\t\t+ -get_equs <E>: prints results with get_equs=E")
+    print("\t\t+ -solver <S>: prints results with solver=S")
     print("\t* (-run|-prf): executes one run of the tests with the given arguments:")
     print("\t\t+ <n>: a positive integer greater than 1")
     print("\t\t+ <m>: a positive integer greater than 1")
@@ -30,8 +34,30 @@ def print_help():
     print("\t\t+ If we use '-prf' instead of '-run' we also save a profile of the execution")
     print("".ljust(PAD_SIZE, "-"))
 
-def print_table():
+def print_table(*argv):
+    ## Reading the filters
+    i = 0; n_filter = list(); m_filter = list(); equs_filter = list(); solver_filter = list()
+    print(argv)
+    while i < len(argv):
+        if argv[i] == "-n":
+            n_filter.append(int(argv[i+1])); i += 2
+        elif argv[i] == "-m":
+            m_filter.append(int(argv[i+1])); i += 2
+        elif argv[i] == "-get_equs":
+            equs_filter.append(argv[i+1]); i += 2
+        elif argv[i] == "-solver":
+            n_filter.append(argv[i+1]); i += 2
+        else:
+            i+=1
+
     data = read_csv("./results_almost_commuting.csv")
+
+    filters = lambda row : ((len(n_filter) == 0 or row['n'] in n_filter) and
+                            (len(m_filter) == 0 or row['m'] in m_filter) and
+                            (len(equs_filter) == 0 or row['get_equs'] in equs_filter) and
+                            (len(solver_filter) == 0 or row['solver'] in solver_filter))
+    
+    data = DataFrame([row for (_,row) in data.iterrows() if filters(row)], columns = data.columns)
 
     print(data.groupby(["get_equs", "solver", "n", "m"]).mean(numeric_only=True))
 
@@ -73,7 +99,7 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         what = sys.argv[1]
         if what == "-table":
-            print_table()
+            print_table(*sys.argv[2:])
             sys.exit()
         elif what in ("-run", "-prf"):
             n = int(sys.argv[2])
