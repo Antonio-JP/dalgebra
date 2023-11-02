@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Structure for Difference Rings &mdash; Differential Algebra in Sage 0.0.20220428.1815 documentation</title><link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Package diff_polynomial" href="../diff_polynomial.html" />
+    <link rel="prev" title="Structure for Differential Rings" href="differential_ring.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Differential Algebra in Sage
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../ring_w_operator.html">Package <code class="docutils literal notranslate"><span class="pre">ring_w_operator</span></code></a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../ring_w_operator.html#modules">Modules</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ring_w_operator.html">Structure for Rings with Associated Operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="differential_ring.html">Structure for Differential Rings</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Structure for Difference Rings</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ring_w_operator.html#indices-and-tables">Indices and Tables</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../diff_polynomial.html">Package <code class="docutils literal notranslate"><span class="pre">diff_polynomial</span></code></a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Differential Algebra in Sage</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../ring_w_operator.html">Package <code class="docutils literal notranslate"><span class="pre">ring_w_operator</span></code></a> &raquo;</li>
+      <li>Structure for Difference Rings</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/ring_w_operator/difference_ring.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="structure-for-difference-rings">
+<h1>Structure for Difference Rings<a class="headerlink" href="#structure-for-difference-rings" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRings">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.ring_w_operator.difference_ring.</code><code class="sig-name descname">DifferenceRings</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">s</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.categories.category.Category</span></code></p>
+<dl class="py class">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRings.ElementMethods">
+<em class="property">class </em><code class="sig-name descname">ElementMethods</code><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRings.ElementMethods" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRings.ElementMethods.difference">
+<code class="sig-name descname">difference</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">times</span><span class="o">=</span><span class="default_value">1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRings.ElementMethods.difference" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRings.MorphismMethods">
+<em class="property">class </em><code class="sig-name descname">MorphismMethods</code><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRings.MorphismMethods" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRings.ParentMethods">
+<em class="property">class </em><code class="sig-name descname">ParentMethods</code><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRings.ParentMethods" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRings.ParentMethods.constants">
+<code class="sig-name descname">constants</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRings.ParentMethods.constants" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructor for abstract methods</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="o">....</span><span class="p">:</span>     <span class="s2">&quot;doc of f&quot;</span>
+<span class="o">....</span><span class="p">:</span>     <span class="k">return</span> <span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span> <span class="o">=</span> <span class="n">abstract_method</span><span class="p">(</span><span class="n">f</span><span class="p">);</span> <span class="n">x</span>
+<span class="o">&lt;</span><span class="n">abstract</span> <span class="n">method</span> <span class="n">f</span> <span class="n">at</span> <span class="o">...&gt;</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="vm">__doc__</span>
+<span class="s1">&#39;doc of f&#39;</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="vm">__name__</span>
+<span class="s1">&#39;f&#39;</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="vm">__module__</span>
+<span class="s1">&#39;__main__&#39;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRings.ParentMethods.difference">
+<code class="sig-name descname">difference</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRings.ParentMethods.difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructor for abstract methods</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="o">....</span><span class="p">:</span>     <span class="s2">&quot;doc of f&quot;</span>
+<span class="o">....</span><span class="p">:</span>     <span class="k">return</span> <span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span> <span class="o">=</span> <span class="n">abstract_method</span><span class="p">(</span><span class="n">f</span><span class="p">);</span> <span class="n">x</span>
+<span class="o">&lt;</span><span class="n">abstract</span> <span class="n">method</span> <span class="n">f</span> <span class="n">at</span> <span class="o">...&gt;</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="vm">__doc__</span>
+<span class="s1">&#39;doc of f&#39;</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="vm">__name__</span>
+<span class="s1">&#39;f&#39;</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="vm">__module__</span>
+<span class="s1">&#39;__main__&#39;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRings.ParentMethods.operation">
+<code class="sig-name descname">operation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRings.ParentMethods.operation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRings.super_categories">
+<code class="sig-name descname">super_categories</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRings.super_categories" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRingFactory">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.ring_w_operator.difference_ring.</code><code class="sig-name descname">DifferenceRingFactory</code><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRingFactory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.structure.factory.UniqueFactory</span></code></p>
+<p>Factory to create uniquely Difference rings from usual rings Sage structures</p>
+<dl class="py method">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRingFactory.create_key">
+<code class="sig-name descname">create_key</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwds</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRingFactory.create_key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.ring_w_operator.difference_ring.DifferenceRingFactory.create_object">
+<code class="sig-name descname">create_object</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">_</span></em>, <em class="sig-param"><span class="n">key</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.ring_w_operator.difference_ring.DifferenceRingFactory.create_object" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="differential_ring.html" class="btn btn-neutral float-left" title="Structure for Differential Rings" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../diff_polynomial.html" class="btn btn-neutral float-right" title="Package diff_polynomial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Rings with Operators: Category, Factory and Wrapper &#8212; Differential Algebra in Sage 0.0.4.4 documentation</title>
+    <title>Rings with Operators: Category, Factory and Wrapper &#8212; Differential Algebra in Sage 0.0.4.5+is-34 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/classic.css" />
     
@@ -187,30 +187,6 @@ Then we define the <em>ring</em> <span class="math notranslate nohighlight">\(R\
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ElementMethods</span></span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <dl class="py method">
-<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.derivative">
-<span class="sig-name descname"><span class="pre">derivative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">derivation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.derivative" title="Permalink to this definition">¶</a></dt>
-<dd><p>Apply a derivation to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
-<p>This method applies repeatedly a derivation defined in the parent of <code class="docutils literal notranslate"><span class="pre">self</span></code>.
-See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.derivative" title="dalgebra.dring.DRings.ParentMethods.derivative"><code class="xref py py-func docutils literal notranslate"><span class="pre">derivative()</span></code></a> for further information.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.difference">
-<span class="sig-name descname"><span class="pre">difference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">difference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.difference" title="Permalink to this definition">¶</a></dt>
-<dd><p>Apply a difference to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
-<p>This method applies repeatedly a difference defined in the parent of <code class="docutils literal notranslate"><span class="pre">self</span></code>.
-See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.difference" title="dalgebra.dring.DRings.ParentMethods.difference"><code class="xref py py-func docutils literal notranslate"><span class="pre">difference()</span></code></a> for further information.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.inverse_operation">
-<span class="sig-name descname"><span class="pre">inverse_operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.inverse_operation" title="Permalink to this definition">¶</a></dt>
-<dd><p>Apply the inverse operation to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
-<p>This method applies repeatedly the inverse operation defined in the parent of <code class="docutils literal notranslate"><span class="pre">self</span></code>.
-See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.inverse_operation" title="dalgebra.dring.DRings.ParentMethods.inverse_operation"><code class="xref py py-func docutils literal notranslate"><span class="pre">inverse_operation()</span></code></a> for further information.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.d_constant">
 <span class="sig-name descname"><span class="pre">d_constant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.d_constant" title="Permalink to this definition">¶</a></dt>
 <dd><p>Method to check whether an element is a constant with respect to one operator.</p>
@@ -251,6 +227,35 @@ on its parent structure.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.derivative">
+<span class="sig-name descname"><span class="pre">derivative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">derivation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.derivative" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a derivation to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
+<p>This method applies repeatedly a derivation defined in the parent of <code class="docutils literal notranslate"><span class="pre">self</span></code>.
+See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.derivative" title="dalgebra.dring.DRings.ParentMethods.derivative"><code class="xref py py-func docutils literal notranslate"><span class="pre">derivative()</span></code></a> for further information.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.difference">
+<span class="sig-name descname"><span class="pre">difference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">difference</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a difference to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
+<p>This method applies repeatedly a difference defined in the parent of <code class="docutils literal notranslate"><span class="pre">self</span></code>.
+See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.difference" title="dalgebra.dring.DRings.ParentMethods.difference"><code class="xref py py-func docutils literal notranslate"><span class="pre">difference()</span></code></a> for further information.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.integrate">
+<span class="sig-name descname"><span class="pre">integrate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">derivation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.integrate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.inverse_operation">
+<span class="sig-name descname"><span class="pre">inverse_operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.inverse_operation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply the inverse operation to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
+<p>This method applies repeatedly the inverse operation defined in the parent of <code class="docutils literal notranslate"><span class="pre">self</span></code>.
+See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.inverse_operation" title="dalgebra.dring.DRings.ParentMethods.inverse_operation"><code class="xref py py-func docutils literal notranslate"><span class="pre">inverse_operation()</span></code></a> for further information.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.operation">
 <span class="sig-name descname"><span class="pre">operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.operation" title="Permalink to this definition">¶</a></dt>
 <dd><p>Apply an operation to <code class="docutils literal notranslate"><span class="pre">self</span></code> a given amount of times.</p>
@@ -272,6 +277,12 @@ See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.ope
 See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.skew" title="dalgebra.dring.DRings.ParentMethods.skew"><code class="xref py py-func docutils literal notranslate"><span class="pre">skew()</span></code></a> for further information.</p>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ElementMethods.to_sage">
+<span class="sig-name descname"><span class="pre">to_sage</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ElementMethods.to_sage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform <code class="docutils literal notranslate"><span class="pre">self</span></code> to a SageMath object (if possible) without any d-structure.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -284,6 +295,13 @@ See <a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.ske
 <dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ParentMethods</span></span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.add_constants">
+<span class="sig-name descname"><span class="pre">add_constants</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.add_constants" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to add new constants (given by name) in a DRing.</p>
+<p>This new constant acts as a transcendental element that is constant <strong>for all</strong> operations.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.all_operators_commute">
 <span class="sig-name descname"><span class="pre">all_operators_commute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.all_operators_commute" title="Permalink to this definition">¶</a></dt>
@@ -327,7 +345,7 @@ of random elements if the two operators actually commute.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">operations</span></code>: list or tuple indicating the operations to be applied. If <code class="docutils literal notranslate"><span class="pre">_ordered</span></code> is given to 
 <code class="docutils literal notranslate"><span class="pre">True</span></code>, then the elements are interpreted as a list of operations that will be applied in 
 the specific order that appears in <code class="docutils literal notranslate"><span class="pre">operations</span></code>. Otherwise, the input must be a list/tuple of 
-exactly <code class="docutils literal notranslate"><span class="pre">self.noperations()</span></code> indicating how many times each operation is applied.</p></li>
+exactly <code class="docutils literal notranslate"><span class="pre">self.noperators()</span></code> indicating how many times each operation is applied.</p></li>
 </ul>
 <p>OUTPUT:</p>
 <p>The result of applying the operators to <code class="docutils literal notranslate"><span class="pre">element</span></code>.</p>
@@ -402,6 +420,11 @@ difference.</p>
 <span class="sig-name descname"><span class="pre">has_skews</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.has_skews" title="Permalink to this definition">¶</a></dt>
 <dd><p>Method to know if there are skew-derivations defined over the ring.</p>
 </dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.integral">
+<span class="sig-name descname"><span class="pre">integral</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">derivation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.integral" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.inverse_operation">
@@ -575,6 +598,18 @@ difference.</p>
 <p>When no skew-derivation is declared for a ring, an empty tuple is returned.</p>
 </dd></dl>
 
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DRings.ParentMethods.to_sage">
+<span class="sig-name descname"><span class="pre">to_sage</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DRings.ParentMethods.to_sage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to remove the d-structure from this ring.</p>
+<p>This method returns an equivalent ring in SageMath whose elements
+are equivalent to self but without the D-structure imposed in this 
+structure.</p>
+<p>This method only works in some specific extensions for DRings.</p>
+<p>This method is associated with the corresponding method
+<a class="reference internal" href="#dalgebra.dring.DRings.ParentMethods.to_sage" title="dalgebra.dring.DRings.ParentMethods.to_sage"><code class="xref py py-func docutils literal notranslate"><span class="pre">to_sage()</span></code></a> on the elements.</p>
+</dd></dl>
+
 </dd></dl>
 
 <dl class="py method">
@@ -607,8 +642,18 @@ from quotient fields and d-rings.</p></li>
 <li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">DRings.parent_class.constant_ring()</span></code>: it tries to compute the field of fractions of the base ring</p></li>
 </ul>
 <dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DFractionField.add_constants">
+<span class="sig-name descname"><span class="pre">add_constants</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">new_constans</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DFractionField.add_constants" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="dalgebra.dring.DFractionField.constant_ring">
-<span class="sig-name descname"><span class="pre">constant_ring</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DFractionField.constant_ring" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">constant_ring</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DFractionField.constant_ring" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dring.DFractionField.inverse_operation">
+<span class="sig-name descname"><span class="pre">inverse_operation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.DFractionField.inverse_operation" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -636,6 +681,11 @@ from quotient fields and d-rings.</p></li>
 <dd><p>Method that calls the <code class="xref py py-class docutils literal notranslate"><span class="pre">DRingFactory</span></code> with types always as “homomorphism”.</p>
 <p>See documentation on <code class="xref py py-class docutils literal notranslate"><span class="pre">DRingFactory</span></code> for further information.</p>
 </dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.dring.is_WrappedDRing">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dring.</span></span><span class="sig-name descname"><span class="pre">is_WrappedDRing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parent</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dring.is_WrappedDRing" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="dalgebra.dring.RingsWithOperators">

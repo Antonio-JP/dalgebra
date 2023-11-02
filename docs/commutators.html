@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
-    <title>Infinite Polynomials of Rings with Operators &#8212; Differential Algebra in Sage 0.0.4.5+is-34 documentation</title>
+    <title>Non-trivial Commutators of Linear Differential Operators &#8212; Differential Algebra in Sage 0.0.4.5+is-34 documentation</title>
     <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="_static/classic.css" />
     
@@ -17,8 +17,8 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Parent structures for Infinite Polynomials over rings with operators" href="dpolynomial/dpolynomial_ring.html" />
-    <link rel="prev" title="Rings with Operators: Category, Factory and Wrapper" href="dring.html" /> 
+    <link rel="next" title="Integrable hierarchies and almost commuting operators" href="commutators/almost_commuting.html" />
+    <link rel="prev" title="Structures for systems of equation over rings with operators" href="dpolynomial/dpolynomial_system.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -30,13 +30,13 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="dpolynomial/dpolynomial_ring.html" title="Parent structures for Infinite Polynomials over rings with operators"
+          <a href="commutators/almost_commuting.html" title="Integrable hierarchies and almost commuting operators"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="dring.html" title="Rings with Operators: Category, Factory and Wrapper"
+          <a href="dpolynomial/dpolynomial_system.html" title="Structures for systems of equation over rings with operators"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">dalgebra</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">Infinite Polynomials of Rings with Operators</a></li> 
+        <li class="nav-item nav-item-this"><a href="">Non-trivial Commutators of Linear Differential Operators</a></li> 
       </ul>
     </div>  
 
@@ -45,25 +45,34 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <section id="module-dalgebra.dpolynomial">
-<span id="infinite-polynomials-of-rings-with-operators"></span><h1>Infinite Polynomials of Rings with Operators<a class="headerlink" href="#module-dalgebra.dpolynomial" title="Permalink to this headline">¶</a></h1>
-<p>Package <code class="docutils literal notranslate"><span class="pre">diff_polynomial</span></code></p>
-<p>This is a package containing all the classes for creating and 
-manipulating differential and difference polynomial ring over arbitrary ground rings.</p>
-<p>AUTHORS:</p>
-<blockquote>
-<div><ul class="simple">
-<li><p>Antonio Jimenez-Pastor (<a class="reference external" href="https://github.com/Antonio-JP">GitHub</a>)</p></li>
+  <section id="module-dalgebra.commutators">
+<span id="non-trivial-commutators-of-linear-differential-operators"></span><h1>Non-trivial Commutators of Linear Differential Operators<a class="headerlink" href="#module-dalgebra.commutators" title="Permalink to this headline">¶</a></h1>
+<p>Module that contains all the files used in computation of commutators.</p>
+<p>This module contains all the files and code necessary in applications for computing 
+non-trivial commutators for differential polynomial. The focus on the differential
+setting is temporal and will be generalized in the future to more generic 
+<code class="xref py py-class docutils literal notranslate"><span class="pre">DPolynomialRing_dense</span></code>.</p>
+<p>This module is split into 3 main subpackages:</p>
+<ul class="simple">
+<li><p><code class="xref py py-mod docutils literal notranslate"><span class="pre">almost_commuting</span></code>: contains all necessary functions to compute the almost-commuting 
+basis described by Wilson (in <em>Algebraic curves and soliton equations</em> (1985)). These computations
+also allows the computation of integrable hierarchies.</p></li>
+<li><p><code class="xref py py-mod docutils literal notranslate"><span class="pre">ideals</span></code>: contains method that can analyze and study algebraic ideals. This is an auxiliary 
+subpackage that is useful for other packages in the module.</p></li>
+<li><p><code class="xref py py-mod docutils literal notranslate"><span class="pre">commutator</span></code>: contains all the methods necessary for computing non-trivial commutators for
+a differential linear operator. This requires the use of the other packages of the module.</p></li>
+<li><p><code class="xref py py-mod docutils literal notranslate"><span class="pre">spectral</span></code>: contains all the methods and functionality related with the computation of 
+spectral curves for a pair of commuting linear differential operators.</p></li>
 </ul>
-</div></blockquote>
 </section>
 <section id="list-of-modules">
 <h1>List of Modules<a class="headerlink" href="#list-of-modules" title="Permalink to this headline">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="dpolynomial/dpolynomial_ring.html">Parent structures for Infinite Polynomials over rings with operators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dpolynomial/dpolynomial_element.html">Element structures for Infinite Polynomials over rings with operators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="dpolynomial/dpolynomial_system.html">Structures for systems of equation over rings with operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commutators/almost_commuting.html">Integrable hierarchies and almost commuting operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commutators/ideals.html">Analyzing solutions to algebraic ideals</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commutators/commutator.html">Obtaining non-trivial centralizers for Specific Linear Differential Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commutators/spectral.html">Spectral curves of commuting linear differential operators</a></li>
 </ul>
 </div>
 </section>
@@ -86,7 +95,7 @@ manipulating differential and difference polynomial ring over arbitrary ground r
   <div>
     <h3><a href="index.html">Table of Contents</a></h3>
     <ul>
-<li><a class="reference internal" href="#">Infinite Polynomials of Rings with Operators</a></li>
+<li><a class="reference internal" href="#">Non-trivial Commutators of Linear Differential Operators</a></li>
 <li><a class="reference internal" href="#list-of-modules">List of Modules</a></li>
 <li><a class="reference internal" href="#indices-and-tables">Indices and Tables</a></li>
 </ul>
@@ -94,18 +103,18 @@ manipulating differential and difference polynomial ring over arbitrary ground r
   </div>
   <div>
     <h4>Previous topic</h4>
-    <p class="topless"><a href="dring.html"
-                          title="previous chapter">Rings with Operators: Category, Factory and Wrapper</a></p>
+    <p class="topless"><a href="dpolynomial/dpolynomial_system.html"
+                          title="previous chapter">Structures for systems of equation over rings with operators</a></p>
   </div>
   <div>
     <h4>Next topic</h4>
-    <p class="topless"><a href="dpolynomial/dpolynomial_ring.html"
-                          title="next chapter">Parent structures for Infinite Polynomials over rings with operators</a></p>
+    <p class="topless"><a href="commutators/almost_commuting.html"
+                          title="next chapter">Integrable hierarchies and almost commuting operators</a></p>
   </div>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
-      <li><a href="_sources/dpolynomial.rst.txt"
+      <li><a href="_sources/commutators.rst.txt"
             rel="nofollow">Show Source</a></li>
     </ul>
    </div>
@@ -133,13 +142,13 @@ manipulating differential and difference polynomial ring over arbitrary ground r
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="dpolynomial/dpolynomial_ring.html" title="Parent structures for Infinite Polynomials over rings with operators"
+          <a href="commutators/almost_commuting.html" title="Integrable hierarchies and almost commuting operators"
              >next</a> |</li>
         <li class="right" >
-          <a href="dring.html" title="Rings with Operators: Category, Factory and Wrapper"
+          <a href="dpolynomial/dpolynomial_system.html" title="Structures for systems of equation over rings with operators"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">dalgebra</a> &#187;</li>
-        <li class="nav-item nav-item-this"><a href="">Infinite Polynomials of Rings with Operators</a></li> 
+        <li class="nav-item nav-item-this"><a href="">Non-trivial Commutators of Linear Differential Operators</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

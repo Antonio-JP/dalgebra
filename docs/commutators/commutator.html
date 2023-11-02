@@ -1,0 +1,230 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+    <title>Obtaining non-trivial centralizers for Specific Linear Differential Operators &#8212; Differential Algebra in Sage 0.0.4.5+is-34 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Spectral curves of commuting linear differential operators" href="spectral.html" />
+    <link rel="prev" title="Analyzing solutions to algebraic ideals" href="ideals.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="spectral.html" title="Spectral curves of commuting linear differential operators"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="ideals.html" title="Analyzing solutions to algebraic ideals"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">dalgebra</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../commutators.html" accesskey="U">Non-trivial Commutators of Linear Differential Operators</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Obtaining non-trivial centralizers for Specific Linear Differential Operators</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-dalgebra.commutators.commutator">
+<span id="obtaining-non-trivial-centralizers-for-specific-linear-differential-operators"></span><h1>Obtaining non-trivial centralizers for Specific Linear Differential Operators<a class="headerlink" href="#module-dalgebra.commutators.commutator" title="Permalink to this headline">¶</a></h1>
+<p>Computing non-trivial centralizers.</p>
+<p>This module contains the main functionality used for computing non-trivial centralizers of linear differential operators.</p>
+<p>This software has been used in the presentation in ISSAC’23 “Computing almost-commuting basis of Ordinary Differential
+Operators”, by A. Jiménez-Pastor, S.L. Rueda and M.A. Zurro in Tromsø, Norway.</p>
+<section id="theory-explanation">
+<h2><strong>Theory explanation</strong><a class="headerlink" href="#theory-explanation" title="Permalink to this headline">¶</a></h2>
+<p>Let us consider an algebraically closed field of characteristic zero <span class="math notranslate nohighlight">\(C\)</span> and the field of d-polynomials defined by <span class="math notranslate nohighlight">\(n-2\)</span> 
+differential variables <span class="math notranslate nohighlight">\(u_2,\ldots,u_{n}\)</span>. Let us consider the linear differential operator:</p>
+<div class="math notranslate nohighlight">
+\[L = \partial^n + u_{2}\partial^{n-2}  + \ldots + u_{n-1}\partial + u_n.\]</div>
+<p>This operator <span class="math notranslate nohighlight">\(L\)</span> can be written in terms of d-polynomials in the ring <span class="math notranslate nohighlight">\(K\{z\} = C\{u_2,\ldots,u_{n},z\}\)</span>. We say that 
+another operator <span class="math notranslate nohighlight">\(P \in K\{z\}\)</span> <em>commutes with `L`</em> if and only if the commutator of <span class="math notranslate nohighlight">\(L\)</span> with <span class="math notranslate nohighlight">\(P\)</span> (<span class="math notranslate nohighlight">\([L,P]\)</span>) is zero.</p>
+<p>In the ring of differential polynomials <span class="math notranslate nohighlight">\(K\{z\}\)</span>, every operator commutes since we are considering the multiplication
+as usual polynomials. However, if we consider the elements of <span class="math notranslate nohighlight">\(K\{z\}\)</span> as operators in <span class="math notranslate nohighlight">\(z\)</span>, we can see them acting via
+substitution in any differential extension of <span class="math notranslate nohighlight">\(K\)</span>. This action defines a new product operation in <span class="math notranslate nohighlight">\(K\{z\}\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[A(z) \cdot B(z) = A(B(z))\]</div>
+<p>Since <span class="math notranslate nohighlight">\(z\)</span> is a differential variable, we can see that this multiplication is <span class="math notranslate nohighlight">\(C\)</span>-linear, which allows to define an 
+alternative <span class="math notranslate nohighlight">\(C\)</span>-algebra structure over <span class="math notranslate nohighlight">\(K\{z\}\)</span>. This <span class="math notranslate nohighlight">\(C\)</span>-algebra will be non-commutative, making sense to consider the
+commutator <span class="math notranslate nohighlight">\([A,B] = A\cdot B - B\cdot A\)</span> and the concept of centralizer</p>
+<div class="math notranslate nohighlight">
+\[\mathcal{C}(A) = \left\{B(z) \in K\{z\}\ :\ [A,B] = 0\right\}.\]</div>
+<p>This module provides methods to study the commutator of differential operators. As this is a difficult problem, we consider 
+operators in normal form. These operators are specializations of the operators <span class="math notranslate nohighlight">\(L\)</span> shown above. Hence, we can apply
+the theory of almost-commuting operators to guide in this search.</p>
+<p>For more information about <em>almost-commuting</em> operators and how to compute them, we refer to <code class="xref py py-mod docutils literal notranslate"><span class="pre">almost_commuting</span></code>.</p>
+</section>
+<section id="examples-of-usage">
+<h2><strong>Examples of usage</strong><a class="headerlink" href="#examples-of-usage" title="Permalink to this headline">¶</a></h2>
+<p>TODO: Add examples of usage of the module that will serve as tests</p>
+</section>
+<section id="things-remaining-todo">
+<h2><strong>Things remaining TODO</strong><a class="headerlink" href="#things-remaining-todo" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Fill the Examples on the documentation</p></li>
+</ol>
+</section>
+<section id="elements-provided-by-the-module">
+<h2><strong>Elements provided by the module</strong><a class="headerlink" href="#elements-provided-by-the-module" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.commutators.commutator.GetEquationsForSolution">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.commutators.commutator.</span></span><span class="sig-name descname"><span class="pre">GetEquationsForSolution</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">loglevel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logfile</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.commutators.commutator.GetEquationsForSolution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to get the equations for a specific type of solutions for non-trivial commutator.</p>
+<p>This method computes the set of algebraic equations that need to be solved for obtaining 
+a non-trivial commutator for a given linear differential operator in normal form. Recall that
+an operator in normal form is of the form</p>
+<div class="math notranslate nohighlight">
+\[L = \partial^n + a_{n-2} \partial^{n-2} + \ldots + a_1 \partial + a_0,\]</div>
+<p>where <span class="math notranslate nohighlight">\(a_*\)</span> are differential elements in some <strong>differential field</strong>. Its generic version
+is studied by Wilson and we can compute its basis of almost commuting operators (see method
+<a class="reference internal" href="almost_commuting.html#dalgebra.commutators.almost_commuting.almost_commuting_wilson" title="dalgebra.commutators.almost_commuting.almost_commuting_wilson"><code class="xref py py-func docutils literal notranslate"><span class="pre">almost_commuting.almost_commuting_wilson()</span></code></a>)</p>
+<p>This method uses the almost commuting basis to create a linear combination of its elements
+up to a fixed order (given by <span class="math notranslate nohighlight">\(m\)</span>) and then compute all the algebraic equations that need to
+be satisfied for obtaining a non-trivial element of the centralizer of <span class="math notranslate nohighlight">\(L\)</span>.</p>
+<p>Since the way the algebraic equations arises from the almost commuting basis and the operator 
+<span class="math notranslate nohighlight">\(L\)</span> depends on the differential field over which <span class="math notranslate nohighlight">\(L\)</span> is defined, we require a method
+<code class="docutils literal notranslate"><span class="pre">extract</span></code> that can obtain, for a given element in the differential field, a list of 
+equations that guarantee the element to vanish.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">m</span></code>: order bound for the commutator to be found.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">L</span></code>: linear differential operator in normal form to be used as base operator.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n</span></code>: if <span class="math notranslate nohighlight">\(L\)</span> is not given directly, <span class="math notranslate nohighlight">\(n\)</span> provides the order of the operator <span class="math notranslate nohighlight">\(L\)</span> to be used.
+Then, the coefficients are given in the input <code class="docutils literal notranslate"><span class="pre">U</span></code>, either as a list or as a dictionary.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">extract</span></code>: a method to extract from the final set of values the equations for 
+the obtained operator to actually commute. These equations will include any variable 
+within the given functions <code class="docutils literal notranslate"><span class="pre">U</span></code> and the flag of constants created.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">flag_name</span></code>: name use for the variables used in the flag of constants.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>A pair <span class="math notranslate nohighlight">\((P, H)\)</span> where <span class="math notranslate nohighlight">\(P\)</span> is an operator of order at most <span class="math notranslate nohighlight">\(m\)</span> such that it <strong>commutes</strong> with <span class="math notranslate nohighlight">\(L_n\)</span> (see method 
+<code class="xref py py-func docutils literal notranslate"><span class="pre">generic_normal()</span></code>) for the given set of <code class="docutils literal notranslate"><span class="pre">U</span></code> whenever the equations in <span class="math notranslate nohighlight">\(H\)</span> all vanish. The equations
+on <span class="math notranslate nohighlight">\(H\)</span> are only <em>algebraic</em> equations.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.commutators.commutator.PolynomialCommutator">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.commutators.commutator.</span></span><span class="sig-name descname"><span class="pre">PolynomialCommutator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">loglevel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">logfile</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.commutators.commutator.PolynomialCommutator" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.commutators.commutator.generate_polynomial_ansatz">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.commutators.commutator.</span></span><span class="sig-name descname"><span class="pre">generate_polynomial_ansatz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">base</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ansatz_var</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'b'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.commutators.commutator.generate_polynomial_ansatz" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a list of ansatz for the generic <span class="math notranslate nohighlight">\(u\)</span> for a generic Schrödinger operator of order <span class="math notranslate nohighlight">\(n\)</span></p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">base</span></code>: the base ring of constants to be used.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n</span></code>: the order of the Schrödinger operator to be considered.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">d</span></code>: degree of the ansatz generated</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">var_name</span></code>: name of the variable to be used as a polynomial element. We will make its derivative to be <span class="math notranslate nohighlight">\(1\)</span>.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.commutators.commutator.generate_polynomial_equations">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.commutators.commutator.</span></span><span class="sig-name descname"><span class="pre">generate_polynomial_equations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">H</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'x'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.commutators.commutator.generate_polynomial_equations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to extract equations assuming a polynomial ansatz</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">Obtaining non-trivial centralizers for Specific Linear Differential Operators</a><ul>
+<li><a class="reference internal" href="#theory-explanation"><strong>Theory explanation</strong></a></li>
+<li><a class="reference internal" href="#examples-of-usage"><strong>Examples of usage</strong></a></li>
+<li><a class="reference internal" href="#things-remaining-todo"><strong>Things remaining TODO</strong></a></li>
+<li><a class="reference internal" href="#elements-provided-by-the-module"><strong>Elements provided by the module</strong></a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="ideals.html"
+                          title="previous chapter">Analyzing solutions to algebraic ideals</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="spectral.html"
+                          title="next chapter">Spectral curves of commuting linear differential operators</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/commutators/commutator.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="spectral.html" title="Spectral curves of commuting linear differential operators"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="ideals.html" title="Analyzing solutions to algebraic ideals"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">dalgebra</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../commutators.html" >Non-trivial Commutators of Linear Differential Operators</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Obtaining non-trivial centralizers for Specific Linear Differential Operators</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2021.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+    </div>
+  </body>
+</html>

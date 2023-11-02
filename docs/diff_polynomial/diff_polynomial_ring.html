@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parent structures for Infinite Polynomials over rings with operators &mdash; Differential Algebra in Sage 0.0.20220428.1815 documentation</title><link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Element structures for Infinite Polynomials over rings with operators" href="diff_polynomial_element.html" />
+    <link rel="prev" title="Package diff_polynomial" href="../diff_polynomial.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> Differential Algebra in Sage
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../ring_w_operator.html">Package <code class="docutils literal notranslate"><span class="pre">ring_w_operator</span></code></a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../diff_polynomial.html">Package <code class="docutils literal notranslate"><span class="pre">diff_polynomial</span></code></a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../diff_polynomial.html#modules">Modules</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Parent structures for Infinite Polynomials over rings with operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="diff_polynomial_element.html">Element structures for Infinite Polynomials over rings with operators</a></li>
+<li class="toctree-l3"><a class="reference internal" href="diff_polynomial_system.html">Structures for systems of equation over rings with operators</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../diff_polynomial.html#indices-and-tables">Indices and Tables</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Differential Algebra in Sage</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../diff_polynomial.html">Package <code class="docutils literal notranslate"><span class="pre">diff_polynomial</span></code></a> &raquo;</li>
+      <li>Parent structures for Infinite Polynomials over rings with operators</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/diff_polynomial/diff_polynomial_ring.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-dalgebra.diff_polynomial.diff_polynomial_ring">
+<span id="parent-structures-for-infinite-polynomials-over-rings-with-operators"></span><h1>Parent structures for Infinite Polynomials over rings with operators<a class="headerlink" href="#module-dalgebra.diff_polynomial.diff_polynomial_ring" title="Permalink to this headline">¶</a></h1>
+<p>File for the ring structure of Differential polynomials</p>
+<p>This file contains all the parent structures for Differential polynomials
+and all the coercion associated classes. Mainly, this module provides the 
+class <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRing_dense</span></code></a>, which is the main parent class defining
+a ring of differential polynomials.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferentialPolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span> 
+<span class="n">sage</span><span class="p">:</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> 
+<span class="n">sage</span><span class="p">:</span> <span class="n">p</span> <span class="o">=</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">^</span><span class="mi">2</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span> <span class="n">p</span>
+<span class="o">-</span><span class="n">y_2</span><span class="o">*</span><span class="n">y_1</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y_1</span><span class="o">^</span><span class="mi">2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span>
+<span class="n">Ring</span> <span class="n">of</span> <span class="n">differential</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> <span class="p">[</span><span class="n">Univariate</span> 
+<span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">]</span> <span class="k">with</span> <span class="n">derivation</span> <span class="p">[</span><span class="n">Map</span> <span class="kn">from</span> 
+<span class="nn">callable</span> <span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>AUTHORS:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Antonio Jimenez-Pastor (2021-05-19): initial version</p></li>
+</ul>
+</div></blockquote>
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolyRingFunctor">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">DifferencePolyRingFunctor</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">variables</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolyRingFunctor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor</span></code></a></p>
+<p>Class representing Functor for creating <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferencePolynomialRing_dense</span></code></a>.</p>
+<p>This class represents the functor <span class="math notranslate nohighlight">\(F: R \mapsto R\{y^(1),\ldots,y^{(n)}\}\)</span>.
+The names of the variables must be given to the functor and, then
+this can take any ring and create the corresponding ring of difference 
+polynomials.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">variables</span></code>: names of the variables that the functor will add (see 
+the input <code class="docutils literal notranslate"><span class="pre">names</span></code> in <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferencePolynomialRing_dense</span></code></a>)</p></li>
+</ul>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferencePolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferencePolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">construction</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span><span class="p">(</span><span class="n">S</span><span class="p">)</span> <span class="ow">is</span> <span class="n">R</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span> <span class="o">=</span> <span class="n">DifferencePolynomialRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span><span class="p">,</span> <span class="n">T</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">construction</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span>
+<span class="n">DifferencePolynomialRing</span><span class="p">(</span><span class="o">*</span><span class="p">,(</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span> <span class="ow">is</span> <span class="n">F</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRingFactory">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">DifferencePolynomialRingFactory</code><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRingFactory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory</span></code></a></p>
+<p>Factory to create rings of difference polynomials.</p>
+<p>This allows to cache the same rings of difference polynomials created from different
+objects.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    sage: from dalgebra import DifferencePolynomialRing
+    sage: R.&lt;y&gt; = DifferencePolynomialRing(QQ[&#39;x&#39;]); R
+    Ring of difference polynomials in (y) over Difference Ring [Univariate Polynomial 
+    Ring in x over Rational Field] with difference [Map from callable [x] |--&gt; [x]]
+    sage: R is DifferencePolynomialRing(QQ[&#39;x&#39;], &#39;y&#39;)
+    True
+    sage: R is DifferencePolynomialRing(QQ[&#39;x&#39;], [&#39;y&#39;])
+    True
+    sage: R is DifferencePolynomialRing(QQ[&#39;x&#39;], (&#39;y&#39;))
+    True
+    sage: R is DifferencePolynomialRing(InfinitePolynomialRing(QQ[&#39;x&#39;], &#39;y&#39;))
+    True
+    sage: R is DifferencePolynomialRing(R)
+    True
+
+We can also see the unique generation even with several variables::
+
+    sage: S = DifferencePolynomialRing(QQ[&#39;x&#39;], (&#39;y&#39;,&#39;a&#39;)); S
+    Ring of difference polynomials in (a, y) over Difference Ring [Univariate 
+    Polynomial Ring in x over Rational Field] with difference [Map from callable [x] |--&gt; [x]]
+    sage: S is DifferencePolynomialRing(QQ[&#39;x&#39;], [&#39;y&#39;,&#39;a&#39;])
+    True
+    sage: S is DifferencePolynomialRing(QQ[&#39;x&#39;], (&#39;y&#39;,&#39;a&#39;))
+    True
+    sage: S is DifferencePolynomialRing(QQ[&#39;x&#39;], names = (&#39;y&#39;,&#39;a&#39;))
+    True
+    sage: S is DifferencePolynomialRing(R, &#39;a&#39;)
+    True
+    sage: S is DifferencePolynomialRing(R, [&#39;a&#39;])
+    True
+
+Remark that, in order to have real uniqueness, the variable names are sorted. The use of 
+the Sage notation ``&lt;·,·&gt;`` is then discouraged::
+
+    sage: S.&lt;y,a&gt; = DifferencePolynomialRing(QQ[&#39;x&#39;])
+    sage: y
+    a_*
+    sage: a
+    y_*
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">DifferencePolynomialRing_dense</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">base</span></em>, <em class="sig-param"><span class="n">names</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense</span></code></a></p>
+<p>Class for a Ring of difference polynomials.</p>
+<p>Given a difference ring <span class="math notranslate nohighlight">\(R\)</span>, we can define the ring of difference polynomials
+on <span class="math notranslate nohighlight">\(y\)</span> over <span class="math notranslate nohighlight">\(R\)</span> as the <em>infinite polynomial ring</em></p>
+<div class="math notranslate nohighlight">
+\[R[y_0, y_1,\ldots]\]</div>
+<p>where the difference <span class="math notranslate nohighlight">\(\sigma\)</span> has been uniquely extended such that, for all <span class="math notranslate nohighlight">\(n \in \mathbb{N}\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\sigma(y_n) = y_{n+1}.\]</div>
+<p>The ring of difference polynomials on <span class="math notranslate nohighlight">\(y\)</span> over <span class="math notranslate nohighlight">\(R\)</span> is denoted by <span class="math notranslate nohighlight">\(R\{y\}\)</span>. We can iterate the 
+process to define th ring of difference polynomials in several variables:</p>
+<div class="math notranslate nohighlight">
+\[R\{y,z\} \simeq R\{y\}\{z\} \simeq R\{z\}\{y\}\]</div>
+<p>This class represents exactly the ring of difference polynomial over the given ring <code class="docutils literal notranslate"><span class="pre">base</span></code> 
+with variables given in <code class="docutils literal notranslate"><span class="pre">names</span></code>.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">base</span></code>: ring structure that represent the base ring of coefficients <span class="math notranslate nohighlight">\(R\)</span>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">names</span></code>: set of names for the variables of the new ring.</p></li>
+</ul>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferencePolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferencePolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]);</span> <span class="n">R</span>
+<span class="n">Ring</span> <span class="n">of</span> <span class="n">difference</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="n">over</span> <span class="n">Difference</span> <span class="n">Ring</span> <span class="p">[</span><span class="n">Univariate</span> 
+<span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">]</span> <span class="k">with</span> <span class="n">difference</span> <span class="p">[</span><span class="n">Map</span> <span class="kn">from</span> 
+<span class="nn">callable</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">|--&gt;</span> <span class="p">[</span><span class="n">x</span><span class="p">]]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span><span class="o">.&lt;</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferencePolynomialRing</span><span class="p">(</span><span class="n">ZZ</span><span class="p">);</span> <span class="n">S</span>
+<span class="n">Ring</span> <span class="n">of</span> <span class="n">difference</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="n">over</span> <span class="n">Difference</span> <span class="n">Ring</span> <span class="p">[</span><span class="n">Integer</span> <span class="n">Ring</span><span class="p">]</span> 
+<span class="k">with</span> <span class="n">difference</span> <span class="p">[</span><span class="n">Map</span> <span class="kn">from</span> <span class="nn">callable</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">|--&gt;</span> <span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+</pre></div>
+</div>
+<p>We can now create objects in those rings using the generators <code class="docutils literal notranslate"><span class="pre">y</span></code>, <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">y_1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">difference</span><span class="p">()</span>
+<span class="n">y_2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">difference</span><span class="p">()</span> <span class="c1">#Homomorphism rule</span>
+<span class="n">a_2</span><span class="o">*</span><span class="n">b_1</span>
+</pre></div>
+</div>
+<dl class="py attribute">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense.Element">
+<code class="sig-name descname">Element</code><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense.Element" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="diff_polynomial_element.html#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense.constants">
+<code class="sig-name descname">constants</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense.constants" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense.construction">
+<code class="sig-name descname">construction</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense.construction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the associated functor and input to create <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>The method construction returns a <code class="xref py py-class docutils literal notranslate"><span class="pre">ConstructionFunctor</span></code> and 
+a valid input for it that would create <code class="docutils literal notranslate"><span class="pre">self</span></code> again. This is a necessary method to
+implement all the coercion system properly.</p>
+<p>For a <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferencePolynomialRing_dense</span></code></a>, the associated functor class is <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolyRingFunctor" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolyRingFunctor"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferencePolyRingFunctor</span></code></a>.
+See its documentation for further information.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferencePolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra.diff_polynomial.diff_polynomial_ring</span> <span class="k">import</span> <span class="n">DifferencePolyRingFunctor</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferencePolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">construction</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">DifferencePolyRingFunctor</span><span class="p">)</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span>
+<span class="n">DifferencePolynomialRing</span><span class="p">(</span><span class="o">*</span><span class="p">,(</span><span class="s1">&#39;y&#39;</span><span class="p">,))</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span>
+<span class="n">Difference</span> <span class="n">Ring</span> <span class="p">[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">]</span> <span class="k">with</span> <span class="n">difference</span> <span class="p">[</span><span class="n">Map</span> <span class="kn">from</span> <span class="nn">callable</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">|--&gt;</span> <span class="p">[</span><span class="n">x</span><span class="p">]]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense.difference">
+<code class="sig-name descname">difference</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRing_dense.difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the difference of an element.</p>
+<p>This method catchs the essence of a <code class="xref py py-class docutils literal notranslate"><span class="pre">DifferencePolynomialRing</span></code>: the extension
+of the difference on the base ring (retrieved by <code class="docutils literal notranslate"><span class="pre">self.base()</span></code>) to the 
+infinite polynomial ring in such a way that the variables are linked linearly with the 
+derivation.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">element</span></code>: an object. Must be included in <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>An element in <code class="docutils literal notranslate"><span class="pre">self</span></code> that represents the difference of <code class="docutils literal notranslate"><span class="pre">element</span></code>.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferencePolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferencePolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">y_1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">x</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">10</span><span class="p">])</span>
+<span class="n">x</span><span class="o">*</span><span class="n">y_11</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">^</span><span class="mi">2</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="o">-</span><span class="n">y_3</span><span class="o">*</span><span class="n">y_2</span> <span class="o">+</span> <span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y_2</span><span class="o">^</span><span class="mi">2</span>
+</pre></div>
+</div>
+<p>This difference also works naturally with several infinite variables:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">S</span> <span class="o">=</span> <span class="n">DifferencePolynomialRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">);</span> <span class="n">a</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">gens</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">a_1</span><span class="o">*</span><span class="n">y_1</span> <span class="o">+</span> <span class="n">a_2</span>
+</pre></div>
+</div>
+<p>We can see other type of shifts or differences operators:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">X</span> <span class="o">=</span> <span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">](</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">T</span><span class="o">.&lt;</span><span class="n">z</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferencePolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="n">x</span><span class="p">],</span> <span class="n">difference</span><span class="o">=</span><span class="k">lambda</span> <span class="n">p</span> <span class="p">:</span> <span class="n">p</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">X</span><span class="o">+</span><span class="mi">1</span><span class="p">));</span> <span class="n">x</span> <span class="o">=</span> <span class="n">T</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">T</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">z</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">z_1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">T</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">T</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">z</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">^</span><span class="mi">2</span> <span class="o">-</span> <span class="n">z</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">z</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="o">-</span><span class="n">z_3</span><span class="o">*</span><span class="n">z_2</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">z_2</span><span class="o">^</span><span class="mi">2</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolyRingFunctor">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">DifferentialPolyRingFunctor</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">variables</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolyRingFunctor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor</span></code></a></p>
+<p>Class representing Functor for creating <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRing_dense</span></code></a>.</p>
+<p>This class represents the functor <span class="math notranslate nohighlight">\(F: R \mapsto R\{y^(1),\ldots,y^{(n)}\}\)</span>.
+The names of the variables must be given to the functor and, then
+this can take any ring and create the corresponding ring of differential 
+polynomials.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">variables</span></code>: names of the variables that the functor will add (see 
+the input <code class="docutils literal notranslate"><span class="pre">names</span></code> in <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRing_dense</span></code></a>)</p></li>
+</ul>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferentialPolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">construction</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span><span class="p">(</span><span class="n">S</span><span class="p">)</span> <span class="ow">is</span> <span class="n">R</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span><span class="p">,</span> <span class="n">T</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">construction</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span>
+<span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="o">*</span><span class="p">,(</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span> <span class="ow">is</span> <span class="n">F</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRingFactory">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">DifferentialPolynomialRingFactory</code><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRingFactory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory</span></code></a></p>
+<p>Factory to create rings of differential polynomials.</p>
+<p>This allows to cache the same rings of differential polynomials created from different
+objects.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>    sage: from dalgebra import DifferentialPolynomialRing
+    sage: R.&lt;y&gt; = DifferentialPolynomialRing(QQ[&#39;x&#39;]); R
+    Ring of differential polynomials in (y) over Differential Ring [Univariate 
+    Polynomial Ring in x over Rational Field] with derivation [Map from 
+    callable d/dx]
+    sage: R is DifferentialPolynomialRing(QQ[&#39;x&#39;], &#39;y&#39;)
+    True
+    sage: R is DifferentialPolynomialRing(QQ[&#39;x&#39;], [&#39;y&#39;])
+    True
+    sage: R is DifferentialPolynomialRing(QQ[&#39;x&#39;], (&#39;y&#39;))
+    True
+    sage: R is DifferentialPolynomialRing(InfinitePolynomialRing(QQ[&#39;x&#39;], &#39;y&#39;))
+    True
+    sage: R is DifferentialPolynomialRing(R)
+    True
+
+We can also see the unique generation even with several variables::
+
+    sage: S = DifferentialPolynomialRing(QQ[&#39;x&#39;], (&#39;y&#39;,&#39;a&#39;)); S
+    Ring of differential polynomials in (a, y) over Differential Ring [Univariate 
+    Polynomial Ring in x over Rational Field] with derivation [Map from callable 
+    d/dx]
+    sage: S is DifferentialPolynomialRing(QQ[&#39;x&#39;], [&#39;y&#39;,&#39;a&#39;])
+    True
+    sage: S is DifferentialPolynomialRing(QQ[&#39;x&#39;], (&#39;y&#39;,&#39;a&#39;))
+    True
+    sage: S is DifferentialPolynomialRing(QQ[&#39;x&#39;], names = (&#39;y&#39;,&#39;a&#39;))
+    True
+    sage: S is DifferentialPolynomialRing(R, &#39;a&#39;)
+    True
+    sage: S is DifferentialPolynomialRing(R, [&#39;a&#39;])
+    True
+
+Remark that, in order to have real uniqueness, the variable names are sorted. The use of 
+the Sage notation ``&lt;·,·&gt;`` is then discouraged::
+
+    sage: S.&lt;y,a&gt; = DifferentialPolynomialRing(QQ[&#39;x&#39;])
+    sage: y
+    a_*
+    sage: a
+    y_*
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">DifferentialPolynomialRing_dense</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">base</span></em>, <em class="sig-param"><span class="n">names</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense</span></code></a></p>
+<p>Class for a Ring of differential polynomials.</p>
+<p>Given a differential ring <span class="math notranslate nohighlight">\(R\)</span>, we can define the ring of differential polynomials
+on <span class="math notranslate nohighlight">\(y\)</span> over <span class="math notranslate nohighlight">\(R\)</span> as the <em>infinite polynomial ring</em></p>
+<div class="math notranslate nohighlight">
+\[R[y_0, y_1,\ldots]\]</div>
+<p>where the derivation <span class="math notranslate nohighlight">\(\partial\)</span> has been uniquely extended such that, for all <span class="math notranslate nohighlight">\(n \in \mathbb{N}\)</span>:</p>
+<div class="math notranslate nohighlight">
+\[\partial(y_n) = y_{n+1}.\]</div>
+<p>The ring of differential polynomials on <span class="math notranslate nohighlight">\(y\)</span> over <span class="math notranslate nohighlight">\(R\)</span> is denoted by <span class="math notranslate nohighlight">\(R\{y\}\)</span>. We can iterate the 
+process to define th ring of differential polynomials in several variables:</p>
+<div class="math notranslate nohighlight">
+\[R\{y,z\} \simeq R\{y\}\{z\} \simeq R\{z\}\{y\}\]</div>
+<p>This class represents exactly the ring of differential polynomial over the given ring <code class="docutils literal notranslate"><span class="pre">base</span></code> 
+with variables given in <code class="docutils literal notranslate"><span class="pre">names</span></code>.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">base</span></code>: ring structure that represent the base ring of coefficients <span class="math notranslate nohighlight">\(R\)</span>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">names</span></code>: set of names for the variables of the new ring.</p></li>
+</ul>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferentialPolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]);</span> <span class="n">R</span>
+<span class="n">Ring</span> <span class="n">of</span> <span class="n">differential</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> 
+<span class="p">[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">]</span> <span class="k">with</span> <span class="n">derivation</span> 
+<span class="p">[</span><span class="n">Map</span> <span class="kn">from</span> <span class="nn">callable</span> <span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span><span class="o">.&lt;</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">ZZ</span><span class="p">);</span> <span class="n">S</span>
+<span class="n">Ring</span> <span class="n">of</span> <span class="n">differential</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> <span class="p">[</span><span class="n">Integer</span> <span class="n">Ring</span><span class="p">]</span> 
+<span class="k">with</span> <span class="n">derivation</span> <span class="p">[</span><span class="n">Map</span> <span class="kn">from</span> <span class="nn">callable</span> <span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>We can now create objects in those rings using the generators <code class="docutils literal notranslate"><span class="pre">y</span></code>, <code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">y_1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">diff</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">y_2</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">diff</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="c1">#Leibniz Rule</span>
+<span class="n">a_2</span><span class="o">*</span><span class="n">b_0</span> <span class="o">+</span> <span class="n">a_1</span><span class="o">*</span><span class="n">b_1</span>
+</pre></div>
+</div>
+<dl class="py attribute">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense.Element">
+<code class="sig-name descname">Element</code><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense.Element" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="diff_polynomial_element.html#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense.constants">
+<code class="sig-name descname">constants</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense.constants" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense.construction">
+<code class="sig-name descname">construction</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense.construction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the associated functor and input to create <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>The method construction returns a <code class="xref py py-class docutils literal notranslate"><span class="pre">ConstructionFunctor</span></code> and 
+a valid input for it that would create <code class="docutils literal notranslate"><span class="pre">self</span></code> again. This is a necessary method to
+implement all the coercion system properly.</p>
+<p>For a <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRing_dense</span></code></a>, the associated functor class is <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolyRingFunctor" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolyRingFunctor"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolyRingFunctor</span></code></a>.
+See its documentation for further information.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferentialPolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra.diff_polynomial.diff_polynomial_ring</span> <span class="k">import</span> <span class="n">DifferentialPolyRingFunctor</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">construction</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">DifferentialPolyRingFunctor</span><span class="p">)</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">F</span>
+<span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="o">*</span><span class="p">,(</span><span class="s1">&#39;y&#39;</span><span class="p">,))</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span>
+<span class="n">Differential</span> <span class="n">Ring</span> <span class="p">[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> <span class="n">Rational</span> <span class="n">Field</span><span class="p">]</span> <span class="k">with</span> <span class="n">derivation</span> <span class="p">[</span><span class="n">Map</span> <span class="kn">from</span> <span class="nn">callable</span> <span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense.derivation">
+<code class="sig-name descname">derivation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense.derivation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the derivation of an element.</p>
+<p>This method catchs the essence of a <code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRing</span></code>: the extension
+of the derivation on the base ring (retrieved by <code class="docutils literal notranslate"><span class="pre">self.base()</span></code>) to the 
+infinite polynomial ring in such a way that the variables are linked linearly with the 
+derivation.</p>
+<p>For element in the base ring, this method relies on the Sage method <code class="xref py py-func docutils literal notranslate"><span class="pre">diff()</span></code>.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">element</span></code>: an object. Must be included in <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>An element in <code class="docutils literal notranslate"><span class="pre">self</span></code> that represents the derivative of <code class="docutils literal notranslate"><span class="pre">element</span></code>.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferentialPolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">derivation</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">y_1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">derivation</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">derivation</span><span class="p">(</span><span class="n">x</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">10</span><span class="p">])</span>
+<span class="n">x</span><span class="o">*</span><span class="n">y_11</span> <span class="o">+</span> <span class="n">y_10</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">derivation</span><span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">^</span><span class="mi">2</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="o">-</span><span class="n">y_3</span><span class="o">*</span><span class="n">y_1</span> <span class="o">-</span> <span class="n">y_2</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y_2</span><span class="o">*</span><span class="n">y_1</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">y_1</span><span class="o">^</span><span class="mi">2</span>
+</pre></div>
+</div>
+<p>This derivation also works naturally with several infinite variables:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">S</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">);</span> <span class="n">a</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">gens</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span><span class="o">.</span><span class="n">derivation</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">a_1</span><span class="o">*</span><span class="n">y_0</span> <span class="o">+</span> <span class="n">a_0</span><span class="o">*</span><span class="n">y_1</span> <span class="o">+</span> <span class="n">a_2</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">RWOPolyRingFunctor</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">variables</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.categories.pushout.ConstructionFunctor</span></code></p>
+<p>Class representing Functor for creating <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialRing_dense</span></code></a>.</p>
+<p>This class represents the functor <span class="math notranslate nohighlight">\(F: R \mapsto R\{y^(1),\ldots,y^{(n)}\}\)</span>.
+The names of the variables must be given to the functor and, then
+this can take any ring and create the corresponding ring of differential 
+polynomials.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">variables</span></code>: names of the variables that the functor will add (see 
+the input <code class="docutils literal notranslate"><span class="pre">names</span></code> in <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRing_dense</span></code></a>)</p></li>
+</ul>
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor.merge">
+<code class="sig-name descname">merge</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">other</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor.merge" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor.variables">
+<code class="sig-name descname">variables</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor.variables" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolySimpleMorphism">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">RWOPolySimpleMorphism</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">domain</span></em>, <em class="sig-param"><span class="n">codomain</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolySimpleMorphism" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.categories.morphism.Morphism</span></code></p>
+<p>Class representing maps to simpler rings.</p>
+<p>This map allows the coercion system to detect that some elements in a 
+<a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRing_dense</span></code></a> are included in simpler rings.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">RWOPolynomialRingFactory</code><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.structure.factory.UniqueFactory</span></code></p>
+<p>Factory to create a ring of polynomials over a ring with an operator.</p>
+<p>This allows to cache the same rings created from different objects. See
+<a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialRing_dense</span></code></a> for further information on this structure.</p>
+<p>Since the class <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialRing_dense</span></code></a> is abstract, this class
+is only useful to unify the creation of other subclasses, so we do not provide 
+any example or test for this. See the tests for <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRingFactory" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferentialPolynomialRingFactory"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferentialPolynomialRingFactory</span></code></a>
+and <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRingFactory" title="dalgebra.diff_polynomial.diff_polynomial_ring.DifferencePolynomialRingFactory"><code class="xref py py-class docutils literal notranslate"><span class="pre">DifferencePolynomialRingFactory</span></code></a> for more details.</p>
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory.create_key">
+<code class="sig-name descname">create_key</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwds</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory.create_key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory.create_object">
+<code class="sig-name descname">create_object</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">_</span></em>, <em class="sig-param"><span class="n">key</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRingFactory.create_object" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense">
+<em class="property">class </em><code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">RWOPolynomialRing_dense</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">base</span></em>, <em class="sig-param"><span class="n">names</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_dense</span></code></p>
+<p>Class for a ring of polynomials over a <code class="xref py py-class docutils literal notranslate"><span class="pre">RingWithOperator</span></code>.</p>
+<p>Given a ring with an associated operator <span class="math notranslate nohighlight">\((R, d)\)</span>, where <span class="math notranslate nohighlight">\(d : R \rightarrow R\)</span>, we can 
+always define the ring of polynomials on <span class="math notranslate nohighlight">\(y\)</span> as the <em>infinite polynomial ring</em></p>
+<div class="math notranslate nohighlight">
+\[R[y_0,y_1,\ldots]\]</div>
+<p>where the operation acts naturally (preserving all its properties) over this ring and,
+in particular, <span class="math notranslate nohighlight">\(d(y_i) = y_{i+1}\)</span> for all <span class="math notranslate nohighlight">\(n \in \mathbb{N}\)</span>.</p>
+<p>This class represents exactly the ring of polynomial with this operator over the given ring <code class="docutils literal notranslate"><span class="pre">base</span></code> 
+with variables given in <code class="docutils literal notranslate"><span class="pre">names</span></code>.</p>
+<p>This class inherits from <code class="xref py py-class docutils literal notranslate"><span class="pre">InfinitePolynomialRing_dense</span></code>,
+which is the Sage structure to manipulate polynomial rings over infinitely many variables.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">base</span></code>: ring structure that represent the base ring of coefficients <span class="math notranslate nohighlight">\(R\)</span> (has to be in the 
+category <code class="xref py py-class docutils literal notranslate"><span class="pre">RingsWithOperator</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">names</span></code>: set of names for the variables of the new ring.</p></li>
+</ul>
+<p>This class is abstract (since the properties of the operator are not known, so extending it to the whole
+ring is not obvious). See different subclasses to check its behavior.</p>
+<dl class="py attribute">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.Element">
+<code class="sig-name descname">Element</code><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.Element" title="Permalink to this definition">¶</a></dt>
+<dd><p>alias of <a class="reference internal" href="diff_polynomial_element.html#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial"><code class="xref py py-class docutils literal notranslate"><span class="pre">dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomial</span></code></a></p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.construction">
+<code class="sig-name descname">construction</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.construction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the associated functor and input to create <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>The method construction returns a <code class="xref py py-class docutils literal notranslate"><span class="pre">ConstructionFunctor</span></code> and 
+a valid input for it that would create <code class="docutils literal notranslate"><span class="pre">self</span></code> again. This is a necessary method to
+implement all the coercion system properly.</p>
+<p>For a <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialRing_dense</span></code></a>, the associated functor class is <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolyRingFunctor"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolyRingFunctor</span></code></a>.
+See its documentation for further information.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.eval">
+<code class="sig-name descname">eval</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwds</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.eval" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to evaluate elements in the ring of differential polynomials.</p>
+<p>Since the infinite polynomials have an intrinsic meaning (namely, the 
+variables are related by the operator), evaluating a polynomial
+is a straight-forward computation once the objects for the <code class="docutils literal notranslate"><span class="pre">*_0</span></code> term is given.</p>
+<p>This method evaluates elements in <code class="docutils literal notranslate"><span class="pre">self</span></code> following that rule.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">element</span></code>: element (that must be in <code class="docutils literal notranslate"><span class="pre">self</span></code>) to be evaluated</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">args</span></code>: list of arguments that will be linearly related with the generators
+of <code class="docutils literal notranslate"><span class="pre">self</span></code> (like they are given by <code class="docutils literal notranslate"><span class="pre">self.gens()</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">kwds</span></code>: dictionary for providing values to the generators of <code class="docutils literal notranslate"><span class="pre">self</span></code>. The 
+name of the keys must be the names of the generators (as they can be got using 
+the attribute <code class="docutils literal notranslate"><span class="pre">_name</span></code>).</p></li>
+</ul>
+<p>We allow a mixed used of <code class="docutils literal notranslate"><span class="pre">args</span></code> and <code class="docutils literal notranslate"><span class="pre">kwds</span></code> but an error will be raised if</p>
+<ul class="simple">
+<li><p>There are too many arguments in <code class="docutils literal notranslate"><span class="pre">args</span></code>,</p></li>
+<li><p>An input in <code class="docutils literal notranslate"><span class="pre">kwds</span></code> is not a valid name of a generator,</p></li>
+<li><p>There are duplicate entries for a generator.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>The resulting element after evaluating the variable <span class="math notranslate nohighlight">\(\alpha_n = d^n(\alpha)\)</span>,
+where <span class="math notranslate nohighlight">\(\alpha\)</span> is the name of the generator.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferentialPolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]);</span> <span class="n">x</span> <span class="o">=</span> <span class="n">R</span><span class="o">.</span><span class="n">base</span><span class="p">()</span><span class="o">.</span><span class="n">gens</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
+<span class="mi">0</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">x</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">x</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>This method commutes with the use of <code class="xref py py-func docutils literal notranslate"><span class="pre">derivation()</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">derivation</span><span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">^</span><span class="mi">2</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">y</span><span class="o">=</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="n">R</span><span class="o">.</span><span class="n">derivation</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">^</span><span class="mi">2</span> <span class="o">-</span> <span class="n">y</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">x</span><span class="p">))</span>
+<span class="kc">True</span>
+</pre></div>
+</div>
+<p>This evaluation also works naturally with several infinite variables:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="n">S</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">R</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">);</span> <span class="n">a</span><span class="p">,</span><span class="n">y</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">gens</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">a</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">x</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">x</span><span class="o">^</span><span class="mi">3</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">in_eval</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">x</span><span class="p">);</span> <span class="n">in_eval</span>
+<span class="n">a_1</span> <span class="o">+</span> <span class="n">x</span><span class="o">*</span><span class="n">a_0</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">parent</span><span class="p">(</span><span class="n">in_eval</span><span class="p">)</span>
+<span class="n">Ring</span> <span class="n">of</span> <span class="n">differential</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="n">over</span> <span class="n">Differential</span> <span class="n">Ring</span> <span class="p">[</span><span class="n">Univariate</span> <span class="n">Polynomial</span> <span class="n">Ring</span> <span class="ow">in</span> <span class="n">x</span> <span class="n">over</span> 
+<span class="n">Rational</span> <span class="n">Field</span><span class="p">]</span> <span class="k">with</span> <span class="n">derivation</span> <span class="p">[</span><span class="n">Map</span> <span class="kn">from</span> <span class="nn">callable</span> <span class="n">d</span><span class="o">/</span><span class="n">dx</span><span class="p">]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.gen">
+<code class="sig-name descname">gen</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">i</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.gen" title="Permalink to this definition">¶</a></dt>
+<dd><p>Override method to create the <span class="math notranslate nohighlight">\(i^{th}\)</span> generator (see method 
+<code class="xref py py-func docutils literal notranslate"><span class="pre">gen()</span></code>).</p>
+<p>For a <a class="reference internal" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense" title="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialRing_dense</span></code></a>, the generator type is 
+<a class="reference internal" href="diff_polynomial_element.html#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialGen</span></code></a>
+which provides extra features to know if an object can be generated by that generator.
+See tis documentation for further details.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">i</span></code>: index of the required generator.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>A <a class="reference internal" href="diff_polynomial_element.html#dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen" title="dalgebra.diff_polynomial.diff_polynomial_element.RWOPolynomialGen"><code class="xref py py-class docutils literal notranslate"><span class="pre">RWOPolynomialGen</span></code></a>
+representing the <span class="math notranslate nohighlight">\(i^{th}\)</span> generator of <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">RWOPolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra.diff_polynomial.diff_polynomial_element</span> <span class="k">import</span> <span class="n">RWOPolynomialGen</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">RWOPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">gen</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">y_</span><span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">gen</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="ow">is</span> <span class="n">y</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">R</span><span class="o">.</span><span class="n">gen</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">RWOPolynomialGen</span><span class="p">)</span>
+<span class="kc">True</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span> <span class="o">=</span> <span class="n">RWOPolynomialRing</span><span class="p">(</span><span class="n">ZZ</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">))</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span>
+<span class="n">Ring</span> <span class="n">of</span> <span class="n">infinite</span> <span class="n">polynomials</span> <span class="ow">in</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="n">over</span> <span class="n">Ring</span> <span class="p">[</span><span class="n">Integer</span> <span class="n">Ring</span><span class="p">]</span> <span class="k">with</span> 
+<span class="n">operator</span> <span class="p">[</span><span class="n">Map</span> <span class="kn">from</span> <span class="nn">callable</span> <span class="o">&lt;</span><span class="k">lambda</span><span class="o">&gt;</span><span class="p">]</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span><span class="o">.</span><span class="n">gen</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">a_</span><span class="o">*</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">S</span><span class="o">.</span><span class="n">gen</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">b_</span><span class="o">*</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.inner">
+<code class="sig-name descname">inner</code><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.inner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize self.  See help(type(self)) for accurate signature.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.one">
+<code class="sig-name descname">one</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.one" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the one element in <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferentialPolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">one</span><span class="p">()</span>
+<span class="mi">1</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.random_element">
+<code class="sig-name descname">random_element</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">deg_bound</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">order_bound</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="n">sparsity</span><span class="o">=</span><span class="default_value">0.75</span></em>, <em class="sig-param"><span class="o">*</span><span class="n">args</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwds</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.random_element" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a random element in this ring.</p>
+<p>This method receives a bound for the degree and order of all the variables
+appearing in the ring and also a sparsity measure to avoid dense polynomials.
+Extra arguments are passed to the random method of the base ring.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">deg_bound</span></code>: total degree bound for the resulting polynomial.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">order_bound</span></code>: order bound for the resulting polynomial.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sparsity</span></code>: propability of a coefficient to be zero.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py method">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.zero">
+<code class="sig-name descname">zero</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.RWOPolynomialRing_dense.zero" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the zero element in <code class="docutils literal notranslate"><span class="pre">self</span></code>.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="k">import</span> <span class="n">DifferentialPolynomialRing</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.&lt;</span><span class="n">y</span><span class="o">&gt;</span> <span class="o">=</span> <span class="n">DifferentialPolynomialRing</span><span class="p">(</span><span class="n">QQ</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">])</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">R</span><span class="o">.</span><span class="n">zero</span><span class="p">()</span>
+<span class="mi">0</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.is_DifferencePolynomialRing">
+<code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">is_DifferencePolynomialRing</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.is_DifferencePolynomialRing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to check whether an object is a ring of difference polynomials.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.is_DifferentialPolynomialRing">
+<code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">is_DifferentialPolynomialRing</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.is_DifferentialPolynomialRing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to check whether an object is a ring of differential polynomials.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="dalgebra.diff_polynomial.diff_polynomial_ring.is_RWOPolynomialRing">
+<code class="sig-prename descclassname">dalgebra.diff_polynomial.diff_polynomial_ring.</code><code class="sig-name descname">is_RWOPolynomialRing</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">element</span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.diff_polynomial.diff_polynomial_ring.is_RWOPolynomialRing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to check whether an object is a ring of infinite polynomial with an operator.</p>
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../diff_polynomial.html" class="btn btn-neutral float-left" title="Package diff_polynomial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="diff_polynomial_element.html" class="btn btn-neutral float-right" title="Element structures for Infinite Polynomials over rings with operators" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
