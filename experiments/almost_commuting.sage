@@ -5,7 +5,7 @@ from datetime import datetime
 from time import process_time
 from cProfile import Profile
 from contextlib import nullcontext
-from pandas import read_csv, DataFrame
+from pandas import read_csv, DataFrame, set_option
 from pstats import Stats, SortKey
 import tracemalloc
 import os, csv
@@ -36,6 +36,7 @@ def print_help():
 
 def print_table(*argv):
     ## Reading the filters
+
     i = 0; n_filter = list(); m_filter = list(); equs_filter = list(); solver_filter = list()
     print(argv)
     while i < len(argv):
@@ -59,9 +60,10 @@ def print_table(*argv):
     
     data = DataFrame([row for (_,row) in data.iterrows() if filters(row)], columns = data.columns)
 
-    print(data.groupby(["get_equs", "solver", "n", "m"]).mean(numeric_only=True))
-
-
+    to_print = data.groupby(["get_equs", "solver", "n", "m"]).mean(numeric_only=True)
+    set_option('display.max_rows', int(2)*len(to_print)) # guarantee the table is fully printed
+    print(to_print)
+      
 def test(n: int, m: int, get_equs: str, solver: str, out_file, profile: bool = False):
     r'''
         Runs :func:`almost_commuting_wilson` for given arguments, measure time and checks output.
