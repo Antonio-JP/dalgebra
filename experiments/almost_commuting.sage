@@ -7,6 +7,7 @@ from cProfile import Profile
 from contextlib import nullcontext
 from pandas import read_csv, DataFrame
 from pstats import Stats, SortKey
+from tabulate import tabulate
 import tracemalloc
 import os, csv
 
@@ -59,7 +60,7 @@ def print_table(*argv):
     
     data = DataFrame([row for (_,row) in data.iterrows() if filters(row)], columns = data.columns)
 
-    print(data.groupby(["get_equs", "solver", "n", "m"]).mean(numeric_only=True))
+    print(tabulate(data.groupby(["get_equs", "solver", "n", "m"]).mean(numeric_only=True), tablefmt='psql'))
 
 
 def test(n: int, m: int, get_equs: str, solver: str, out_file, profile: bool = False):
