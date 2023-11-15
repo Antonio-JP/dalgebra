@@ -279,7 +279,7 @@ def generic_normal(n: int,
     return output_z[n] + sum(output_u[i-2][0]*output_z[n-i] for i in range(2,n+1))
 
 @cache_in_file
-def almost_commuting_wilson(n: int, m: int, name_u: str = "u", name_z: str = "z", equation_gens = "direct", solver ="integral"):
+def almost_commuting_wilson(n: int, m: int, name_u: str = "u", name_z: str = "z", equation_gens = "recursive", solver ="linear"):
     r'''
         Method to compute an element on Wilson's almost-commuting basis.
 
