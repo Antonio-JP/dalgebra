@@ -163,5 +163,5 @@ from .dpolynomial import * # ring of difference/differential polynomials
 from .dextension import * # extension of d-rings
 
 def dalgebra_version():
-    import pkg_resources
-    return pkg_resources.get_distribution('dalgebra').version
+    from importlib.metadata import version
+    return version('dalgebra')

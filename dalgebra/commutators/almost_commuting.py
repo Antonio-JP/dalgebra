@@ -582,25 +582,35 @@ def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPo
 ### SPECIAL HIERARCHIES
 ###
 #################################################################################################
-__KDV = dict()
+def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = None):
+    r'''
+        Return equations of the `m`-th step of the integrable hierarchy induced by `n`.
+
+        This method computes all the equations in the hierarchy using the method :func:`almost_commuting_wilson` 
+        and then return the corresponding equations indicated by the argument `i`,
+    '''
+    H = almost_commuting_wilson(n,m)
+    if isinstance(i, int):
+        return H[i]
+    elif isinstance(i, (tuple, list)):
+        return [H[ind] for ind in i]
+    elif isinstance(i, slice):
+        return H[i]
+    return H
+
 def kdv(m: int):
     r'''
         KdV hierarchy (see :wiki:`KdV_hierarchy`) is the integrable hierarchy that appears from almost commutators of a generic operator of order 2.
     '''
-    if not m in __KDV:
-        __KDV[m] = almost_commuting_wilson(2, m)[1]
-    return __KDV[m][0]
+    return hierarchy(2,m,0)
 
-__BOUSSINESQ = dict()
-def boussinesq(m: int, i: int):
+def boussinesq(m: int, i: int | tuple[int] | list[int] | slice | None = None):
     r'''
         Boussinesq hierarchy (TODO: add reference)
     '''
-    if not m in __BOUSSINESQ:
-        __BOUSSINESQ[m] = almost_commuting_wilson(3, m)[1]
-    return __BOUSSINESQ[m][i]
+    return hierarchy(3,m,i)
 
 __all__ = [
     "generic_normal", "almost_commuting_wilson", 
-    "kdv", "boussinesq"
+    "hierarchy", "kdv", "boussinesq"
 ]
