@@ -26,6 +26,7 @@ def print_help():
     print("\t\t+ -m <M>: prints results with m=M")
     print("\t\t+ -get_equs <E>: prints results with get_equs=E")
     print("\t\t+ -solver <S>: prints results with solver=S")
+    print("\t\t+ -latex <filename>: put the output table into LaTeX format in file './filename.tex'")
     print("\t* (-run|-prf): executes one run of the tests with the given arguments:")
     print("\t\t+ <n>: a positive integer greater than 1")
     print("\t\t+ <m>: a positive integer greater than 1")
@@ -37,8 +38,8 @@ def print_help():
 def print_table(*argv):
     ## Reading the filters
 
-    i = 0; n_filter = list(); m_filter = list(); equs_filter = list(); solver_filter = list()
-    print(argv)
+    i = 0; n_filter = list(); m_filter = list(); equs_filter = list(); solver_filter = list(); latex = None
+
     while i < len(argv):
         if argv[i] == "-n":
             n_filter.append(int(argv[i+1])); i += 2
@@ -47,7 +48,9 @@ def print_table(*argv):
         elif argv[i] == "-get_equs":
             equs_filter.append(argv[i+1]); i += 2
         elif argv[i] == "-solver":
-            n_filter.append(argv[i+1]); i += 2
+            solver_filter.append(argv[i+1]); i += 2
+        elif argv[i] == "-latex":
+            latex = argv[i+1]; i += 2
         else:
             i+=1
 
@@ -63,6 +66,40 @@ def print_table(*argv):
     to_print = data.groupby(["get_equs", "solver", "n", "m"]).mean(numeric_only=True)
     set_option('display.max_rows', int(2)*len(to_print)) # guarantee the table is fully printed
     print(to_print)
+
+    if latex != None:
+        new_rows = dict()
+        for i,row in data.reset_index().iterrows():
+            key = row["n"], row["m"]
+            if not key in new_rows:
+                new_rows[key] = {"DI": "?", "DL": "?", "RI": "?", "RL": "?"}
+            if row["get_equs"] == "direct" and row["solver"] == "integral":
+                to_change = "DI"
+            elif row["get_equs"] == "direct":
+                to_change = "DL"
+            elif row["solver"] == "integral":
+                to_change = "RI"
+            else:
+                to_change = "RL"
+            new_rows[key][to_change] = row["time"]
+
+        new_data = DataFrame([
+            [key[0],key[1]]+[value["DI"], value["DL"], value["RI"], value["RL"]] 
+            for (key,value) in sorted(new_rows.items()) if all(v != "?" for v in value.values())], 
+            columns = ["n","m","DI","DL","RI","RL"]
+        )
+        with open(f"./{latex}.tex", "wt") as file:
+            new_data.style.format_index(
+                "\\textbf{{{}}}", escape="latex", axis=1).highlight_min(
+                subset=["DI","DL","RI","RL"], axis=1, props="font-weight:bold;").hide(
+                axis="index").to_latex(
+                    file,
+                    convert_css=True,
+                    column_format="cc|cccc",
+                    position="!ht",
+                    position_float="centering",
+                    hrules=True
+            )
       
 def test(n: int, m: int, get_equs: str, solver: str, out_file, profile: bool = False):
     r'''
