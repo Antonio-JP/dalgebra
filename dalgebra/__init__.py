@@ -165,3 +165,7 @@ from .dextension import * # extension of d-rings
 def dalgebra_version():
     from importlib.metadata import version
     return version('dalgebra')
+
+def dalgebra_folder():
+    import os
+    return os.path.dirname(__file__)
