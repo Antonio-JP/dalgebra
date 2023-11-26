@@ -109,14 +109,14 @@ def cache_in_file(func):
         version of the module allowing to easily repeat computations when needed.
     '''
     @functools.wraps(func)
-    def wrapped(*args, to_cache=True, **kwds):
+    def wrapped(*args, to_cache:bool=True, path_to_folder:str = None, extension:str = "dmp", **kwds):
         if not to_cache:
             return func(*args, **kwds)
         else:
-            from .. import dalgebra_version
-            file_for_result = f"{func.__name__}({','.join(str(el) for el in args)})[{','.join(f'{k}_{v}' for (k,v) in kwds.items())}]_{dalgebra_version()}.dmp"
-            ## Creating if needed the folder for the cache
-            path_to_folder = os.path.join(os.path.dirname(__file__) if __name__ != "__main__" else "./", "..", "__pycache__")
+            from .. import dalgebra_version, dalgebra_folder
+            file_for_result = f"{func.__name__}({','.join(str(el) for el in args)})[{','.join(f'{k}_{v}' for (k,v) in kwds.items())}]_{dalgebra_version()}.{extension}"
+            ## Creating if needed the folder for the cache (if needed)
+            path_to_folder = os.path.join(dalgebra_folder(), "__pycache__") if path_to_folder == None else path_to_folder
             os.makedirs(path_to_folder, exist_ok=True)
 
             ## Creating the final file path 
