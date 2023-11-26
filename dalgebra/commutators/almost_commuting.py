@@ -279,7 +279,7 @@ def generic_normal(n: int,
     return output_z[n] + sum(output_u[i-2][0]*output_z[n-i] for i in range(2,n+1))
 
 @cache_in_file
-def almost_commuting_wilson(n: int, m: int, name_u: str = "u", name_z: str = "z", equation_gens = "recursive", solver ="linear"):
+def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "recursive", solver:str ="linear"):
     r'''
         Method to compute an element on Wilson's almost-commuting basis.
 
@@ -331,17 +331,18 @@ def almost_commuting_wilson(n: int, m: int, name_u: str = "u", name_z: str = "z"
 
         TESTS::
 
-            sage: from dalgebra.commutators.almost_commuting import almost_commuting_wilson
+            sage: from dalgebra.commutators.almost_commuting import base_almost_commuting_wilson
             sage: for n in range(2,3): # long time (> 2 min)
             ....:     for m in range(1, 10):
-            ....:         O1 = almost_commuting_wilson(n,m,solver="linear", equation_gens="recursive", to_cache=False)
-            ....:         O2 = almost_commuting_wilson(n,m,solver="diff",   equation_gens="recursive", to_cache=False)
-            ....:         O3 = almost_commuting_wilson(n,m,solver="linear", equation_gens="direct", to_cache=False)
-            ....:         O4 = almost_commuting_wilson(n,m,solver="diff",   equation_gens="direct", to_cache=False)
+            ....:         O1 = base_almost_commuting_wilson(n,m,solver="linear", equation_gens="recursive", to_cache=False)
+            ....:         O2 = base_almost_commuting_wilson(n,m,solver="diff",   equation_gens="recursive", to_cache=False)
+            ....:         O3 = base_almost_commuting_wilson(n,m,solver="linear", equation_gens="direct", to_cache=False)
+            ....:         O4 = base_almost_commuting_wilson(n,m,solver="diff",   equation_gens="direct", to_cache=False)
             ....:         assert O1 == O2, f"Error between 1 and 2 ({n=}, {m=})"
             ....:         assert O1 == O3, f"Error between 1 and 3 ({n=}, {m=})"
             ....:         assert O1 == O4, f"Error between 1 and 4 ({n=}, {m=})"
     '''
+    name_u: str = "u"; name_z: str = "z"
     if (not n in ZZ) or ZZ(n) <= 0:
         raise ValueError(f"[almost] The value {n = } must be a positive integer")
     if (not m in ZZ) or ZZ(m) <= 0:
@@ -351,7 +352,7 @@ def almost_commuting_wilson(n: int, m: int, name_u: str = "u", name_z: str = "z"
     
     names_u = __names_variables(n, name_u)
     output_ring = DifferentialPolynomialRing(QQ, names_u + [name_z])
-    output_z = output_ring.gen('z') # variable for the `\partial`
+    output_z = output_ring.gen(name_z) # variable for the `\partial`
     output_u = [output_ring.gen(name) for name in names_u] # sorted `u` variables independent of the lexicographic order
     
     if n == 1: # special case where `L = \partial`
@@ -384,6 +385,29 @@ def almost_commuting_wilson(n: int, m: int, name_u: str = "u", name_z: str = "z"
         
         output = (Pm,T)
     return output
+
+@cache_in_file
+def almost_commuting_wilson(n: int, m: int, name_u: str = "u", name_z: str = "z"):
+    import os
+    from .. import dalgebra_folder
+
+    (Pm, T) = base_almost_commuting_wilson(n,m,path_to_folder=os.path.join(dalgebra_folder(), "results", "almost_commuting"), extension="out")
+
+    if name_u != "u" or name_z != "z":
+        true_u = __names_variables(n, "u")
+        names_u = __names_variables(n, name_u)
+        output_R = DifferentialPolynomialRing(QQ, names_u + [name_z])
+
+        output_z = output_R.gen(name_z) # variable for the `\partial`
+        output_u = [output_R.gen(name) for name in names_u] # sorted `u` variables independent of the lexicographic order
+
+        dic = {true_u[i] : output_u[i] for i in range(len(true_u))}
+        dic["z"] = output_z
+
+        Pm = Pm(**dic)
+        T = tuple(el(**dic) for el in T)
+
+    return Pm,T
 
 def __almost_commuting_direct(parent: DPolynomialRing_dense, order_L: int, order_P: int, name_p: str, name_u: str, name_z: str) -> tuple[DPolynomialRing_dense, list[DPolynomial], list[DPolynomial]]:
     r'''
