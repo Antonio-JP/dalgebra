@@ -387,22 +387,33 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "recursive"
     return output
 
 @cache_in_file
-def almost_commuting_wilson(n: int, m: int, name_u: str = "u", name_z: str = "z"):
+def almost_commuting_wilson(n: int, m: int, name_u: str|list[str]|tuple[str] = "u", name_z: str = "z"):
     import os
     from .. import dalgebra_folder
 
-    (Pm, T) = base_almost_commuting_wilson(n,m,path_to_folder=os.path.join(dalgebra_folder(), "results", "almost_commuting"), extension="out")
+    #################################################################################################################################
+    ## We first call the base code that only cares about "n" and "m" with default names for "u" and "z".
+    (Pm, T) = base_almost_commuting_wilson(
+        n,m, ## Default values for the call on the base_commuting_wilson
+        path_to_folder=os.path.join(dalgebra_folder(), "results", "almost_commuting"), ## Folder for caching results in repository
+        extension="out" ## Extension of the cached results
+    )
 
+    #################################################################################################################################
+    ## Then we proceed to change the names in the differential structure
     if name_u != "u" or name_z != "z":
         true_u = __names_variables(n, "u")
-        names_u = __names_variables(n, name_u)
+        if isinstance(name_u, (list, tuple)) and len(name_u) == n-1: ## We allow custom names for the us if given in a list format
+            names_u = name_u
+        else:
+            names_u = __names_variables(n, name_u)
         output_R = DifferentialPolynomialRing(QQ, names_u + [name_z])
 
         output_z = output_R.gen(name_z) # variable for the `\partial`
         output_u = [output_R.gen(name) for name in names_u] # sorted `u` variables independent of the lexicographic order
 
-        dic = {true_u[i] : output_u[i] for i in range(len(true_u))}
-        dic["z"] = output_z
+        dic = {true_u[i] : output_u[i][0] for i in range(len(true_u))}
+        dic["z"] = output_z[0]
 
         Pm = Pm(**dic)
         T = tuple(el(**dic) for el in T)
