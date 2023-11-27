@@ -20,6 +20,8 @@ AUTHORS:
 # ****************************************************************************
 import functools, logging, os, pickle, sys
 
+from sage.misc.persist import SagePickler # pylint: disable=no-name-in-module
+
 STDOUT_HANDLER = logging.StreamHandler(sys.stdout)
 
 __USED_LOGLEVEL = set()
@@ -134,7 +136,7 @@ def cache_in_file(func):
             ## Caching the output
             try:
                 with open(path_to_file, "wb") as file:
-                    pickle.dump(output, file)
+                    file.write(SagePickler.dumps(output))
             except Exception as e:
                 print(f"[FILE_CACHE] Error while caching in file: {e}")
             return output
