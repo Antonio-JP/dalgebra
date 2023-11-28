@@ -10,7 +10,7 @@ from pstats import Stats, SortKey
 import tracemalloc
 import os, csv
 
-from dalgebra.commutators.almost_commuting import almost_commuting_wilson, generic_normal
+from dalgebra.commutators.almost_commuting import base_almost_commuting_wilson, generic_normal
 
 def print_help():
     PAD_SIZE = os.get_terminal_size()[0]
@@ -112,7 +112,7 @@ def test(n: int, m: int, get_equs: str, solver: str, out_file, profile: bool = F
     with (Profile() if profile else nullcontext()) as prf:
         tracemalloc.start()
         ctime = process_time()
-        P, _ = almost_commuting_wilson(n,m,equation_gens=get_equs,solver=solver,to_cache=False)
+        P, _ = base_almost_commuting_wilson(n,m,equation_gens=get_equs,solver=solver,to_cache=False)
         ctime = process_time() - ctime
         memory = tracemalloc.get_traced_memory()[1] / 2.**20
         tracemalloc.stop()
