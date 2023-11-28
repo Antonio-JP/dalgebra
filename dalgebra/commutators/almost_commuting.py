@@ -624,7 +624,7 @@ def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = N
         This method computes all the equations in the hierarchy using the method :func:`almost_commuting_wilson` 
         and then return the corresponding equations indicated by the argument `i`,
     '''
-    H = almost_commuting_wilson(n,m)
+    H = almost_commuting_wilson(n,m)[1]
     if isinstance(i, int):
         return H[i]
     elif isinstance(i, (tuple, list)):
