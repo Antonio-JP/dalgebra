@@ -595,10 +595,10 @@ def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPo
 
     ## Adapting the DPolynomialRing
     R = parent.change_ring(base_C)
-    to_plug = {R.gen(gen.variable_name()) : sum(coeff*R(mon) for (mon,coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
+    to_plug = {R.gen(gen.variable_name()) : sum(coeff*R(str(mon)) for (mon,coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
 
     ## Creating the new equations
-    equations = [R(equ)(dic=to_plug) for equ in equations] 
+    equations = [equ(dic=to_plug) for equ in equations] 
     new_equations = sum([[base_C(coeff).wrapped for coeff in equ.coefficients()] for equ in equations],[])
 
     if len(cs) == 1:
@@ -608,7 +608,7 @@ def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPo
     b = vector([equ.constant_coefficient() for equ in new_equations])
     sols = A.solve_right(-b)
     sols = {c : sol for (c, sol) in zip (cs, sols)}
-    ansatz_evaluated = {gen: sum(sols[coeff]*R(mon) for (mon, coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
+    ansatz_evaluated = {gen: sum(sols[coeff]*R(str(mon)) for (mon, coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
 
     return ansatz_evaluated
 
