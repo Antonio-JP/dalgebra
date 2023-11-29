@@ -380,8 +380,9 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "recursive"
 
         ## Solving the system with the corresponding method
         solve_p = solver(R, equations, u, p)
-        Pm = output_z[m] + sum(output_ring(solve_p[v]) * output_z[m-i-2] for i, v in enumerate(p))
-        T = tuple([output_ring(el(dic=solve_p)) for el in T])
+        solve_p = {v : output_ring(solve_p[v]) for v in p}
+        Pm = output_z[m] + sum(solve_p[v] * output_z[m-i-2] for i, v in enumerate(p))
+        T = tuple([el(dic=solve_p) for el in T])
         
         output = (Pm,T)
     return output
