@@ -11,7 +11,7 @@ PACKAGE=dalgebra
 all: install doc test
 		
 # Installing commands
-install: clean_build
+install: clean_build clean_cache
 	$(SAGE) -pip install --upgrade .
 
 no-deps: clean_build

@@ -1,6 +1,6 @@
 ## -*- encoding: utf-8 -*-
 import sys
-from setuptools import setup
+from setuptools import setup, find_packages
 from codecs import open # To open the README file with proper encoding
 
 # Get information from separate files (README, VERSION)
@@ -33,12 +33,10 @@ setup(
       f'Programming Language :: Python :: {sys.version}',
     ], # classifiers list: https://pypi.python.org/pypi?%3Aaction=list_classifiers
     keywords = "SageMath difference/differential algebra",
-    packages = ["dalgebra",
-                "dalgebra.dextension",
-                "dalgebra.dpolynomial",
-                "dalgebra.commutators",
-                "dalgebra.logging"],
+    packages = find_packages(),
     setup_requires   = [],
     install_requires = readfile("requirements.txt").split("\n"),
+    include_package_data=True,
+    package_data={'': ['dalgebra/results/almost_commuting/*.out']}
 )
     
