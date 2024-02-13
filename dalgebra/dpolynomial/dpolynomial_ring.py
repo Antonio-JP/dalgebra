@@ -1671,7 +1671,7 @@ class WeightFunction(SetMorphism):
         return recursive.union(set([v[0] for (v,i) in zip(self.parent().gens(), self.__base_weights) if i == weight]))
 
     @cached_method
-    def homogeneous_monomials(self, weight: int) -> set[DPolynomial]:
+    def homogeneous_monomials(self, weight: int) -> tuple[DPolynomial]:
         r'''
             Method that generates the homogeneous monomials of weight ``weight``.
 
@@ -1694,44 +1694,47 @@ class WeightFunction(SetMorphism):
             TODO: add examples
         '''
         if weight < 0:
-            return set()
+            return tuple()
         elif weight == 0:
-            return set([self.parent().one()])
+            return tuple([self.parent().one()])
         else:
+            result = list()
+            to_add = list()
+
             ## operation part
-            result = set()
             for (operator, ttype, op_weight) in zip(self.parent().operators(), self.parent().operator_types(), self.__operator_weights):
                 if ttype == "derivation":
                     logger.debug(f"Adding derivations of monomials of weights {weight-1}")
-                    to_add = sum([operator(mon).monomials() for mon in self.homogeneous_monomials(weight - op_weight)], [])
+                    to_add += sum([operator(mon).monomials() for mon in self.homogeneous_monomials(weight - op_weight)], [])
                 elif ttype == "homomorphism":
                     cweight = weight - op_weight; i = 1
                     while cweight >= 0:
                         logger.debug(f"Adding shifts of monomials of weights {cweight} with degree {i}")
-                        to_add = sum([operator(mon).monomials() for mon in self.homogeneous_monomials(cweight) if mon.degree() == i], [])
+                        to_add += sum([operator(mon).monomials() for mon in self.homogeneous_monomials(cweight) if mon.degree() == i], [])
                         i += 1; cweight -= op_weight
                 else:
                     cweight = weight - 1
                     while cweight >= 0:
                         logger.debug(f"Adding operation of monomials of weights {cweight} that has weight {weight}")
-                        to_add = sum([[m for m in operator(mon).monomials() if self(m) == weight] for mon in self.homogeneous_monomials(cweight)], [])
+                        to_add += sum([[m for m in operator(mon).monomials() if self(m) == weight] for mon in self.homogeneous_monomials(cweight)], [])
                         cweight -= 1
-                logger.debug(f"Adding {len(to_add)} elements")
-                result.update(to_add)
                         
             ## multiplication part
             for i in range(1,weight//2 + 1):
                 logger.debug(f"Adding product of monomials of weights {i} and {weight-i}")
-                to_add = [tl*th for (tl,th) in product(self.homogeneous_monomials(i), self.homogeneous_monomials(weight-i))]
-                logger.debug(f"Adding {len(to_add)} elements")
-                result.update(to_add)
+                to_add += [tl*th for (tl,th) in product(self.homogeneous_monomials(i), self.homogeneous_monomials(weight-i))]
 
             ## special cases for the variables
-            to_add = [v[0] for i,v in enumerate(self.parent().gens()) if self.__base_weights[i] == weight]
+            to_add += [v[0] for i,v in enumerate(self.parent().gens()) if self.__base_weights[i] == weight]
             logger.debug(f"Special cases added: {len(to_add)}")
-            result.update(to_add)
 
-            return result
+            added = set()
+            for v in to_add:
+                if not v in added:
+                    result.append(v)
+                    added.add(v)
+
+            return tuple(result)
 
     def is_homogeneous(self, element: DPolynomial) -> bool:
         r'''
