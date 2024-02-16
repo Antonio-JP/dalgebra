@@ -87,19 +87,22 @@ def print_table(*argv):
             new_rows[key][to_change] = row["time"]
 
         new_data = DataFrame([
-            [key[0],key[1]]+[value[("Direct", "Integration")], value[("Direct", "Linear")], value[("Recursive", "Integration")], value[("Recursive", "Linear")]] 
+            [key[0],key[1]]+[value[("Direct", "Integration")], value[("Direct", "Linear")], value[("Recursive", "Integration")], value[("Recursive", "Linear")]]+
+            [value[("Direct", "Integration")]/value[("Direct", "Linear")], value[("Direct", "Integration")]/value[("Recursive", "Integration")]] + 
+            [value[("Direct", "Linear")]/value[("Recursive", "Linear")], value[("Recursive", "Integration")]/value[("Recursive", "Linear")]]+
+            [value[("Direct", "Integration")]/value[("Recursive", "Linear")]]
             for (key,value) in sorted(new_rows.items()) if any(v != nan for v in value.values())], 
-            columns = ["n","m",("Direct", "Integration"),("Direct", "Linear"),("Recursive", "Integration"),("Recursive", "Linear")]
+            columns = ["n","m"] + ["D.I.","D.L.","R.I.","R.L."] + ["D.I./D.L.", "D.I./R.I."] + ["D.L./R.L.", "R.I./R.L."] +["D.I./R.L."]
         )
         print(new_data.columns)
         new_data.set_index(["n","m"],inplace=True)
         with open(f"./{latex}.tex", "wt") as file:
             new_data.style.format_index(
                 "\\textbf{{{}}}", escape="latex", axis=1).highlight_min(
-                subset=[("Direct", "Integration"),("Direct", "Linear"),("Recursive", "Integration"),("Recursive", "Linear")], axis=1, props="font-weight:bold;").to_latex(
+                subset=["D.I.","D.L.","R.I.","R.L.",], axis=1, props="font-weight:bold;").to_latex(
                     file,
                     convert_css=True,
-                    column_format="cc|rrrr",
+                    column_format="cc|rrrr|rr|rr|r",
                     position="!ht",
                     position_float="centering",
                     hrules=True,
