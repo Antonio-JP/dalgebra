@@ -5,7 +5,8 @@ from datetime import datetime
 from time import process_time
 from cProfile import Profile
 from contextlib import nullcontext
-from pandas import read_csv, DataFrame, set_option
+from numpy import nan
+from pandas import read_csv, DataFrame, set_option, MultiIndex
 from pstats import Stats, SortKey
 import tracemalloc
 import os, csv
@@ -59,7 +60,9 @@ def print_table(*argv):
     filters = lambda row : ((len(n_filter) == 0 or row['n'] in n_filter) and
                             (len(m_filter) == 0 or row['m'] in m_filter) and
                             (len(equs_filter) == 0 or row['get_equs'] in equs_filter) and
-                            (len(solver_filter) == 0 or row['solver'] in solver_filter))
+                            (len(solver_filter) == 0 or row['solver'] in solver_filter) and
+                            row['m'] % row['n'] != 0 # we ommit the trivial cases
+                            )
     
     data = DataFrame([row for (_,row) in data.iterrows() if filters(row)], columns = data.columns)
 
@@ -72,33 +75,38 @@ def print_table(*argv):
         for i,row in data.reset_index().iterrows():
             key = row["n"], row["m"]
             if not key in new_rows:
-                new_rows[key] = {"DI": "?", "DL": "?", "RI": "?", "RL": "?"}
+                new_rows[key] = {("Direct", "Integration"): nan, ("Direct", "Linear"): nan, ("Recursive", "Integration"): nan, ("Recursive", "Linear"): nan}
             if row["get_equs"] == "direct" and row["solver"] == "integral":
-                to_change = "DI"
+                to_change = ("Direct", "Integration")
             elif row["get_equs"] == "direct":
-                to_change = "DL"
+                to_change = ("Direct", "Linear")
             elif row["solver"] == "integral":
-                to_change = "RI"
+                to_change = ("Recursive", "Integration")
             else:
-                to_change = "RL"
+                to_change = ("Recursive", "Linear")
             new_rows[key][to_change] = row["time"]
 
         new_data = DataFrame([
-            [key[0],key[1]]+[value["DI"], value["DL"], value["RI"], value["RL"]] 
-            for (key,value) in sorted(new_rows.items()) if all(v != "?" for v in value.values())], 
-            columns = ["n","m","DI","DL","RI","RL"]
+            [key[0],key[1]]+[value[("Direct", "Integration")], value[("Direct", "Linear")], value[("Recursive", "Integration")], value[("Recursive", "Linear")]] 
+            for (key,value) in sorted(new_rows.items()) if any(v != nan for v in value.values())], 
+            columns = ["n","m",("Direct", "Integration"),("Direct", "Linear"),("Recursive", "Integration"),("Recursive", "Linear")]
         )
+        print(new_data.columns)
+        new_data.set_index(["n","m"],inplace=True)
         with open(f"./{latex}.tex", "wt") as file:
             new_data.style.format_index(
                 "\\textbf{{{}}}", escape="latex", axis=1).highlight_min(
-                subset=["DI","DL","RI","RL"], axis=1, props="font-weight:bold;").hide(
-                axis="index").to_latex(
+                subset=[("Direct", "Integration"),("Direct", "Linear"),("Recursive", "Integration"),("Recursive", "Linear")], axis=1, props="font-weight:bold;").to_latex(
                     file,
                     convert_css=True,
-                    column_format="cc|cccc",
+                    column_format="cc|rrrr",
                     position="!ht",
                     position_float="centering",
-                    hrules=True
+                    hrules=True,
+                    label="tab:comparison",
+                    multirow_align="t",
+                    sparse_columns=True,
+                    caption=r"Execution time (in seconds) for computing the order $m$ almost commuting basis element for the operator $L_n$ using different approaches."
             )
       
 def test(n: int, m: int, get_equs: str, solver: str, out_file, profile: bool = False):
