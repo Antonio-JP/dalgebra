@@ -153,9 +153,9 @@ class IndexBijection_Object (Morphism):
 #######################################################################################
 class DPolynomialGen (InfinitePolynomialGen):
     r'''
-        Class for generators of :class:`.dpolynomial_ring.DPolynomialRing_dense`.
+        Class for generators of :class:`.dpolynomial_ring.DPolynomialRing_sparse`.
 
-        A generator of a :class:`.dpolynomial_ring.DPolynomialRing_dense` is 
+        A generator of a :class:`.dpolynomial_ring.DPolynomialRing_sparse` is 
         an object that can create the infinitely many variables associated with a particular name. The variables it generates
         are of the form ``name_index`` where ``name`` is the string defining the variable and the index is the image 
         a :class:`IndexBijection_Object`.
@@ -168,7 +168,7 @@ class DPolynomialGen (InfinitePolynomialGen):
 
         INPUT:
 
-        * ``parent``: a :class:`.dpolynomial_ring.DifferentialPolynomialRing_dense` where ``self`` will generate its elements.
+        * ``parent``: a :class:`.dpolynomial_ring.DPolynomialRing_sparse` where ``self`` will generate its elements.
           This will indicate also the amount of indices allow to generate a variable.
         * ``name``: main part of the name for the generated variables.
 
@@ -349,7 +349,7 @@ RWOPolynomialGen = DPolynomialGen #: alias for DPolynomialGen (used for backward
 ### MAIN CLASS FOR THE ELEMENTS
 ###
 #######################################################################################
-class DPolynomial (InfinitePolynomial_dense):
+class DPolynomial (InfinitePolynomial_sparse):
     r'''
         Class for representing infinite polynomials associated with a d-ring.
 
@@ -376,16 +376,16 @@ class DPolynomial (InfinitePolynomial_dense):
             R\{y,z\} \simeq R\{y\}\{z\} \simeq R\{z\}\{y\}
 
         Objects of this class represents the polynomials of within one of these a ring. They 
-        are a natural extension of the class :class:`~sage.rings.polynomial.infinite_polynomial_element.InfinitePolynomial_dense`
+        are a natural extension of the class :class:`~sage.rings.polynomial.infinite_polynomial_element.InfinitePolynomial_sparse`
         including some extra functionality more specific for d-polynomials (such as the the operation, evaluation and orders).
 
         INPUT:
 
-        * ``parent``: a :class:`.dpolynomial_ring.DPolynomialRing_dense` where the new element will be contained.
+        * ``parent``: a :class:`.dpolynomial_ring.DPolynomialRing_sparse` where the new element will be contained.
         * ``polynomial``: a valid polynomial to be casted into an element of ``parent``.
 
         We recommend not to use this constructor, but instead build the polynomials using the generators of the 
-        corresponding :class:`.dpolynomial_ring.DPolynomialRing_dense`.
+        corresponding :class:`.dpolynomial_ring.DPolynomialRing_sparse`.
     '''
     def __init__(self, parent : Parent, polynomial : Element):
         if(is_InfinitePolynomial(polynomial)):
@@ -402,7 +402,7 @@ class DPolynomial (InfinitePolynomial_dense):
 
             This method computes the order of a concrete polynomial in all the 
             variables that appear in its parent. This method relies on the method 
-            :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_dense.gens`
+            :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_sparse.gens`
             and the method :func:`~DPolynomialGen.index`.
 
             INPUT:
@@ -509,7 +509,7 @@ class DPolynomial (InfinitePolynomial_dense):
 
             This method computes the lowest appearing order of a concrete polynomial in all the 
             variables that appear in its parent. This method relies on the method 
-            :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_dense.gens`
+            :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_sparse.gens`
             and the method :func:`~DPolynomialGen.index`.
 
             INPUT:
@@ -624,7 +624,7 @@ class DPolynomial (InfinitePolynomial_dense):
         r'''
             Method to obtain the flattened version of a polynomial.
 
-            Check :func:`~.dpolynomial_ring.DPolynomialRing_dense.flatten` for further information and 
+            Check :func:`~.dpolynomial_ring.DPolynomialRing_sparse.flatten` for further information and 
             examples.
         '''
         return self.parent().flatten(self)
@@ -761,7 +761,7 @@ class DPolynomial (InfinitePolynomial_dense):
         r'''
             Method to convert this operator to a linear operator. 
             
-            See method :func:`~.dpolynomial_ring.DPolynomialRing_dense.as_linear_operator`.
+            See method :func:`~.dpolynomial_ring.DPolynomialRing_sparse.as_linear_operator`.
         '''
         return self.parent().as_linear_operator(self)
 
@@ -771,17 +771,17 @@ class DPolynomial (InfinitePolynomial_dense):
             Override of the __call__ method. 
 
             Evaluating an operator polynomial has a different meaning than evaluating a polynomial
-            with infinitely many variables (see method :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_dense.eval`
+            with infinitely many variables (see method :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_sparse.eval`
             for further information)
 
             INPUT:
 
             * ``args`` and ``kwargs`` with the same format as in 
-              :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_dense.eval`
+              :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_sparse.eval`
 
             OUTPUT:
 
-            The evaluated object as in :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_dense.eval`.
+            The evaluated object as in :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_sparse.eval`.
 
             EXAMPLES::
 
@@ -867,28 +867,37 @@ class DPolynomial (InfinitePolynomial_dense):
 
             This method relies on the base polynomial structure behind the infinite polynomial ring.
         '''
-        R = self.parent().polynomial_ring()
-        return R(self.polynomial()).divides(R(self.parent()(other).polynomial()))
+        P = self.parent()
+        try:
+            R = (self+P(other)).polynomial().parent()
+            return R(self.polynomial()).divides(other.polynomial())
+        except:
+            return False
 
     def is_unit(self):
         return self.degree() == 0
 
     def degree(self, x=None, std_grading=False) -> int: 
         r'''Overriding :func:`degree` to fit the setting of D'''
-        R = self.parent().polynomial_ring()
+        P = self.parent()
+        # Updating the polynomial ring for self
+        R = (self+P(x)).polynomial().parent() if x != None else self.polynomial().parent()
         if x != None and x.parent() == self.parent():
-            x = R(x.polynomial())
+            x = R(x.polynomial()) # get a polynomial
+        elif x != None:
+            x = R(x)
         
         return R(self.polynomial()).degree(x, std_grading)
 
     def coefficient(self, monomial) -> DPolynomial:
         r'''Overriding :func:`coefficient` to fit the setting of D'''
         P = self.parent()
-        R = P.polynomial_ring()
 
         if isinstance(monomial, dict):
+            R = (sum(P(mon) for mon in monomial) + self).polynomial().parent()
             monomial = {R(P(mon).polynomial()) : monomial[mon] for mon in monomial}
         else: # a monomial is given
+            R = (self+P(monomial)).polynomial().parent()
             monomial = R(P(monomial).polynomial())
         return P(R(self.polynomial()).coefficient(monomial))
     
@@ -926,7 +935,7 @@ class DPolynomial (InfinitePolynomial_dense):
         result = self.parent()(result) if result in self.parent() else result   
         return result
     def _floordiv_(self, x):
-        R = self.parent().polynomial_ring()
+        R = (self+x).parent().polynomial_ring()
         return self.parent().element_class(self.parent(), R(self.polynomial()) // R(x.polynomial()))
     def __pow__(self, n):
         return self.parent().element_class(self.parent(), super().__pow__(n))
@@ -940,7 +949,7 @@ class DPolynomial (InfinitePolynomial_dense):
         r'''
             Method on an element to compute (if possible) the Sylvester resultant.
 
-            See :func:`~.dpolynomial_ring.DPolynomialRing_dense.sylvester_resultant` for further information.
+            See :func:`~.dpolynomial_ring.DPolynomialRing_sparse.sylvester_resultant` for further information.
         '''
         return self.parent().sylvester_resultant(self, other, gen)
 
@@ -948,7 +957,7 @@ class DPolynomial (InfinitePolynomial_dense):
         r'''
             Method to compute the Sylvester `k`-matrix for two operator polynomials.
 
-            See :func:`~.dpolynomial_ring.DPolynomialRing_dense.sylvester_matrix` for further information.
+            See :func:`~.dpolynomial_ring.DPolynomialRing_sparse.sylvester_matrix` for further information.
         '''
         return self.parent().sylvester_matrix(self, other, gen, k)
 

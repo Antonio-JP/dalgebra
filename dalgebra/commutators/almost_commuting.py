@@ -161,7 +161,7 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 
 from ..dring import DifferentialRing, DRings
 from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
-from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing_dense
+from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing_sparse
 from ..dpolynomial.dpolynomial_system import DSystem
 from ..logging.logging import cache_in_file
 
@@ -236,7 +236,7 @@ def generic_normal(n: int,
 
         OUTPUT:
 
-        An operator in a :class:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_dense` of order
+        An operator in a :class:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_sparse` of order
         ``n`` and in generic normal form.
 
         If `n \leq 0` we raise a :class:`ValueError`. The case when `n = 1` it is always `\partial`.
@@ -267,7 +267,7 @@ def generic_normal(n: int,
         raise ValueError(f"[almost] The value {n = } must be a positive integer")
     if name_var == name_partial:
         raise ValueError(f"[almost] The names for the differential variables must be different. Given {name_var} and {name_partial}")
-    if output_ring != None and not isinstance(output_ring, DPolynomialRing_dense):
+    if output_ring != None and not isinstance(output_ring, DPolynomialRing_sparse):
         raise TypeError(f"[almost] The optional argument `output_ring` must be a ring of d-polynomials or ``None``")
     
     names_u = __names_variables(n, name_var, simplify_names=simplify_names)
@@ -363,7 +363,7 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "recursive"
         ## This case is simpler because there is a unique operator in normal form of order 1: \partial
         ## Moreover, [L, \partial] = -\kappa_\partial(L), i.e., the coefficients of the commutator are simply the derivatives of the coefficients of L
         P = output_z[1]
-        T = tuple([output_u[-(i+1)][1] for i in range(n-1)]) # (u_n', u_{n-1}',..., u_2')
+        T = tuple([-output_u[-(i+1)][1] for i in range(n-1)]) # (-u_n', -u_{n-1}',..., -u_2')
         output = (P, T)
     elif m%n == 0: # Special case: the order of the required almost-commutator is divisible by order of base operator
         ## Since `L_n` always commute with itself, so it does `L_n^k` for any `k`. 
@@ -421,7 +421,7 @@ def almost_commuting_wilson(n: int, m: int, name_u: str|list[str]|tuple[str] = "
 
     return Pm,T
 
-def __almost_commuting_direct(parent: DPolynomialRing_dense, order_L: int, order_P: int, name_p: str, name_u: str, name_z: str) -> tuple[DPolynomialRing_dense, list[DPolynomial], list[DPolynomial]]:
+def __almost_commuting_direct(parent: DPolynomialRing_sparse, order_L: int, order_P: int, name_p: str, name_u: str, name_z: str) -> tuple[DPolynomialRing_sparse, list[DPolynomial], list[DPolynomial]]:
     r'''
         Direct method to compute the equations to solve for Wilson's almost commuting basis.
 
@@ -429,7 +429,7 @@ def __almost_commuting_direct(parent: DPolynomialRing_dense, order_L: int, order
 
         This method receives the usual input for methods that create the equations:
 
-        * ``parent``: a basic :class:`DPolynomialRing_dense` that must contain the `u` variables and the `\partial` variable.
+        * ``parent``: a basic :class:`DPolynomialRing_sparse` that must contain the `u` variables and the `\partial` variable.
         * ``order_L``: the value we are using as order of the generic operator `L`.
         * ``order_P``: the order of the almost commuting operator `P` which equations we want to compute.
         * ``name_p``: name of the variables we will create that will be solved (see :func:`__names_variables`)
@@ -463,7 +463,7 @@ def __almost_commuting_direct(parent: DPolynomialRing_dense, order_L: int, order
     return R, equations, T
 
 @lru_cache(maxsize=128)
-def __almost_commuting_recursive(parent: DPolynomialRing_dense, order_L: int, order_P: int, name_p: str, name_u: str, name_z: str) -> tuple[DPolynomialRing_dense, list[DPolynomial], list[DPolynomial]]:
+def __almost_commuting_recursive(parent: DPolynomialRing_sparse, order_L: int, order_P: int, name_p: str, name_u: str, name_z: str) -> tuple[DPolynomialRing_sparse, list[DPolynomial], list[DPolynomial]]:
     r'''
         Recursive method to compute the equations to solve for Wilson's almost commuting basis.
 
@@ -471,7 +471,7 @@ def __almost_commuting_recursive(parent: DPolynomialRing_dense, order_L: int, or
 
         This method receives the usual input for methods that create the equations:
 
-        * ``parent``: a basic :class:`DPolynomialRing_dense` that must contain the `u` variables and the `\partial` variable.
+        * ``parent``: a basic :class:`DPolynomialRing_sparse` that must contain the `u` variables and the `\partial` variable.
         * ``order_L``: the value we are using as order of the generic operator `L`.
         * ``order_P``: the order of the almost commuting operator `P` which equations we want to compute.
         * ``name_p``: name of the variables we will create that will be solved (see :func:`__names_variables`)
@@ -540,7 +540,7 @@ def __almost_commuting_recursive(parent: DPolynomialRing_dense, order_L: int, or
 
         return R, output[n-1:], output[:n-1]
 
-def __almost_commuting_integral(parent: DPolynomialRing_dense, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
+def __almost_commuting_integral(parent: DPolynomialRing_sparse, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
     r'''
         Integration method to solve the equations for obtaining Wilson's almost commuting basis.
 
@@ -561,7 +561,7 @@ def __almost_commuting_integral(parent: DPolynomialRing_dense, equations: list[D
     S = DSystem(equations, parent=parent, variables=p)
     return S.solve_linear()
 
-def __almost_commuting_linear(parent: DPolynomialRing_dense, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
+def __almost_commuting_linear(parent: DPolynomialRing_sparse, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
     r'''
         Method that solves the system for almost-commutation using a linear approach
 
@@ -645,6 +645,155 @@ def boussinesq(m: int, i: int | tuple[int] | list[int] | slice | None = None):
         Boussinesq hierarchy (TODO: add reference)
     '''
     return hierarchy(3,m,i)
+
+@cache_in_file
+def recursion(n: int):
+    r'''
+        Method that computes the associated recursion matrix that arises from checking the first jumping in the hierarchy.
+
+        Namely, assume we have computed the almost commuting basis given by Wilson's theorem, `P_m(U)` and let 
+
+        .. MATH::
+
+            [L, P_m(U)] = H_{m,0}(U) + \ldots H_{m,n-2}(U) \partial^{n-2}.
+
+        We know that the elements `H_{m,i}` are homogeneous of weight `n+m-i`. Moreover, it is supposed (at least for `n=2` and 
+        `n=3`) that there are recursion matrices of pseudo-differential operators `R` such that 
+
+        .. MATH::
+
+            R H_m = H_{m+n},
+
+        where `H_m = (H_{m,0}(U),\ldots, H_{m,n-2}(U))^T`.
+
+        A priori, we do not know how bad is `R` in terms of the pseudo-differential part. However, since this formula works for all
+        `m \geq 1`, these operator must be applicable for that particular case `m=1`. This, luckily, is always a very simple case:
+
+        .. MATH::
+
+            H_{1,i}(U) = -u_{n-2-i}'.
+
+        Hence, the operators in `R` can be pseudo differential operators with, at most, negative order `-1`. This can be adapted in the code
+        to be working.
+
+        Moreover, the recursion formula gives also structure to the operators in `R`. Since `R H_m = H_{n+m}`, we have that the output of the recursion
+        is again homogeneous. This means that the elements of `R` are homogeneous of some particular weights. More precisely,
+
+        .. MATH::
+
+            w(R_{i,j}) = (2n+m-i) - (n+m-j) = n + j - i,
+
+        which is independent of `m`. Hence, we can do an ansatz using the homogeneous monomials of weights `0, \ldots, n+j-i+1` where
+
+        .. MATH::
+
+            R_{i,j} = \sum_{o=-1}^{n+j-i} c_{i,j,o}(U) \partial^o,
+
+        where the elements `c_{i,j,o} are generic homogeneous elements of weight `o`. We can plug these expressions right away into `R H_m = H_{m+n}` for
+        `m=1,\ldots,n-1` and then we check the conditions on the generic coefficients to obtain the equality. Solving this system leads to the recursion 
+        matrix.
+
+        NOTE: We need to check whether this always leads to a unique solution or not. The hope is that, yes.
+    '''
+    from sage.rings.ideal import Ideal
+    ## Some auxiliary functions
+    logger.info(f"[recursion] ++ Defining the auxiliary function...")
+    I = lambda p : p.inverse_operation(0) # computes the integral of an element (or tries)
+    ACT = lambda op, p: op[0](**{z.variable_name(): p}) + (op[1]*I(p) if op[1] != 0 else op[1]) # computes the action of a pseudo_operator of order -1 `op` over `p`
+    ACT_M = lambda M, ps: [sum(ACT(op, p) for (op, p) in zip(M[i], ps)) for i in range(len(M))] # applies a matrix of p.o. of order -1 `M` over a vector of `ps`.
+    
+    logger.info(f"[recursion] Computing the recursion matrix for {n=}.")
+    L = generic_normal(n); z = L.parent().gen("z")
+    
+    ## We compute now the first two steps of the hierarchy
+    logger.info(f"[recursion] ++ Computing the hierarchy up to order {2*n-1}...")
+    H = [None] + [hierarchy(n, m) for m in range(1, 2*n)]
+
+    ## We check the valid elements for the pseudo-part
+    logger.info("[recursion] ++ Checking which columns on R can have \\partial^{-1}")
+    valid_pseudo = []
+    for r in range(n-1):
+        try:
+            for m in range(1,n):
+                I(H[m][r])
+            # all have exact integrals -> valid for \partial^{-1}
+            valid_pseudo.append(r)
+        except ValueError:
+            pass
+    valid_pseudo = set(valid_pseudo)
+    logger.info(f"[recursion] ++ Valid columns: {valid_pseudo}")
+
+
+    ## We compute now the homogeneous monomials
+    order_in_matrix = lambda i,j : n + j - i
+    logger.info(f"[recursion] ++ Computing the homogeneous monomials up to order {2*n-1}")
+    W = L.parent().weight_func([int(v.variable_name()[1:]) for v in L.parent().gens()[:-1]] + [0], [1]) # everything except derivation has weight 1 # TODO: the getting of weight is dubius
+    T = [W.homogeneous_monomials(i) for i in range(2*n)]
+
+    ## We first create the ansatz. For that, we need to define the ansatz constants first.
+    logger.info(f"[recursion] ++ Creating all the variable names...")
+    variable_names_matrix = [
+        [
+            [[f"c_{i}_{j}_{o}_{k}" for k in range(len(T[o]))] for o in range(order_in_matrix(i,j)+2)]
+            for j in range(n-1)
+        ]
+        for i in range(n-1)
+    ]
+    all_variables = sum((sum((sum((variable_names_matrix[i][j][o] for o in range(order_in_matrix(i,j)+2)), []) for j in range(n-1)), []) for i in range(n-1)), [])
+    logger.info(f"[recursion] ++ Created {len(all_variables)} variables")
+    logger.info(f"[recursion] ++ Adding the constants to the ring")
+    R = L.parent().add_constants(*all_variables) # The differential ring with the differential variables and all the constants
+    logger.info(f"[recursion] ++ Creating the generic matrix of operators...")
+    M = [
+            [
+                (
+                    sum(sum(R(c)*R(str(t)) for (c,t) in zip(variable_names_matrix[i][j][o], T[o]))*R(str(z[order_in_matrix(i,j)-o])) for o in range(order_in_matrix(i,j)+1)), 
+                    sum(R(c)*R(str(t)) for (c,t) in zip(variable_names_matrix[i][j][n+j-i+1], T[n+j-i+1])) if j in valid_pseudo else R.zero() # homogenous of weight n+j-i+1 for "\partial^{-1}"
+                )
+            for j in range(n-1)] 
+        for i in range(n-1)]
+
+    BwC = R.base().wrapped # base ring w/o differential structure
+    B = BwC.base() # base ring w/o ansatz variables --> solutions will live here
+    
+    ## Casting the computed hierarchy to the new ring
+    logger.info(f"[recursion] ++ Casting the Hs into the appropriate ring...")
+    H = [None] + [[sum(BwC(c)*R(str(m)) for (c,m) in zip(el.coefficients(), el.monomials())) for el in h] for h in H[1:]]
+
+    ## We compute the equations to be solve
+    logger.info(f"[recursion] ++ Computing the equations to be solved...")
+    equations = []
+    for m in range(1,n):
+        MH = ACT_M(M, H[m])
+        diff = [MH[i] - H[m+n][i] for i in range(n-1)]
+        equations += sum([[BwC(el) for el in h.coefficients()] for h in diff], [])
+    
+    logger.info(f"[recursion] ++ Created the linear systems. We have {len(equations)} equations")
+    ## We solve the system (NOTE: right now we use groebner bases and reduce, maybe it is better to change this)
+    
+    logger.info(f"[recursion] ++ Solving the linear system... (currently with Grobner basis)")
+    ideal_orig = Ideal(equations)
+    ideal_gb = ideal_orig.groebner_basis()
+    logger.info(f"[recursion] ++ Computing the final solutions")
+    
+    variables_solved = [
+        [
+            [[B(BwC(f"c_{i}_{j}_{o}_{k}").reduce(ideal_gb)) for k in range(len(T[o]))] for o in range(order_in_matrix(i,j)+2)]
+            for j in range(n-1)
+        ]
+        for i in range(n-1)
+    ]
+    M = [
+            [
+                (
+                    sum(sum(c*t for (c,t) in zip(variables_solved[i][j][o], T[o]))*z[order_in_matrix(i,j)-o] for o in range(order_in_matrix(i,j)+1)), 
+                    sum(c*t for (c,t) in zip(variables_solved[i][j][n+j-i+1], T[n+j-i+1])) # homogenous of weight n+j-i+1 for "\partial^{-1}"
+                )
+            for j in range(n-1)] 
+        for i in range(n-1)]
+    
+    logger.info(f"[recursion] ++ Finished computation")
+    return M
 
 __all__ = [
     "generic_normal", "almost_commuting_wilson", 

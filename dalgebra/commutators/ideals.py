@@ -32,7 +32,7 @@ from typing import Any
 
 from ..dring import DifferentialRing, DRings
 from ..dpolynomial.dpolynomial_element import DPolynomial
-from ..dpolynomial.dpolynomial_ring import DPolynomialRing, DPolynomialRing_dense
+from ..dpolynomial.dpolynomial_ring import DPolynomialRing, DPolynomialRing_sparse
 from ..logging.logging import loglevel, cut_string
 
 _DRings = DRings.__classcall__(DRings)
@@ -144,7 +144,7 @@ class SolutionBranch:
     @cached_method
     def diff_parent(self, origin):
         r'''Recreate the differential structure over the :func:`final_parent` for this solution branch.'''
-        if isinstance(origin, DPolynomialRing_dense):
+        if isinstance(origin, DPolynomialRing_sparse):
             output = DPolynomialRing(self.diff_parent(origin.base()), origin.variable_names())
         elif is_FractionField(origin) and origin in _DRings:
             output = self.diff_parent(origin.base()).fraction_field()

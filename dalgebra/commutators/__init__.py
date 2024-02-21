@@ -4,7 +4,7 @@ r'''
     This module contains all the files and code necessary in applications for computing 
     non-trivial commutators for differential polynomial. The focus on the differential
     setting is temporal and will be generalized in the future to more generic 
-    :class:`DPolynomialRing_dense`.
+    :class:`DPolynomialRing_sparse`.
 
     This module is split into 3 main subpackages:
 

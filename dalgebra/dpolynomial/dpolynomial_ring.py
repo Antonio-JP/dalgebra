@@ -3,7 +3,7 @@ File for the ring structure of Differential polynomials
 
 This file contains all the parent structures for Differential polynomials
 and all the coercion associated classes. Mainly, this module provides the 
-class :class:`DifferentialPolynomialRing_dense`, which is the main parent class defining
+class :class:`DifferentialPolynomialRing_sparse`, which is the main parent class defining
 a ring of differential polynomials.
 
 EXAMPLES::
@@ -69,7 +69,7 @@ class DPolynomialRingFactory(UniqueFactory):
         Factory to create a ring of polynomials over a ring with operators.
 
         This allows to cache the same rings created from different objects. See
-        :class:`DPolynomialRing_dense` for further information on this structure.
+        :class:`DPolynomialRing_sparse` for further information on this structure.
     '''
     def create_key(self, base, *names : str, **kwds):
         if "names" in kwds and len(names) > 0:
@@ -96,27 +96,27 @@ class DPolynomialRingFactory(UniqueFactory):
         # Now the names are appropriate and the base is correct
         return (base, names)
 
-    def create_object(self, _, key) -> DPolynomialRing_dense:
+    def create_object(self, _, key) -> DPolynomialRing_sparse:
         base, names = key
 
-        return DPolynomialRing_dense(base, names)
+        return DPolynomialRing_sparse(base, names)
 
 DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing")
 RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing (used for backward compatibility)
-def DifferentialPolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_dense:
+def DifferentialPolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_sparse:
     if not base in _DRings:
         base = DifferentialRing(base, kwds.pop("derivation", diff))
     if not base.is_differential():
         raise TypeError("The base ring must be a differential ring")
     return DPolynomialRing(base, *names, **kwds)
-def DifferencePolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_dense:
+def DifferencePolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_sparse:
     if not base in _DRings:
         base = DifferenceRing(base, kwds.pop("difference", base.Hom(base).one()))
     if not base.is_difference():
         raise TypeError("The base ring must be a difference ring")
     return DPolynomialRing(base, *names, **kwds)
 
-class DPolynomialRing_dense (InfinitePolynomialRing_dense):
+class DPolynomialRing_sparse (InfinitePolynomialRing_sparse):
     r'''
         Class for a ring of polynomials over a :class:`~dalgebra.dring.DRing`.
 
@@ -134,7 +134,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         This class represents exactly the ring of polynomials with these operator over the given ring ``base`` 
         with variables given in ``names``.
 
-        This class inherits from :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_dense`,
+        This class inherits from :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse`,
         which is the Sage structure to manipulate polynomial rings over infinitely many variables.
 
         INPUT:
@@ -337,11 +337,14 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         r'''
             Extended definition of :func:`_element_constructor_`.
 
-            Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_dense`
+            Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse`
             and then transforms the output into the corresponding type for ``self``.
         '''
         try:
-            p = super()._element_constructor_(x)
+            if isinstance(x, DPolynomial): # x is a D-polynomial, we translate independently the coefficients and the monomials
+                p = sum(self.base()(c)*self(str(t)) for (c,t) in zip(x.coefficients(), x.monomials()))
+            else:
+                p = super()._element_constructor_(x)
             return self.element_class(self, p)
         except (ValueError, NameError) as error: # if it is not a normal element, we try as linear operators
             try:
@@ -362,7 +365,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
 
     def _pushout_(self, other):
         scons, sbase = self.construction()
-        if isinstance(other, DPolynomialRing_dense):
+        if isinstance(other, DPolynomialRing_sparse):
             ocons, obase = other.construction()
             cons = scons.merge(ocons)
             try:
@@ -378,7 +381,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             Override method to create the `i^{th}` generator (see method 
             :func:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse.gen`).
 
-            For a :class:`DPolynomialRing_dense`, the generator type is 
+            For a :class:`DPolynomialRing_sparse`, the generator type is 
             :class:`~dalgebra.diff_polynomial.diff_polynomial_element.DPolynomialGen`
             which provides extra features to know if an object can be generated by that generator.
             See tis documentation for further details.
@@ -437,7 +440,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             a valid input for it that would create ``self`` again. This is a necessary method to
             implement all the coercion system properly.
 
-            For a :class:`DPolynomialRing_dense`, the associated functor class is :class:`DPolyRingFunctor`.
+            For a :class:`DPolynomialRing_sparse`, the associated functor class is :class:`DPolyRingFunctor`.
             See its documentation for further information.
         '''
         return DPolyRingFunctor(self._names), self.base()
@@ -540,11 +543,11 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
 
             OUTPUT:
 
-            A :class:`DPolynomialRing_dense` over ``R`` with the same variables as ``self``.
+            A :class:`DPolynomialRing_sparse` over ``R`` with the same variables as ``self``.
         '''
         return DPolynomialRing(R, self.variable_names())
 
-    def append_variables(self, *variables) -> DPolynomialRing_dense:
+    def append_variables(self, *variables) -> DPolynomialRing_sparse:
         r'''Add new d-variables to the current ring'''
         F,B = self.construction()
         new_ring = F.append_variables(*variables)(B)
@@ -608,7 +611,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         return self(0)
     
     def random_element(self,
-        deg_bound : int = 0,order_bound : int = 0, sparsity : float = 0.75,
+        deg_bound : int = 0,order_bound : int = 0,
         *args,**kwds
     ):
         r'''
@@ -626,14 +629,12 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
         '''
         deg_bound = 0 if ((not deg_bound in ZZ) or deg_bound < 0) else deg_bound
         order_bound = 0 if ((not order_bound in ZZ) or order_bound < 0) else order_bound
-        gens = self.gens(); n = len(gens)
-        p = 0
-        for degrees in IndexBijection(n).iter(deg_bound):
-            for list_orders in product(*(sum(degrees)*[IndexBijection(self.noperators()).iter(order_bound)])):
-                if random() > sparsity:
-                    p += self.base().random_element(*args, **kwds) * prod(gens[i][orders] for (i,orders) in enumerate(list_orders))
+
+        gens_for_poly = [g[el] for g in self.gens() for el in IndexBijection(self.noperators()).iter(order_bound)]
+        poly_ring = PolynomialRing(self.base(), gens_for_poly)
+        p = poly_ring.random_element(deg_bound)
         
-        return p
+        return self(p)
      
     def eval(self, element, *args, dic: dict[DPolynomialGen,DPolynomial] = None, **kwds):
         r'''
@@ -908,7 +909,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
 
         return AdditiveMap(self, func) 
     
-    def add_constants(self, *new_constants: str) -> DPolynomialRing_dense:
+    def add_constants(self, *new_constants: str) -> DPolynomialRing_sparse:
         return DPolynomialRing(self.base().add_constants(*new_constants), self.variable_names())
 
     def linear_operator_ring(self) -> Ring:
@@ -1360,7 +1361,7 @@ class DPolynomialRing_dense (InfinitePolynomialRing_dense):
             for further information). This method transforms the elements of ``self`` that can be seen as linear
             operators to this ring structure.
 
-            Conversely, a :class:`DPolynomialRing_dense` can transform elements from its ring of linear operators
+            Conversely, a :class:`DPolynomialRing_sparse` can transform elements from its ring of linear operators
             (i.e., the output of :func:`linear_operator_ring`) to linear :class:`DPolynomial`.
 
             This method checks that ``self`` has the appropriate structure (i.e., it has only one infinite variable)
@@ -1434,12 +1435,12 @@ def is_DPolynomialRing(element):
     r'''
         Method to check whether an object is a ring of infinite polynomial with an operator.
     '''
-    return isinstance(element, DPolynomialRing_dense)
+    return isinstance(element, DPolynomialRing_sparse)
 is_RWOPolynomialRing = is_DPolynomialRing #: alias for is_DPolynomialRing (used for backward compatibility)
 
 class DPolyRingFunctor (ConstructionFunctor):
     r'''
-        Class representing Functor for creating :class:`DPolynomialRing_dense`.
+        Class representing Functor for creating :class:`DPolynomialRing_sparse`.
 
         This class represents the functor `F: R \mapsto R\{y^(1),\ldots,y^{(n)}\}`.
         The names of the variables must be given to the functor and, then
@@ -1449,7 +1450,7 @@ class DPolyRingFunctor (ConstructionFunctor):
         INPUT:
 
         * ``variables``: names of the variables that the functor will add (see 
-          the input ``names`` in :class:`DifferentialPolynomialRing_dense`)
+          the input ``names`` in :class:`DPolynomialRing_sparse`)
     '''
     def __init__(self, variables):
         self.__variables = set(variables)
@@ -1490,9 +1491,9 @@ class DPolynomialToLinOperator (Morphism):
         Class representing a map to a ring of linear operators
 
         This map allows the coercion system to detect that some elements in a 
-        :class:`DifferentialPolynomialRing_dense` are included in its ring of linear operators.
+        :class:`DPolynomialRing_sparse` are included in its ring of linear operators.
     '''
-    def __init__(self, dpoly_ring : DPolynomialRing_dense):
+    def __init__(self, dpoly_ring : DPolynomialRing_sparse):
         linear_operator_ring = dpoly_ring.linear_operator_ring()
         super().__init__(dpoly_ring, linear_operator_ring)
 
@@ -1504,7 +1505,7 @@ class DPolynomialSimpleMorphism (Morphism):
         Class representing maps to simpler rings.
 
         This map allows the coercion system to detect that some elements in a 
-        :class:`DifferentialPolynomialRing_dense` are included in simpler rings.
+        :class:`DPolynomialRing_sparse` are included in simpler rings.
     '''
     def __init__(self, domain, codomain):
         super().__init__(domain, codomain)
@@ -1558,7 +1559,7 @@ class WeightFunction(SetMorphism):
         * Add reference to weight functions in differential setting.
         * Add reference to weight functions in difference setting.
     '''
-    def __init__(self, dpoly_ring: DPolynomialRing_dense, base_weights: list[int] | tuple[int] | dict[str|DPolynomialGen, int], operator_weights: list[int] |tuple[int]):
+    def __init__(self, dpoly_ring: DPolynomialRing_sparse, base_weights: list[int] | tuple[int] | dict[str|DPolynomialGen, int], operator_weights: list[int] |tuple[int]):
         if isinstance(base_weights, (list,tuple)): # we got a list of weights
             if not len(base_weights) == dpoly_ring.ngens():
                 raise TypeError(f"[WeightFunction] A weight must be define for all generators (got {len(base_weights)}, expected {dpoly_ring.ngens()})")
@@ -1582,7 +1583,7 @@ class WeightFunction(SetMorphism):
 
         super().__init__(dpoly_ring.Hom(ZZ, _Sets), self.weight)
 
-    def parent(self) -> DPolynomialRing_dense:
+    def parent(self) -> DPolynomialRing_sparse:
         r'''
             Return the base ring of d-polynomials
         '''
@@ -1813,8 +1814,8 @@ class RankingFunction:
 
         INPUT:
 
-        * ``parent``: a :class:`DPolynomialRing_dense` where the ranking will be applied.
-        * ``ordering``: a list or tuple of :class:`DPolynomialGen` that will include the variables of a :class:`DPolynomialRing_dense`
+        * ``parent``: a :class:`DPolynomialRing_sparse` where the ranking will be applied.
+        * ``ordering``: a list or tuple of :class:`DPolynomialGen` that will include the variables of a :class:`DPolynomialRing_sparse`
           that will be incorporated to the ranking and the base ordering between the base variables.
         * ``ttype``: the type of ranking to be created. Currently, only "elimination" or "orderly" are allowed:
           - "elimination": the ranking will be the elimination ranking where the ``ordering`` determines the order of the variables.
@@ -1822,9 +1823,9 @@ class RankingFunction:
 
         TODO: add examples
     '''
-    def __init__(self, parent: DPolynomialRing_dense, ordering: list[DPolynomialGen] | tuple[DPolynomialGen] = None, ttype: str = "orderly"):
+    def __init__(self, parent: DPolynomialRing_sparse, ordering: list[DPolynomialGen] | tuple[DPolynomialGen] = None, ttype: str = "orderly"):
         ## Processing arguments
-        if not isinstance(parent, DPolynomialRing_dense):
+        if not isinstance(parent, DPolynomialRing_sparse):
             raise TypeError(f"[ranking] The parent must be a ring of d-polynomials, but got {type(parent)}")
         if ordering is None:
             ordering = parent.gens()
@@ -1841,7 +1842,7 @@ class RankingFunction:
         self.base_order : list[DPolynomialGen] | tuple[DPolynomialGen] = ordering
         self.type : str = ttype
 
-    def parent(self) -> DPolynomialRing_dense:
+    def parent(self) -> DPolynomialRing_sparse:
         return self.__parent
 
     def compare_variables(self, u: DPolynomial, v: DPolynomial):
@@ -1899,7 +1900,7 @@ class RankingFunction:
             Method that compares two d-polynomials.
 
             This method is the critical step of a ranking function. It takes two variables in 
-            a ring of d-polynomials, i.e., two variables in a :class:`DPolynomialRing_dense`
+            a ring of d-polynomials, i.e., two variables in a :class:`DPolynomialRing_sparse`
             and compare which one is bigger in terms of this ranking function.
 
             When the inputs are d-polynomials (not only variables) we proceed to extend
