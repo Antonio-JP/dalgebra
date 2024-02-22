@@ -1566,7 +1566,7 @@ class WeightFunction(SetMorphism):
             if any(el < 0 for el in base_weights):
                 raise ValueError(f"[WeightFunction] Weights must be always non-negative.")
         elif isinstance(base_weights, dict):
-            base_weights = [int(base_weights.get(v, base_weights.get(v.variable_name, base_weights.get(str(v), 0)))) for v in dpoly_ring.gens()]
+            base_weights = [int(base_weights.get(v, base_weights.get(v.variable_name(), base_weights.get(str(v), 0)))) for v in dpoly_ring.gens()]
             if any(el < 0 for el in base_weights):
                 raise ValueError(f"[WeightFunction] Weights must be always non-negative.")
         else:
