@@ -590,16 +590,14 @@ def __almost_commuting_linear(parent: DPolynomialRing_sparse, equations: list[DP
     ansatz_variables = {p[i]: [f"c_{i}_{j}" for j in range(len(hom_monoms[p[i]]))] for i in range(m-1)}
 
     # Creating the new base ring with all new constants
-    R = parent.add_constants(*sum([name for name in ansatz_variables.values()],[]))
-    base_C = R.base()
+    base_C = DifferentialRing(PolynomialRing(parent.base().wrapped,sum([name for name in ansatz_variables.values()],[])))
     ansatz_variables = {p[i]: [base_C(el) for el in ansatz_variables[p[i]]] for i in range(m-1)}
     cs = base_C.wrapped.gens()
 
     ## Adapting the DPolynomialRing
     # Casting monomials to the new ring (creating again reduce possible errors)
-    w = R.weight_func({u[i].variable_name(): i+2 for i in range(n-1)}, [1])
-    hom_monoms_wC = {p[i] : w.homogeneous_monomials(2+i) for i in range(m-1)}
-    to_plug = {R.gen(gen.variable_name()) : sum(coeff*mon for (mon,coeff) in zip(hom_monoms_wC[gen], ansatz_variables[gen])) for gen in p}
+    R = parent.change_ring(base_C)
+    to_plug = {R.gen(gen.variable_name()) : sum(coeff*R(mon) for (mon,coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
 
     ## Creating the new equations
     equations = [equ(dic=to_plug) for equ in equations] 
