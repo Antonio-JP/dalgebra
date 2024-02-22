@@ -590,13 +590,16 @@ def __almost_commuting_linear(parent: DPolynomialRing_sparse, equations: list[DP
     ansatz_variables = {p[i]: [f"c_{i}_{j}" for j in range(len(hom_monoms[p[i]]))] for i in range(m-1)}
 
     # Creating the new base ring with all new constants
-    base_C = DifferentialRing(PolynomialRing(QQ, sum([name for name in ansatz_variables.values()],[])), lambda _ : 0)
+    R = parent.add_constants(*sum([name for name in ansatz_variables.values()],[]))
+    base_C = R.base()
     ansatz_variables = {p[i]: [base_C(el) for el in ansatz_variables[p[i]]] for i in range(m-1)}
     cs = base_C.wrapped.gens()
 
     ## Adapting the DPolynomialRing
-    R = parent.change_ring(base_C)
-    to_plug = {R.gen(gen.variable_name()) : sum(coeff*R(str(mon)) for (mon,coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
+    # Casting monomials to the new ring (creating again reduce possible errors)
+    w = R.weight_func({u[i].variable_name(): i+2 for i in range(n-1)}, [1])
+    hom_monoms_wC = {p[i] : w.homogeneous_monomials(2+i) for i in range(m-1)}
+    to_plug = {R.gen(gen.variable_name()) : sum(coeff*mon for (mon,coeff) in zip(hom_monoms_wC[gen], ansatz_variables[gen])) for gen in p}
 
     ## Creating the new equations
     equations = [equ(dic=to_plug) for equ in equations] 
@@ -609,13 +612,10 @@ def __almost_commuting_linear(parent: DPolynomialRing_sparse, equations: list[DP
     b = vector([equ.constant_coefficient() for equ in new_equations])
     sols = A.solve_right(-b)
     sols = {c : sol for (c, sol) in zip (cs, sols)}
-    ansatz_evaluated = {gen: sum(sols[coeff]*R(str(mon)) for (mon, coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
+    ## The ansatz evaluated contains elements in `parent`
+    ansatz_evaluated = {gen: sum(parent.base()(sols[coeff])*mon for (mon, coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
 
     return ansatz_evaluated
-
-#################################################################################################
-###
-### SPECIAL HIERARCHIES
 ###
 #################################################################################################
 def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = None):
