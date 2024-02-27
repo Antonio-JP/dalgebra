@@ -3,23 +3,23 @@ from __future__ import annotations
 import logging
 
 from functools import reduce
+from itertools import product
 
-from sage.all import cached_method, ZZ, latex, diff, prod, CommutativeRing, random, Parent, parent, matrix, vector
+from sage.all import (binomial, cached_method, cartesian_product, ZZ, latex, diff, 
+                      Parent, parent, SR, vector)
 from sage.categories.all import Morphism, Category, CommutativeAlgebras, Sets
 from sage.categories.morphism import SetMorphism # pylint: disable=no-name-in-module
 from sage.categories.pushout import ConstructionFunctor, pushout
-from sage.rings.polynomial.polynomial_ring import is_PolynomialRing
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
-from sage.rings.polynomial.multi_polynomial_ring_base import is_MPolynomialRing #pylint: disable=no-name-in-module
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.ring import Ring #pylint: disable=no-name-in-module
+from sage.rings.semirings.non_negative_integer_semiring import NN
 from sage.structure.element import Element, Matrix #pylint: disable=no-name-in-module
 from sage.structure.factory import UniqueFactory #pylint: disable=no-name-in-module
 
 from typing import Collection
 
-from .dpolynomial_element import DPolynomialGen, IndexBijection
-from ..dring import DRings, DFractionField, AdditiveMap, DifferentialRing, DifferenceRing, DRing_Wrapper
+from ..dring import DRings, DFractionField, AdditiveMap, DifferentialRing, DifferenceRing
 
 logger = logging.getLogger(__name__)
 _DRings = DRings.__classcall__(DRings)
@@ -195,6 +195,21 @@ class DMonomial:
         the key to be just a number, representing the element `(v, 0)`.
 
         We *do not* allow to modify this object once is created.
+
+        EXAMPLES::
+
+            sage: from dalgebra import *
+            sage: from dalgebra.dpolynomial.dpolynomial import *
+            sage: R = DPolynomialRing(DifferentialRing(DifferenceRing(QQ)), names=("a","b")) # ring with two variables and two operators
+            sage: a, b = R.gens()
+            sage: a[(0,5)]
+            a_0_5
+            sage: a[10]
+            a_0_4
+            sage: a[(2,3)]*b[(1,0)]
+            a_2_3*b_1_0
+            sage: b[0]**2*a[10]*b[1]
+            a_0_4*b_0_0**2*b_0_1
     '''
     def __init__(self, parent: DPolynomialRing_new, input: DMonomial | dict[tuple[int,tuple[int]|int],int] | tuple[tuple[int,tuple[int]|int]|int, int]):
         self._variables = dict()
@@ -219,35 +234,56 @@ class DMonomial:
             if len(element) == 3:
                 v,o,e = element
 
-        ## Checking the arguments
-        if (not v in ZZ) or v < 0 or v > parent.ngens():
-            raise ValueError("[DMonomial] Variable index not valid.")
-        
-        if not isinstance(o, (list,tuple)) and (not o in ZZ) or o < 0:
-            raise ValueError(f"[DMonomial] Order indication not valid ({o})")
-        else:
-            o = (ZZ(o),)
-
-        if not isinstance(o, (list,tuple)) or len(o) != parent.noperators(): 
-            raise TypeError(f"[DMonomial] Invalid input for order ({o}) for {parent.noperators()} operations")
-        elif any((not oo in ZZ or oo < 0 for oo in o)):
-            raise ValueError(f"[DMonomial] Order indication not valid ({o})")
+            ## Checking the arguments
+            if (not v in ZZ) or v < 0 or v > parent.ngens():
+                raise ValueError("[DMonomial] Variable index not valid.")
             
-        if (not e in ZZ) or e < 0: 
-            raise ValueError("[DMonomial] Value for exponent not value")
-        
-        if e != 0:
-            self.__variables[(ZZ(v), ZZ(o))] = self.__variables.get((ZZ(v), ZZ(o)), ZZ.zero()) + ZZ(e)
+            if (not isinstance(o, (list,tuple))) and ((not o in ZZ) or o < 0):
+                raise ValueError(f"[DMonomial] Order indication not valid ({o})")
+            elif not isinstance(o, (list, tuple)):
+                o = (ZZ(o),)
 
-    ## Multiplication of monomials
+            if not isinstance(o, (list,tuple)) or len(o) != parent.noperators(): 
+                raise TypeError(f"[DMonomial] Invalid input for order ({o}) for {parent.noperators()} operations")
+            elif any((not oo in ZZ or oo < 0 for oo in o)):
+                raise ValueError(f"[DMonomial] Order indication not valid ({o})")
+            o = tuple(ZZ(oo) for oo in o)
+                
+            if (not e in ZZ) or e < 0: 
+                raise ValueError("[DMonomial] Value for exponent not value")
+            
+            if e != 0:
+                self._variables[(ZZ(v), o)] = self._variables.get((ZZ(v), o), ZZ.zero()) + ZZ(e)
+
+    @staticmethod
+    def one(parent: DPolynomialRing_new):
+        return DMonomial(parent, dict())
+
     def __mul__(self, other: DMonomial) -> DMonomial:
         if not isinstance(other, DMonomial): raise TypeError("[DMonomial] Multiplication only valid with other monomials.")
         if self._parent != other._parent: raise TypeError("[DMonomial] Multipliaction of monomials only valid with same parent.")
         keys = set(self._variables.keys()).union(other._variables.keys())
-        return DMonomial(self.parent(), {key: self._variables.get(key, 0)+other._variables.get(key, 0) for key in keys})
+        return DMonomial(self._parent, {key: self._variables.get(key, 0)+other._variables.get(key, 0) for key in keys})
     
+    def __pow__(self, power: int) -> DMonomial:
+        if power == 0: return DMonomial.one(self._parent)
+
+        return DMonomial(self._parent, {k : power*e for (k,e) in self._variables.items()})
+    
+    ##############################################################################
+    ### PROPERTY METHODS
+    ##############################################################################        
+    def is_one(self) -> bool: #: Checker for the one (i.e., no variables in the dictionary) 
+        return len(self._variables) == 0
+    
+    def is_variable(self) -> bool: #: Checker for a variable (i.e., only one element in the dictionary and degree 1)
+        return len(self._variables) == 1 and next(iter(self._variables.items()))[1] == 1
+    
+    ##############################################################################
+    ### COMPUTATIONAL METHODS
+    ##############################################################################
     @cached_method
-    def __derivative__(self, operation: int = 0) -> tuple[DMonomial]:
+    def _derivative_(self, operation: int = 0) -> tuple[tuple[DMonomial,int]]:
         r'''
             Method to compute the derivative of a monomial. 
             
@@ -266,7 +302,7 @@ class DMonomial:
         return result
     
     @cached_method
-    def __shift__(self, operation: int = 0) -> DMonomial:
+    def _shift_(self, operation: int = 0) -> DMonomial:
         r'''
             Method to compute the derivative of a monomial. 
             
@@ -280,19 +316,19 @@ class DMonomial:
         return DMonomial(copy)
     
     @cached_method
-    def __hash__(self) -> int: #: hashing the dictionary using the tuples of items
-        return hash(tuple(self._variables.items()))
-    
-    def __eq__(self, other: DMonomial) -> bool:
-        if isinstance(other, DMonomial): # the equality goes through the dictionary
-            return self._variables == other._variables
-        elif other in self._parent: # case for elements of parent
-            return self._parent(other).__eq__(self)
-        else:
-            return False
-        
-    def is_one(self) -> bool:
-        return len(self._variables) == 0
+    def _inverse_(self, operation: int = 0) -> DMonomial:
+        r'''
+            Tries to get the previous element of an operation.
+
+            It only works when we have a variable, otherwise,  we would need more information.
+        '''
+        if not self.is_variable():
+            raise TypeError("Impossible to invert an operation for a non-variable")
+        v = next(iter(self._variables))
+        if v[1][operation] != 0:
+            raise ValueError("Impossible to invert an operation that has not been applied")
+        new_orders = list(v[1]); v[1][operation] -= 1; new_orders = tuple(new_orders)
+        return DMonomial(self._parent, (((v[0], new_orders), 1),))
     
     def eval(self, *args, dic : dict = None, **kwds):
         r'''
@@ -304,7 +340,7 @@ class DMonomial:
         if len(args) != 0: 
             if dic != None or len(kwds) != 0:
                 raise TypeError("Incorrect format for evaluating a DMonomial")
-            kwds.update({self._parent.gen(i).variable_name() : args[i] for i in range(len(args))})
+            kwds.update({self._parent.variable_names()[i] : args[i] for i in range(len(args))})
         elif dic != None:
             if not isinstance(dic, dict): raise TypeError("Invalid type for dictionary evaluating DMonomial")
             kwds.update({v.variable_name() if isinstance(v, DPolynomialGen) else str(v) : val for (v,val) in dic})
@@ -320,13 +356,68 @@ class DMonomial:
         return result * (DMonomial(copy) if len(copy) > 0 else result._parent.one())
 
     @cached_method
+    def variables(self) -> set[DMonomial]:
+        r'''
+            Return a set of variables (i.e., Monomials with only 1 element in the dictionary with degree 1) 
+        '''
+        return set(self._variables.keys())
+    
+    @cached_method
+    def orders(self, operation:int = -1) -> dict[int, int]: #: Compute the orders for each variable
+        output = dict()
+        for (v,o) in self._variables:
+            output[v] = max(output.get(v, -1), o[operation] if operation != -1 else sum(o))
+        
+        return output
+    
+    @cached_method
+    def order(self, variable: int , operation: int = -1): #: Get the order for a particular variable
+        return self.orders(operation).get(variable, -1)
+    
+    @cached_method
+    def lorders(self, operation: int = -1) -> dict[int, int]: #: Compute the lower orders for each variable
+        output = dict()
+        for (v,o) in self._variables:
+            output[v] = min(output.get(v, self.order(v, operation)), o[operation] if operation != -1 else sum(o))
+        
+        return output
+    
+    @cached_method
+    def lorder(self, variable: int , operation: int = -1): #: Get the lower order for a particular variable
+        return self.lorders(operation).get(variable, -1)
+
+    @cached_method
+    def degree(self, variable: DMonomial = None) -> int: #: Method to get the degree of a variable (0 if not present)
+        if variable != None:
+            return self._variables.get(next(iter(variable._variables)), ZZ(0))
+        else:
+            return sum(self._variables.items())
+        
+    ##############################################################################
+    ### MAGIC METHODS
+    ##############################################################################
+    @cached_method
+    def __hash__(self) -> int: #: hashing the dictionary using the tuples of items
+        return hash(tuple(self._variables.items()))
+    
+    def __eq__(self, other: DMonomial) -> bool:
+        if other == 1: return self.is_one()
+        
+        if isinstance(other, DMonomial): # the equality goes through the dictionary
+            return self._variables == other._variables
+        elif other in self._parent: # case for elements of parent
+            return self._parent(other) == self._parent(self)
+        else:
+            return False
+
+    @cached_method
     def __repr__(self) -> str:
         if self.is_one():
             return "1"
         
         variable_names = self._parent.variable_names()
         elements = sorted(self._variables.items())
-        return "*".join(f"{variable_names[v]}_{'_'.join(str(oo) for oo in o)}**{e}" for ((v,o),e) in elements)
+        return "*".join(f"{variable_names[v]}_{'_'.join(str(oo) for oo in o)}{f'**{e}' if e != 1 else ''}" for ((v,o),e) in elements)
     
     def __str__(self) -> str: return repr(self)
    
@@ -376,7 +467,7 @@ class DPolynomialGen:
 
         This is done to simplify the reading of the code for the user when using these objects.
     '''
-    def __init__(self, parent: Parent, name: str):
+    def __init__(self, parent: Parent, name: str, *, index: int = -1):
         if(not is_DPolynomialRing(parent)):
             raise TypeError("The DPolynomialGen must have a ring of polynomial with an operator as parent")
 
@@ -385,34 +476,20 @@ class DPolynomialGen:
         self._parent = parent
         self._output = {}
 
-        self._index = [i for i,v in enumerate(parent.variable_names()) if v == name][0]
+        self._index = index if index != -1 else parent.variable_names().index(name)
 
-    def __eq__(self, other: DPolynomialGen) -> bool:
-        if not isinstance(other, DPolynomialGen): return False
-        return (self._name, self._parent) == (other._name, other._parent)
-    
-    def __ne__(self, other: DPolynomialGen) -> bool:
-        return not (self == other)
-    
-    def __hash__(self) -> int:
-        return hash(self._name, self._parent)
+    #########################################################################
+    ### GETTER METHODS
+    #########################################################################
+    def variable_name(self) -> str:
+        r'''
+            Method that returns the variable name of ``self``
+        '''
+        return self._parent.variable_names()[self._index]
 
-    def _latex_(self) -> str:
-        from sage.misc.latex import latex_variable_name
-        return latex_variable_name(self._name + "ast" if "_" in self._name else "_ast")
-    
-    def __getitem__(self, i : int | tuple[int]) -> DMonomial:
-        if self._parent.noperators() > 1 and not isinstance(i, (list,tuple)):
-            i = self.index_map(i)
-        elif self._parent.noperators() > 1 and len(i) != self._parent.noperators():
-            raise ValueError("Incorrect indices for an element")
-        elif self._parent.noperators() > 1:
-            i = tuple(i)
-        elif self._parent.noperators() == 1 and isinstance(i, (list,tuple)):
-            i = i[0]
-
-        return DMonomial(self._parent, [((self._index, tuple(i)),1)])
-
+    #########################################################################
+    ### COMPUTATIONAL METHODS
+    #########################################################################
     def contains(self, element: DPolynomial) -> bool:
         r'''
             Method to know if an object can be generated using ``self``.
@@ -435,7 +512,7 @@ class DPolynomialGen:
                 return element.is_monomial() and element.monomials()[0] in self
             elif isinstance(element, DMonomial):
                 if len(element._variables) != 1: return False
-                (v, _), e = next(element._variables.items())
+                (v, _), e = next(iter(element._variables.items()))
                 return  v == self._index and e == 1
         except:
             return False
@@ -446,9 +523,6 @@ class DPolynomialGen:
         first = "_".join(spl[:-self._parent.noperators()]) # giving all indices
         second = "_".join(spl[:-1]) # giving the global index
         return self._name in (first, second)
-
-    def __contains__(self, other: DPolynomial) -> bool:
-        return self.contains(other)
 
     def index(self, element: DPolynomial, as_tuple : bool = None) -> int | tuple[int]:
         r'''
@@ -472,33 +546,26 @@ class DPolynomialGen:
             elif not isinstance(element, DMonomial): element = self._parent(element).monomials()[0]
 
             
-            index = next(element._variables.keys())[1]
+            index = next(iter(element._variables.keys()))[1]
             if self._parent.noperators() > 1 and not as_tuple:
                 index = self.index_map.inverse(index)
             elif self._parent.noperators() == 1 and not as_tuple:
                 index = index[0]
             return index
 
-    def next(self, element: DPolynomial, operation : int) -> DPolynomial:
-        r'''
-            Method to get the next variable from ``element`` with the given operation
-        '''
-        if operation < 0 or operation >= self._parent.noperators():
-            raise IndexError("The operation requested is out of range")
-        new_index = list(self.index(element, as_tuple=True))
-        new_index[operation] += 1
-        new_index = tuple(new_index)
-        
-        return self[new_index]
-
-    def variable_name(self) -> str:
-        r'''
-            Method that returns the variable name of ``self``
-        '''
-        return self._parent.variable_names()[self._index]
-
+    # def next(self, element: DPolynomial, operation : int) -> DPolynomial:
+    #     r'''
+    #         Method to get the next variable from ``element`` with the given operation
+    #     '''
+    #     if operation < 0 or operation >= self._parent.noperators():
+    #         raise IndexError("The operation requested is out of range")
+    #     new_index = list(self.index(element, as_tuple=True))
+    #     new_index[operation] += 1
+    #     new_index = tuple(new_index)
+    #    
+    #     return self[new_index]
     ###################################################################################
-    ### Arithmetic methods
+    ### ARITHMETIC METHODS
     ###################################################################################
     def __add__(self, x):
         if isinstance(x, DPolynomialGen): x = x[0]
@@ -544,6 +611,46 @@ class DPolynomialGen:
     def __pow__(self, n):
         return self[0]**n
 
+    ###################################################################################
+    ### MAGIC METHODS
+    ###################################################################################
+    def __eq__(self, other: DPolynomialGen) -> bool:
+        if not isinstance(other, DPolynomialGen): return False
+        return (self._name, self._parent) == (other._name, other._parent)
+    
+    def __ne__(self, other: DPolynomialGen) -> bool:
+        return not (self == other)
+    
+    def __hash__(self) -> int:
+        return hash(self._name, self._parent)
+
+    def _latex_(self) -> str:
+        from sage.misc.latex import latex_variable_name
+        return latex_variable_name(self._name + "ast" if "_" in self._name else "_ast")
+    
+    def __getitem__(self, i : int | tuple[int]) -> DMonomial:
+        if self._parent.noperators() > 1 and not isinstance(i, (list,tuple)):
+            i = self.index_map(i)
+        elif self._parent.noperators() > 1 and len(i) != self._parent.noperators():
+            raise ValueError("Incorrect indices for an element")
+        elif self._parent.noperators() == 1 and not isinstance(i, (list,tuple)):
+            i = (i,)
+
+        return DMonomial(self._parent, [(self._index, tuple(i), 1)])
+
+    def __contains__(self, other: DPolynomial) -> bool:
+        return self.contains(other)
+
+    def __repr__(self) -> str:
+        return self._name+'_*'
+    
+    def __str__(self) -> str:
+        return repr(self)
+        
+    def _latex_(self) -> str:
+        from sage.misc.latex import latex_variable_name
+        return latex_variable_name(self._name + '_ast')
+     
 RWOPolynomialGen = DPolynomialGen #: alias for DPolynomialGen (used for backward compatibility)
 
 class DPolynomial(Element):
@@ -577,6 +684,9 @@ class DPolynomial(Element):
     def is_monomial(self) -> bool: #: Checker for monomials -> just one monomial and coefficient 1
         return self.is_term() and self.coefficients()[0] == self._parent.base().one()
 
+    def is_variable(self) -> bool: #: Checker for variable -> just one monomial that is a variable
+        return self.is_monomial() and next(iter(self._content)).is_variable()
+    
     def is_unit(self) -> bool: #: Checker for an element to be a unit (i.e., has degree 0)
         return self.degree() == 0
     
@@ -585,6 +695,10 @@ class DPolynomial(Element):
     ###################################################################################
     ### Getter methods
     ###################################################################################
+    @cached_method
+    def variables(self) -> tuple[DMonomial]: #: Get variables appearing in a polynomial (i.e., monomials of degree 1)
+        return tuple(reduce(lambda p, q: p.update(q), (m.variables() for m in self._content), initial=set()))
+
     @cached_method
     def monomials(self) -> tuple[DMonomial]:
         r'''
@@ -599,12 +713,26 @@ class DPolynomial(Element):
         '''
         return tuple([self._content[m] for m in self.monomials()])
     
-    def coefficient(self, monomial: DMonomial) -> Element:
+    def coefficient(self, monomial: DMonomial, *, _poly = False) -> Element | DPolynomial:
         r'''
             Method to get the coefficient associated with a monomial. It returns 0 if there is nothing.
         '''
-        return self._content.get(DMonomial(self._parent, monomial), self._parent.base().zero())
-    
+        if monomial == 1:
+            return self.constant_coefficient()
+        monomial = DMonomial(self._parent, monomial)
+        
+        # Usual monomial getter -> return an element of self._parent.base()
+        if monomial in self._content:
+            return self._content[monomial] if not _poly else DPolynomial(self._parent, {monomial : self._content[monomial]})
+        
+        # We try to get a DPolynomial where all elements in ``monomial*result`` appears in ``self``
+        output = dict()
+        for (m,c) in self._content.items():
+            if all(m._variables.get(v, -1) == monomial._variables.get(v) for v in monomial._variables):
+                output[DMonomial(self._parent, {v: e for (v,e) in m._variables if (not v in monomial._variables)})] = c
+        if len(output) == 0: return self._parent.zero()
+        return DPolynomial(self._parent, output)
+        
     def constant_coefficient(self) -> Element: #: Method to get the coefficient without variables
         return self.coefficient(())
 
@@ -799,8 +927,11 @@ class DPolynomial(Element):
 
         return self.lorders(operation)[gen._index]
     
-    def degree(self, x=None):
-        raise NotImplementedError("This method is not yet implemented")
+    def degree(self, x=None) -> int:
+        x : DPolynomial = self.parent()(x)
+        if not x.is_variable():
+            raise ValueError("Impossible to get degree w.r.t. a non-variable element")
+        return max(m.degree(next(iter(x._content))) for m in self._content)
 
     @cached_method
     def infinite_variables(self) -> tuple[DPolynomialGen]:
@@ -821,26 +952,32 @@ class DPolynomial(Element):
     ###################################################################################
     def _add_(self, other: DPolynomial) -> DPolynomial:
         keys = set(self._content.keys()).union(other._content.keys())
-        return DPolynomial(self._parent, {m : self.coefficient(m) + other.coefficient(m) for m in keys})
+        return DPolynomial(self._parent, {m : self._content.get(m,self._parent.base().zero()) + other._content.get(m,self._parent.base().zero()) for m in keys})
     def __neg__(self) -> DPolynomial:
-        return DPolynomial(self._parent, {m : -c for (m,c) in self._content})
+        return DPolynomial(self._parent, {m : -c for (m,c) in self._content.items()})
     def _sub_(self, other: DPolynomial) -> DPolynomial:
         return self + (-other)
     def _mul_(self, other: DPolynomial) -> DPolynomial:
         output = dict()
-        for (ms, mo) in zip(self.monomials(), other.monomials()):
+        for (ms, mo) in product(self.monomials(), other.monomials()):
             m = ms*mo
-            output[m] = output.get(m) + self.coefficient(ms)*other.coefficient(mo)
+            output[m] = output.get(m, self._parent.base().zero()) + self._content[ms]*other._content[mo]
         return DPolynomial(self._parent, output)
     def _floordiv_(self, _: DPolynomial) -> DPolynomial:
         return NotImplemented
     @cached_method
     def __pow__(self, power: int) -> DPolynomial:
         if power == 0: return self._parent.one()
+        elif power == 1: return self
         elif power < 0: raise NotImplementedError("Negative powers not allowed")
         else:
             a,A = (self**(power//2 + power%2), self**(power//2))
             return a*A
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, DMonomial):
+            return self == self._parent(other)
+        return super().__eq__(other)
 
     def numerator(self) -> DPolynomial:
         return self
@@ -958,7 +1095,6 @@ class DPolynomial(Element):
             This can also be done for difference operators::
             
         '''
-        raise NotImplementedError("This method is not yet implemented")
         # if self._parent.noperators() > 1:
         #     raise NotImplementedError("[solve] Method implemented only for 1 operator.")
         
@@ -971,6 +1107,7 @@ class DPolynomial(Element):
         # coeff = self.coefficient(gen[self.order(gen)])
         # rem = -self + coeff*gen[self.order(gen)]
         # return (rem/coeff).inverse_operation(0, times=self.order(gen))
+        raise NotImplementedError("This method is not yet implemented")
 
     ###################################################################################
     ### Weight methods
@@ -1044,7 +1181,13 @@ class DPolynomial(Element):
     ### Other magic methods
     ###################################################################################
     def __repr__(self) -> str:
-        return "+".join(f"({repr(c)}){f'*{m}' if not m.is_one() else ''}" for (m,c) in self._content.items())
+        if self.is_zero(): return "0"
+        parts = []
+        for (m,c) in self._content.items():
+            if m.is_one(): parts.append(f"({c})")
+            elif c == 1: parts.append(f"{m}")
+            else: parts.append(f"({c})*{m}")
+        return "+".join(parts)
     
     def _latex_(self) -> str:
         return "+".join(r"\left(" + latex(c) + r"\right)" + ('' if m.is_one() else latex(m)) for (m,c) in self._content.items())
@@ -1052,7 +1195,7 @@ class DPolynomial(Element):
     def __call__(self, *args, dic : dict = None, **kwds):
         return sum(c*m.eval(*args, dic=dic, **kwds) for (m,c) in self._content.items())
     
-class DPolynomialRing_new:
+class DPolynomialRing_new(Parent):
     r'''
         Class for a ring of polynomials over a :class:`~dalgebra.dring.DRing`.
 
@@ -1227,13 +1370,19 @@ class DPolynomialRing_new:
 
         if any(ttype == "none" for ttype in base.operator_types()):
             raise TypeError(f"All operators in {base} must be typed")
+        
+        ## Setting the inner variables of the ring
+        super().__init__(base, category=tuple(self._set_categories(base)))
 
-        ## Line to set the appropriate parent class
-        CommutativeRing.__init__(self, base, category=self._set_categories(base))
-        ## Initializing the ring of infinitely many variables
-        super().__init__(base, names, 'deglex')
-        ## Resetting the category to be the appropriate
-        CommutativeRing.__init__(self, base, category=self._set_categories(base))
+        self.__operators : tuple[AdditiveMap] = tuple([
+            self._create_operator(operation, ttype) 
+            for operation, ttype in enumerate(self.base().operator_types())
+        ])
+        self.__variable_names = tuple(names)
+        self.__gens = tuple(DPolynomialGen(self, name, index=i) for (i,name) in enumerate(names))
+        self.__cache : list[dict[DPolynomial, DPolynomial]] = [dict() for _ in range(len(self.__operators))]
+        self.__cache_ranking : dict[tuple[tuple[DPolynomial], str], RankingFunction] = dict()
+        self.__fraction_field : DFractionField = None
         
         # registering conversion to simpler structures
         current = self.base()
@@ -1251,69 +1400,17 @@ class DPolynomialRing_new:
         except NotImplementedError:
             pass
 
-        self.__variable_names = tuple(names)
-        self.__operators : tuple[AdditiveMap] = tuple([
-            self._create_operator(operation, ttype) 
-            for operation, ttype in enumerate(self.base().operator_types())
-        ])
-        self.__cache : list[dict[DPolynomial, DPolynomial]] = [dict() for _ in range(len(self.__operators))]
-        self.__cache_ranking : dict[tuple[tuple[DPolynomial], str], RankingFunction] = dict()
-        self.__fraction_field : DFractionField = None
-
     #################################################
-    ### Coercion methods
+    ### GETTER METHODS
     #################################################
-    def _has_coerce_map_from(self, S: Parent) -> bool:
-        r'''
-            Standard implementation for ``_has_coerce_map_from``
-        '''
-        coer =  self._coerce_map_from_(S)
-        return (not(coer is False) and not(coer is None))
-        
-    def _element_constructor_(self, x) -> DPolynomial:
-        r'''
-            Extended definition of :func:`_element_constructor_`.
-
-            Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse`
-            and then transforms the output into the corresponding type for ``self``.
-        '''
-        try:
-            if isinstance(x, DPolynomial): # x is a D-polynomial, we translate independently the coefficients and the monomials
-                p = sum(self.base()(c)*self(str(t)) for (c,t) in zip(x.coefficients(), x.monomials()))
-            else:
-                p = super()._element_constructor_(x)
-            return self.element_class(self, p)
-        except (ValueError, NameError) as error: # if it is not a normal element, we try as linear operators
-            try:
-                p = self.base()._element_constructor_(x)
-                return self(p)
-            except (ValueError, NameError) as error:
-                try: # trying to get the ring of linear operators
-                    operator_ring = self.linear_operator_ring()
-                    if x in operator_ring:
-                        x = operator_ring(x).polynomial()
-                        y = self.gens()[0]
-                        if self.noperators() == 1: # x is a univariate polynomial
-                            return sum(self.base()(x.monomial_coefficient(m))*y[m.degree()] for m in x.monomials())
-                        else:
-                            return sum(self.base()(c)*y[tuple(m.degrees())] for (c,m) in zip(x.coefficients(), x.monomials()))
-                except NotImplementedError:
-                    raise NotImplementedError(f"Ring of linear operator rings not implemented. Moreover: {error}")
-
-    def _pushout_(self, other):
-        scons, sbase = self.construction()
-        if isinstance(other, DPolynomialRing_new):
-            ocons, obase = other.construction()
-            cons = scons.merge(ocons)
-            try:
-                base = pushout(sbase, obase)
-            except TypeError:
-                base = pushout(obase, sbase)
-            return cons(base)
-        return None
+    def variable_names(self) -> tuple[str]:
+        return self.__variable_names
+    
+    def gens(self) -> tuple[DPolynomialGen]:
+        return self.__gens
     
     @cached_method
-    def gen(self, i: int | str = None) -> DPolynomialGen:
+    def gen(self, i: int|str = None):
         r'''
             Override method to create the `i^{th}` generator (see method 
             :func:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse.gen`).
@@ -1363,15 +1460,83 @@ class DPolynomialRing_new:
                 ValueError: tuple.index(x): x not in tuple
         '''
         if isinstance(i, str):
-            i = self._names.index(i)
-        if(not(i in ZZ) or (i < 0 or i > len(self._names))):
+            i = self.variable_names().index(i)
+        if(not(i in ZZ) or (i < 0 or i > len(self.variable_names()))):
             raise ValueError("Invalid index for generator")
         
-        return DPolynomialGen(self, self._names[i])
-                
-    def variable_names(self) -> tuple[str]:
-        return self.__variable_names
+        return self.gens()[i]
+    
+    def ngens(self) -> int:
+        return len(self.__variable_names)
 
+    
+    #################################################
+    ### Coercion methods
+    #################################################
+    def _has_coerce_map_from(self, S: Parent) -> bool:
+        r'''
+            Standard implementation for ``_has_coerce_map_from``
+        '''
+        coer =  self._coerce_map_from_(S)
+        return (not(coer is False) and not(coer is None))
+        
+    def _element_constructor_(self, x) -> DPolynomial:
+        r'''
+            Extended definition of :func:`_element_constructor_`.
+
+            Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse`
+            and then transforms the output into the corresponding type for ``self``.
+        '''
+        if isinstance(x, DMonomial):
+            return DPolynomial(self, {DMonomial(self, x): self.base().one()}) # create a polynomial out of a monomial
+        elif isinstance(x, DPolynomial):
+            return DPolynomial(self, x) # this casts the coefficients
+        elif x in self.base():
+            return DPolynomial(self, {DMonomial.one(self): x}) # casting elements in self.base()
+        else:
+            ## Converting the input into a Symbolic Expression
+            if isinstance(x, str): x = SR(x)
+            if x in SR: x = SR(x)
+
+            variables = x.variables()
+
+            ## Splitting variables into normal variables and other variables
+            inner_variables = []; outer_variables = []; var_and_order = dict()
+            for v in variables:
+                for (i,g) in enumerate(self.gens()):
+                    if v in g:
+                        outer_variables.append(v)
+                        var_and_order[v] = (i, g.index(v))
+                        break
+            else: inner_variables.append(v)
+
+            ## We check the object is a polynomial in the outer variables
+            if any(not x.is_polynomial(v) for v in outer_variables): 
+                raise ValueError(f"The input is not a polynomial: {x}")
+            ## We check if the inner variables are in the base ring
+            if any(not v in self.base() for v in inner_variables):
+                raise ValueError(f"The input has coefficients that are not in base ring: {x}")
+            ## Creating a polynomial out of the element
+            PR = PolynomialRing(self.base(), outer_variables, sparse=True)
+            x = x.polynomial(ring=PR)
+
+            return DPolynomial(self, {
+                DMonomial(self, ((var_and_order[v], m.degree(v)) for v in m.variables())) : c
+                for (c,m) in zip(x.coefficients(), x.monomials())
+            })
+
+    def _pushout_(self, other):
+        scons, sbase = self.construction()
+        if isinstance(other, DPolynomialRing_new):
+            ocons, obase = other.construction()
+            cons = scons.merge(ocons)
+            try:
+                base = pushout(sbase, obase)
+            except TypeError:
+                base = pushout(obase, sbase)
+            return cons(base)
+        return None
+              
     def construction(self) -> tuple[DPolyRingFunctor, Ring]:
         r'''
             Return the associated functor and input to create ``self``.
@@ -1383,7 +1548,7 @@ class DPolynomialRing_new:
             For a :class:`DPolynomialRing_new`, the associated functor class is :class:`DPolyRingFunctor`.
             See its documentation for further information.
         '''
-        return DPolyRingFunctor(self._names), self.base()
+        return DPolyRingFunctor(self.variable_names()), self.base()
     
     def flatten(self, polynomial : DPolynomial) -> Element:
         r'''
@@ -1443,32 +1608,33 @@ class DPolynomialRing_new:
                 sage: R(R.flatten(f1)) == f1
                 True
         '''
-        # we check that the input is in ``self``
-        polynomial = self(polynomial)
+    #     # we check that the input is in ``self``
+    #     polynomial = self(polynomial)
 
-        # we compute the destination ring for the polynomial
-        variables = [*polynomial.polynomial().parent().gens()]
-        current = self.base()
-        while (
-            isinstance(current, DRing_Wrapper) or 
-            is_PolynomialRing(current) or 
-            is_MPolynomialRing(current) or 
-            isinstance(current, InfinitePolynomialRing_dense) or 
-            isinstance(current, InfinitePolynomialRing_sparse)
-        ):
-            if is_PolynomialRing(current) or is_MPolynomialRing(current):
-                variables.extend(current.gens())
-            elif isinstance(current, InfinitePolynomialRing_dense) or isinstance(current, InfinitePolynomialRing_sparse):
-                variables.extend(reduce(lambda p, q : pushout(p,q), [c.polynomial().parent() for c in polynomial.polynomial().coefficients()]).gens())
+    #     # we compute the destination ring for the polynomial
+    #     variables = [*polynomial.polynomial().parent().gens()]
+    #     current = self.base()
+    #     while (
+    #         isinstance(current, DRing_Wrapper) or 
+    #         is_PolynomialRing(current) or 
+    #         is_MPolynomialRing(current) or 
+    #         isinstance(current, InfinitePolynomialRing_dense) or 
+    #         isinstance(current, InfinitePolynomialRing_sparse)
+    #     ):
+    #         if is_PolynomialRing(current) or is_MPolynomialRing(current):
+    #             variables.extend(current.gens())
+    #         elif isinstance(current, InfinitePolynomialRing_dense) or isinstance(current, InfinitePolynomialRing_sparse):
+    #             variables.extend(reduce(lambda p, q : pushout(p,q), [c.polynomial().parent() for c in polynomial.polynomial().coefficients()]).gens())
             
-            if isinstance(current, DRing_Wrapper):
-                current = current.wrapped
-            else:
-                current = current.base()
+    #         if isinstance(current, DRing_Wrapper):
+    #             current = current.wrapped
+    #         else:
+    #             current = current.base()
 
-        # at this state we have a "current" that can not be extracted further and a list of variables
-        destiny_ring = PolynomialRing(current, variables)
-        return destiny_ring(str(polynomial.polynomial()))
+    #     # at this state we have a "current" that can not be extracted further and a list of variables
+    #     destiny_ring = PolynomialRing(current, variables)
+    #     return destiny_ring(str(polynomial.polynomial()))
+        raise NotImplementedError("This method is not yet implemented")
 
     def change_ring(self, R):
         r'''
@@ -1508,18 +1674,22 @@ class DPolynomialRing_new:
     #################################################
     ### Magic python methods
     #################################################
-    def __call__(self, *args, **kwds) -> DPolynomial:
-        res = super().__call__(*args, **kwds)
-        if not isinstance(res, self.element_class):
-            res = self.element_class(self, res)
-        return res
+    def __contains__(self, x):
+        if isinstance(x, DMonomial):
+            return x._parent.noperators() <= self.noperators()
+        return super().__contains__(x)
+    # def __call__(self, *args, **kwds) -> DPolynomial:
+    #     res = super().__call__(*args, **kwds)
+    #     if not isinstance(res, self.element_class):
+    #         res = self.element_class(self, res)
+    #     return res
 
     ## Other magic methods   
     def __repr__(self):
-        return f"Ring of operator polynomials in ({', '.join(self._names)}) over {self._base}"
+        return f"Ring of operator polynomials in ({', '.join(self.variable_names())}) over {self.base()}"
 
     def _latex_(self):
-        return latex(self._base) + r"\{" + ", ".join(self._names) + r"\}"
+        return latex(self.base()) + r"\{" + ", ".join(self.variable_names()) + r"\}"
             
     #################################################
     ### Element generation methods
@@ -1774,74 +1944,34 @@ class DPolynomialRing_new:
         operator : AdditiveMap = self.base().operators()[operation] 
         if ttype == "homomorphism":
             def __extended_homomorphism(element : DPolynomial) -> DPolynomial:
-                if(element in self):
-                    element = self(element)
-                else:
-                    element=self(str(element))
+                element = self(element)
                     
                 if(element in self.base()):
                     return self(operator(self.base()(element)))
                 
                 if(not element in self.__cache[operation]):
-                    generators = self.gens()
-                    if(element.is_monomial()):
-                        c = element.coefficients()[0]
-                        v = element.variables(); d = [element.degree(v[i]) for i in range(len(v))]
-                        v = [self(str(el)) for el in v]
-
-                        result = operator(c)
-                        for i in range(len(v)):
-                            for g in generators:
-                                if g.contains(v[i]):
-                                    result *= g.next(v[i], operation)**d[i]
-                                    break
-                        
-                        self.__cache[operation][element] = result
-                    else:
-                        c = element.coefficients(); m = element.monomials()
-                        self.__cache[operation][element] = sum(operator(c[i])*__extended_homomorphism(m[i]) for i in range(len(m)))
-                        
+                    self.__cache[operation][element] = DPolynomial(
+                        self, 
+                        {m._shift_(operation) : operator(c) for (m,c) in element._content.items()}
+                    )
+                    
                 return self.__cache[operation][element]
             func = __extended_homomorphism
         elif ttype == "derivation":
             def __extended_derivation(element : DPolynomial) -> DPolynomial:
-                if(element in self):
-                    element = self(element)
-                else:
-                    element=self(str(element))
+                element = self(element)
 
-                try:
+                if(element in self.base()):
                     return self(operator(self.base()(element)))
-                except:
-                    pass
                 
                 if(not element in self.__cache[operation]):
-                    generators = self.gens()
-                    if(element.is_monomial()):
-                        c = element.coefficients()[0]
-                        m = element.monomials()[0]
-                        v = element.variables(); d = [element.degree(v[i]) for i in range(len(v))]
-                        v = [self(str(el)) for el in v]
-                        base = c*prod([v[i]**(d[i]-1) for i in range(len(v))], self.one())
-
-                        first_term = operator(c)*m
-                        second_term = self.zero()
-                        for i in range(len(v)):
-                            to_add = d[i]*prod([v[j] for j in range(len(v)) if j != i], self.one())
-                            for g in generators:
-                                if(g.contains(v[i])):
-                                    to_add *= g.next(v[i], operation) # we create the next generator for this operation
-                                    break
-                            second_term += to_add
-                        self.__cache[operation][element] = first_term + base*second_term
-                    else:
-                        self.__cache[operation][element] = sum(
-                            operator(c)*m + c*__extended_derivation(m) 
-                            for (c,m) in zip(
-                                element.coefficients(), 
-                                element.monomials()
-                            )
-                        )
+                    final_dict = dict()
+                    for (m,c) in element._content.items():
+                        for nm, e in m._derivative_(operation):
+                            final_dict[nm] = final_dict.get(nm, self.base().zero()) + c*e
+                        final_dict[m] = final_dict.get(m, self.base().zero()) + operator(c)
+                    
+                        self.__cache[operation][element] = DPolynomial(self, final_dict)
                         
                 return self.__cache[operation][element]
             func = __extended_derivation
@@ -1907,19 +2037,12 @@ class DPolynomialRing_new:
         elif element.degree() == 1:
             logger.debug(f"[inverse_derivation] Found linear element --> Easy to do")
             solution = self.zero()
-            for coeff, monomial in zip(element.coefficients(), element.monomials()):
-                if monomial == 1:
+            for monomial, coeff in element._content.items():
+                if monomial.is_one():
                     raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
                 coeff = coeff.inverse_operation(operation) if not coeff.d_constant() else coeff
-                var = monomial.variables()[0] # we know there is only 1
-                for g in element.infinite_variables():
-                    if var in g:
-                        ind = list(g.index(var, True))
-                        if ind[operation] == 0:
-                            raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
-                        ind[operation] -= 1
-                        new_mon = g[tuple(ind) if len(ind) > 1 else ind[0]]
-                        break
+                var = next(iter(monomial.variables())) # we know there is only 1
+                new_mon = var._inverse_(operation)
                 solution += coeff*new_mon
         else:
             logger.debug(f"[inverse_derivation] Element is not linear")
@@ -1928,11 +2051,11 @@ class DPolynomialRing_new:
                 raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
             monomials_with_points = []
             for mon in monomials:
-                bv = max(self.gens().index(v) for v in mon.infinite_variables())
-                bo = mon.order(self.gens()[bv], operation)
+                bv = max(k[0] for k in mon._variables) # index of the maximum variable
+                bo = mon.order(bv, operation) # order of the biggest variable w.r.t. operation
                 monomials_with_points.append((bv, bo))
 
-            aux = max(el[1] for el in monomials_with_points)
+            aux = max(el[1] for el in monomials_with_points) # element with highest order -> used as a balance option to use "max"
             V, O = max(monomials_with_points, key = lambda p: p[0]*aux + p[1])
             V = self.gens()[V]
             logger.debug(f"[inverse_derivation] Maximal variable: {V[O]}")
@@ -1940,8 +2063,8 @@ class DPolynomialRing_new:
             if element.degree(V[O]) > 1:
                 raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
             else:
-                highest_part = element.coefficient(V[O]); deg_order_1 = highest_part.degree(V[O-1])
-                cs = [highest_part.coefficient(V[O-1]**i) for i in range(deg_order_1+1)]
+                highest_part = element.coefficient(V[O], _poly=True); deg_order_1 = highest_part.degree(V[O-1])
+                cs = [highest_part.coefficient(V[O-1]**i, _poly=True) for i in range(deg_order_1+1)]
                 order_1_part = sum(cs[i]*V[O-1]**i for i in range(deg_order_1+1))
                 q1 = highest_part - order_1_part # order q1 < d-1
                 
@@ -2153,46 +2276,47 @@ class DPolynomialRing_new:
                 ...
                 NotImplementedError: [sylvester_checking] Sylvester resultant with 2 is not implemented
         '''
-        ## Checking the polynomials and ring arguments
-        P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
+        # ## Checking the polynomials and ring arguments
+        # P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
         
-        ## Checking the k argument
-        n = P.order(gen); m = Q.order(gen); N = min(n,m) - 1
-        # Special case when one of the orders is -1 (i.e., the variable `gen` is not present)
-        if n == -1:
-            return matrix([[P]]) # P does not contain the variable `gen` to eliminate
-        elif m == -1:
-            return matrix([[Q]]) # Q does not contain the variable `u` to eliminate
+        # ## Checking the k argument
+        # n = P.order(gen); m = Q.order(gen); N = min(n,m) - 1
+        # # Special case when one of the orders is -1 (i.e., the variable `gen` is not present)
+        # if n == -1:
+        #     return matrix([[P]]) # P does not contain the variable `gen` to eliminate
+        # elif m == -1:
+        #     return matrix([[Q]]) # Q does not contain the variable `u` to eliminate
         
-        if not k in ZZ:
-            raise TypeError(f"[sylvester_matrix] The index {k = } is not an integer.")
-        elif N == -1 and k != 0:
-            raise TypeError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0].")
-        elif N >= 0 and (k < 0 or k > N):
-            raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
+        # if not k in ZZ:
+        #     raise TypeError(f"[sylvester_matrix] The index {k = } is not an integer.")
+        # elif N == -1 and k != 0:
+        #     raise TypeError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0].")
+        # elif N >= 0 and (k < 0 or k > N):
+        #     raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
         
-        part_without_gen = lambda Poly : sum(c*m for (c,m) in zip(Poly.coefficients(), Poly.monomials()) if m.order(gen) == -1)
-        homogeneous = any(part_without_gen(poly) != 0 for poly in (P,Q))
+        # part_without_gen = lambda Poly : sum(c*m for (c,m) in zip(Poly.coefficients(), Poly.monomials()) if m.order(gen._index) == -1)
+        # homogeneous = any(part_without_gen(poly) != 0 for poly in (P,Q))
 
-        if homogeneous and k > 0:
-            raise NotImplementedError(f"[sylvester_matrix] The case of inhomogeneous operators and positive {k=} is not implemented.")
+        # if homogeneous and k > 0:
+        #     raise NotImplementedError(f"[sylvester_matrix] The case of inhomogeneous operators and positive {k=} is not implemented.")
 
-        extra = 1 if homogeneous else 0
-        logger.info(f"Sylvester data: {n=}, {m=}, {k=}, {homogeneous=}")
+        # extra = 1 if homogeneous else 0
+        # logger.info(f"Sylvester data: {n=}, {m=}, {k=}, {homogeneous=}")
 
-        # Building the extension
-        extended_P: list[DPolynomial] = [P.operation(times=i) for i in range(m-k+extra)]
-        extended_Q: list[DPolynomial] = [Q.operation(times=i) for i in range(n-k+extra)]
+        # # Building the extension
+        # extended_P: list[DPolynomial] = [P.operation(times=i) for i in range(m-k+extra)]
+        # extended_Q: list[DPolynomial] = [Q.operation(times=i) for i in range(n-k+extra)]
 
-        # Building the Sylvester matrix (n+m-1-k) , (n+m-1-k)
-        fR = self.polynomial_ring() # guaranteed common parent for all polynomials
-        cols = [fR(gen[pos].polynomial()) for pos in range(n+m-k+extra)]
-        equations = [fR(equation.polynomial()) for equation in extended_P + extended_Q]
+        # # Building the Sylvester matrix (n+m-1-k) , (n+m-1-k)
+        # fR = self.polynomial_ring() # guaranteed common parent for all polynomials
+        # cols = [fR(gen[pos].polynomial()) for pos in range(n+m-k+extra)]
+        # equations = [fR(equation.polynomial()) for equation in extended_P + extended_Q]
 
-        # Returning the matrix
-        output = matrix([([part_without_gen(self(equation))] if homogeneous else []) + [self(equation.coefficient(m)) for m in cols] for equation in equations])
-        logger.info(f"Obtained following matrix:\n{output}")
-        return output
+        # # Returning the matrix
+        # output = matrix([([part_without_gen(self(equation))] if homogeneous else []) + [self(equation.coefficient(m)) for m in cols] for equation in equations])
+        # logger.info(f"Obtained following matrix:\n{output}")
+        # return output
+        raise NotImplementedError(f"Method need revisiting")
 
     def sylvester_subresultant_sequence(self, P: DPolynomial, Q: DPolynomial, gen: DPolynomialGen = None) -> tuple[DPolynomial]:
         r'''
@@ -2364,16 +2488,17 @@ class DPolynomialRing_new:
                 NotImplementedError: Impossible to generate ring of linear operators with 2 variables
 
         '''
-        linear_operator_ring = self.linear_operator_ring() # it ensures the structure is alright for building this
-        element = self(element) # making sure the element is in ``self``
+        # linear_operator_ring = self.linear_operator_ring() # it ensures the structure is alright for building this
+        # element = self(element) # making sure the element is in ``self``
 
-        if not element.is_linear() or 1 in element.polynomial().monomials():
-            raise TypeError("Linear operator can only be built from an homogeneous linear operator polynomial.")
+        # if not element.is_linear() or 1 in element.polynomial().monomials():
+        #     raise TypeError("Linear operator can only be built from an homogeneous linear operator polynomial.")
 
-        coeffs = element.coefficients(); monoms = element.monomials(); y = self.gens()[0]
-        base_ring = linear_operator_ring.base(); gens = linear_operator_ring.gens()
+        # coeffs = element.coefficients(); monoms = element.monomials(); y = self.gens()[0]
+        # base_ring = linear_operator_ring.base(); gens = linear_operator_ring.gens()
 
-        return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
+        # return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
+        raise NotImplementedError(f"Method need a revision")
 
 def is_DPolynomialRing(element):
     r'''
@@ -2969,7 +3094,7 @@ class RankingFunction:
         '''
         element = self.parent()(element)
 
-        return element.coefficient(self.rank(element))
+        return element.coefficient(self.rank(element), _poly = True)
 
     @cached_method
     def separant(self, element: DPolynomial) -> DPolynomial:
