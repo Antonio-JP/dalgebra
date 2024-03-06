@@ -273,7 +273,7 @@ class DMonomial(Element):
         for (v, o), e in self._variables.items():
             copy = self._variables.copy()
             od = list(o); od[operation] += 1; od = tuple(od)
-            copy[(v, od)] = 1
+            copy[(v, od)] = 1 if not (v,od) in copy else copy[(v,od)]+1
             if e == 1: copy.pop((v, o))
             else: copy[(v,o)] = e - 1
             result.append((self._parent.element_class(self._parent, copy), e))

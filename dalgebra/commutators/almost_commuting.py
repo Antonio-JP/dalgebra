@@ -160,9 +160,11 @@ from sage.all import binomial, matrix, QQ, vector, ZZ
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 
 from ..dring import DifferentialRing, DRings
-from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
-from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing_sparse
-from ..dpolynomial.dpolynomial_system import DSystem
+
+# from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
+# from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing_sparse
+from ..dpolynomial.dpolynomial import DPolynomial, DPolynomialGen, DPolynomialSimpleMorphism, DPolynomialRing_Monoid, DifferentialPolynomialRing
+# from ..dpolynomial.dpolynomial_system import DSystem
 from ..logging.logging import cache_in_file
 
 #################################################################################################
@@ -195,18 +197,18 @@ def __names_variables(order:int, var_name: str, *, simplify_names: bool = True) 
             sage: __names_variables(0, "p")
             []
             sage: __names_variables(3, "a")
-            ['a2', 'a3']
+            ['a_2', 'a_3']
             sage: __names_variables(15, "L")
-            ['L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9', 'L10', 'L11', 'L12', 'L13', 'L14', 'L15']
+            ['L_2', 'L_3', 'L_4', 'L_5', 'L_6', 'L_7', 'L_8', 'L_9', 'L_10', 'L_11', 'L_12', 'L_13', 'L_14', 'L_15']
 
         The option ``simplify_names`` decides whether to remove the index "2" to the variable name when ``order`` is 2.
         In some cases, keeping the generic name template with the `2` is cumbersome, but in other cases it is easier to do 
         comparisons::
 
             sage: __names_variables(2, "u", simplify_names=False)
-            ['u2']
+            ['u_2']
     '''
-    return [f"{var_name}{i+2}" for i in range(order-1)] if (order > 2 or (not simplify_names)) else [var_name] if order == 2 else []
+    return [f"{var_name}_{i+2}" for i in range(order-1)] if (order > 2 or (not simplify_names)) else [var_name] if order == 2 else []
 
 @lru_cache(maxsize=64)
 def generic_normal(n: int, 
@@ -247,19 +249,19 @@ def generic_normal(n: int,
             sage: generic_normal(2)
             u_0*z_0 + z_2
             sage: generic_normal(3)
-            u2_0*z_1 + u3_0*z_0 + z_3
+            u_2_0*z_1 + u_3_0*z_0 + z_3
             sage: generic_normal(4)
-            u2_0*z_2 + u3_0*z_1 + u4_0*z_0 + z_4
+            u_2_0*z_2 + u_3_0*z_1 + u_4_0*z_0 + z_4
             sage: generic_normal(4, "a")
-            a2_0*z_2 + a3_0*z_1 + a4_0*z_0 + z_4
+            a_2_0*z_2 + a_3_0*z_1 + a_4_0*z_0 + z_4
             sage: generic_normal(4, "a", "p")
-            a2_0*p_2 + a3_0*p_1 + a4_0*p_0 + p_4
+            a_2_0*p_2 + a_3_0*p_1 + a_4_0*p_0 + p_4
             sage: from dalgebra import DifferentialPolynomialRing
-            sage: R = DifferentialPolynomialRing(QQ, ["u2", "u3", "u4", "p", "a", "z"])
+            sage: R = DifferentialPolynomialRing(QQ, ["u_2", "u_3", "u_4", "p", "a", "z"])
             sage: generic_normal(4, output_ring=R).parent() is R
             True
             sage: generic_normal(4).parent()
-            Ring of operator polynomials in (u2, u3, u4, z) over Differential Ring [[Rational Field], (0,)]
+            Ring of operator polynomials in (u_2, u_3, u_4, z) over Differential Ring [[Rational Field], (0,)]
 
     '''
     ## Checking the input
@@ -267,7 +269,7 @@ def generic_normal(n: int,
         raise ValueError(f"[almost] The value {n = } must be a positive integer")
     if name_var == name_partial:
         raise ValueError(f"[almost] The names for the differential variables must be different. Given {name_var} and {name_partial}")
-    if output_ring != None and not isinstance(output_ring, DPolynomialRing_sparse):
+    if output_ring != None and not isinstance(output_ring, DPolynomialRing_Monoid):
         raise TypeError(f"[almost] The optional argument `output_ring` must be a ring of d-polynomials or ``None``")
     
     names_u = __names_variables(n, name_var, simplify_names=simplify_names)
@@ -378,11 +380,14 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "recursive"
         u = [R.gen(name) for name in names_u] # this is [u2, u3, ..., un]
         p = [R.gen(v) for v in __names_variables(m, name_p, simplify_names=False)] # this is [p2, p3, ..., pn]
 
+        ## Creating the simplification morphism
+        simplifier = DPolynomialSimpleMorphism(R, output_ring)
+
         ## Solving the system with the corresponding method
         solve_p = solver(R, equations, u, p)
-        solve_p = {v : output_ring(solve_p[v]) for v in p}
+        solve_p = {v : simplifier(solve_p[v]) for v in p}
         Pm = output_z[m] + sum(solve_p[v] * output_z[m-i-2] for i, v in enumerate(p))
-        T = tuple([el(dic=solve_p) for el in T])
+        T = tuple([simplifier(el(dic=solve_p)) for el in T])
         
         output = (Pm,T)
     return output
@@ -421,7 +426,7 @@ def almost_commuting_wilson(n: int, m: int, name_u: str|list[str]|tuple[str] = "
 
     return Pm,T
 
-def __almost_commuting_direct(parent: DPolynomialRing_sparse, order_L: int, order_P: int, name_p: str, name_u: str, name_z: str) -> tuple[DPolynomialRing_sparse, list[DPolynomial], list[DPolynomial]]:
+def __almost_commuting_direct(parent: DPolynomialRing_Monoid, order_L: int, order_P: int, name_p: str, name_u: str, name_z: str) -> tuple[DPolynomialRing_Monoid, list[DPolynomial], list[DPolynomial]]:
     r'''
         Direct method to compute the equations to solve for Wilson's almost commuting basis.
 
@@ -456,14 +461,14 @@ def __almost_commuting_direct(parent: DPolynomialRing_sparse, order_L: int, orde
     C = L.lie_bracket(P, z)
 
     ## Getting equations for almost-commutation and the remaining with 
-    equations = [C.coefficient(z[i]) for i in range(order_L-1, C.order(z)+1)]
-    T = [C.coefficient(z[i]) for i in range(order_L-1)]
+    equations = [C.coefficient_full(z[i]) for i in range(order_L-1, C.order(z)+1)]
+    T = [C.coefficient_full(z[i]) for i in range(order_L-1)]
 
     ## Returning the full output
     return R, equations, T
 
 @lru_cache(maxsize=128)
-def __almost_commuting_recursive(parent: DPolynomialRing_sparse, order_L: int, order_P: int, name_p: str, name_u: str, name_z: str) -> tuple[DPolynomialRing_sparse, list[DPolynomial], list[DPolynomial]]:
+def __almost_commuting_recursive(parent: DPolynomialRing_Monoid, order_L: int, order_P: int, name_p: str, name_u: str, name_z: str) -> tuple[DPolynomialRing_Monoid, list[DPolynomial], list[DPolynomial]]:
     r'''
         Recursive method to compute the equations to solve for Wilson's almost commuting basis.
 
@@ -505,9 +510,9 @@ def __almost_commuting_recursive(parent: DPolynomialRing_sparse, order_L: int, o
         E = T + E # mixing into one to fit format of recursion
 
         ## Getting the final ring
-        R = R.append_variables(f"{name_p}{order_P}") # we add the last variable ("p_m") into `R` 
+        R = R.append_variables(f"{name_p}_{order_P}") # we add the last variable ("p_m") into `R` 
         u = list(reversed([R.gen(name) for name in __names_variables(order_L, name_u)]))+ [[R.zero(), R.zero()], [R.one()]] # u[i] := coeff(L, z[i])
-        p = [R.one(), R.zero()] + [R.gen(f"{name_p}{i}") for i in range(2, order_P+1)] # p[i] := p_i (i.e. the coefficient of weight `i`)
+        p = [R.one(), R.zero()] + [R.gen(f"{name_p}_{i}") for i in range(2, order_P+1)] # p[i] := p_i (i.e. the coefficient of weight `i`)
         assert len(u) == order_L + 1; assert len(p) == order_P + 1
         ## Casting old things to the new ring
         E = [R(el) for el in E]
@@ -540,7 +545,7 @@ def __almost_commuting_recursive(parent: DPolynomialRing_sparse, order_L: int, o
 
         return R, output[n-1:], output[:n-1]
 
-def __almost_commuting_integral(parent: DPolynomialRing_sparse, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
+def __almost_commuting_integral(parent: DPolynomialRing_Monoid, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
     r'''
         Integration method to solve the equations for obtaining Wilson's almost commuting basis.
 
@@ -558,10 +563,11 @@ def __almost_commuting_integral(parent: DPolynomialRing_sparse, equations: list[
         Then, the output is in the usual format for these methods: it returns a dictionary `v \mapsto A` where `v` are 
         the variables given in ``p`` and `A` are the values such that, plugged into ``equations``, make them all vanish.
     '''
-    S = DSystem(equations, parent=parent, variables=p)
-    return S.solve_linear()
+    # S = DSystem(equations, parent=parent, variables=p)
+    # return S.solve_linear()
+    raise NotImplementedError("Need to revisit the integration solver")
 
-def __almost_commuting_linear(parent: DPolynomialRing_sparse, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
+def __almost_commuting_linear(parent: DPolynomialRing_Monoid, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
     r'''
         Method that solves the system for almost-commutation using a linear approach
 
@@ -586,23 +592,22 @@ def __almost_commuting_linear(parent: DPolynomialRing_sparse, equations: list[DP
 
     # Creating the homogeneous monomials and the names for the ansatz variables
     # Since p = [p_2, p_3, ..., p_m] we create the homogeneous monomials increasingly
-    hom_monoms = {p[i] : w.homogeneous_monomials(2+i) for i in range(m-1)}
-    ansatz_variables = {p[i]: [f"c_{i}_{j}" for j in range(len(hom_monoms[p[i]]))] for i in range(m-1)}
-
+    hom_monoms = {weight : w.homogeneous_monomials(weight) for weight in range(2,m+1)}
+    ansatz_variables = {weight: [f"c_{weight}_{j}" for j in range(len(hom_monoms[weight]))] for weight in range(2,m+1)}
     # Creating the new base ring with all new constants
     base_C = DifferentialRing(PolynomialRing(parent.base().wrapped,sum([name for name in ansatz_variables.values()],[])))
-    ansatz_variables = {p[i]: [base_C(el) for el in ansatz_variables[p[i]]] for i in range(m-1)}
-    cs = base_C.wrapped.gens()
+    ansatz_variables = {weight: [base_C(el) for el in ansatz_variables[weight]] for weight in range(2,m+1)}
+    cs = base_C.wrapped.gens() # used for linear equations at the end
 
     ## Adapting the DPolynomialRing
     # Casting monomials to the new ring (creating again reduce possible errors)
     R = parent.change_ring(base_C)
-    to_plug = {R.gen(gen.variable_name()) : sum(coeff*R(mon) for (mon,coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
+    to_plug = {f"p_{weight}" : sum(coeff*R(mon) for (mon,coeff) in zip(hom_monoms[weight], ansatz_variables[weight])) for weight in range(2, m+1)}
 
     ## Creating the new equations
-    equations = [equ(dic=to_plug) for equ in equations] 
-    new_equations = sum([[base_C(coeff).wrapped for coeff in equ.coefficients()] for equ in equations],[])
-
+    plugged_equations = [equ(**to_plug) for equ in equations] 
+    new_equations = sum([[coeff.wrapped for coeff in equ.coefficients()] for equ in plugged_equations],[])
+    
     if len(cs) == 1:
         A = matrix(base_C.wrapped.base(), [[equ.lc() for _ in cs] for equ in new_equations])
     else: # multivariate polynomials are the base structure
@@ -611,7 +616,7 @@ def __almost_commuting_linear(parent: DPolynomialRing_sparse, equations: list[DP
     sols = A.solve_right(-b)
     sols = {c : sol for (c, sol) in zip (cs, sols)}
     ## The ansatz evaluated contains elements in `parent`
-    ansatz_evaluated = {gen: sum(parent.base()(sols[coeff])*mon for (mon, coeff) in zip(hom_monoms[gen], ansatz_variables[gen])) for gen in p}
+    ansatz_evaluated = {gen: sum(parent.base()(sols[coeff])*mon for (mon, coeff) in zip(hom_monoms[i+2], ansatz_variables[i+2])) for (i,gen) in enumerate(p)}
 
     return ansatz_evaluated
 ###

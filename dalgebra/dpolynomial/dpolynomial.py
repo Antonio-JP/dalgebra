@@ -444,12 +444,12 @@ class DPolynomial(Element):
             kwds.update({self.parent().variable_names()[i] : args[i] for i in range(len(args))})
         elif dic != None:
             if not isinstance(dic, dict): raise TypeError("Invalid type for dictionary evaluating DMonomial")
-            kwds.update({v.variable_name() if isinstance(v, DMonomialGen) else str(v) : val for (v,val) in dic})
+            kwds.update({v.variable_name() if isinstance(v, DMonomialGen) else str(v) : val for (v,val) in dic.items()})
 
         ## Changing names to integers
         kwds = {self.parent().variable_names().index(k): v for (k,v) in kwds.items()}
 
-        result = ZZ(0)
+        result = ZZ(0); pp = result.parent()
         for (m, c) in self._content.items():
             ## Evaluating the monomial
             ev_mon = ZZ(1)
@@ -460,7 +460,9 @@ class DPolynomial(Element):
                     ev_mon *= P.apply_operations(el, o)
                 else:
                     rem_mon[(v,o)] = m._variables[(v,o)]
-            result += (c*ev_mon)*self.parent()(self.parent().monoids().element_class(self.parent().monoids(), rem_mon))
+            rem_mon = self.parent()(self.parent().monoids().element_class(self.parent().monoids(), rem_mon)) if len(rem_mon) > 0 else ZZ(1)
+            pp = pushout(pushout(pushout(pp, c.parent()), ev_mon.parent()), rem_mon.parent())
+            result = pp(result) + (pp(c)*pp(ev_mon))*pp(rem_mon)
         return result
 
     
@@ -2179,7 +2181,6 @@ class DPolynomialVariableMorphism (Morphism):
             }
         )
 
-
 class DPolynomialSimpleMorphism (Morphism):
     r'''
         Class representing maps to simpler rings.
@@ -2406,19 +2407,19 @@ class WeightFunction(SetMorphism):
             ## operation part
             for (operator, ttype, op_weight) in zip(self.parent().operators(), self.parent().operator_types(), self.__operator_weights):
                 if ttype == "derivation":
-                    logger.debug(f"Adding derivations of monomials of weights {weight-1}")
-                    to_add += sum((tuple(self.parent().element_class(self.parent(), {m: 1}) for m in operator(mon).monomials()) for mon in self.homogeneous_monomials(weight - op_weight)), tuple())
+                    logger.debug(f"Adding derivations of monomials of weights {weight-op_weight}")
+                    to_add += sum((tuple(self.parent()(m) for m in operator(mon).monomials()) for mon in self.homogeneous_monomials(weight - op_weight)), tuple())
                 elif ttype == "homomorphism":
                     cweight = weight - op_weight; i = 1
                     while cweight >= 0:
                         logger.debug(f"Adding shifts of monomials of weights {cweight} with degree {i}")
-                        to_add += sum((tuple(self.parent().element_class(self.parent(), {m: 1}) for m in operator(mon).monomials()) for mon in self.homogeneous_monomials(cweight) if mon.degree() == i), tuple())
+                        to_add += sum((tuple(self.parent()(m) for m in operator(mon).monomials()) for mon in self.homogeneous_monomials(cweight) if mon.degree() == i), tuple())
                         i += 1; cweight -= op_weight
                 else:
                     cweight = weight - 1
                     while cweight >= 0:
                         logger.debug(f"Adding operation of monomials of weights {cweight} that has weight {weight}")
-                        to_add += sum(([self.parent().element_class(self.parent(), {m: 1}) for m in operator(mon).monomials() if self(m) == weight] for mon in self.homogeneous_monomials(cweight)), tuple())
+                        to_add += sum(([self.parent()(m) for m in operator(mon).monomials() if self(m) == weight] for mon in self.homogeneous_monomials(cweight)), tuple())
                         cweight -= 1
                         
             ## multiplication part
