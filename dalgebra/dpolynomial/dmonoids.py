@@ -309,37 +309,12 @@ class DMonomial(Element):
         new_orders = list(v[1]); v[1][operation] -= 1; new_orders = tuple(new_orders)
         return self._parent.element_class(self._parent, (((v[0], new_orders), 1),))
     
-    def eval(self, *args, dic : dict = None, **kwds):
-        r'''
-            Evaluating a DMonomial
-
-            We rely on the variable names of the parent. There are no coercions in this method, it simply computes the corresponding product
-            with the corresponding values.
-        '''
-        if len(args) != 0: 
-            if dic != None or len(kwds) != 0:
-                raise TypeError("Incorrect format for evaluating a DMonomial")
-            kwds.update({self._parent.variable_names()[i] : args[i] for i in range(len(args))})
-        elif dic != None:
-            if not isinstance(dic, dict): raise TypeError("Invalid type for dictionary evaluating DMonomial")
-            kwds.update({v.variable_name() if isinstance(v, DMonomialGen) else str(v) : val for (v,val) in dic})
-
-        copy = self._variables.copy()
-        result = ZZ(1)
-        for variable, value in kwds.items():
-            index = self._parent.index_variable(variable)
-            for (v,o), e in self._variables.items():
-                if v == index:
-                    result *= (self._parent.apply_operations(value, o, _ordered=False))**e
-                    copy.pop((v,o)) # this variable will not appear in the remaining monomial
-        return result * (self._parent.element_class(self._parent, copy) if len(copy) > 0 else result._parent.one())
-
     @cached_method
     def variables(self) -> set[DMonomial]:
         r'''
             Return a set of variables (i.e., Monomials with only 1 element in the dictionary with degree 1) 
         '''
-        return set(self._variables.keys())
+        return set(self._parent.gens()[v[0]][v[1]] for v in self._variables.keys())
     
     @cached_method
     def orders(self, operation:int = -1) -> dict[int, int]: #: Compute the orders for each variable
@@ -377,17 +352,16 @@ class DMonomial(Element):
     ##############################################################################
     @cached_method
     def __hash__(self) -> int: #: hashing the dictionary using the tuples of items
-        return hash(tuple(self._variables.items()))
+        return hash(tuple(sorted(self._variables.items())))
     
     def __eq__(self, other: DMonomial) -> bool:
         if other == 1: return self.is_one()
         
         if isinstance(other, DMonomial): # the equality goes through the dictionary
             return self._variables == other._variables
-        elif other in self._parent: # case for elements of parent
-            return self._parent(other) == self._parent(self)
         else:
-            return False
+            return NotImplemented
+    def __ne__(self, other: DMonomial) -> bool: return not (self == other)
 
     @cached_method
     def __repr__(self) -> str:
@@ -486,7 +460,7 @@ class DMonomialGen:
         return not (self == other)
     
     def __hash__(self) -> int:
-        return hash(self._index, self._parent)
+        return hash((self._index, self._parent))
     
     def __getitem__(self, i : int | tuple[int]) -> DMonomial:
         if self._parent.noperators() > 1 and not isinstance(i, (list,tuple)):
@@ -592,8 +566,6 @@ class DMonomialMonoid(Parent):
     def _an_element_(self) -> DMonomial:
         return self.one()
     
-
-
     ################################################################################
     ### MAGIC METHODS
     ################################################################################
