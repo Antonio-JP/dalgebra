@@ -987,6 +987,7 @@ class DRing_WrapperElement(Element):
         if isinstance(r, DRing_Wrapper):
             return self.wrapped == r(x).wrapped
         return r(self) == r(x)
+    def __ne__(self, x) -> bool: return not (self == x)
     
     ## Other methods from rings and element
     def divides(self, other) -> bool:
@@ -1560,8 +1561,9 @@ class DRingFunctor(ConstructionFunctor):
     def _repr_(self):
         return f"DRing(*,{self.__operators}])"
         
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.__class__ == other.__class__ and self.__operators == other.__operators and self.__types == other.__types
+    def __ne__(self, other) -> bool: return not (self == other)
 
     def __merge_skews(self, f: SkewMap, g: SkewMap):
         r'''
@@ -1689,6 +1691,7 @@ class AdditiveMap(SetMorphism):
 
     def __eq__(self, other) -> bool:
         return isinstance(other, AdditiveMap) and self.domain() == other.domain() and self.function == other.function
+    def __ne__(self, other) -> bool: return not (self == other)
 
     def __hash__(self) -> int:
         return self.function.__hash__()
