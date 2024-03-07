@@ -20,6 +20,6 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from .dpolynomial_element import *
-from .dpolynomial_ring import *
-from .dpolynomial_system import *
+from .dmonoids import *
+from .dpolynomial import *
+from .dsystems import *

@@ -1,6 +1,8 @@
 r'''    
     Computing non-trivial centralizers.
 
+    TODO: CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
+
     This module contains the main functionality used for computing non-trivial centralizers of linear differential operators.
 
     This software has been used in the presentation in ISSAC'23 "Computing almost-commuting basis of Ordinary Differential
@@ -70,7 +72,7 @@ from sage.rings.polynomial.polynomial_element_generic import Polynomial
 from typing import Callable
 
 from ..dring import DRings, DifferentialRing, DFractionField
-from ..dpolynomial.dpolynomial_element import DPolynomial
+from ..dpolynomial.dpolynomial import DPolynomial
 from ..logging.logging import loglevel
 from .almost_commuting import generic_normal, almost_commuting_wilson
 

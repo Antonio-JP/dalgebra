@@ -7,8 +7,9 @@ r'''
     **Things remaining TODO**
     -----------------------------------------
 
-    1. Extend this documentation
-    2. Add references to notation, definitions, etc.
+    1. CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
+    2. Extend this documentation
+    3. Add references to notation, definitions, etc.
     
     **Elements provided by the module**
     -----------------------------------------
@@ -29,8 +30,7 @@ from time import time
 from typing import TypedDict
 
 from ..dring import DifferentialRing
-from ..dpolynomial.dpolynomial_element import DPolynomial
-from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing
+from ..dpolynomial.dpolynomial import DPolynomial, DifferentialPolynomialRing
 from ..logging.logging import loglevel
 from .ideals import SolutionBranch
 

@@ -10,7 +10,8 @@ r'''
     **Things remaining TODO**
     -----------------------------------------
 
-    1. Extend this documentation
+    1. CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
+    2. Extend this documentation
     
     **Elements provided by the module**
     -----------------------------------------
@@ -31,8 +32,7 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from typing import Any
 
 from ..dring import DifferentialRing, DRings
-from ..dpolynomial.dpolynomial_element import DPolynomial
-from ..dpolynomial.dpolynomial_ring import DPolynomialRing, DPolynomialRing_sparse
+from ..dpolynomial.dpolynomial import DPolynomial, DPolynomialRing, is_DPolynomialRing
 from ..logging.logging import loglevel, cut_string
 
 _DRings = DRings.__classcall__(DRings)
@@ -144,7 +144,7 @@ class SolutionBranch:
     @cached_method
     def diff_parent(self, origin):
         r'''Recreate the differential structure over the :func:`final_parent` for this solution branch.'''
-        if isinstance(origin, DPolynomialRing_sparse):
+        if is_DPolynomialRing(origin):
             output = DPolynomialRing(self.diff_parent(origin.base()), origin.variable_names())
         elif is_FractionField(origin) and origin in _DRings:
             output = self.diff_parent(origin.base()).fraction_field()

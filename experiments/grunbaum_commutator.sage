@@ -9,11 +9,13 @@ from sage.rings.polynomial.polynomial_element_generic import Polynomial
 from dalgebra import DifferentialRing, DifferentialPolynomialRing
 from dalgebra.commutators.commutator import GetEquationsForSolution, generate_polynomial_equations
 from dalgebra.commutators.ideals import analyze_ideal
-from dalgebra.dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
+from dalgebra.dpolynomial.dpolynomial import DPolynomial, DPolynomialGen
 from dalgebra.dring import DRing_WrapperElement
 from dalgebra.logging.logging import logging_file_level, logging_stderr_level
 import logging
 from time import time
+
+# TODO: CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
 
 def print_help():
     PAD_SIZE = os.get_terminal_size()[0]

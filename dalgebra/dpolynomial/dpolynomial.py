@@ -663,7 +663,6 @@ class DPolynomial(Element):
     ### Ranking methods
     ###################################################################################
     def __check_ranking_argument(self, ranking, ordering=None, ttype="orderly"):
-        from .dpolynomial_ring import RankingFunction
         if ranking == None: ranking = self.parent().ranking()
         elif not isinstance(ranking, RankingFunction): ranking = self.parent().ranking(ordering, ttype)
         return ranking
@@ -728,6 +727,7 @@ class DPolynomial(Element):
     
     def __call__(self, *args, dic : dict = None, **kwds):
         return self.eval(*args, dic=dic, **kwds)
+RWOPolynomial = DPolynomial #: alias for DPolynomial (used for backward compatibility)
 
 class DPolynomialGen(DMonomialGen):
     r'''
