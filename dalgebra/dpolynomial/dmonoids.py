@@ -164,7 +164,7 @@ class DMonomial(Element):
             sage: a[(2,3)]*b[(1,0)]
             a_2_3*b_1_0
             sage: b[0]**2*a[10]*b[1]
-            a_0_4*b_0_0**2*b_0_1
+            a_0_4*b_0_0^2*b_0_1
     '''
     def __init__(self, parent: DMonomialMonoid, input: DMonomial | dict[tuple[int,tuple[int]|int],int] | tuple[tuple[int,tuple[int]|int]|int, int]):
         self._variables = dict()
@@ -252,7 +252,7 @@ class DMonomial(Element):
         r'''
             Method to compute the derivative of a monomial. 
             
-            Due to the Leibniz tule, this is a sum, so we return a tuple of monomials that appear in the derivative with the coefficient.
+            Due to the Leibniz rule, this is a sum, so we return a tuple of monomials that appear in the derivative with the coefficient.
             This is valid for any derivation, since the differential variables do not concrete into any further operation.
 
             EXAMPLES::
@@ -272,7 +272,7 @@ class DMonomial(Element):
         result = list()
         for (v, o), e in self._variables.items():
             copy = self._variables.copy()
-            od = list(o); od[operation] += 1; od = tuple(od)
+            od = list(o); od[operation] += 1; od = tuple(od) # pylint: disable=unsupported-assignment-operation
             copy[(v, od)] = 1 if not (v,od) in copy else copy[(v,od)]+1
             if e == 1: copy.pop((v, o))
             else: copy[(v,o)] = e - 1
@@ -289,7 +289,7 @@ class DMonomial(Element):
         '''
         copy = self._variables.copy()
         for (v, o) in self._variables:
-            od = list(o); od[operation] += 1; od = tuple(od)
+            od = list(o); od[operation] += 1; od = tuple(od) # pylint: disable=unsupported-assignment-operation
             copy[(v,od)] = copy.pop((v,od))
 
         return self._parent.element_class(self._parent, copy)
@@ -304,9 +304,9 @@ class DMonomial(Element):
         if not self.is_variable():
             raise TypeError("Impossible to invert an operation for a non-variable")
         v = next(iter(self._variables))
-        if v[1][operation] != 0:
+        if v[1][operation] == 0:
             raise ValueError("Impossible to invert an operation that has not been applied")
-        new_orders = list(v[1]); v[1][operation] -= 1; new_orders = tuple(new_orders)
+        new_orders = list(v[1]); new_orders[operation] -= 1; new_orders = tuple(new_orders) # pylint: disable=unsupported-assignment-operation
         return self._parent.element_class(self._parent, (((v[0], new_orders), 1),))
     
     @cached_method
@@ -345,7 +345,7 @@ class DMonomial(Element):
         if variable != None:
             return self._variables.get(next(iter(variable._variables)), ZZ(0))
         else:
-            return sum(self._variables.items())
+            return sum(self._variables.values())
         
     ##############################################################################
     ### MAGIC METHODS
@@ -362,6 +362,9 @@ class DMonomial(Element):
         else:
             return NotImplemented
     def __ne__(self, other: DMonomial) -> bool: return not (self == other)
+
+    def __lt__(self, other: DMonomial) -> bool:
+        return sorted(self._variables.items()) < sorted(other._variables.items())
 
     @cached_method
     def __repr__(self) -> str:
@@ -420,6 +423,11 @@ class DMonomialGen:
             (v, _), e = next(iter(element._variables.items()))
             return  v == self._index and e == 1
         except:
+            if isinstance(element, str): # We try with strings
+                element_parts = element.split("_")
+                if len(element_parts) <= self._parent.noperators(): return False # not enough indices
+                name = "_".join(element_parts[:-self._parent.noperators()])
+                return name == self._name
             return False
         
     def index(self, element: DMonomial, as_tuple : bool = None) -> int | tuple[int]:
@@ -440,9 +448,13 @@ class DMonomialGen:
         '''
         as_tuple = self._parent.noperators() > 1 if as_tuple is None else as_tuple # defaulting value for as_tuple
         if(self.contains(element)):
-            element = self._parent(element) # Casting to DMonomial --> It is a variable
-            
-            index = next(iter(element._variables.keys()))[1] ## This gets the order tuple
+            if isinstance(element, str): # Special case of str
+                element_parts = element.split("_")
+                index = tuple(ZZ(el) for el in element_parts[-self._parent.noperators():])
+            else:
+                element = self._parent(element) # Casting to DMonomial --> It is a variable
+                
+                index = next(iter(element._variables.keys()))[1] ## This gets the order tuple
             if self._parent.noperators() > 1 and not as_tuple:
                 index = self.index_map.inverse(index)
             elif self._parent.noperators() == 1 and not as_tuple:
@@ -514,7 +526,7 @@ class DMonomialMonoid(Parent):
             sage: MM.one()
             1
 
-        We can see that the implementation of a DMonomialMonoid pass all the tests niherited by the category::
+        We can see that the implementation of a DMonomialMonoid pass all the tests inherited by the category::
 
             sage: from sage.misc.sage_unittest import TestSuite
             sage: TestSuite(MM).run()
