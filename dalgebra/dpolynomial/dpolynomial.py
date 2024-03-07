@@ -49,7 +49,16 @@ class DPolynomialRingFactory(UniqueFactory):
             raise ValueError("No variables given: impossible to create a ring")
         if len(set(names)) < len(names):
             raise ValueError("Repeated names given: impossible to create the ring")
-        names = tuple(sorted(names))
+        ## Method to create sorting keys for variable names:
+        ## We split the underscores and sort lexicographically transforming numbers when possible.
+        def _name_sorting_criteria(name):
+            el = name.split("_")
+            for i,part in enumerate(el):
+                try: el[i] = ZZ(part) 
+                except: pass
+            return tuple(el)
+
+        names = tuple(sorted(names, key=_name_sorting_criteria))
 
         # We check now whether the base ring is valid or not
         if not base in _DRings:
@@ -118,8 +127,30 @@ class DPolynomial(Element):
     def is_unit(self) -> bool: #: Checker for an element to be a unit (i.e., has degree 0)
         return self.degree() == 0
     
+    def is_linear(self, variables: Collection[DMonomialGen | DPolynomial] = None):
+        r'''
+            Method to check if a d-polynomial is linear w.r.t. some variables.
+
+            We allow as input either generators (and we check linearity w.r.t. to all variables withing those generators)
+            or variables of the ring.
+
+            A polynomial is linear w.r.t. a set of variables if no monomial has a combined degree higher than 1.
+        '''
+        # processing the variables
+        if variables == None:
+            return self.degree() <= 1
+        if not isinstance(variables, (list, tuple)):
+            raise TypeError("Variables for checking linearity must be given as tuple/list")
+        
+        variables = [v if isinstance(v, DMonomialGen) and v in self.parent().gens() else self.parent()(v) for v in variables]
+        variables = [v for v in self.variables() if any(v in g if isinstance(g, DMonomialGen) else v == g for g in variables)]
+
+        return max(sum(m.degree(next(iter(v._content))) for v in variables) for m in self.monomials()) <= 1
+
     def divides(self, other: DPolynomial) -> bool:
-        raise NotImplementedError("This method is not yet implemented")
+        pself, pother = self.parent().as_polynomials(self, other)
+        return pself.divides(pother)
+    
     ###################################################################################
     ### Getter methods
     ###################################################################################
@@ -143,6 +174,10 @@ class DPolynomial(Element):
 
     def coefficient_full(self, monomial: DMonomial) -> DPolynomial:
         r'''Getter for the polynomial of all the elements for which ``monomial`` is part of the monomial'''
+        if isinstance(monomial, DPolynomial):
+            if not monomial.is_monomial(): raise TypeError(f"If requested with d-polynomial, it must be a monomial")
+            monomial = monomial.monomials()[0]
+
         output = dict()
         for (m,c) in self._content.items():
             if all(m._variables.get(v, -1) == monomial._variables.get(v) for v in monomial._variables):
@@ -378,7 +413,7 @@ class DPolynomial(Element):
     ###################################################################################
     @cached_method
     def as_polynomial(self) -> Element: 
-        return self.parent().as_polynomials(self)
+        return self.parent().as_polynomials(self)[0]
         
     ###################################################################################
     ### Arithmetic operations
@@ -396,6 +431,11 @@ class DPolynomial(Element):
             m = ms*mo
             output[m] = output.get(m, self.parent().base().zero()) + self._content[ms]*other._content[mo]
         return self.parent().element_class(self.parent(), output)
+    def __truediv__(self, other: Element) -> DPolynomial:
+        if other in self.parent().base():
+            other = self.parent().base()(other)
+            return self.parent().element_class(self.parent(), {m : c/other for (m,c) in self._content.items()})
+        return super().__truediv__(other)
     def _floordiv_(self, _: DPolynomial) -> DPolynomial:
         return NotImplemented
     @cached_method
@@ -465,7 +505,6 @@ class DPolynomial(Element):
             result = pp(result) + (pp(c)*pp(ev_mon))*pp(rem_mon)
         return result
 
-    
     def lie_bracket(self, other: DPolynomial, gen: DMonomialGen = None) -> DPolynomial:
         r'''
             Computes the Lie-bracket (or commutator) of ``self`` with other :Class:`DPolynomial`.
@@ -577,23 +616,20 @@ class DPolynomial(Element):
                 v_0^2
                 sage: p(u=p.solve(u))
                 0
-
-            This can also be done for difference operators::
             
         '''
-        # if self.parent().noperators() > 1:
-        #     raise NotImplementedError("[solve] Method implemented only for 1 operator.")
+        if self.parent().noperators() > 1:
+            raise NotImplementedError("[solve] Method implemented only for 1 operator.")
         
-        # appearances = len([v for v in self.variables() if v in gen])
-        # if appearances == 0:
-        #     raise ValueError(f"[solve] The variable {gen.variable_name()} does not appear in {self}")
-        # elif appearances > 1:
-        #     raise NotImplementedError(f"[solve] The variable {gen.variable_name()} appear with different orders in {self}")
+        appearances = len([v for v in self.variables() if v in gen])
+        if appearances == 0:
+            raise ValueError(f"[solve] The variable {gen.variable_name()} does not appear in {self}")
+        elif appearances > 1:
+            raise NotImplementedError(f"[solve] The variable {gen.variable_name()} appear with different orders in {self}")
         
-        # coeff = self.coefficient(gen[self.order(gen)])
-        # rem = -self + coeff*gen[self.order(gen)]
-        # return (rem/coeff).inverse_operation(0, times=self.order(gen))
-        raise NotImplementedError("This method is not yet implemented")
+        coeff = self.coefficient(gen[self.order(gen)])
+        rem = -self + coeff*gen[self.order(gen)] # we know ``gen`` do not show up in rem
+        return (rem/coeff).inverse_operation(0, times=self.order(gen)) # the division is with coefficient only
 
     ###################################################################################
     ### Weight methods
@@ -666,14 +702,26 @@ class DPolynomial(Element):
     ###################################################################################
     ### Other magic methods
     ###################################################################################
+    @cached_method
     def __repr__(self) -> str:
         if self.is_zero(): return "0"
         parts = []
-        for (m,c) in self._content.items():
-            if m.is_one(): parts.append(f"({c})")
-            elif c == 1: parts.append(f"{m}")
-            else: parts.append(f"({c})*{m}")
-        return "+".join(parts)
+        for (m,c) in sorted(self._content.items(), key=lambda p : p[0]):
+            if str(c)[0] == "-": # changing sign
+                sign = "-"; c = -c
+            else:
+                sign = "+"
+
+            par = any(char in str(c) for char in ("+", "*", "-"))            
+
+            if m.is_one(): parts.append((sign, "", f"{'(' if par else ''}{c}{')' if par else ''}"))
+            elif c == 1: parts.append((sign, f"{m}", ""))
+            else: parts.append((sign, f"{m}", f"{'(' if par else ''}{c}{')' if par else ''}*"))
+
+        output = f"{parts[0][0] if parts[0][0] == '-' else ''}{parts[0][2]}{parts[0][1]}"
+        for (sign, m, c) in parts[1:]:
+            output += f" {sign} {c}{m}"
+        return output
     
     def _latex_(self) -> str:
         return "+".join(r"\left(" + latex(c) + r"\right)" + ('' if m.is_one() else latex(m)) for (m,c) in self._content.items())
@@ -1237,6 +1285,49 @@ class DPolynomialRing_Monoid(Parent):
         
         return new_ring
 
+    def remove_variables(self, *variables: str|DMonomialGen) -> DPolynomialRing_Monoid:
+        r'''
+            Method that removes d-variables from the ring of d-polynomials and guarantees the conversion between structures.
+            If all variables are removed, we return the base d-ring.
+
+            INPUT:
+
+            * ``variables``: list of names to be removed. If any name is not is ``self``, we ignore it.
+
+            EXAMPLE::
+
+                sage: from dalgebra.dring import *
+                sage: from dalgebra.dpolynomial.dpolynomial import *
+                sage: R.<a,b,c> = DPolynomialRing(DifferentialRing(QQ))
+                sage: Ra = R.remove_variables("b", c)
+                sage: Ra
+                Ring of operator polynomials in (a) over Differential Ring [[Rational Field], (0,)]
+                sage: p = a[2]*b[0] - c[1]^2
+                sage: Ra(p)
+                Traceback (most recent call last):
+                ...
+                ValueError: Impossible to convert element a_2*b_0+(-1)*c_1^2 from ...
+                sage: pp = a[3] + 3*a[2] + 3*a[1] + a[0]
+                sage: Ra(pp)
+                (3)*a_1 + (3)*a_2 + a_3 + a_0
+                sage: R(Ra(pp)) == pp
+                True
+        '''
+        variables = set([v._name if isinstance(v, DMonomialGen) else str(v) for v in variables])
+        rem_variables = [v_name for v_name in self.variable_names() if (not v_name in variables)]
+        if len(rem_variables) == 0: # all removed
+            return self.base()
+        elif len(rem_variables) == self.ngens(): # nothing removed
+            return self
+        else: # some intermediate ring
+            ## We create the new ring
+            output = DPolynomialRing(self.base(), rem_variables)
+            ## We guarantee the conversion/coercion between structures
+            self.register_coercion(DPolynomialVariableMorphism(output, self))
+            output.register_conversion(DPolynomialSimpleMorphism(self, output))
+
+            return output
+
     def fraction_field(self):
         try:
             if self.is_field():
@@ -1333,6 +1424,8 @@ class DPolynomialRing_Monoid(Parent):
         variables = set()
         for element in elements:
             variables.update(self(element).variables())
+        # This sort the variables first by index (i.e., alphabetically) then by order
+        variables = sorted(variables, key = lambda p : tuple(next(iter(p._content))._variables.items())[0])
 
         PR = PolynomialRing(self.base(), [str(v) for v in variables], sparse=True)
         result = [PR(str(element)) for element in elements] # TODO: This may be improved?
@@ -1620,55 +1713,62 @@ class DPolynomialRing_Monoid(Parent):
         raise NotImplementedError("This method is not yet implemented")
     
     def __inverse_derivation(self, element: DPolynomial, operation: int):
-        # logger.debug(f"[inverse_derivation] Called with {element}")
-        # if element == 0:
-        #     logger.debug(f"[inverse_derivation] Found a zero --> Easy")
-        #     solution = self.zero()
-        # elif element.degree() == 1:
-        #     logger.debug(f"[inverse_derivation] Found linear element --> Easy to do")
-        #     solution = self.zero()
-        #     for monomial, coeff in element._content.items():
-        #         if monomial.is_one():
-        #             raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
-        #         coeff = coeff.inverse_operation(operation) if not coeff.d_constant() else coeff
-        #         var = next(iter(monomial.variables())) # we know there is only 1
-        #         new_mon = var._inverse_(operation)
-        #         solution += coeff*new_mon
-        # else:
-        #     logger.debug(f"[inverse_derivation] Element is not linear")
-        #     monomials = element.monomials()
-        #     if 1 in monomials:
-        #         raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
-        #     monomials_with_points = []
-        #     for mon in monomials:
-        #         bv = max(k[0] for k in mon._variables) # index of the maximum variable
-        #         bo = mon.order(bv, operation) # order of the biggest variable w.r.t. operation
-        #         monomials_with_points.append((bv, bo))
+        r'''
+            Implementation of integration of differential polynomials using Bilge's INTEG algorithm
+            (see :doi:`10.1016/0010-4655(92)90013-o`).
 
-        #     aux = max(el[1] for el in monomials_with_points) # element with highest order -> used as a balance option to use "max"
-        #     V, O = max(monomials_with_points, key = lambda p: p[0]*aux + p[1])
-        #     V = self.gens()[V]
-        #     logger.debug(f"[inverse_derivation] Maximal variable: {V[O]}")
+            Method ``INTEG`` splits a differential polynomial into three parts: an integrable part, a 
+            non-integrable part and a constant part. We ignore the constant part (we always assume it to
+            be zero).
+        '''
+        logger.debug(f"[inverse_derivation] Called with {element}")
+        if element == 0:
+            logger.debug(f"[inverse_derivation] Found a zero --> Easy")
+            solution = self.zero()
+        elif element.degree() == 1:
+            logger.debug(f"[inverse_derivation] Found linear element --> Easy to do")
+            solution = self.zero()
+            for monomial, coeff in element._content.items():
+                if monomial.is_one():
+                    raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
+                coeff = coeff.inverse_operation(operation) if not coeff.d_constant() else coeff
+                var = next(iter(monomial.variables())) # we know there is only 1, since the element is linear
+                new_mon = self(var._inverse_(operation))
+                solution += coeff*new_mon
+        else:
+            logger.debug(f"[inverse_derivation] Element is not linear")
+            monomials = element.monomials()
+            if 1 in monomials:
+                raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
+            monomials_with_points = []
+            for mon in monomials:
+                bv = max(k[0] for k in mon._variables) # index of the maximum variable
+                bo = mon.order(bv, operation) # order of the biggest variable w.r.t. operation
+                monomials_with_points.append((bv, bo))
+
+            aux = max(o for (_,o) in monomials_with_points) # element with highest order -> used as a balance option to use "max"
+            V, O = max(monomials_with_points, key = lambda p: p[0]*aux + p[1])
+            V = self.gens()[V]
+            logger.debug(f"[inverse_derivation] Maximal variable: {V[O]}")
             
-        #     if element.degree(V[O]) > 1:
-        #         raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
-        #     else:
-        #         highest_part = element.coefficient(V[O], _poly=True); deg_order_1 = highest_part.degree(V[O-1])
-        #         cs = [highest_part.coefficient(V[O-1]**i, _poly=True) for i in range(deg_order_1+1)]
-        #         order_1_part = sum(cs[i]*V[O-1]**i for i in range(deg_order_1+1))
-        #         q1 = highest_part - order_1_part # order q1 < d-1
+            if element.degree(V[O]) > 1:
+                raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
+            else:
+                highest_part = element.coefficient_full(V[O]); deg_order_1 = highest_part.degree(V[O-1])
+                cs = [highest_part.coefficient_full(V[O-1]**i) for i in range(deg_order_1+1)]
+                order_1_part = sum(cs[i]*V[O-1]**i for i in range(deg_order_1+1))
+                q1 = highest_part - order_1_part # order q1 < d-1
                 
-        #         ## we compute remaining polynomial
-        #         partial_integral = sum(cs[i]*(1/ZZ(i+1)) * V[O-1]**(i+1) for i in range(deg_order_1+1)) + V[O-1]*q1
+                ## we compute remaining polynomial
+                partial_integral = sum(cs[i]/ZZ(i+1) * V[O-1]**(i+1) for i in range(deg_order_1+1)) + V[O-1]*q1 # division is on coeff. level
 
-        #     logger.debug(f"[inverse_derivation] Partial integral: {partial_integral}")
-        #     rem = element - partial_integral.operation(operation)
-        #     logger.debug(f"[inverse_derivation] Remaining to integrate: {rem}")
-        #     solution = partial_integral + self.inverse_operation(rem, operation)
+            logger.debug(f"[inverse_derivation] Partial integral: {partial_integral}")
+            rem = element - partial_integral.operation(operation)
+            logger.debug(f"[inverse_derivation] Remaining to integrate: {rem}")
+            solution = partial_integral + self.inverse_operation(rem, operation)
             
-        # logger.debug(f"[inverse_derivation] Result: {solution}")
-        # return solution
-        raise NotImplementedError("This method is not yet implemented")
+        logger.debug(f"[inverse_derivation] Result: {solution}")
+        return solution
    
     def __inverse_skew(self, element: DPolynomial, operation: int):
         raise NotImplementedError("[inverse_skew] Skew-derivation operation not yet implemented")
