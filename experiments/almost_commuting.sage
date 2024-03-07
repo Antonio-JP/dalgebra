@@ -6,7 +6,7 @@ from time import process_time
 from cProfile import Profile
 from contextlib import nullcontext
 from numpy import nan
-from pandas import read_csv, DataFrame, set_option, MultiIndex
+from pandas import read_csv, DataFrame, set_option
 from pstats import Stats, SortKey
 import tracemalloc
 import os, csv
@@ -44,7 +44,7 @@ def read_data(n_filter: list[int] = list(), m_filter: list[int] = list(), equs_f
                             (len(m_filter) == 0 or row['m'] in m_filter) and
                             (len(equs_filter) == 0 or row['get_equs'] in equs_filter) and
                             (len(solver_filter) == 0 or row['solver'] in solver_filter) and
-                            row['m'] % row['n'] != 0 # we ommit the trivial cases
+                            row['m'] % row['n'] != 0 # we omit the trivial cases
                             )
     
     return DataFrame([row for (_,row) in data.iterrows() if filters(row)], columns = data.columns)
@@ -150,7 +150,7 @@ def print_table(*argv):
     new_data = collect_data(data)
 
     if latex != None:
-        new_data = latex_table(new_data, latex)
+        latex_table(new_data, latex)
     if graphs:
         create_graphs(new_data)
         

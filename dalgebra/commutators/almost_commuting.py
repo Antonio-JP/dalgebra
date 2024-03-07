@@ -161,10 +161,8 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 
 from ..dring import DifferentialRing, DRings
 
-# from ..dpolynomial.dpolynomial_element import DPolynomial, DPolynomialGen
-# from ..dpolynomial.dpolynomial_ring import DifferentialPolynomialRing, DPolynomialRing_sparse
 from ..dpolynomial.dpolynomial import DPolynomial, DPolynomialGen, DPolynomialSimpleMorphism, DPolynomialRing_Monoid, DifferentialPolynomialRing
-# from ..dpolynomial.dpolynomial_system import DSystem
+from ..dpolynomial.dsystems import DSystem
 from ..logging.logging import cache_in_file
 
 #################################################################################################
@@ -563,9 +561,8 @@ def __almost_commuting_integral(parent: DPolynomialRing_Monoid, equations: list[
         Then, the output is in the usual format for these methods: it returns a dictionary `v \mapsto A` where `v` are 
         the variables given in ``p`` and `A` are the values such that, plugged into ``equations``, make them all vanish.
     '''
-    # S = DSystem(equations, parent=parent, variables=p)
-    # return S.solve_linear()
-    raise NotImplementedError("Need to revisit the integration solver")
+    S = DSystem(equations, parent=parent, variables=p)
+    return S.solve_linear()
 
 def __almost_commuting_linear(parent: DPolynomialRing_Monoid, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
     r'''

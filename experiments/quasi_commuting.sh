@@ -1,15 +1,15 @@
 BOUND_N=5;
-BOUND_M=5;
+BOUND_M=10;
 REPEATS=1;
-METHODS="linear diff";
+METHODS="integral linear";
 EQUS="direct recursive";
 PARALLEL=1;
 
 tsp -S $PARALLEL;
 
-for l in $(seq 3 1 $(($BOUND_N+$BOUND_M)))
+for n in $(seq 2 1 $BOUND_N)
 do
-    for m in $(seq $(( $l-$BOUND_N > 1 ? $l-$BOUND_N : 1 )) 1 $(( $BOUND_M < $l-2 ? $BOUND_M : $l-2 )))
+    for m in $(seq 2 1 $BOUND_M)
     do
         for r in $(seq 1 1 $REPEATS)
         do
@@ -17,7 +17,8 @@ do
             do
                 for equ in $EQUS
                 do
-                    tsp sage quasi_commuting.sage $n $m $method $equ
+                    echo "sage almost_commuting.sage -run $n $m $equ $method"
+                    sage almost_commuting.sage -run $n $m $equ $method 
                 done
             done
         done
