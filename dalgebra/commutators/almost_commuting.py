@@ -236,7 +236,7 @@ def generic_normal(n: int,
 
         OUTPUT:
 
-        An operator in a :class:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_sparse` of order
+        An operator in a :class:`~dalgebra.dpolynomial.dpolynomial.DPolynomialRing_Monoid` of order
         ``n`` and in generic normal form.
 
         If `n \leq 0` we raise a :class:`ValueError`. The case when `n = 1` it is always `\partial`.
@@ -432,7 +432,7 @@ def __almost_commuting_direct(parent: DPolynomialRing_Monoid, order_L: int, orde
 
         This method receives the usual input for methods that create the equations:
 
-        * ``parent``: a basic :class:`DPolynomialRing_sparse` that must contain the `u` variables and the `\partial` variable.
+        * ``parent``: a basic :class:`DPolynomialRing_Monoid` that must contain the `u` variables and the `\partial` variable.
         * ``order_L``: the value we are using as order of the generic operator `L`.
         * ``order_P``: the order of the almost commuting operator `P` which equations we want to compute.
         * ``name_p``: name of the variables we will create that will be solved (see :func:`__names_variables`)
@@ -474,7 +474,7 @@ def __almost_commuting_recursive(parent: DPolynomialRing_Monoid, order_L: int, o
 
         This method receives the usual input for methods that create the equations:
 
-        * ``parent``: a basic :class:`DPolynomialRing_sparse` that must contain the `u` variables and the `\partial` variable.
+        * ``parent``: a basic :class:`DPolynomialRing_Monoid` that must contain the `u` variables and the `\partial` variable.
         * ``order_L``: the value we are using as order of the generic operator `L`.
         * ``order_P``: the order of the almost commuting operator `P` which equations we want to compute.
         * ``name_p``: name of the variables we will create that will be solved (see :func:`__names_variables`)

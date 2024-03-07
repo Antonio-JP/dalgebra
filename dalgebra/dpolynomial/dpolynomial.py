@@ -72,20 +72,20 @@ class DPolynomialRingFactory(UniqueFactory):
 
         return DPolynomialRing_Monoid(base, names)
 
-DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_Monoid")
+DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial.DPolynomialRing_Monoid")
 RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing_Monoid (used for backward compatibility)
 def DifferentialPolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_Monoid:
     if not base in _DRings:
         base = DifferentialRing(base, kwds.pop("derivation", diff))
     if not base.is_differential():
         raise TypeError("The base ring must be a differential ring")
-    return DPolynomialRing_Monoid(base, *names, **kwds)
+    return DPolynomialRing(base, *names, **kwds)
 def DifferencePolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_Monoid:
     if not base in _DRings:
         base = DifferenceRing(base, kwds.pop("difference", base.Hom(base).one()))
     if not base.is_difference():
         raise TypeError("The base ring must be a difference ring")
-    return DPolynomialRing_Monoid(base, *names, **kwds)
+    return DPolynomialRing(base, *names, **kwds)
 
 class DPolynomial(Element):
     r'''
@@ -195,7 +195,7 @@ class DPolynomial(Element):
 
             This method computes the order of a concrete polynomial in all the 
             variables that appear in its parent. This method relies on the method 
-            :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_sparse.gens`
+            :func:`~dalgebra.dpolynomial.dpolynomial.DPolynomialRing_Monoid.gens`
             and the method :func:`~DMonomialGen.index`.
 
             INPUT:
@@ -290,7 +290,7 @@ class DPolynomial(Element):
 
             This method computes the lowest appearing order of a concrete polynomial in all the 
             variables that appear in its parent. This method relies on the method 
-            :func:`~dalgebra.dpolynomial.dpolynomial_ring.DPolynomialRing_sparse.gens`
+            :func:`~dalgebra.dpolynomial.dpolynomial.DPolynomialRing_Monoid.gens`
             and the method :func:`~DMonomialGen.index`.
 
             INPUT:
@@ -565,7 +565,7 @@ class DPolynomial(Element):
         r'''
             Method on an element to compute (if possible) the Sylvester resultant.
 
-            See :func:`~.dpolynomial_ring.DPolynomialRing_sparse.sylvester_resultant` for further information.
+            See :func:`~.dpolynomial.DPolynomialRing_Monoid.sylvester_resultant` for further information.
         '''
         return self.parent().sylvester_resultant(self, other, gen)
 
@@ -573,7 +573,7 @@ class DPolynomial(Element):
         r'''
             Method to compute the Sylvester `k`-matrix for two operator polynomials.
 
-            See :func:`~.dpolynomial_ring.DPolynomialRing_sparse.sylvester_matrix` for further information.
+            See :func:`~.dpolynomial.DPolynomialRing_Monoid.sylvester_matrix` for further information.
         '''
         return self.parent().sylvester_matrix(self, other, gen, k)
 
@@ -639,7 +639,7 @@ class DPolynomial(Element):
             Computes the weight of a d-polynomial.
 
             This method computes the weight of a d-polynomial for a given weight function. These 
-            weight functions can be given as an actual :class:`~dalgebra.dpolynomial.dpolynomial_ring.WeightFunction`
+            weight functions can be given as an actual :class:`~dalgebra.dpolynomial.dpolynomial.WeightFunction`
             or the same arguments as this class have.
         '''
         if not isinstance(weight, WeightFunction):
@@ -926,7 +926,7 @@ class DPolynomialRing_Monoid(Parent):
         When we have several operators, we can create elements on the variables in two ways:
 
         * Using an index (as usual): then the corresponding variable will be created but following the order
-          that is given by :class:`dalgebra.dpolynomial.dpolynomial_element.IndexBijection`.
+          that is given by :class:`dalgebra.dpolynomial.dmonoids.IndexBijection`.
         * Using a tuple: have the standard meaning that each of the operators has been applied that amount of times.
 
         We can see these two approaches in place::
@@ -1027,7 +1027,7 @@ class DPolynomialRing_Monoid(Parent):
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: from dalgebra.dpolynomial.dpolynomial_element import DMonomialGen
+                sage: from dalgebra.dpolynomial.dmonoids import DMonomialGen
                 sage: R.<y> = DPolynomialRing_Monoid(DifferentialRing(QQ['x'], diff))
                 sage: R.gen(0)
                 y_*
@@ -1806,7 +1806,7 @@ class DPolynomialRing_Monoid(Parent):
 
             OUTPUT:
 
-            A :class:`~.dpolynomial_element.DPolynomial` with the Sylvester resultant of `P` and `Q`.
+            A :class:`~.dpolynomial.DPolynomial` with the Sylvester resultant of `P` and `Q`.
 
             EXAMPLES::
 

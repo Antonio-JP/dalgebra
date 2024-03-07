@@ -1,9 +1,9 @@
 .. nodoctest
 
-Structures for systems of equation over rings with operators
+D-Polynomials: monoids and elements for monomials
 ==============================================================================================================================
 
-.. automodule:: dalgebra.dpolynomial.dpolynomial_system
+.. automodule:: dalgebra.dpolynomial.dmonoids
    :members:
    :undoc-members:
    :show-inheritance:

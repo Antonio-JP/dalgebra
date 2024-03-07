@@ -1,9 +1,9 @@
 .. nodoctest
 
-Element structures for Infinite Polynomials over rings with operators
+D-Polynomials: parent and element srtuctures
 ==============================================================================================================================
 
-.. automodule:: dalgebra.dpolynomial.dpolynomial_element
+.. automodule:: dalgebra.dpolynomial.dpolynomial
    :members:
    :undoc-members:
    :show-inheritance:

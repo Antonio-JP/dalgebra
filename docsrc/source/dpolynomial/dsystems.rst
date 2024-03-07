@@ -1,9 +1,9 @@
 .. nodoctest
 
-Parent structures for Infinite Polynomials over rings with operators
+Structures for systems of equation over rings with operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra.dpolynomial.dpolynomial_ring
+.. automodule:: dalgebra.dpolynomial.dsystems
    :members:
    :undoc-members:
    :show-inheritance:

@@ -128,7 +128,7 @@ def cache_in_file(func):
                     with open(path_to_file, "rb") as file:
                         return pickle.load(file)
                 except Exception:
-                    pass
+                    print("Error loading")
             
             ## Calling the function
             output = func(*args, **kwds)

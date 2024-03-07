@@ -14,9 +14,9 @@ List of Modules
 .. toctree::
    :maxdepth: 1
 
-   dpolynomial/dpolynomial_ring
-   dpolynomial/dpolynomial_element
-   dpolynomial/dpolynomial_system
+   dpolynomial/dmonomial
+   dpolynomial/dpolynomial
+   dpolynomial/dsystems
 
 
 Indices and Tables

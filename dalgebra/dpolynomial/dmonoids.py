@@ -63,7 +63,7 @@ def IndexBijection(size : int):
 
         EXAMPLES::
 
-            sage: from dalgebra.dpolynomial.dpolynomial_element import IndexBijection
+            sage: from dalgebra.dpolynomial.dmonoids import IndexBijection
             sage: size2 = IndexBijection(2)
             sage: size2(0)
             (0, 0)
