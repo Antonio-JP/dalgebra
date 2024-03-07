@@ -72,8 +72,8 @@ class DPolynomialRingFactory(UniqueFactory):
 
         return DPolynomialRing_Monoid(base, names)
 
-DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial.DPolynomialRing_Monoid")
-RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing_Monoid (used for backward compatibility)
+DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial.DPolynomialRing")
+RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing (used for backward compatibility)
 def DifferentialPolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_Monoid:
     if not base in _DRings:
         base = DifferentialRing(base, kwds.pop("derivation", diff))
@@ -494,10 +494,10 @@ class DPolynomial(Element):
             ## Evaluating the monomial
             ev_mon = ZZ(1)
             rem_mon = dict()
-            for (v,o) in m._variables: 
+            for (v,o),e in m._variables.items(): 
                 if v in kwds:
                     el = kwds[v]; P = el.parent()
-                    ev_mon *= P.apply_operations(el, o)
+                    ev_mon *= P.apply_operations(el, o)**e
                 else:
                     rem_mon[(v,o)] = m._variables[(v,o)]
             rem_mon = self.parent()(self.parent().monoids().element_class(self.parent().monoids(), rem_mon)) if len(rem_mon) > 0 else ZZ(1)

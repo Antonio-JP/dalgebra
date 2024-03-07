@@ -402,6 +402,12 @@ def almost_commuting_wilson(n: int, m: int, name_u: str|list[str]|tuple[str] = "
         path_to_folder=os.path.join(dalgebra_folder(), "results", "almost_commuting"), ## Folder for caching results in repository
         extension="out" ## Extension of the cached results
     )
+    
+    ## Fixing a possible problem with pickling
+    F,b = Pm.parent().construction()
+    original_ring = F(b)
+    Pm = original_ring(Pm)
+    T = tuple(original_ring(t) for t in T)
 
     #################################################################################################################################
     ## Then we proceed to change the names in the differential structure
@@ -409,8 +415,12 @@ def almost_commuting_wilson(n: int, m: int, name_u: str|list[str]|tuple[str] = "
         true_u = __names_variables(n, "u")
         if isinstance(name_u, (list, tuple)) and len(name_u) == n-1: ## We allow custom names for the us if given in a list format
             names_u = name_u
-        else:
+        elif isinstance(name_u, (list, tuple)):
+            raise ValueError(f"The given names are not of appropriate length (expected {n-1}, got {len(name_u)})")
+        elif isinstance(name_u, str):
             names_u = __names_variables(n, name_u)
+        else:
+            raise TypeError(f"Unrecognized type for {name_u=}")
         output_R = DifferentialPolynomialRing(QQ, names_u + [name_z])
 
         output_z = output_R.gen(name_z) # variable for the `\partial`
