@@ -756,7 +756,7 @@ class DSystem:
 
     ###################################################################################################
     ### Private methods concerning the resultant
-    def __decide_resultant_algorithm(self, operation: int = None, alg_res: str = "auto") -> Callable[[int,int,*Any], DPolynomial]:
+    def __decide_resultant_algorithm(self, operation: int = None, alg_res: str = "auto") -> Callable[[int,int], DPolynomial]:
         r'''
             Method to decide the (hopefully) most optimal algorithm to compute the resultant.
         '''
