@@ -919,7 +919,7 @@ class DPolynomialRing_Monoid(Parent):
 
         Hence, we can create the ring of operator polynomials with as many variables as we want::
 
-            sage: OR.<u,v> = DPolynomialRing_Monoid(dsR); OR
+            sage: OR.<u,v> = DPolynomialRing(dsR); OR
             Ring of operator polynomials in (u, v) over Ring [[Multivariate Polynomial Ring in 
             x, y over Rational Field], (d/dx, d/dy, Hom({x: x + 1, y: y - 1}))]
             
@@ -1028,14 +1028,14 @@ class DPolynomialRing_Monoid(Parent):
 
                 sage: from dalgebra import *
                 sage: from dalgebra.dpolynomial.dmonoids import DMonomialGen
-                sage: R.<y> = DPolynomialRing_Monoid(DifferentialRing(QQ['x'], diff))
+                sage: R.<y> = DPolynomialRing(DifferentialRing(QQ['x'], diff))
                 sage: R.gen(0)
                 y_*
                 sage: R.gen(0) is y
                 True
                 sage: isinstance(R.gen(0), DMonomialGen)
                 True
-                sage: S = DPolynomialRing_Monoid(DifferentialRing(ZZ, lambda z : 0), ('a', 'b'))
+                sage: S = DPolynomialRing(DifferentialRing(ZZ, lambda z : 0), ('a', 'b'))
                 sage: S
                 Ring of operator polynomials in (a, b) over Differential Ring [[Integer Ring], (0,)]
                 sage: S.gen(0)
@@ -1205,7 +1205,7 @@ class DPolynomialRing_Monoid(Parent):
                 sage: dx,dex,dl,dm,de = B.derivation_module().gens()
                 sage: shift = B.Hom(B)([x+1, e*ex, l, m, e])
                 sage: DSB = DifferenceRing(DifferentialRing(B, dx + ex*dex), shift); x,ex,l,m,e = DSB.gens()
-                sage: R.<u,v> = DPolynomialRing_Monoid(DSB)
+                sage: R.<u,v> = DPolynomialRing(DSB)
                 sage: f1 = u[1,0]*ex + (l-1)*v[0,1]*x - m; f1
                 ex*u_1_0 + (x*l - x)*v_0_1 - m
                 sage: f1.polynomial()
@@ -1508,7 +1508,7 @@ class DPolynomialRing_Monoid(Parent):
 
             As expected, similar behavior occurs when having several operators in the ring::
 
-                sage: T.<u> = DPolynomialRing_Monoid(DifferenceRing(DifferentialRing(QQ[x],diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = T.base()(x)
+                sage: T.<u> = DPolynomialRing(DifferenceRing(DifferentialRing(QQ[x],diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = T.base()(x)
                 sage: p3 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2]; op3 = p3.as_linear_operator()
                 sage: p4 = u[0,1] - u[0,0]; op4 = p4.as_linear_operator()
                 sage: p3(u=p4) == T(op3*op4)
@@ -1558,7 +1558,7 @@ class DPolynomialRing_Monoid(Parent):
 
         ### Deciding final parent
         rem_names = [name for (name,gen) in zip(names,gens) if gen not in final_input]
-        R = DPolynomialRing_Monoid(self.base(), rem_names) if len(rem_names) > 0 else self.base()
+        R = DPolynomialRing(self.base(), rem_names) if len(rem_names) > 0 else self.base()
         for value in final_input.values():
             R = pushout(R, parent(value))
         
@@ -1812,7 +1812,7 @@ class DPolynomialRing_Monoid(Parent):
 
                 sage: from dalgebra import *
                 sage: B = DifferentialRing(QQ[x], diff); x = B(x)
-                sage: S.<z> = DPolynomialRing_Monoid(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: P.sylvester_resultant(Q)
@@ -1820,7 +1820,7 @@ class DPolynomialRing_Monoid(Parent):
 
             If several variables are available, we need to explicitly provide the variable we are considering::
 
-                sage: R.<u,v> = DPolynomialRing_Monoid(B)
+                sage: R.<u,v> = DPolynomialRing(B)
                 sage: P = (3*x -1)*u[0]*v[0] + x^2*v[1]*u[0] + u[2]
                 sage: Q = 7*x*v[0] + x^2*v[0]*u[1]
                 sage: P.sylvester_resultant(Q)
@@ -1866,7 +1866,7 @@ class DPolynomialRing_Monoid(Parent):
 
                 sage: from dalgebra import *
                 sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
-                sage: S.<z> = DPolynomialRing_Monoid(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: S.sylvester_subresultant(P, Q, k=1, i=0)
@@ -1877,7 +1877,7 @@ class DPolynomialRing_Monoid(Parent):
             We can see that the case with `k=0` and `i=0`coincides with the method :func:`sylvester_resultant`::
             
                 sage: B = DifferentialRing(QQ[x], diff); x = B(x)
-                sage: S.<z> = DPolynomialRing_Monoid(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: S.sylvester_subresultant(P, Q, k=0, i=0) == P.sylvester_resultant(Q)
@@ -1925,7 +1925,7 @@ class DPolynomialRing_Monoid(Parent):
 
                 sage: from dalgebra import *
                 sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
-                sage: S.<z> = DPolynomialRing_Monoid(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: P.sylvester_matrix(Q)
@@ -1942,7 +1942,7 @@ class DPolynomialRing_Monoid(Parent):
             It is important to remark that this matrix depends directly on the operation defined on the ring::
 
                 sage: B = DifferentialRing(QQ[x], diff); x = B(x)
-                sage: S.<z> = DPolynomialRing_Monoid(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: P.sylvester_matrix(Q)
@@ -1959,7 +1959,7 @@ class DPolynomialRing_Monoid(Parent):
             However, the Sylvester matrix is not well defined when the ring has several operations::
 
                 sage: B = DifferentialRing(DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)), diff); x = B(x)
-                sage: S.<z> = DPolynomialRing_Monoid(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[0,2] - 3*x*z[0,1] + (x^2 - 1)*z[1,0]
                 sage: Q = z[2,3] - z[1,0]
                 sage: P.sylvester_matrix(Q)
@@ -2037,13 +2037,13 @@ class DPolynomialRing_Monoid(Parent):
 
                 sage: from dalgebra import *
                 sage: B = DifferenceRing(QQ[x], QQ[x].Hom(QQ[x])(x+1)); x = B(x)
-                sage: S.<z> = DPolynomialRing_Monoid(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: S.sylvester_subresultant_sequence(P, Q)
                 ((x^6 + 6*x^5 + 10*x^4 - 18*x^3 - 65*x^2 - 42*x - 2)*z_0, (8*x^2 + 7*x)*z_1 + (-3*x^3 - 3*x^2 + 3*x + 2)*z_0)
                 sage: B = DifferentialRing(QQ[x], diff); x = B(x)
-                sage: S.<z> = DPolynomialRing_Monoid(B)
+                sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: S.sylvester_subresultant_sequence(P, Q)
@@ -2162,7 +2162,7 @@ class DPolynomialRing_Monoid(Parent):
 
             This also work when having several operators in the same ring::
 
-                sage: S.<u> = DPolynomialRing_Monoid(DifferenceRing(DifferentialRing(QQ[x], diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = S.base()(x)
+                sage: S.<u> = DPolynomialRing(DifferenceRing(DifferentialRing(QQ[x], diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = S.base()(x)
                 sage: p4 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2] 
                 sage: p4.as_linear_operator()
                 -D^2*S^2 + x*D*S + (x^3 - 3*x)*D + 2
