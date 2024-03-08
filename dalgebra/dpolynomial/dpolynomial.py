@@ -486,23 +486,40 @@ class DPolynomial(Element):
             if not isinstance(dic, dict): raise TypeError("Invalid type for dictionary evaluating DMonomial")
             kwds.update({v.variable_name() if isinstance(v, DMonomialGen) else str(v) : val for (v,val) in dic.items()})
 
-        ## Changing names to integers
-        kwds = {self.parent().variable_names().index(k): v for (k,v) in kwds.items()}
+        ## Computing the final ring
+        from functools import reduce
+        final_base = reduce(pushout, 
+                            (el.parent() if not is_DPolynomialRing(el.parent()) else el.parent().base()
+                                for el in kwds.values()), 
+                            self.parent().base())
+        R_w_kwds = self.parent().remove_variables(*list(kwds.keys())) # conversion from self.parent() to R_w_kwds is created
+        final_dvariables = set(R_w_kwds.variable_names())
+        for value in kwds.values():
+            if is_DPolynomialRing(value.parent()):
+                final_dvariables.update(value.parent().variable_names())
+        output_ring = DPolynomialRing(final_base, list(final_dvariables))
+        self_to_output = DPolynomialVariableMorphism(R_w_kwds, output_ring) * R_w_kwds.convert_map_from(self.parent())
 
-        result = ZZ(0); pp = result.parent()
+        ## Changing names to integers
+        kwds = {
+            self.parent().variable_names().index(k) : 
+                DPolynomialVariableMorphism(v.parent(), output_ring)(v) if is_DPolynomialRing(v.parent()) else
+                final_base(v)
+            for (k,v) in kwds.items()}
+
+        result = output_ring.zero()
         for (m, c) in self._content.items():
             ## Evaluating the monomial
-            ev_mon = ZZ(1)
-            rem_mon = dict()
+            ev_mon = final_base.one() # ev_mon will be in final_base or output_ring
+            rem_mon = dict() # rem_mon will be in output_ring using ``self_to_output``
             for (v,o),e in m._variables.items(): 
                 if v in kwds:
                     el = kwds[v]; P = el.parent()
                     ev_mon *= P.apply_operations(el, o)**e
                 else:
                     rem_mon[(v,o)] = m._variables[(v,o)]
-            rem_mon = self.parent()(self.parent().monoids().element_class(self.parent().monoids(), rem_mon)) if len(rem_mon) > 0 else ZZ(1)
-            pp = pushout(pushout(pushout(pp, c.parent()), ev_mon.parent()), rem_mon.parent())
-            result = pp(result) + (pp(c)*pp(ev_mon))*pp(rem_mon)
+            rem_mon = self.parent()(self.parent().monoids().element_class(self.parent().monoids(), rem_mon)) if len(rem_mon) > 0 else self.parent().one()
+            result += self_to_output(rem_mon) * final_base(c) * ev_mon
         return result
 
     def lie_bracket(self, other: DPolynomial, gen: DMonomialGen = None) -> DPolynomial:
@@ -1434,181 +1451,6 @@ class DPolynomialRing_Monoid(Parent):
         result = [PR(str(element)) for element in elements] # TODO: This may be improved?
 
         return result
-
-    def eval(self, element, *args, dic: dict[DMonomialGen,DPolynomial] = None, **kwds):
-        r'''
-            Method to evaluate elements in the ring of differential polynomials.
-
-            Since the infinite polynomials have an intrinsic meaning (namely, the 
-            variables are related by the operator), evaluating a polynomial
-            is a straight-forward computation once the objects for the ``*_0`` term is given.
-
-            This method evaluates elements in ``self`` following that rule.
-
-            REMARK: **this method can be used to compose operator polynomials**. In the case 
-            where we have an operator polynomial `p(u) \in R\{u\}` (for `R` a ring with operators) 
-            we can interpret the polynomial `p(u)` as an operator over any extension of `R` that acts
-            by substituting `u` by the element the operator acts on.
-
-            In the case of linear operators, we can define a non-commutative product over these operators
-            and this method eval can be used to compute such multiplication (see examples below).
-
-            INPUT:
-
-            * ``element``: element (that must be in ``self``) to be evaluated
-            * ``args``: list of arguments that will be linearly related with the generators
-              of ``self`` (like they are given by ``self.gens()``)
-            * ``dic``: dictionary mapping generators to polynomials. This allows an input equivalent to 
-              the argument in ``kwds`` but where the keys of the dictionary are :class:`DPOlynomialGen`.
-            * ``kwds``: dictionary for providing values to the generators of ``self``. The 
-              name of the keys must be the names of the generators (as they can be got using 
-              the attribute ``_name``).
-
-            We allow a mixed used of ``args`` and ``kwds`` but an error will be raised if
-
-            * There are too many arguments in ``args``,
-            * An input in ``kwds`` is not a valid name of a generator,
-            * There are duplicate entries for a generator.
-
-            OUTPUT:
-
-            The resulting element after evaluating the variable `\alpha_{(i_1,...,i_n)} = (d_1^{i_1} \circ ... \circ d_n^{i_n})(\alpha)`,
-            where `\alpha` is the name of the generator.
-
-            EXAMPLES::
-
-                sage: from dalgebra import *
-                sage: R.<y> = DifferentialPolynomialRing(QQ['x']); x = R.base().gens()[0]
-                sage: R.eval(y[1], 0)
-                0
-                sage: R.eval(y[0] + y[1], x)
-                x + 1
-                sage: R.eval(y[0] + y[1], y=x)
-                x + 1
-
-            This method always commutes with the use of :func:`operation`::
-
-                sage: R.eval(R.derivative(x^2*y[1]^2 - y[2]*y[1]), y=x) == R.derivative(R.eval(x^2*y[1]^2 - y[2]*y[1], y=x))
-                True
-
-            This evaluation also works naturally with several infinite variables::
-
-                sage: S = DifferentialPolynomialRing(R, 'a'); a,y = S.gens()
-                sage: S.eval(a[1] + y[0]*a[0], a=x, y=x^2)
-                x^3 + 1
-                sage: in_eval = S.eval(a[1] + y[0]*a[0], y=x); in_eval
-                a_1 + x*a_0
-                sage: parent(in_eval)
-                Ring of operator polynomials in (a) over Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
-
-            As explained earlier, we can use this method to compute the product as operator of two linear operators::
-
-                sage: R.<y> = DifferentialPolynomialRing(QQ['x']); x = R.base().gens()[0]
-                sage: p1 = y[2] - (x^2 - 1)*y[1] + y[0]; op1 = p1.as_linear_operator()
-                sage: p2 = x*y[1] - 3*y[0]; op2 = p2.as_linear_operator()
-                sage: p1(y=p2) == R(op1*op2)
-                True
-
-            As expected, similar behavior occurs when having several operators in the ring::
-
-                sage: T.<u> = DPolynomialRing(DifferenceRing(DifferentialRing(QQ[x],diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = T.base()(x)
-                sage: p3 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2]; op3 = p3.as_linear_operator()
-                sage: p4 = u[0,1] - u[0,0]; op4 = p4.as_linear_operator()
-                sage: p3(u=p4) == T(op3*op4)
-                True
-                sage: p3(u=p4) - p4(u=p3) == T(op3*op4 - op4*op3) # computing the commutator of the two operators
-                True
-
-            This can also work when having several infinite variables (in contrast with the method :func:`as_linear_operator`)::
-
-                sage: U.<a,b> = DifferentialPolynomialRing(QQ[x]); x = U.base()(x)
-                sage: p5 = a[0] + b[1]*(b[0]^2 - x^2)*a[1]; p5.is_linear(a)
-                True
-                sage: p6 = x*a[1] - b[0]*a[0]; p6.is_linear(a)
-                True
-                sage: p5(a=p6) - p6(a=p5) # commutator of p5 and p6 viewed as operators w.r.t. a
-                -a_0*b_1^2*b_0^2 + (-x)*a_1*b_2*b_0^2 + (-2*x)*a_1*b_1^2*b_0 + a_1*b_1*b_0^2 + x^2*a_0*b_1^2 + x^3*a_1*b_2 + x^2*a_1*b_1
-        '''
-        ### Combining the arguments from dic and kwds
-        if dic != None:
-            for k,v in dic.items():
-                if isinstance(k, DMonomialGen):
-                    kwds[k.variable_name()] = v
-                else:
-                    kwds[str(k)] = v
-
-        ### Checking the element is in self
-        if(not element in self):
-            raise TypeError("Impossible to evaluate %s as an element of %s" %(element, self))
-        element = self(element) # making sure the structure is the appropriate
-
-        ### Checking the input that needs to be evaluated
-        gens : tuple[DMonomialGen] = self.gens()
-        names : list[str] = [el._name for el in gens]
-        if(len(args) > self.ngens()):
-            raise ValueError(f"Too many argument for evaluation: given {len(args)}, expected (at most) {self.ngens()}")
-
-        final_input : dict[DMonomialGen, Element] = {gens[i] : args[i] for i in range(len(args))}
-        other_input : dict = dict()
-        for key in kwds:
-            if(not key in names):
-                other_input[key] = kwds[key]
-            else:
-                gen = gens[names.index(key)]
-                if(gen in final_input):
-                    raise TypeError(f"Duplicated value for generator {gen}")
-                final_input[gen] = kwds[key]
-
-        ### Deciding final parent
-        rem_names = [name for (name,gen) in zip(names,gens) if gen not in final_input]
-        R = DPolynomialRing(self.base(), rem_names) if len(rem_names) > 0 else self.base()
-        for value in final_input.values():
-            R = pushout(R, parent(value))
-        
-        final_input = {key : R(value) for key,value in final_input.items()} # updating input to the output ring
-        logger.debug(f"[eval] This is the final input for the polynomial: {final_input}")
-
-        ### Building the elements to be used in evaluation
-        evaluation_dict = {}
-        for variable in element.variables():
-            logger.debug(f"[eval] Checking variable {variable}")
-            for gen in gens:
-                logger.debug(f"[eval] Checking if {variable} in {repr(gen)}")
-                
-                if variable in gen: # we found the generator of this variable
-                    logger.debug(f"[eval] Found generator {repr(gen)} for variable {variable}")
-                    operations = gen.index(variable)
-                    if gen in final_input:
-                        if self.noperators() == 1:
-                            value = final_input[gen].operation(times=operations)
-                        else:
-                            value = final_input[gen]
-                            for (i, times) in enumerate(operations):
-                                value = value.operation(operation=i, times=times)
-                        try:
-                            to_add = R(value)
-                        except:
-                            to_add = R(str(value))
-                        logger.debug(f"[eval] Adding value: '{str(variable)}': {to_add}")
-                        evaluation_dict[str(variable)] = to_add
-                    else:
-                        try:
-                            to_add = R(gen[operations])
-                        except:
-                            to_add = R(str(gen[operations]))
-                        logger.debug(f"[eval] Adding variable: '{str(variable)}': {to_add}")
-                        evaluation_dict[str(variable)] = to_add
-                    break
-        # extending the dictionary to all variables in element.polynomial().
-        variable_names = [str(v) for v in element.variables()]
-        for variable in element.polynomial().parent().variable_names():
-            if not variable in variable_names: # only those that do not appear
-                evaluation_dict[variable] = R.zero() # we can add anything here, since they do not show up
-
-        evaluation_dict.update(other_input)
-        logger.debug(f"[eval] Final evaluation performed:\n\t**DICT={evaluation_dict}\n\t**POLY={element.polynomial()}")
-
-        return R(element.polynomial()(**evaluation_dict))
         
     #################################################
     ### Method from DRing category

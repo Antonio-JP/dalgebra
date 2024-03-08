@@ -983,10 +983,14 @@ class DRing_WrapperElement(Element):
     def __eq__(self, x) -> bool:
         if x is None: return False
 
-        r = pushout(self.parent(), parent(x))
-        if isinstance(r, DRing_Wrapper):
-            return self.wrapped == r(x).wrapped
-        return r(self) == r(x)
+        if isinstance(x, DRing_WrapperElement):
+            return self.wrapped == x.wrapped
+        else:
+            return self.wrapped == x
+        # r = pushout(self.parent(), parent(x))
+        # if isinstance(r, DRing_Wrapper):
+        #     return self.wrapped == r(x).wrapped
+        # return r(self) == r(x)
     def __ne__(self, x) -> bool: return not (self == x)
     
     ## Other methods from rings and element
