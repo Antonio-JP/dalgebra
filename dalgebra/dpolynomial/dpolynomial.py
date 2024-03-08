@@ -1323,8 +1323,11 @@ class DPolynomialRing_Monoid(Parent):
             ## We create the new ring
             output = DPolynomialRing(self.base(), rem_variables)
             ## We guarantee the conversion/coercion between structures
-            self.register_coercion(DPolynomialVariableMorphism(output, self))
-            output.register_conversion(DPolynomialSimpleMorphism(self, output))
+            try:
+                self.register_coercion(DPolynomialVariableMorphism(output, self))
+                output.register_conversion(DPolynomialSimpleMorphism(self, output))
+            except AssertionError:
+                pass
 
             return output
 
