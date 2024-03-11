@@ -1342,17 +1342,12 @@ class DRing_Wrapper(Parent):
         r'''
             Extended definition of :func:`_element_constructor_`.
         '''
-        if x in SR: 
-            # conversion from symbolic ring --> using its string representation
+        if parent(x) is SR: # The case of a symbolic expression ("x in SR" is too generic)
             x = str(x)
-        elif isinstance(parent(x), DRing_Wrapper): 
-            # conversion from other wrapped rings with operators --> we convert the element within
-            x = x.wrapped
-        if hasattr(self.wrapped, "_element_constructor_"):
-            p = self.wrapped._element_constructor_(x)
-        else:
-            p = self.wrapped(x)
-        return self.element_class(self, p)
+        elif isinstance(parent(x), DRing_Wrapper):
+            x = x.wrapped # x is of class DRing_ElementWrapper
+        
+        return self.element_class(self, self.wrapped(x))
 
     def _is_valid_homomorphism_(self, codomain, im_gens, base_map=None) -> bool:
         return self.wrapped._is_valid_homomorphism_(codomain, im_gens, base_map)
