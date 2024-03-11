@@ -1142,6 +1142,7 @@ class DRing_Wrapper(Parent):
                     raise ValueError(f"Invalid type provided -> {ttype}")
 
         self.__types = tuple(types)
+        self.__cached_pushouts = dict()
 
         #########################################################################################################
         # CREATING CATEGORIES
@@ -1356,19 +1357,34 @@ class DRing_Wrapper(Parent):
         return DRingFunctor([operator.function for operator in self.operators()], self.operator_types()), self.wrapped
 
     def _pushout_(self, other):
-        if other == self.wrapped:
-            return self
-        elif other is SR:
-            return pushout(SR, self.wrapped)
-        scons, sbase = self.construction()
-        if isinstance(other, DRing_Wrapper):
-            ocons, obase = other.construction()
-            cons = scons.merge(ocons)
-            try:
-                base = pushout(sbase, obase)
-            except TypeError:
-                base = pushout(obase, sbase)
-            return cons(base)
+        try:
+            hash(other)
+            hashable = True
+        except TypeError:
+            hashable = False
+
+        if (not hashable) or (not other in self.__cached_pushouts):
+            if other == self.wrapped:
+                result = self
+            elif other is SR:
+                result = pushout(SR, self.wrapped)
+            else:
+                scons, sbase = self.construction()
+                if isinstance(other, DRing_Wrapper):
+                    ocons, obase = other.construction()
+                    cons = scons.merge(ocons)
+                    try:
+                        base = pushout(sbase, obase)
+                    except TypeError:
+                        base = pushout(obase, sbase)
+                    result = cons(base)
+                else:
+                    result = None
+            
+            if hashable: self.__cached_pushouts[other] = result
+            return result
+        
+        if hashable: return self.__cached_pushouts[other]
         return None
 
     # Rings methods
