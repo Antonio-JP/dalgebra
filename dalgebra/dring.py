@@ -863,9 +863,10 @@ class DRingFactory(UniqueFactory):
                 new_operator = hom_from_callable(base, operator)
             elif ttype == "derivation":
                 der_module = base.derivation_module()
+                to_sum = tuple((base(operator(base_gen)), der_gen) for (base_gen, der_gen) in zip(base.gens(),der_module.gens()))
                 new_operator = DerivationMap(
                     base, 
-                    sum((base(operator(base_gen))*der_gen for (base_gen,der_gen) in zip(base.gens(),der_module.gens())), der_module.zero())
+                    sum((im_gen*der_gen for (im_gen, der_gen) in to_sum if im_gen != 0), der_module.zero())
                 )
             elif ttype == "skew":
                 if not isinstance(parent(operator), RingDerivationModule):
