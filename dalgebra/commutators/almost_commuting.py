@@ -709,7 +709,7 @@ def recursion(n: int):
     ## Some auxiliary functions
     logger.info(f"[recursion] ++ Defining the auxiliary function...")
     I = lambda p : p.inverse_operation(0) # computes the integral of an element (or tries)
-    ACT = lambda op, p: op[0](**{z.variable_name(): p}) + (op[1]*I(p) if op[1] != 0 else op[1]) # computes the action of a pseudo_operator of order -1 `op` over `p`
+    ACT = lambda op, p: op[0](**{z.variable_name(): p}) + (op[1]*I(p) if (not op[1] == 0) else op[1]) # computes the action of a pseudo_operator of order -1 `op` over `p`
     ACT_M = lambda M, ps: [sum(ACT(op, p) for (op, p) in zip(M[i], ps)) for i in range(len(M))] # applies a matrix of p.o. of order -1 `M` over a vector of `ps`.
     
     logger.info(f"[recursion] Computing the recursion matrix for {n=}.")
@@ -737,7 +737,7 @@ def recursion(n: int):
     ## We compute now the homogeneous monomials
     order_in_matrix = lambda i,j : n + j - i
     logger.info(f"[recursion] ++ Computing the homogeneous monomials up to order {2*n-1}")
-    W = L.parent().weight_func([int(v.variable_name()[1:]) for v in L.parent().gens()[:-1]] + [0], [1]) # everything except derivation has weight 1 # TODO: the getting of weight is dubius
+    W = L.parent().weight_func([int(v.variable_name()[2:]) for v in L.parent().gens()[:-1]] + [0], [1]) # everything except derivation has weight 1 # TODO: the getting of weight is dubius
     T = [W.homogeneous_monomials(i) for i in range(2*n)]
 
     ## We first create the ansatz. For that, we need to define the ansatz constants first.
@@ -757,8 +757,8 @@ def recursion(n: int):
     M = [
             [
                 (
-                    sum(sum(R(c)*R(str(t)) for (c,t) in zip(variable_names_matrix[i][j][o], T[o]))*R(str(z[order_in_matrix(i,j)-o])) for o in range(order_in_matrix(i,j)+1)), 
-                    sum(R(c)*R(str(t)) for (c,t) in zip(variable_names_matrix[i][j][n+j-i+1], T[n+j-i+1])) if j in valid_pseudo else R.zero() # homogenous of weight n+j-i+1 for "\partial^{-1}"
+                    sum(sum(R.base()(c)*R(t) for (c,t) in zip(variable_names_matrix[i][j][o], T[o]))*R(z[order_in_matrix(i,j)-o]) for o in range(order_in_matrix(i,j)+1)), 
+                    sum(R.base()(c)*R(t) for (c,t) in zip(variable_names_matrix[i][j][n+j-i+1], T[n+j-i+1])) if j in valid_pseudo else R.zero() # homogenous of weight n+j-i+1 for "\partial^{-1}"
                 )
             for j in range(n-1)] 
         for i in range(n-1)]
@@ -768,7 +768,7 @@ def recursion(n: int):
     
     ## Casting the computed hierarchy to the new ring
     logger.info(f"[recursion] ++ Casting the Hs into the appropriate ring...")
-    H = [None] + [[sum(BwC(c)*R(str(m)) for (c,m) in zip(el.coefficients(), el.monomials())) for el in h] for h in H[1:]]
+    H = [None] + [[sum(R.base()(c)*R(m) for (c,m) in zip(el.coefficients(), el.monomials())) for el in h] for h in H[1:]]
 
     ## We compute the equations to be solve
     logger.info(f"[recursion] ++ Computing the equations to be solved...")
@@ -776,7 +776,7 @@ def recursion(n: int):
     for m in range(1,n):
         MH = ACT_M(M, H[m])
         diff = [MH[i] - H[m+n][i] for i in range(n-1)]
-        equations += sum([[BwC(el) for el in h.coefficients()] for h in diff], [])
+        equations += sum([[el.wrapped for el in h.coefficients()] for h in diff], [])
     
     logger.info(f"[recursion] ++ Created the linear systems. We have {len(equations)} equations")
     ## We solve the system (NOTE: right now we use groebner bases and reduce, maybe it is better to change this)
