@@ -618,7 +618,7 @@ def __almost_commuting_linear(parent: DPolynomialRing_Monoid, equations: list[DP
     if len(cs) == 1:
         A = matrix(base_C.wrapped.base(), [[equ.lc() for _ in cs] for equ in new_equations])
     else: # multivariate polynomials are the base structure
-        A = matrix(base_C.wrapped.base(), [[equ.coefficient(v) for v in cs] for equ in new_equations])
+        A = matrix(base_C.wrapped.base(), [[equ.coefficient(v) for v in cs] for equ in new_equations], sparse=True)
     b = vector([equ.constant_coefficient() for equ in new_equations])
     sols = A.solve_right(-b)
     sols = {c : sol for (c, sol) in zip (cs, sols)}
