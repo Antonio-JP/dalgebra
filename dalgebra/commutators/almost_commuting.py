@@ -161,6 +161,7 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 
 from ..dring import DifferentialRing, DRings
 
+from ..dpolynomial.dmonoids import DMonomial
 from ..dpolynomial.dpolynomial import DPolynomial, DPolynomialGen, DPolynomialSimpleMorphism, DPolynomialRing_Monoid, DifferentialPolynomialRing
 from ..dpolynomial.dsystems import DSystem
 from ..logging.logging import cache_in_file
@@ -518,7 +519,15 @@ def __almost_commuting_recursive(parent: DPolynomialRing_Monoid, order_L: int, o
         E = T + E # mixing into one to fit format of recursion
 
         ## Getting the final ring
-        R = R.append_variables(f"{name_p}_{order_P}") # we add the last variable ("p_m") into `R` 
+        oR, R = R, R.append_variables(f"{name_p}_{order_P}") # we add the last variable ("p_m") into `R` 
+        ## Creating conversion and coercion from parent to R
+        try:
+            parent.register_conversion(parent.convert_map_from(oR)*oR.convert_map_from(R)) # composition of convert maps
+            R.register_coercion(R.coerce_map_from(oR)*oR.coerce_map_from(parent))
+        except AssertionError:
+            logger.debug("[AC-get_equ-recur] Coercion/conversion already registered")
+
+        ## Creating variables for the generators
         u = list(reversed([R.gen(name) for name in __names_variables(order_L, name_u)]))+ [[R.zero(), R.zero()], [R.one()]] # u[i] := coeff(L, z[i])
         p = [R.one(), R.zero()] + [R.gen(f"{name_p}_{i}") for i in range(2, order_P+1)] # p[i] := p_i (i.e. the coefficient of weight `i`)
         assert len(u) == order_L + 1; assert len(p) == order_P + 1
@@ -527,6 +536,17 @@ def __almost_commuting_recursive(parent: DPolynomialRing_Monoid, order_L: int, o
 
         n = order_L; m = order_P-1 # for simplicity in the following formulas
 
+        def gen_monomial(ind_p=-1, ord_p=-1, ind_u=-1, ord_u=-1) -> DMonomial:
+            if ind_p == 1 or ind_u == n-1: # zero cases
+                return tuple()
+            output = tuple()
+            # Processing ind_p (0 --> 1 (do nothing), 1 --> return tuple())
+            if ind_p > 0: output += (((p[ind_p]._index, ord_p), 1),)
+            # Processing ind_u (n --> 1 (do nothing), n-1 --> 0 return tuple())
+            if ind_u >= 0 and ind_u < n: output += (((u[ind_u]._index, ord_u), 1),)
+
+            return R.monoids().element_class(R.monoids(), output)
+            
         ## Starting from the recursive part
         logger.debug(f"[AC-get_equ-recur] Creating the recursive part of the output ([L, P_{m}]D)")
         output = [R.zero()] + E + [R.zero() for _ in range(order_L+order_P-3-len(E))]
@@ -534,22 +554,36 @@ def __almost_commuting_recursive(parent: DPolynomialRing_Monoid, order_L: int, o
 
         ## Computing the influence of the new variable
         logger.debug(f"[AC-get_equ-recur] Creating the part involving the new variable ([L, p_{m+1}])")
+        to_add = [dict() for _ in range(len(output))]
+
         for l in range(n-1):
-            el = binomial(n, l)*p[m+1][n-l] + sum(binomial(i,l)*u[i][0]*p[m+1][i-l] for i in range(l+1, n-1))
-            logger.debug(f"[AC-get_equ-recur] - Coefficient {l}: {el}")
-            output[l] += el
-        logger.debug(f"[AC-get_equ-recur] - Coefficient {n-1}: {n*p[m+1][1]}")
-        output[n-1] += n*p[m+1][1]
+            t = gen_monomial(m+1,n-l)
+            #assert not t in to_add[l]
+            to_add[l][t] = binomial(n, l)
+
+            for i in range(l+1, n-1):
+                t = gen_monomial(m+1,i-l,i,0)
+                #assert not t in to_add[l]
+                to_add[l][t] = binomial(i,l)
+            
+        t = gen_monomial(m+1,1)
+        #assert not t in to_add[n-1]
+        to_add[n-1][t] = n
 
         ## Computing the generic influence
         logger.debug(f"[AC-get_equ-recur] Creating the remaining part of the output (P_{m} [L, d])")
         for l in range(n+m-1):
-            el = (
-                sum(sum(binomial(i,k)*p[m-i][0]*u[l-k][i-k+1] for k in range(max(0, l-n+2), min(i,l)+1) )for i in range(max(0, l-n+2), m-1)) +
-                sum(binomial(m,k)*u[l-k][m-k+1]for k in range(max(0, l-n+2), min(m,l)+1) )
-            )
-            logger.debug(f"[AC-get_equ-recur] - Coefficient {l}: {el}")
-            output[l] -= el
+            for i in range(max(0, l-n+2), m-1):
+                for k in range(max(0, l-n+2), min(i,l)+1):
+                    t = gen_monomial(m-i, 0, l-k, i-k+1)
+                    #assert not t in to_add[l]
+                    to_add[l][t] = -binomial(i,k)
+            for k in range(max(0, l-n+2), min(m,l)+1):
+                t = gen_monomial(ind_u=l-k, ord_u=m-k+1)
+                #assert not t in to_add[l]
+                to_add[l][t] = -binomial(m,k)
+        
+        output = [output[i] + R.element_class(R, to_add[i]) for i in range(len(output))]
 
         return R, output[n-1:], output[:n-1]
 
