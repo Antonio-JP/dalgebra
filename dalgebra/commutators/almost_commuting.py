@@ -771,7 +771,7 @@ def recursion(n: int):
     ## We compute now the homogeneous monomials
     order_in_matrix = lambda i,j : n + j - i
     logger.info(f"[recursion] ++ Computing the homogeneous monomials up to order {2*n-1}")
-    W = L.parent().weight_func([int(v.variable_name()[2:]) for v in L.parent().gens()[:-1]] + [0], [1]) # everything except derivation has weight 1 # TODO: the getting of weight is dubius
+    W = L.parent().weight_func([int(v.variable_name()[2:]) for v in L.parent().gens()[:-1]] + [0], [1]) # everything except derivation has weight 1 # TODO: the getting of weight is dubious
     T = [W.homogeneous_monomials(i) for i in range(2*n)]
 
     ## We first create the ansatz. For that, we need to define the ansatz constants first.

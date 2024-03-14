@@ -4,7 +4,7 @@ import logging
 
 from itertools import product
 
-from sage.all import (cached_method, ZZ, latex, diff, Parent, parent, SR, vector)
+from sage.all import (cached_method, ZZ, latex, diff, Parent, SR, vector)
 from sage.categories.all import Morphism, Category, Sets
 from sage.categories.monoids import Monoids
 from sage.categories.morphism import SetMorphism # pylint: disable=no-name-in-module
