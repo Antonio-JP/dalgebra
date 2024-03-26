@@ -346,8 +346,8 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "direct", s
     name_u: str = "u"; name_z: str = "z"
     if (not n in ZZ) or ZZ(n) <= 0:
         raise ValueError(f"[almost] The value {n = } must be a positive integer")
-    if (not m in ZZ) or ZZ(m) <= 0:
-        raise ValueError(f"[almost] The value {m = } must be a positive integer")
+    if (not m in ZZ) or ZZ(m) < 0:
+        raise ValueError(f"[almost] The value {m = } must be a non-negative integer")
     if name_u == name_z:
         raise ValueError(f"[almost] The names for the differential variables must be different. Given {name_u} and {name_z}")
     

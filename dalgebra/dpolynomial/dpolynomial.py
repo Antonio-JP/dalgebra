@@ -563,15 +563,16 @@ class DPolynomial(Element):
             * ``power``: the power we want to compute.
             * ``gen``: the generator that will be substituted. If not given, we will take the first generator of the parent.
         '''
+        gen = gen if gen != None else self.parent().gens()[0]
         power = int(power)
         if power == 0:
-            return self.parent().one()
+            return gen[0]
         elif power == 1:
             return self
         else:
             H1 = self.sym_power(power//2 + power % 2, gen)
             H2 = self.sym_power(power//2, gen)
-            gen = gen if gen != None else self.parent().gens()[0]
+            
             ngen = gen.variable_name()
             return H1(**{ngen: H2})
         
@@ -740,6 +741,8 @@ class DPolynomial(Element):
         return output
     
     def _latex_(self) -> str:
+        if self.is_zero(): return "0"
+
         return "+".join(r"\left(" + latex(c) + r"\right)" + ('' if m.is_one() else latex(m)) for (m,c) in self._content.items())
     
     def __call__(self, *args, dic : dict = None, **kwds):
