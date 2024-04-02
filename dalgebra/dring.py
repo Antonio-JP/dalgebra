@@ -1332,6 +1332,8 @@ class DRing_Wrapper(Parent):
 
     ## Coercion methods
     def _coerce_map_from_(self, S):
+        if isinstance(S, DRing_Wrapper):
+            return self._coerce_map_from_(S.wrapped) ## TODO: WARNING: THIS DOES NOT CHECK FOR CORRECTNESS IN OPERATIONS
         return self.wrapped == S or self.wrapped._coerce_map_from_(S) != None
 
     def __call__(self, x, *args, **kwds):
