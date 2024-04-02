@@ -55,7 +55,7 @@ def LoopInParallel(func, iterable, chunksize=1):
     
 def StartPool(ncpus: int = None):
     global __ProcessesPool
-    if __ProcessesPool == None and ncpus != None:
+    if __ProcessesPool == None and ncpus not in (None, 1):
         __ProcessesPool = Pool(ncpus)
 
 #################################################################################################
@@ -88,7 +88,7 @@ class SolutionBranch:
         ## Storing the dictionary of partial solution
         ##################################################################
         self.__solution = {k : self.__parent(v) for k,v in solution.items()} # we store a copy with casted values
-        self.__solution = SolutionBranch.__clean_solution(self.__solution, self.__parent)
+        self.__solution = SolutionBranch.__clean_solution(self.__solution, self.I, self.__parent)
 
         ##################################################################
         ## Storing the list of decisions taken
@@ -150,7 +150,7 @@ class SolutionBranch:
             output = self.diff_parent(origin.base()).fraction_field()
         else: 
             imgs_of_gens = {str(v): self.parent()(origin(str(v)).derivative()) if v in origin else 0 for v in self.final_parent().gens()}
-            base = self.final_parent().fraction_field() if origin.is_field() else self.final_parent()
+            base = self.final_parent(origin.is_field())
             if any(imgs_of_gens[v] != 0 for v in (g for g in imgs_of_gens if g not in base.variable_names())):
                 raise TypeError(f"Impossible to build the differential structure: something was not constant but was assigned in the solution branch")
             
@@ -169,13 +169,7 @@ class SolutionBranch:
     ######################################################################################################    
     def eval(self, element):
         if isinstance(element, DPolynomial): # case of differential polynomials
-            dR = self.diff_parent(element.parent())
-            return sum(
-                c*m for (c,m) in zip(
-                    (dR(self.eval(el)) for el in element.coefficients()),
-                    (dR(str(el)) for el in element.monomials())
-                )
-            )
+            return element(**self.__solution) # this should evaluate coefficients and monomials
         
         # case of coefficients
         if is_FractionField(element.parent()): # case of fractions
@@ -234,19 +228,21 @@ class SolutionBranch:
         if not isinstance(other, SolutionBranch): return False
         return self.I == other.I and self.__solution == other.__solution
     
+    def __ne__(self, other) -> bool: return not (self == other)
+    
     def __hash__(self) -> int: return hash((self.I, tuple(sorted(self.__solution.keys()))))
 
     ######################################################################################################
     ### STATIC METHODS OF THE CLASS
     ######################################################################################################
     @staticmethod
-    def __clean_solution(solution: dict, parent):
+    def __clean_solution(solution: dict, ideal, parent):
         solution = {k: parent(v) for k,v in solution.items()}
         old_solution = None
 
         while(solution != old_solution):
             old_solution = solution
-            solution = {k: v(**old_solution) for (k,v) in solution.items()}
+            solution = {k: v(**old_solution).reduce(ideal) for (k,v) in solution.items()}
 
         return solution
  

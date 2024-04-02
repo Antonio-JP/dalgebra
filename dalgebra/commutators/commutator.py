@@ -85,7 +85,7 @@ _DRings = DRings.__classcall__(DRings)
 #################################################################################################
 @loglevel(logger)
 def GetEquationsForSolution(m : int, 
-        L: DPolynomial = None, n: int = None, U: list | dict = None, *, 
+        n: int = None, U: list | dict = None, *, 
         extract: Callable[[Polynomial], list[Polynomial]], 
         flag_name: str = "c", name_partial: str = "z") -> tuple[DPolynomial, DPolynomial, Ideal]:
     r'''
@@ -130,15 +130,7 @@ def GetEquationsForSolution(m : int,
         on `H` are only *algebraic* equations.
     '''
     ## If the operator `L` is given, we transform it into the inputs `U` and `n`
-    if L != None:
-        ## Checking we do not collide in arguments
-        if U != None or n != None: raise ValueError(f"[GEFS] Too many arguments given. `L` provided together with `U` and `n`.")
-        z = L.parent().gen(name_partial)
-        if not L.is_linear(z): raise TypeError(f"[GEFS] The base operator is not linear.")
-        elif not L.is_normal_form(z): raise TypeError(f"[GEFS] The base operator is not in normal form")
-        n = L.order(z)
-        U = [L.parent().base()(L.coefficient(z[i])) for i in range(n-1)]
-    elif U == None or n == None:
+    if U == None or n == None:
         raise ValueError(f"[GEFS] Too few arguments given. Either `L` or (`U`,`n`) must be provided")
     
     ## Checking correctness of arguments
@@ -168,35 +160,30 @@ def GetEquationsForSolution(m : int,
     ## Adding the appropriate number of flag constants
     logger.debug(f"[GEFS] Creating the ring for having the flag of constants...")
     C = [f"{flag_name}_{i}" for i in range(m+1)]
-    diff_base = parent_us.add_constants(*C)
-        
+    diff_base = parent_us.add_constants(*C); C = [diff_base(c) for c in C]
     logger.debug(f"[GEFS] Ring with flag-constants: {diff_base=}")
-    u = [L.coefficient(z[i]).change_ring(diff_base) for i in range(n-1)]
-    L = L.change_ring(diff_base)
-    u = [L.parent().gen(el.infinite_variables()[0].variable_name()) for el in u]
-    C = [diff_base(C[i]) for i in range(len(C))]
-    print(u)
-    U = {u[i]: diff_base(U.get(i, 0)) for i in range(n-1)}
+    U = {L.coefficient_full(z[i]).infinite_variables()[0]: diff_base(U.get(i,0)) for i in U} # Dictionary to evaluate generic polynomials
+    L = L(dic=U) # parent now without any u variable
 
     ### Computing the almost commuting basis up to order `m` and the hierarchy up to this point
     logger.debug(f"[GEFS] ++ Computing the basis of almost commuting and the hierarchies...")
-    Ps = [L.parent().one()]; Hs = [(n-1)*[L.parent().zero()]]
-    for i in range(1, m+1):
+    Ps = []; Hs = []
+    for i in range(0, m+1):
         ## TODO: should we remove the i with m%n = 0?
         nP, nH = almost_commuting_wilson(n, i, name_z=name_partial)
-        Ps.append(nP.change_ring(diff_base)); Hs.append([h.change_ring(diff_base) for h in nH])
+        Ps.append(nP(dic=U)); Hs.append([h(dic=U) for h in nH])
         logger.debug(f"[GEFS]    Computed for order {i}")
     
     logger.debug(f"[GEFS] -- Computed the basis of almost commuting and the hierarchies")
     
     logger.debug(f"[GEFS] Computing the guessed commutator...")
-    P = sum(c*p(dic=U) for (c,p) in zip(C, Ps)) # this is the evaluated operator that will commute
+    P = sum(c*p for (c,p) in zip(C, Ps)) # this is the evaluated operator that will commute
     logger.debug(f"[GEFS] Computing the commuting equations...")
-    H = [sum(C[i]*Hs[i][j](dic=U) for i in range(len(C))) for j in range(n-1)] # the equations that need to be 0
+    H = [sum(C[i]*Hs[i][j] for i in range(len(C))) for j in range(n-1)] # the equations that need to be 0
     logger.debug(f"[GEFS] Extracting the algebraic equation from the commuting equations...")
     H = sum([extract(h.numerator()) for h in H], []) # extract the true equations from 
 
-    return L(dic=U), P, ideal(H)
+    return L, P, ideal(H)
 
 @loglevel(logger)
 def PolynomialCommutator(n: int, m: int, d: int) -> tuple[DPolynomial, DPolynomial, Ideal]:
