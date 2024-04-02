@@ -376,6 +376,19 @@ class DMonomial(Element):
         return "*".join(f"{variable_names[v]}_{'_'.join(str(oo) for oo in o)}{f'^{e}' if e != 1 else ''}" for ((v,o),e) in elements)
     
     def __str__(self) -> str: return repr(self)
+
+    def _latex_(self) -> str:
+        if self.is_one():
+            return "1"
+        
+        variable_names = self._parent.variable_names()
+        elements = sorted(self._variables.items())
+        return "".join(
+            (f"\u007b{variable_names[v]}\u007d") + # variable name surrounded by brackets
+            (r"_{" + f"({','.join(str(oo) for oo in o)})" + r"}") + # Section representing the operators applied
+            (f'^\u007b{e}\u007d' if e != 1 else '') # exponent of the variable
+        for ((v,o),e) in elements
+        )
    
 class DMonomialGen:
     def __init__(self, parent: DMonomialMonoid, name: str, *, index: int = -1):
@@ -494,8 +507,7 @@ class DMonomialGen:
         return repr(self)
 
     def _latex_(self) -> str:
-        from sage.misc.latex import latex_variable_name
-        return latex_variable_name(self._name + "ast" if "_" in self._name else "_ast")
+        return f"\u007b{self._name}\u007d_\u007b(*)\u007d"
 
 RWOPolynomialGen = DMonomialGen #: alias for DMonomialGen (used for backward compatibility)
 

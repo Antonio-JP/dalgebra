@@ -471,6 +471,9 @@ class DPolynomial(Element):
     ###################################################################################
     ### Operational operations
     ###################################################################################
+    def eval_coefficients(self, *args, **kwds):
+        return self.parent().element_class(self.parent(), {t : c(*args, **kwds) for (t,c) in self._content.items()})
+
     def eval(self, *args, dic : dict = None, **kwds):
         r'''
             Evaluating a DMonomial
@@ -486,41 +489,66 @@ class DPolynomial(Element):
             if not isinstance(dic, dict): raise TypeError("Invalid type for dictionary evaluating DMonomial")
             kwds.update({v.variable_name() if isinstance(v, DMonomialGen) else str(v) : val for (v,val) in dic.items()})
 
-        ## Computing the final ring
-        from functools import reduce
-        final_base = reduce(pushout, 
-                            (el.parent() if not is_DPolynomialRing(el.parent()) else el.parent().base()
-                                for el in kwds.values()), 
-                            self.parent().base())
-        R_w_kwds = self.parent().remove_variables(*list(kwds.keys())) # conversion from self.parent() to R_w_kwds is created
-        final_dvariables = set(R_w_kwds.variable_names())
-        for value in kwds.values():
-            if is_DPolynomialRing(value.parent()):
-                final_dvariables.update(value.parent().variable_names())
-        output_ring = DPolynomialRing(final_base, list(final_dvariables))
-        self_to_output = DPolynomialVariableMorphism(R_w_kwds, output_ring) * R_w_kwds.convert_map_from(self.parent())
+        ###########################################################
+        ## Evaluating coefficients first
+        ###########################################################
+        inner_kwds = dict()
+        out_kwds = dict()
+        for entry, value in kwds.items():
+            if not entry in self.parent().variable_names():
+                inner_kwds[entry] = value
+            else:
+                out_kwds[entry] = value
+        kwds = out_kwds
 
-        ## Changing names to integers
-        kwds = {
-            self.parent().variable_names().index(k) : 
-                DPolynomialVariableMorphism(v.parent(), output_ring)(v) if is_DPolynomialRing(v.parent()) else
-                final_base(v)
-            for (k,v) in kwds.items()}
+        if len(inner_kwds) > 0: # Evaluating coefficients -> this forces everything to remain in the same base ring
+            return self.eval_coefficients(**inner_kwds)(**kwds)
 
-        result = output_ring.zero()
-        for (m, c) in self._content.items():
-            ## Evaluating the monomial
-            ev_mon = final_base.one() # ev_mon will be in final_base or output_ring
-            rem_mon = dict() # rem_mon will be in output_ring using ``self_to_output``
-            for (v,o),e in m._variables.items(): 
-                if v in kwds:
-                    el = kwds[v]; P = el.parent()
-                    ev_mon *= P.apply_operations(el, o)**e
-                else:
-                    rem_mon[(v,o)] = m._variables[(v,o)]
-            rem_mon = self.parent()(self.parent().monoids().element_class(self.parent().monoids(), rem_mon)) if len(rem_mon) > 0 else self.parent().one()
-            result += self_to_output(rem_mon) * final_base(c) * ev_mon
-        return result
+        if len(kwds) > 0:
+            ## Computing the final ring
+            from functools import reduce
+            final_base = reduce(pushout, 
+                                (el.parent() if not is_DPolynomialRing(el.parent()) else el.parent().base()
+                                    for el in kwds.values()), 
+                                self.parent().base())
+            R_w_kwds = self.parent().remove_variables(*list(kwds.keys())) # conversion from self.parent() to R_w_kwds is created
+            final_dvariables = set(R_w_kwds.variable_names()) if is_DPolynomialRing(R_w_kwds) else set()
+            for value in kwds.values():
+                if is_DPolynomialRing(value.parent()):
+                    final_dvariables.update(value.parent().variable_names())
+            if len(final_dvariables) > 0 and is_DPolynomialRing(R_w_kwds):
+                output_ring = DPolynomialRing(final_base, list(final_dvariables))
+                self_to_output = DPolynomialVariableMorphism(R_w_kwds, output_ring) * R_w_kwds.convert_map_from(self.parent())
+            elif len(final_dvariables) > 0:
+                output_ring = DPolynomialRing(final_base, list(final_dvariables))
+                self_to_output = output_ring.coerce_map_from(R_w_kwds) * R_w_kwds.convert_map_from(self.parent())
+            else:
+                output_ring = final_base
+                self_to_output = output_ring.coerce_map_from(R_w_kwds) * R_w_kwds.convert_map_from(self.parent())
+
+            ## Changing names to integers
+            kwds = {
+                self.parent().variable_names().index(k) : 
+                    DPolynomialVariableMorphism(v.parent(), output_ring)(v) if is_DPolynomialRing(v.parent()) else
+                    final_base(v)
+                for (k,v) in kwds.items()}
+
+            result = output_ring.zero()
+            for (m, c) in self._content.items():
+                ## Evaluating the monomial
+                ev_mon = final_base.one() # ev_mon will be in final_base or output_ring
+                rem_mon = dict() # rem_mon will be in output_ring using ``self_to_output``
+                for (v,o),e in m._variables.items(): 
+                    if v in kwds:
+                        el = kwds[v]; P = el.parent()
+                        ev_mon *= P.apply_operations(el, o)**e
+                    else:
+                        rem_mon[(v,o)] = m._variables[(v,o)]
+                rem_mon = self.parent()(self.parent().monoids().element_class(self.parent().monoids(), rem_mon)) if len(rem_mon) > 0 else self.parent().one()
+                result += self_to_output(rem_mon) * final_base(c) * ev_mon
+            return result
+        else: # Nothing to evaluate -> we return the object
+            return self
 
     def lie_bracket(self, other: DPolynomial, gen: DMonomialGen = None) -> DPolynomial:
         r'''
@@ -742,8 +770,23 @@ class DPolynomial(Element):
     
     def _latex_(self) -> str:
         if self.is_zero(): return "0"
+        parts = []
+        for (m,c) in sorted(self._content.items(), key=lambda p : p[0]):
+            if str(c)[0] == "-": # changing sign
+                sign = "-"; c = -c
+            else:
+                sign = "+"
 
-        return "+".join(r"\left(" + latex(c) + r"\right)" + ('' if m.is_one() else latex(m)) for (m,c) in self._content.items())
+            par = any(char in str(c) for char in ("+", "*", "-"))            
+
+            if m.is_one(): parts.append((sign, "", f"\\left({latex(c)}\\right)"))
+            elif c == 1: parts.append((sign, latex(m), ""))
+            else: parts.append((sign, latex(m), f"\\left({latex(c)}\\right)"))
+
+        output = f"{parts[0][0] if parts[0][0] == '-' else ''}{parts[0][2]}{parts[0][1]}"
+        for (sign, m, c) in parts[1:]:
+            output += f" {sign} {c}{m}"
+        return output
     
     def __call__(self, *args, dic : dict = None, **kwds):
         return self.eval(*args, dic=dic, **kwds)
