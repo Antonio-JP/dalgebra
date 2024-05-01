@@ -820,13 +820,20 @@ class DPolynomial(Element):
                 Traceback (most recent call last)
                 ...
                 TypeError: The given polynomial ... is not linear or homogeneous over v_*
+                sage: f3 = x*u[0] + x^2*u[2] # variable v not appearing
+                sage: f3._maple_("v", "x", "partial")
+                'x*u(x) + x^2*diff(u(x), x$2)'
+                sage: R.one()._maple_("u")
+                '1'
+                sage: R.zero()._maple_("u")
+                '0'                
                 sage: S.<big,small> = DifferentialPolynomialRing(QQ)
-                sage: f3 = big[0]*small[1] + 3*big[0]*small[3]^2 - big[1]*small[2]
-                sage: f3._maple_(small) # not linear in small_*
+                sage: f4 = big[0]*small[1] + 3*big[0]*small[3]^2 - big[1]*small[2]
+                sage: f4._maple_(small) # not linear in small_*
                 Traceback (most recent call last)
                 ...
                 TypeError: The given polynomial ... is not linear or homogeneous over small_*
-                sage: f3._maple_(big) # correct
+                sage: f4._maple_(big) # correct
                 '(diff(small(t), t$1) + 3*diff(small(t), t$3)^2) + (-diff(small(t), t$2))*big'
         '''
         if not isinstance(gen, DMonomialGen):
@@ -834,21 +841,25 @@ class DPolynomial(Element):
         if gen not in self.parent().gens():
             raise ValueError("The given variable must be a valid generator of the parent.")
         
+        if self.is_zero():
+            return r"0"
+        
         if not self.is_linear([gen]) or any(self.parent()(m).order(gen) == -1 for m in self.monomials()):
-            raise TypeError(f"The given polynomial ({self}) is not linear or homogeneous over {gen}")
+            if self.order(gen) != -1:
+                raise TypeError(f"The given polynomial ({self}) is not linear or homogeneous over {gen}")
         
         if maple_diff is None:
             maple_diff = gen.variable_name()
-        
-        if self.is_zero():
-            return r"0"
 
         coeffs = dict()
         mons = dict()
-        for i in range(self.order(gen)+1):
-            c = self.coefficient_full(gen[i])
-            if c != 0:
-                coeffs[i] = str(c) # we cast the coefficients to strings
+        if self.order(gen) != -1: # Normal case
+            for i in range(self.order(gen)+1):
+                c = self.coefficient_full(gen[i])
+                if c != 0:
+                    coeffs[i] = str(c) # we cast the coefficients to strings
+        else: # special case for polynomials without the differential operatos
+            coeffs[0] = str(self)
 
         ## We transform the coefficients to fit the Maple format
         regex = r"(" + "|".join([el.variable_name() for el in self.infinite_variables()]) + r")_(\d+)"
