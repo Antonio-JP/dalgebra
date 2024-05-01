@@ -109,3 +109,6 @@ docs/_sources
 *.prf
 *.csv
 *.dmp
+*.out
+
+.ci
