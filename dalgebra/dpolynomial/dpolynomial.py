@@ -788,6 +788,96 @@ class DPolynomial(Element):
             output += f" {sign} {c}{m}"
         return output
     
+    def _maple_(self, gen: DMonomialGen | str, maple_var: str = "t", maple_diff: str = None) -> str:
+        r'''
+            Method to convert the polynomial into a differential polynomial in Maple.
+
+            This method requires a d-variable as input to determine which is the operator variable.
+
+            INPUT:
+
+            * ``gen``: variable to be used as an operator variable. If the polynomial is not linear in this variable, an error is 
+              raised. It can be also the name of a d-variable in ``self.parent()``.
+            * ``maple_var``: the name that the independent variable will take. This is the variable over which we differentiate.
+            * ``maple_diff``: name for the differential operator in Maple. If none is given, we will take the name of the d-variable 
+              given by ``gen``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: f1 = x*u[0]*v[1] + x^2*u[2]*v[2] + 3*x*v[2] - (1-x)*v[0]
+                sage: f1._maple_(v) # correct behavior
+                '(x - 1)+(x*u(x))*D+((3*x) + x^2*diff(u(x), x$2))*D^2'
+                sage: f1._maple_(v, "x", "D") # changing ind. variable and diff. operator
+                '(x - 1)+(x*u(x))*D+((3*x) + x^2*diff(u(x), x$2))*D^2'
+                sage: f1._maple_(u) # Not homogeneous in u_*
+                Traceback (most recent call last)
+                ...
+                TypeError: The given polynomial ... is not linear or homogeneous over u_*
+                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homoeneous in v_*
+                sage: f2._maple_(v)
+                Traceback (most recent call last)
+                ...
+                TypeError: The given polynomial ... is not linear or homogeneous over v_*
+                sage: S.<big,small> = DifferentialPolynomialRing(QQ)
+                sage: f3 = big[0]*small[1] + 3*big[0]*small[3]^2 - big[1]*small[2]
+                sage: f3._maple_(small) # not linear in small_*
+                Traceback (most recent call last)
+                ...
+                TypeError: The given polynomial ... is not linear or homogeneous over small_*
+                sage: f3._maple_(big) # correct
+                '(diff(small(t), t$1) + 3*diff(small(t), t$3)^2) + (-diff(small(t), t$2))*big'
+        '''
+        if not isinstance(gen, DMonomialGen):
+            gen = self.parent().gen(str(gen))
+        if gen not in self.parent().gens():
+            raise ValueError("The given variable must be a valid generator of the parent.")
+        
+        if not self.is_linear([gen]) or any(self.parent()(m).order(gen) == -1 for m in self.monomials()):
+            raise TypeError(f"The given polynomial ({self}) is not linear or homogeneous over {gen}")
+        
+        if maple_diff is None:
+            maple_diff = gen.variable_name()
+        
+        if self.is_zero():
+            return r"0"
+
+        coeffs = dict()
+        mons = dict()
+        for i in range(self.order(gen)+1):
+            c = self.coefficient_full(gen[i])
+            if c != 0:
+                coeffs[i] = str(c) # we cast the coefficients to strings
+
+        ## We transform the coefficients to fit the Maple format
+        regex = r"(" + "|".join([el.variable_name() for el in self.infinite_variables()]) + r")_(\d+)"
+        def subs_regex(M):
+            var, order = M.groups()
+            if order == '0':
+                return var + f"({maple_var})"
+            else:
+                return f"diff({var}({maple_var}), {maple_var}${order})"
+            
+        import re
+        for i in coeffs:
+            coeffs[i] = re.sub(regex, subs_regex, coeffs[i])
+            mons[i] = "" if i == 0 else maple_diff if i == 1 else f"{maple_diff}^{i}"
+
+
+        ## We put everything together
+        def mix_coeff_mon(coeff, mon):
+            if coeff == "1" and mon == "":
+                return "1"
+            elif mon == "":
+                return coeff
+            elif coeff == "1":
+                return mon
+            else:
+                return f"({coeff})*{mon}"
+
+        return "+".join(mix_coeff_mon(coeffs[i], mons[i]) for i in coeffs)
+
     def __call__(self, *args, dic : dict = None, **kwds):
         return self.eval(*args, dic=dic, **kwds)
 RWOPolynomial = DPolynomial #: alias for DPolynomial (used for backward compatibility)
@@ -2930,7 +3020,7 @@ class RankingFunction:
     
     def _latex_(self) -> str:
         return r"\mathbf{" + ("OrdR" if self.type == "orderly" else "ElimR") + r"}(" + "<".join(latex(v) for v in self.base_order) + r")"
-
+    
 __all__ = [
     "DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing", # names imported
     "RWOPolynomialRing", "is_RWOPolynomialRing" # deprecated names (backward compatibilities) 
