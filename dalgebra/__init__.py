@@ -160,7 +160,6 @@ from .logging import * # loading the logger and related functions
 
 from .dring import * # basic ring structures
 from .dpolynomial import * # ring of difference/differential polynomials
-from .dextension import * # extension of d-rings
 
 def dalgebra_version():
     from importlib.metadata import version
