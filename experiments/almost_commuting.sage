@@ -94,7 +94,7 @@ def latex_table(data: DataFrame, file_name: str) -> DataFrame:
                 caption=r"Execution time (in seconds) for computing the order $m$ almost commuting basis element for the operator $L_n$ using different approaches."
         )
 
-def create_graphs(data: DataFrame):
+def create_graphs_old(data: DataFrame):
     from pandas import concat
     from matplotlib import pyplot as plt
 
@@ -121,7 +121,34 @@ def create_graphs(data: DataFrame):
     plt.savefig("./speed-up.png")    
     plt.close("all")
 
-def print_table(*argv):
+def create_graphs(data: DataFrame):
+    from pandas import concat
+    from matplotlib import pyplot as plt
+
+    plt.close("all")
+    ## We plot the time for each n,m
+    ## For each n, we plot in the `x` the values for "m" and in the `y` the speed-up
+    DATA = concat(
+        {f"{n=}": 
+         data[["time"]].loc[(n,)] for n in data.droplevel('m').index.drop_duplicates()
+        }, axis=1
+    ).sort_index()
+    DATA.columns = [f"{n=}" for n in data.droplevel('m').index.drop_duplicates()]
+
+    plt.figure(figsize=(12,5))
+
+    for column in DATA.columns:
+        col = DATA[column].dropna()
+        plt.plot(*[col.index, col], linestyle="-", marker="o", label=column)
+    
+    plt.legend(loc="upper left")
+    plt.xlabel("m", loc="right")
+    # plt.title("Speed-up from Direct-Integration to Recursive-Linear", loc="center", y=-0.125)
+
+    plt.savefig("./speed-up.png")    
+    plt.close("all")
+
+def print_table_old(*argv):
     ## Reading the filters
     i = 0; n_filter = list(); m_filter = list(); equs_filter = list(); solver_filter = list(); latex = None; graphs = False
 
@@ -153,8 +180,34 @@ def print_table(*argv):
         latex_table(new_data, latex)
     if graphs:
         create_graphs(new_data)
-        
-      
+
+def print_table(*argv):
+    ## Reading the filters
+    i = 0; n_filter = list(); m_filter = list(); equs_filter = list(); solver_filter = list(); latex = None; graphs = False
+
+    while i < len(argv):
+        if argv[i] == "-latex":
+            latex = argv[i+1]; i += 2
+        elif argv[i] == "-graph":
+            graphs = True; i += 1
+        else:
+            i+=1
+
+    n_filter = [2,3,5,7]
+    m_filter = [2,3,4,5,6,7,8,9,10,11,12,13,14]
+    equs_filter = ["direct"]
+    solver_filter = ["integral"]
+
+    data = read_data(n_filter, m_filter, equs_filter, solver_filter)
+
+    to_print = data.groupby(["get_equs", "solver", "n", "m"]).mean(numeric_only=True).droplevel(["get_equs", "solver"])
+    set_option('display.max_rows', int(2)*len(to_print)) # guarantee the table is fully printed
+    print(to_print)
+
+    if graphs:
+        print("Creating graphs...")
+        create_graphs(to_print)
+            
 def test(n: int, m: int, get_equs: str, solver: str, out_file, profile: bool = False):
     r'''
         Runs :func:`almost_commuting_wilson` for given arguments, measure time and checks output.
