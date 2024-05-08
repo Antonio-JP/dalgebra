@@ -4,7 +4,7 @@ import logging
 
 from itertools import product
 
-from sage.all import (cached_method, ZZ, latex, diff, Parent, SR, vector)
+from sage.all import (cached_method, ZZ, latex, diff, matrix, Parent, SR, vector)
 from sage.categories.all import Morphism, Category, Sets
 from sage.categories.monoids import Monoids
 from sage.categories.morphism import SetMorphism # pylint: disable=no-name-in-module
@@ -414,6 +414,9 @@ class DPolynomial(Element):
     @cached_method
     def as_polynomial(self) -> Element: 
         return self.parent().as_polynomials(self)[0]
+    
+    def as_linear_operator(self) -> Element:
+        return self.parent().as_linear_operator(self)
         
     ###################################################################################
     ### Arithmetic operations
@@ -1958,48 +1961,65 @@ class DPolynomialRing_Monoid(Parent):
                 Traceback (most recent call last):
                 ...
                 NotImplementedError: [sylvester_checking] Sylvester resultant with 2 is not implemented
+
+            But it works nicely with several d-variables in the ring::
+
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: S.<y,z> = DPolynomialRing(B)
+                sage: P = z[2] - 3*y[0]*z[1] + (x^2 - 1)*z[0]
+                sage: Q = z[3] - y[1]*z[0]
+                [           x^2 - 1           (-3)*y_0                  1                  0                  0]
+                [               2*x (-3)*y_1 + x^2 - 1           (-3)*y_0                  1                  0]
+                [                 2     (-3)*y_2 + 4*x (-6)*y_1 + x^2 - 1           (-3)*y_0                  1]
+                [              -y_1                  0                  0                  1                  0]
+                [              -y_2               -y_1                  0                  0                  1]
         '''
-        # ## Checking the polynomials and ring arguments
-        # P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
+        ## Checking the polynomials and ring arguments
+        P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
         
-        # ## Checking the k argument
-        # n = P.order(gen); m = Q.order(gen); N = min(n,m) - 1
-        # # Special case when one of the orders is -1 (i.e., the variable `gen` is not present)
-        # if n == -1:
-        #     return matrix([[P]]) # P does not contain the variable `gen` to eliminate
-        # elif m == -1:
-        #     return matrix([[Q]]) # Q does not contain the variable `u` to eliminate
+        ## Checking the k argument
+        n = P.order(gen); m = Q.order(gen); N = min(n,m) - 1
+        # Special case when one of the orders is -1 (i.e., the variable `gen` is not present)
+        if n == -1:
+            return matrix([[P]]) # P does not contain the variable `gen` to eliminate
+        elif m == -1:
+            return matrix([[Q]]) # Q does not contain the variable `u` to eliminate
         
-        # if not k in ZZ:
-        #     raise TypeError(f"[sylvester_matrix] The index {k = } is not an integer.")
-        # elif N == -1 and k != 0:
-        #     raise TypeError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0].")
-        # elif N >= 0 and (k < 0 or k > N):
-        #     raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
+        if not k in ZZ:
+            raise TypeError(f"[sylvester_matrix] The index {k = } is not an integer.")
+        elif N == -1 and k != 0:
+            raise TypeError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0].")
+        elif N >= 0 and (k < 0 or k > N):
+            raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
         
-        # part_without_gen = lambda Poly : sum(c*m for (c,m) in zip(Poly.coefficients(), Poly.monomials()) if m.order(gen._index) == -1)
-        # homogeneous = any(part_without_gen(poly) != 0 for poly in (P,Q))
+        part_without_gen = lambda Poly : sum(c*m for (c,m) in zip(Poly.coefficients(), Poly.monomials()) if m.order(gen._index) == -1)
+        homogeneous = any(part_without_gen(poly) != 0 for poly in (P,Q))
 
-        # if homogeneous and k > 0:
-        #     raise NotImplementedError(f"[sylvester_matrix] The case of inhomogeneous operators and positive {k=} is not implemented.")
+        if homogeneous and k > 0:
+            raise NotImplementedError(f"[sylvester_matrix] The case of inhomogeneous operators and positive {k=} is not implemented.")
 
-        # extra = 1 if homogeneous else 0
-        # logger.info(f"Sylvester data: {n=}, {m=}, {k=}, {homogeneous=}")
+        extra = 1 if homogeneous else 0
+        logger.info(f"Sylvester data: {n=}, {m=}, {k=}, {homogeneous=}")
 
-        # # Building the extension
-        # extended_P: list[DPolynomial] = [P.operation(times=i) for i in range(m-k+extra)]
-        # extended_Q: list[DPolynomial] = [Q.operation(times=i) for i in range(n-k+extra)]
+        # Building the extension
+        extended_P: list[DPolynomial] = [P.operation(times=i) for i in range(m-k+extra)]
+        extended_Q: list[DPolynomial] = [Q.operation(times=i) for i in range(n-k+extra)]
 
-        # # Building the Sylvester matrix (n+m-1-k) , (n+m-1-k)
-        # fR = self.polynomial_ring() # guaranteed common parent for all polynomials
-        # cols = [fR(gen[pos].polynomial()) for pos in range(n+m-k+extra)]
-        # equations = [fR(equation.polynomial()) for equation in extended_P + extended_Q]
+        # Building the Sylvester matrix (n+m-1-k) , (n+m-1-k)
+        cols = [gen[pos] for pos in range(n+m-k+extra)]
+        equations = extended_P + extended_Q
 
-        # # Returning the matrix
-        # output = matrix([([part_without_gen(self(equation))] if homogeneous else []) + [self(equation.coefficient(m)) for m in cols] for equation in equations])
-        # logger.info(f"Obtained following matrix:\n{output}")
-        # return output
-        raise NotImplementedError(f"Method need revisiting")
+        ## We get the coefficient of the sylvester matrix
+        nrows = len(equations)
+        ncols = len(cols) + (1 if homogeneous else 0)
+        output = sum([([part_without_gen(self(equation))] if homogeneous else []) + [self(equation.coefficient_full(m)) for m in cols] for equation in equations], [])
+        output = self.as_polynomials(*output)
+        output = matrix([output[r*ncols:r*ncols + ncols] for r in range(nrows)])
+        
+        # Returning the matrix
+        logger.info(f"Obtained following matrix:\n{output}")
+        return output
+        
 
     def sylvester_subresultant_sequence(self, P: DPolynomial, Q: DPolynomial, gen: DMonomialGen = None) -> tuple[DPolynomial]:
         r'''
@@ -2068,9 +2088,9 @@ class DPolynomialRing_Monoid(Parent):
 
         ## Checking the operator polynomials are correct
         P = self(P); Q = self(Q)
-        if not P.is_linear(gen):
+        if not P.is_linear([gen]):
             raise TypeError(f"[sylvester_checking] The polynomial {P} is not linear w.r.t. {gen}")
-        if not Q.is_linear(gen):
+        if not Q.is_linear([gen]):
             raise TypeError(f"[sylvester_checking] The polynomial {Q} is not linear w.r.t. {gen}")
 
         return P,Q,gen
@@ -2134,32 +2154,40 @@ class DPolynomialRing_Monoid(Parent):
                 sage: from dalgebra import *
                 sage: R.<y> = DifferentialPolynomialRing(QQ[x]); x = R.base()(x)
                 sage: p1 = y[2] - (x^2 - 1)*y[1] - y[0] # linear operator of order 2
-                sage: p1.as_linear_operator()
-                D^2 + (-x^2 + 1)*D - 1
-                sage: R(p1.as_linear_operator()) == p1
-                True
+                sage: p1.as_linear_operator() # D^2 + (-x^2 + 1)*D - 1
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: ...
+                sage: R(p1.as_linear_operator()) == p1 # True
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: ...
                 
             If the operator polynomial is not linear or has a constant term, this method raises a :class:`TypeError`::
 
                 sage: p2 = x*y[2]*y[0] - (x^3 + 3)*y[1]^2 # non-linear operator
-                sage: p2.as_linear_operator()
+                sage: p2.as_linear_operator() # TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
                 Traceback (most recent call last):
                 ...
-                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
+                NotImplementedError: ...
                 sage: p3 = y[2] - (x^2 - 1)*y[1] - y[0] + x^3 # linear operator but inhomogeneous
-                sage: p3.as_linear_operator()
+                sage: p3.as_linear_operator() # TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
                 Traceback (most recent call last):
                 ...
-                TypeError: Linear operator can only be built from an homogeneous linear operator polynomial.
+                NotImplementedError: ...
 
             This also work when having several operators in the same ring::
 
                 sage: S.<u> = DPolynomialRing(DifferenceRing(DifferentialRing(QQ[x], diff), QQ[x].Hom(QQ[x])(QQ[x](x)+1))); x = S.base()(x)
                 sage: p4 = 2*u[0,0] + (x^3 - 3*x)*u[1,0] + x*u[1,1] - u[2,2] 
-                sage: p4.as_linear_operator()
-                -D^2*S^2 + x*D*S + (x^3 - 3*x)*D + 2
-                sage: S(p4.as_linear_operator()) == p4
-                True
+                sage: p4.as_linear_operator() # -D^2*S^2 + x*D*S + (x^3 - 3*x)*D + 2
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: ...
+                sage: S(p4.as_linear_operator()) == p4 # True
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: ...
 
             However, when having several infinite variables this method can not work even when the operator is clearly linear::
 
@@ -2168,7 +2196,7 @@ class DPolynomialRing_Monoid(Parent):
                 sage: p5.as_linear_operator()
                 Traceback (most recent call last):
                 ...
-                NotImplementedError: Impossible to generate ring of linear operators with 2 variables
+                NotImplementedError: ...
 
         '''
         # linear_operator_ring = self.linear_operator_ring() # it ensures the structure is alright for building this
@@ -2207,7 +2235,7 @@ class DPolyRingFunctor (ConstructionFunctor):
     def __init__(self, variables):
         self.__variables = set(variables)
         super().__init__(_DRings,_DRings)
-        self.rank = 12 # just above PolynomialRing and DRingFunctor and DExtension
+        self.rank = 12 # just above PolynomialRing and DRingFunctor
         
     ### Methods to implement        
     def _apply_functor(self, x):
@@ -2441,15 +2469,15 @@ class WeightFunction(SetMorphism):
                 sage: w.weighted_variables(1)
                 {a_0_0}
                 sage: w.weighted_variables(2)
-                {b_0_0, a_0_1}
+                {a_0_1, b_0_0}
                 sage: w.weighted_variables(3)
-                {b_0_1, a_1_0, a_0_2}
+                {a_0_2, a_1_0, b_0_1}
                 sage: w.weighted_variables(4)
-                {b_1_0, b_0_2, a_1_1, a_0_3}
+                {a_0_3, a_1_1, b_0_2, b_1_0}
                 sage: w.weighted_variables(5)
-                {b_1_1, b_0_3, a_2_0, a_1_2, a_0_4}
+                {a_0_4, a_1_2, a_2_0, b_0_3, b_1_1}
                 sage: w.weighted_variables(6)
-                {b_2_0, b_1_2, b_0_4, a_2_1, a_1_3, a_0_5}
+                {a_0_5, a_1_3, a_2_1, b_0_4, b_1_2, b_2_0}
                 sage: [len(w.weighted_variables(i)) for i in range(20)]
                 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
                 sage: w = R.weight_func([1,3],[1,1])

@@ -290,7 +290,7 @@ class DMonomial(Element):
         copy = self._variables.copy()
         for (v, o) in self._variables:
             od = list(o); od[operation] += 1; od = tuple(od) # pylint: disable=unsupported-assignment-operation
-            copy[(v,od)] = copy.pop((v,od))
+            copy[(v,od)] = copy.pop((v,o))
 
         return self._parent.element_class(self._parent, copy)
     
@@ -532,7 +532,7 @@ class DMonomialMonoid(Parent):
             sage: a[(2,3)]
             a_2_3
             sage: b[10]
-            b_0_3
+            b_0_4
             sage: a[(0,0)]^2*b[1]^3
             a_0_0^2*b_0_1^3
             sage: MM.one()
@@ -594,7 +594,7 @@ class DMonomialMonoid(Parent):
     ### MAGIC METHODS
     ################################################################################
     def __repr__(self) -> str:
-        return f"Monoid of d-monomials with {self.noperators()} with generators {self.gens()}"
+        return f"Monoid of d-monomials with {self.noperators()} operations with generators {self.gens()}"
     def __str__(self) -> str: return repr(self)
     def __eq__(self, other: DMonomialMonoid) -> bool:
         if not isinstance(other, DMonomialMonoid): return False
