@@ -1,7 +1,7 @@
-r'''    
+r'''
     Computation of spectral curves.
 
-    This module contains the main functionality to compute and analyze the spectral curves obtained from a pair 
+    This module contains the main functionality to compute and analyze the spectral curves obtained from a pair
     of commuting linear differential operators.
 
     **Things remaining TODO**
@@ -10,7 +10,7 @@ r'''
     1. CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
     2. Extend this documentation
     3. Add references to notation, definitions, etc.
-    
+
     **Elements provided by the module**
     -----------------------------------------
 '''
@@ -21,7 +21,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 from collections.abc import Sequence as ListType
-from sage.all import gcd
+
+from sage.arith.misc import GCD as gcd
 from sage.rings.fraction_field import is_FractionField
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.polynomial_element_generic import Polynomial
@@ -52,7 +53,7 @@ class SolutionBranch_SpectralData(TypedDict):
 @loglevel(logger)
 def SpectralCurveOverIdeal(L: DPolynomial, P: DPolynomial, branches: ListType[SolutionBranch]) -> dict[SolutionBranch, SolutionBranch_SpectralData]:
     r'''
-        Method that automatizes the computation of spectral curve and some extra data throughout the 
+        Method that automatizes the computation of spectral curve and some extra data throughout the
         solution branches of an ideal.
     '''
     final_output = dict()
@@ -97,18 +98,19 @@ def SpectralCurveOverIdeal(L: DPolynomial, P: DPolynomial, branches: ListType[So
 def spectral_operators(L: DPolynomial, P: DPolynomial, name_lambda: str = "lambda_", name_mu: str = "mu"):
     r'''
         Method to create the spectral operators associated with two differential operators.
-        
+
         This method assumes `L` and `P` are two linear differential operators in the same parent
         of the form `F[\textbf{x}]\{z\}`, i.e., one differential variable, then a set of algebraic variables
         (may or not be constant) and a base field `F` such that `\partial(F) = 0`.
 
-        To create the spectral operators we need to add algebraically the two constants `\lambda` and 
+        To create the spectral operators we need to add algebraically the two constants `\lambda` and
         `\mu` to `F[\textbf{x}]` at the same level. Then we will need to add again the variable `z`.
 
         This method will then return the two operators `L_\lambda = L - \lambda` and `P_\mu = P - \mu`.
     '''
     DR = L.parent()
-    if not P.parent() == DR: raise TypeError(f"[spectral] Method only implemented with same parent for operators.")
+    if not P.parent() == DR:
+        raise TypeError(f"[spectral] Method only implemented with same parent for operators.")
 
     ## We extract the main polynomial ring / base field
     PR = DR.base() # this is a wrapped of `F[x]`
@@ -123,10 +125,10 @@ def spectral_operators(L: DPolynomial, P: DPolynomial, name_lambda: str = "lambd
         R = PolynomialRing(R, [name_lambda, name_mu])
     else: # We assume R is a polynomial ring
         R = PolynomialRing(R.base(), list(R.variable_names()) + [name_lambda, name_mu])
-    l = R(name_lambda); m = R(name_mu)
+    l, m = R(name_lambda), R(name_mu)
 
     if was_fraction_field: # we set the type of ring to fraction_field if needed
-        R = R.fraction_field() 
+        R = R.fraction_field()
 
     ## At this point R is the desired algebraic base ring where `l`,`m` are the new variables.
     ## We add now the differential structure again
@@ -140,8 +142,8 @@ def spectral_operators(L: DPolynomial, P: DPolynomial, name_lambda: str = "lambd
 
     ## We cast everything to the goal ring
     z = DR.gens()[0]
-    l = DR(l); m = DR(m)
-    L = DR(L); P = DR(P)
+    l, m = DR(l), DR(m)
+    L, P = DR(L), DR(P)
 
     ## We return the spectral operators
     return L - l*z[0], P - m*z[0]
@@ -174,11 +176,11 @@ def BC_pair(L, P):
     ## We check if M is zero
     if M == 0:
         return "The given operator `P` was a polynomial in `C[L]`"
-    
+
     raise NotImplementedError(f"[BC_pair] Method not yet implemented")
 
 
 __all__ = [
     "spectral_operators", "SpectralCurveOverIdeal",
-    "BC_pair"    
+    "BC_pair"
 ]

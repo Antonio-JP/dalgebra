@@ -1,5 +1,5 @@
 r'''
-**Difference and Differential Algebra** 
+**Difference and Differential Algebra**
 +++++++++++++++++++++++++++++++++++++++
 
 ``dalgebra`` is a `SageMath <https://www.sagemath.org>`_ package that allow to create, manipulate, and study *differential* and *difference* structures.
@@ -15,7 +15,7 @@ r'''
 **Main use-case**
 -----------------------------------------
 
-Let `R` be a ring and `\sigma: R \rightarrow R` a map such that `\sigma(r+s) = \sigma(r) + \sigma(r)`. The package ``dalgebra`` allows to create the combined structure `(R,\sigma)` and 
+Let `R` be a ring and `\sigma: R \rightarrow R` a map such that `\sigma(r+s) = \sigma(r) + \sigma(r)`. The package ``dalgebra`` allows to create the combined structure `(R,\sigma)` and
 their elements will know about this operation over themselves. The main cases for this `\sigma` are the *shifts* and the *derivations*, which defines the behavior of `\sigma` with respect
 to the multiplication of `R`:
 
@@ -57,7 +57,7 @@ Or we can create a differential ring with two elements that mimic the behavior o
 **Installation**
 -----------------------------------------
 
-This package can be installed, used, modified and distributed freely under the conditions of the 
+This package can be installed, used, modified and distributed freely under the conditions of the
 `GNU General Public License v3 <https://www.gnu.org/licenses/gpl-3.0.html>`_ (see the file :home:`LICENSE </blob/master/LICENSE>`).
 
 There are two different ways of installing the package into your `SageMath`_ distribution:
@@ -78,7 +78,7 @@ After cloning or downloading the source code, you may install it by running the 
 *Install via pip*
 =========================
 
-Another option to install this package is to use the ``pip`` functionality within `SageMath`_. This will install the latest stable version 
+Another option to install this package is to use the ``pip`` functionality within `SageMath`_. This will install the latest stable version
 of the package and will take care of any dependencies that may be required.
 
 To install it via ``pip``, run the following in a terminal where ``sage`` can be executed::
@@ -109,7 +109,7 @@ Once installed, the full functionality of the package can be used after importin
 **Dependencies**
 -----------------------------------------
 
-This package has been developed on top of `SageMath`_ and currently has no other dependency. However, there are related packages 
+This package has been developed on top of `SageMath`_ and currently has no other dependency. However, there are related packages
 available online that will be connected in future versions:
 
 * :git:`mkauers/ore_algebra`: developed by `M. Kauers <http://www.kauers.de/>`_ and `M. Mezzarobba <http://marc.mezzarobba.net/>`_.
@@ -118,11 +118,11 @@ available online that will be connected in future versions:
 **Package under active development**
 -----------------------------------------
 
-This package is still under an active development and further features will be included in future version of the code. This means that several bugs may exist or appear. 
-We would thank anyone that, after detecting any error, would post it in the :home:`issues page </issues>` of the repository using 
+This package is still under an active development and further features will be included in future version of the code. This means that several bugs may exist or appear.
+We would thank anyone that, after detecting any error, would post it in the :home:`issues page </issues>` of the repository using
 the label :git:`bug <github/docs/labels/bug>`.
 
-Moreover, any requested feature can be post in the :home:`issues page </issues>` of the repository using the label 
+Moreover, any requested feature can be post in the :home:`issues page </issues>` of the repository using the label
 :git:`enhancement <github/docs/labels/enhancement>`.
 
 **References**
