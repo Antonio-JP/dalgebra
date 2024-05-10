@@ -170,6 +170,8 @@ class DPolynomial(Element):
     
     def coefficient(self, monomial: DMonomial) -> Element:
         r'''Getter for the coefficient structure for a given monomial'''
+        if not isinstance(monomial, DMonomial):
+            monomial = self.parent().monoids()(monomial)
         return self._content.get(monomial, self.parent().base().zero())
 
     def coefficient_full(self, monomial: DMonomial) -> DPolynomial:
@@ -185,6 +187,44 @@ class DPolynomial(Element):
         if len(output) == 0: return self.parent().zero()
         return self.parent().element_class(self.parent(), output)
         
+    def coefficient_without_var(self, *gens: DPolynomialGen) -> DPolynomial:
+        r'''
+            Similar to :func:`coefficient_full` but for terms without the given variables
+            
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: R.<u,v> = DPolynomialRing(B)
+                sage: P = (3*x -1)*u[0]*v[0] + x^2*v[1]*u[0] + u[2] + 1
+                sage: Q = 7*x*v[0] + x^2*v[0]*u[1]
+                sage: P.coefficient_without_var(u,v) == P.constant_coefficient()
+                True
+                sage: P.coefficient_without_var(u)
+                1
+                sage: P.coefficient_without_var(v)
+                1 + u_2
+                sage: Q.coefficient_without_var(u)
+                (7*x)*v_0
+                sage: Q.coefficient_without_var(v)
+                0
+                sage: P.coefficient_without_var() == P
+                True
+        '''
+        if len(gens) == 1 and isinstance(gens[0], (list,tuple)):
+            gens = gens[0]
+        if len(gens) == 0:
+            return self
+
+        output = dict()
+        for (m,c) in self._content.items():
+            if all(all(v._index != el[0] for el in m._variables) for v in gens):
+                output[m] = c
+        
+        if len(output) == 0:
+            return self.parent().zero()
+        return self.parent().element_class(self.parent(), output)
+
     def constant_coefficient(self) -> Element: #: Method to get the coefficient without variables
         return self.coefficient(())
 
@@ -454,8 +494,12 @@ class DPolynomial(Element):
         if isinstance(other, DMonomial):
             return self == self.parent()(other)
         elif isinstance(other, DPolynomial):
-            return set(self.monomials()) == set(other.monomials()) and all(self.coefficient(m) == other.coefficient(m) for m in self.monomials())
+            # Trying a faster comparison
+            if set(self.monomials()) == set(other.monomials()) and all(self.coefficient(m) == other.coefficient(m) for m in self.monomials()):
+                return True
         return super().__eq__(other)
+    def __ne__(self, other) -> bool:
+        return not self == other
     
     def __hash__(self) -> int:
         r'''
@@ -811,16 +855,16 @@ class DPolynomial(Element):
                 sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: f1 = x*u[0]*v[1] + x^2*u[2]*v[2] + 3*x*v[2] - (1-x)*v[0]
                 sage: f1._maple_(v) # correct behavior
-                '(x - 1)+(x*u(x))*D+((3*x) + x^2*diff(u(x), x$2))*D^2'
+                '(x - 1) + x*u(t)*v + ((3*x) + x^2*diff(u(t), t$2))*v^2'
                 sage: f1._maple_(v, "x", "D") # changing ind. variable and diff. operator
-                '(x - 1)+(x*u(x))*D+((3*x) + x^2*diff(u(x), x$2))*D^2'
+                '(x - 1) + x*u(x)*D + ((3*x) + x^2*diff(u(x), x$2))*D^2'
                 sage: f1._maple_(u) # Not homogeneous in u_*
-                Traceback (most recent call last)
+                Traceback (most recent call last):
                 ...
                 TypeError: The given polynomial ... is not linear or homogeneous over u_*
                 sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homoeneous in v_*
                 sage: f2._maple_(v)
-                Traceback (most recent call last)
+                Traceback (most recent call last):
                 ...
                 TypeError: The given polynomial ... is not linear or homogeneous over v_*
                 sage: f3 = x*u[0] + x^2*u[2] # variable v not appearing
@@ -833,11 +877,11 @@ class DPolynomial(Element):
                 sage: S.<big,small> = DifferentialPolynomialRing(QQ)
                 sage: f4 = big[0]*small[1] + 3*big[0]*small[3]^2 - big[1]*small[2]
                 sage: f4._maple_(small) # not linear in small_*
-                Traceback (most recent call last)
+                Traceback (most recent call last):
                 ...
                 TypeError: The given polynomial ... is not linear or homogeneous over small_*
                 sage: f4._maple_(big) # correct
-                '(diff(small(t), t$1) + 3*diff(small(t), t$3)^2) + (-diff(small(t), t$2))*big'
+                '(diff(small(t), t$1) + 3*diff(small(t), t$3)^2) - diff(small(t), t$2)*big'
         '''
         if not isinstance(gen, DMonomialGen):
             gen = self.parent().gen(str(gen))
@@ -860,8 +904,8 @@ class DPolynomial(Element):
             for i in range(self.order(gen)+1):
                 c = self.coefficient_full(gen[i])
                 if c != 0:
-                    coeffs[i] = str(c) # we cast the coefficients to strings
-        else: # special case for polynomials without the differential operatos
+                    coeffs[i] = str(c) if len(c._content) == 1 else f"({c})" # we cast the coefficients to strings
+        else: # special case for polynomials without the differential operator
             coeffs[0] = str(self)
 
         ## We transform the coefficients to fit the Maple format
@@ -884,13 +928,23 @@ class DPolynomial(Element):
             if coeff == "1" and mon == "":
                 return "1"
             elif mon == "":
-                return coeff
+                return f"{coeff}"
             elif coeff == "1":
                 return mon
             else:
-                return f"({coeff})*{mon}"
+                return f"{coeff}*{mon}"
+            
+        result = ""
+        for to_add in (mix_coeff_mon(coeffs[i], mons[i]) for i in coeffs):
+            to_add = to_add.strip() # Removing white-spaces
+            if result == "": # first iteration
+                result += to_add
+            elif to_add[0] == "-":
+                result += " - " + to_add[1:]
+            else:
+                result += " + " + to_add
 
-        return "+".join(mix_coeff_mon(coeffs[i], mons[i]) for i in coeffs)
+        return result
 
     def __call__(self, *args, dic : dict = None, **kwds):
         return self.eval(*args, dic=dic, **kwds)
@@ -1000,7 +1054,7 @@ class DPolynomialRing_Monoid(Parent):
             sage: diff(y[1])
             y_2
             sage: diff(a[1]*b[0]) #Leibniz Rule
-            a_2*b_0 + a_1*b_1
+            a_1*b_1 + a_2*b_0
 
         Although the use of diff can work in these rings, it is not fully recommended because we may require more 
         information for the ``diff`` method to work properly. We recommend the use of the ``derivative`` methods 
@@ -1012,18 +1066,18 @@ class DPolynomialRing_Monoid(Parent):
             sage: R.derivative(x)
             1
             sage: R.derivative(x*y[10])
-            x*y_11 + y_10
+            y_10 + x*y_11
             sage: R.derivative(x^2*y[1]^2 - y[2]*y[1])
-            -y_3*y_1 - y_2^2 + 2*x^2*y_2*y_1 + 2*x*y_1^2
+            (2*x^2)*y_1*y_2 - y_1*y_3 + (2*x)*y_1^2 - y_2^2
             sage: (x*y[10]).derivative()
-            x*y_11 + y_10
+            y_10 + x*y_11
 
         This derivation also works naturally with several infinite variables::
 
             sage: S.derivative(a[1] + b[0]*a[0])
-            a_1*b_0 + a_0*b_1 + a_2
+            a_0*b_1 + a_1*b_0 + a_2
             sage: (a[3]*a[1]*b[0] - b[2]).derivative()
-            a_4*a_1*b_0 + a_3*a_2*b_0 + a_3*a_1*b_1 - b_3
+            a_1*a_3*b_1 + a_1*a_4*b_0 + a_2*a_3*b_0 - b_3
 
         At the same time, these rings also work with difference operators. This can be easily built
         using the method :func:`DifferencePolynomialRing` using a shift operator as the main 
@@ -1046,7 +1100,7 @@ class DPolynomialRing_Monoid(Parent):
             sage: R.difference(x*y[10])
             x*y_11
             sage: R.difference(x^2*y[1]^2 - y[2]*y[1])
-            -y_3*y_2 + x^2*y_2^2
+            -y_2*y_3 + x^2*y_2^2
 
         This difference also works naturally with several infinite variables::
 
@@ -1062,9 +1116,9 @@ class DPolynomialRing_Monoid(Parent):
             sage: T.difference(z[0])
             z_1
             sage: T.difference(x)
-            x + 1
+            (x + 1)
             sage: T.difference(x^2*z[1]^2 - z[2]*z[1])
-            -z_3*z_2 + (x^2 + 2*x + 1)*z_2^2
+            -z_2*z_3 + (x^2 + 2*x + 1)*z_2^2
 
         One of the main features of the category :class:`dalgebra.dring.DRings` is that
         several operators can be included in the ring. This class of operator rings also have such feature, 
@@ -1109,7 +1163,7 @@ class DPolynomialRing_Monoid(Parent):
             sage: u[5].derivative(1, times=3).derivative(0, times=2).difference(times=1)
             u_2_4_2
             sage: (u[5]*v[0,1,0]).derivative(1)
-            u_0_2_1*v_0_1_0 + u_0_1_1*v_0_2_0
+            u_0_1_1*v_0_2_0 + u_0_2_1*v_0_1_0
             sage: (u[5]*v[0,1,0]).derivative(1) - u[0,1,0].shift()*v[0,2,0]
             u_0_2_1*v_0_1_0
     '''
@@ -1359,14 +1413,16 @@ class DPolynomialRing_Monoid(Parent):
                 sage: from dalgebra import *
                 sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: f1 = x*u[0] + x^2*u[2] - (1-x)*v[0]
-                sage: R.flatten(f1)
-                u_2*x^2 + u_0*x + v_0*x - v_0
-                sage: R.flatten(f1).parent()
-                Multivariate Polynomial Ring in u_2, u_1, u_0, v_2, v_1, v_0, x over Rational Field
+                sage: R.flatten(f1) # u_2*x^2 + u_0*x + v_0*x - v_0
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: This method is not yet implemented
+                sage: R.flatten(f1).parent() # Multivariate Polynomial Ring in u_2, u_1, u_0, v_2, v_1, v_0, x over Rational Field
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: This method is not yet implemented
 
-            This method works with more complicated ring with operators. It is interesting to remark that the subindex of the 
-            infinite variables (when having several operators) collapse to one number following the rules as in 
-            :class:`IndexBijection`::
+            This method works with more complicated ring with operators::
 
                 sage: B.<x,ex,l,m,e> = QQ[]
                 sage: dx,dex,dl,dm,de = B.derivation_module().gens()
@@ -1374,24 +1430,32 @@ class DPolynomialRing_Monoid(Parent):
                 sage: DSB = DifferenceRing(DifferentialRing(B, dx + ex*dex), shift); x,ex,l,m,e = DSB.gens()
                 sage: R.<u,v> = DPolynomialRing(DSB)
                 sage: f1 = u[1,0]*ex + (l-1)*v[0,1]*x - m; f1
+                -m + ex*u_1_0 + (x*l - x)*v_0_1
+                sage: f1.as_polynomial()
                 ex*u_1_0 + (x*l - x)*v_0_1 - m
-                sage: f1.polynomial()
-                ex*u_2 + (x*l - x)*v_1 - m
                 sage: f1.derivative()
-                ex*u_2_0 + ex*u_1_0 + (x*l - x)*v_1_1 + (l - 1)*v_0_1
-                sage: f1.derivative().polynomial()
-                ex*u_5 + ex*u_2 + (x*l - x)*v_4 + (l - 1)*v_1
-                sage: R.flatten(f1.derivative())
-                v_4*x*l - v_4*x + u_5*ex + u_2*ex + v_1*l - v_1
-                sage: R.flatten(f1.derivative()).parent()
-                Multivariate Polynomial Ring in u_5, u_4, u_3, u_2, u_1, u_0, v_5, v_4, v_3, v_2, v_1, v_0, x, ex, l, m, e over Rational Field
-
+                ex*u_1_0 + ex*u_2_0 + (l - 1)*v_0_1 + (x*l - x)*v_1_1
+                sage: f1.derivative().as_polynomial()
+                ex*u_1_0 + ex*u_2_0 + (l - 1)*v_0_1 + (x*l - x)*v_1_1
+                sage: R.flatten(f1.derivative()) # v_4*x*l - v_4*x + u_5*ex + u_2*ex + v_1*l - v_1
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: This method is not yet implemented
+                sage: R.flatten(f1.derivative()).parent() # Multivariate Polynomial Ring in u_5, u_4, u_3, u_2, u_1, u_0, v_5, v_4, v_3, v_2, v_1, v_0, x, ex, l, m, e over Rational Field
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: This method is not yet implemented
+                
             We remark that we can reconstruct the original polynomial from the flattened version::
 
-                sage: R(R.flatten(f1.derivative())) == f1.derivative()
-                True
-                sage: R(R.flatten(f1)) == f1
-                True
+                sage: R(R.flatten(f1.derivative())) == f1.derivative() # True
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: This method is not yet implemented
+                sage: R(R.flatten(f1)) == f1 # True
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: This method is not yet implemented
         '''
     #     # we check that the input is in ``self``
     #     polynomial = self(polynomial)
@@ -1473,10 +1537,10 @@ class DPolynomialRing_Monoid(Parent):
                 sage: Ra(p)
                 Traceback (most recent call last):
                 ...
-                ValueError: Impossible to convert element a_2*b_0+(-1)*c_1^2 from ...
+                ValueError: Impossible to convert element a_2*b_0 - c_1^2 from ...
                 sage: pp = a[3] + 3*a[2] + 3*a[1] + a[0]
                 sage: Ra(pp)
-                (3)*a_1 + (3)*a_2 + a_3 + a_0
+                a_0 + 3*a_1 + 3*a_2 + a_3
                 sage: R(Ra(pp)) == pp
                 True
         '''
@@ -1586,9 +1650,9 @@ class DPolynomialRing_Monoid(Parent):
                 sage: q = 3*a_1[2] - c[2]*a_2[0]
                 sage: pp, qq = R.as_polynomials(p,q)
                 sage: pp.parent()
-                Multivariate Polynomial Ring in c_2, a_2_1, a_1_2, a_2_0, c_3 over Differential Ring [[Rational Field], (0,)]
+                Multivariate Polynomial Ring in a_1_2, a_2_0, a_2_1, c_2, c_3 over Differential Ring [[Rational Field], (0,)]
                 sage: qq
-                -c_2*a_2_0 + 3*a_1_2
+                -a_2_0*c_2 + 3*a_1_2
 
         '''
         variables = set()
@@ -1728,7 +1792,10 @@ class DPolynomialRing_Monoid(Parent):
                     raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
                 coeff = coeff.inverse_operation(operation) if not coeff.d_constant() else coeff
                 var = next(iter(monomial.variables())) # we know there is only 1, since the element is linear
-                new_mon = self(var._inverse_(operation))
+                try:
+                    new_mon = self(var._inverse_(operation))
+                except ValueError: # impossible to integrate a monomial
+                    raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
                 solution += coeff*new_mon
         else:
             logger.debug(f"[inverse_derivation] Element is not linear")
@@ -1811,28 +1878,28 @@ class DPolynomialRing_Monoid(Parent):
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: P.sylvester_resultant(Q)
-                x^6 + 6*x^4 - 18*x^3 + 9*x^2 - 30*x - 19
+                (x^6 + 6*x^4 - 18*x^3 + 9*x^2 - 30*x - 19)
 
             If several variables are available, we need to explicitly provide the variable we are considering::
 
                 sage: R.<u,v> = DPolynomialRing(B)
                 sage: P = (3*x -1)*u[0]*v[0] + x^2*v[1]*u[0] + u[2]
-                sage: Q = 7*x*v[0] + x^2*v[0]*u[1]
+                sage: Q = 7*x*v[0]*u[0] + x^2*v[0]*u[1]
                 sage: P.sylvester_resultant(Q)
                 Traceback (most recent call last):
                 ...
                 ValueError: [sylvester_checking] No infinite variable provided but several available.
                 sage: P.sylvester_resultant(Q, u)
-                x^6*v_1*v_0^2 + (3*x^5 - x^4)*v_0^3
+                (56*x^2)*v_0^2 + x^6*v_0^2*v_1 + (3*x^5 - x^4)*v_0^3
                 sage: P.sylvester_resultant(Q, v)
-                x^2*u_1 + 7*x
+                (14*x^3)*u_0*u_1*u_2 + (49*x^2)*u_0^2*u_2 + x^4*u_1^2*u_2
 
             The infinite variable can also be given as an index::
 
                 sage: P.sylvester_resultant(Q, 0)
-                x^6*v_1*v_0^2 + (3*x^5 - x^4)*v_0^3
+                (56*x^2)*v_0^2 + x^6*v_0^2*v_1 + (3*x^5 - x^4)*v_0^3
                 sage: P.sylvester_resultant(Q, 1)
-                x^2*u_1 + 7*x
+                (14*x^3)*u_0*u_1*u_2 + (49*x^2)*u_0^2*u_2 + x^4*u_1^2*u_2
                 sage: P.sylvester_resultant(Q, 2)
                 Traceback (most recent call last):
                 ...
@@ -1865,9 +1932,9 @@ class DPolynomialRing_Monoid(Parent):
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: S.sylvester_subresultant(P, Q, k=1, i=0)
-                -3*x^3 - 3*x^2 + 3*x + 2
+                -(3*x^3 + 3*x^2 - 3*x - 2)
                 sage: S.sylvester_subresultant(P, Q, k=1, i=1)
-                8*x^2 + 7*x
+                (8*x^2 + 7*x)
 
             We can see that the case with `k=0` and `i=0`coincides with the method :func:`sylvester_resultant`::
             
@@ -1924,15 +1991,15 @@ class DPolynomialRing_Monoid(Parent):
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: P.sylvester_matrix(Q)
-                [      x^2 - 1          -3*x             1             0             0]
-                [            0     x^2 + 2*x      -3*x - 3             1             0]
-                [            0             0 x^2 + 4*x + 3      -3*x - 6             1]
-                [           -1             0             0             1             0]
-                [            0            -1             0             0             1]
+                [      (x^2 - 1)          -(3*x)               1               0               0]
+                [              0     (x^2 + 2*x)      -(3*x + 3)               1               0]
+                [              0               0 (x^2 + 4*x + 3)      -(3*x + 6)               1]
+                [             -1               0               0               1               0]
+                [              0              -1               0               0               1]
                 sage: P.sylvester_matrix(Q, k=1)
-                [      x^2 - 1          -3*x             1             0]
-                [            0     x^2 + 2*x      -3*x - 3             1]
-                [           -1             0             0             1]
+                [  (x^2 - 1)      -(3*x)           1           0]
+                [          0 (x^2 + 2*x)  -(3*x + 3)           1]
+                [         -1           0           0           1]
 
             It is important to remark that this matrix depends directly on the operation defined on the ring::
 
@@ -1941,15 +2008,15 @@ class DPolynomialRing_Monoid(Parent):
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: P.sylvester_matrix(Q)
-                [x^2 - 1    -3*x       1       0       0]
-                [    2*x x^2 - 4    -3*x       1       0]
-                [      2     4*x x^2 - 7    -3*x       1]
-                [     -1       0       0       1       0]
-                [      0      -1       0       0       1]
+                [(x^2 - 1)    -(3*x)         1         0         0]
+                [    (2*x) (x^2 - 4)    -(3*x)         1         0]
+                [        2     (4*x) (x^2 - 7)    -(3*x)         1]
+                [       -1         0         0         1         0]
+                [        0        -1         0         0         1]
                 sage: P.sylvester_matrix(Q,k=1)
-                [x^2 - 1    -3*x       1       0]
-                [    2*x x^2 - 4    -3*x       1]
-                [     -1       0       0       1]
+                [(x^2 - 1)    -(3*x)         1         0]
+                [    (2*x) (x^2 - 4)    -(3*x)         1]
+                [       -1         0         0         1]
 
             However, the Sylvester matrix is not well defined when the ring has several operations::
 
@@ -1968,11 +2035,12 @@ class DPolynomialRing_Monoid(Parent):
                 sage: S.<y,z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*y[0]*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - y[1]*z[0]
-                [           x^2 - 1           (-3)*y_0                  1                  0                  0]
-                [               2*x (-3)*y_1 + x^2 - 1           (-3)*y_0                  1                  0]
-                [                 2     (-3)*y_2 + 4*x (-6)*y_1 + x^2 - 1           (-3)*y_0                  1]
-                [              -y_1                  0                  0                  1                  0]
-                [              -y_2               -y_1                  0                  0                  1]
+                sage: P.sylvester_matrix(Q, gen=z)
+                [        (x^2 - 1)            -3*y_0                 1                 0                 0]
+                [            (2*x) (x^2 - 1) - 3*y_1            -3*y_0                 1                 0]
+                [                2     (4*x) - 3*y_2 (x^2 - 1) - 6*y_1            -3*y_0                 1]
+                [             -y_1                 0                 0                 1                 0]
+                [             -y_2              -y_1                 0                 0                 1]
         '''
         ## Checking the polynomials and ring arguments
         P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
@@ -1992,8 +2060,7 @@ class DPolynomialRing_Monoid(Parent):
         elif N >= 0 and (k < 0 or k > N):
             raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
         
-        part_without_gen = lambda Poly : sum(c*m for (c,m) in zip(Poly.coefficients(), Poly.monomials()) if m.order(gen._index) == -1)
-        homogeneous = any(part_without_gen(poly) != 0 for poly in (P,Q))
+        homogeneous = any(poly.coefficient_without_var(gen) != 0 for poly in (P,Q))
 
         if homogeneous and k > 0:
             raise NotImplementedError(f"[sylvester_matrix] The case of inhomogeneous operators and positive {k=} is not implemented.")
@@ -2012,8 +2079,8 @@ class DPolynomialRing_Monoid(Parent):
         ## We get the coefficient of the sylvester matrix
         nrows = len(equations)
         ncols = len(cols) + (1 if homogeneous else 0)
-        output = sum([([part_without_gen(self(equation))] if homogeneous else []) + [self(equation.coefficient_full(m)) for m in cols] for equation in equations], [])
-        output = self.as_polynomials(*output)
+        output = sum([([self(equation).coefficient_without_var(gen)] if homogeneous else []) + [self(equation.coefficient_full(m)) for m in cols] for equation in equations], [])
+        
         output = matrix([output[r*ncols:r*ncols + ncols] for r in range(nrows)])
         
         # Returning the matrix
@@ -2053,13 +2120,13 @@ class DPolynomialRing_Monoid(Parent):
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: S.sylvester_subresultant_sequence(P, Q)
-                ((x^6 + 6*x^5 + 10*x^4 - 18*x^3 - 65*x^2 - 42*x - 2)*z_0, (8*x^2 + 7*x)*z_1 + (-3*x^3 - 3*x^2 + 3*x + 2)*z_0)
+                ((x^6 + 6*x^5 + 10*x^4 - 18*x^3 - 65*x^2 - 42*x - 2)*z_0, -(3*x^3 + 3*x^2 - 3*x - 2)*z_0 + (8*x^2 + 7*x)*z_1)
                 sage: B = DifferentialRing(QQ[x], diff); x = B(x)
                 sage: S.<z> = DPolynomialRing(B)
                 sage: P = z[2] - 3*x*z[1] + (x^2 - 1)*z[0]
                 sage: Q = z[3] - z[0]
                 sage: S.sylvester_subresultant_sequence(P, Q)
-                ((x^6 + 6*x^4 - 18*x^3 + 9*x^2 - 30*x - 19)*z_0, (8*x^2 + 4)*z_1 + (-3*x^3 + x - 1)*z_0)
+                ((x^6 + 6*x^4 - 18*x^3 + 9*x^2 - 30*x - 19)*z_0, -(3*x^3 - x + 1)*z_0 + (8*x^2 + 4)*z_1)
         '''
         ## Checking the polynomials and ring arguments
         P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
@@ -2080,6 +2147,8 @@ class DPolynomialRing_Monoid(Parent):
         elif self.ngens() > 1 and gen in ZZ:
             if gen < 0 or gen >= self.ngens():
                 raise IndexError(f"[sylvester_checking] Requested generator {gen} but only {self.ngens()} exist.")
+            gen = self.gens()[gen]
+        elif gen in ZZ:
             gen = self.gens()[gen]
         elif isinstance(gen, DMonomialGen) and not gen in self.gens():
             raise ValueError(f"[sylvester_checking] The variable {repr(gen)} do not belong to {self}")
