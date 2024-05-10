@@ -173,7 +173,7 @@ class DSystem:
                 sage: system.equation(0)
                 x*u_0 - v_1
                 sage: system.equation(1)
-                u_1 + (-x + 1)*v_0
+                u_1 - (x - 1)*v_0
 
             If the index given is not in range, we raise a :class:`IndexError`::
 
@@ -200,12 +200,12 @@ class DSystem:
                 sage: system.equation(0)
                 x*u_0_0 - v_1_0
                 sage: system.equation(1)
-                u_0_1 + (-x + 1)*v_0_0
+                u_0_1 - (x - 1)*v_0_0
 
             And now, we can use the ``apply`` argument for each operator::
 
                 sage: system.equation(0, (0, 1)) # we apply the derivative
-                x*u_1_0 + u_0_0 - v_2_0
+                u_0_0 + x*u_1_0 - v_2_0
                 sage: system.equation(0, (1, 1)) # we apply the shift
                 (x + 1)*u_0_1 - v_1_1
                 sage: system.equation(0, (0, 2), (1, 3)) == system.equation(0).derivative(times=2).shift(times=3)
@@ -261,23 +261,23 @@ class DSystem:
             If nothing is given, we return all the equations::
 
                 sage: system.equations()
-                (x*u_0 - v_1, u_1 + (-x + 1)*v_0)
+                (x*u_0 - v_1, u_1 - (x - 1)*v_0)
 
             If only an element is given, then we return that particular element::
 
                 sage: system.equations(1)
-                (u_1 + (-x + 1)*v_0,)
+                (u_1 - (x - 1)*v_0,)
 
             Otherwise, we return the tuple with the equations required. This can be also 
             used to obtained equations after applying the operation (see :func:`equation`)::
 
                 sage: system.equations([(0,0), (0,1), (1,3)])
-                (x*u_0 - v_1, x*u_1 + u_0 - v_2, u_4 + (-x + 1)*v_3 + (-3)*v_2)
+                (x*u_0 - v_1, u_0 + x*u_1 - v_2, u_4 - 3*v_2 - (x - 1)*v_3)
 
             This method also allows the use of :class:`slice` to provide the indices for equations::
 
                 sage: system.equations(slice(None,None,-1)) # reversing the equations
-                (u_1 + (-x + 1)*v_0, x*u_0 - v_1)
+                (u_1 - (x - 1)*v_0, x*u_0 - v_1)
         '''
         if indices is None:
             return self._equations
@@ -326,8 +326,8 @@ class DSystem:
                 [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*, v_*)]:
                 {
                     x*u_0 - v_1 == 0
-                    x*u_1 + u_0 - v_2 == 0
-                    u_4 + (-x + 1)*v_3 + (-3)*v_2 == 0
+                    u_0 + x*u_1 - v_2 == 0
+                    u_4 - 3*v_2 - (x - 1)*v_3 == 0
                 }
 
             This method is used when using the ``__getitem__`` notation::
@@ -336,7 +336,7 @@ class DSystem:
                 System over [Ring of operator polynomials in (u, v) over Differential Ring 
                 [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*, v_*)]:
                 {
-                    u_1 + (-x + 1)*v_0 == 0
+                    u_1 - (x - 1)*v_0 == 0
                     x*u_0 - v_1 == 0
                 }
 
@@ -347,7 +347,7 @@ class DSystem:
                 [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*,)]:
                 {
                     x*u_0 - v_1 == 0
-                    u_1 + (-x + 1)*v_0 == 0
+                    u_1 - (x - 1)*v_0 == 0
                 }
         '''
         variables = self.variables if variables is None else variables
@@ -384,14 +384,14 @@ class DSystem:
                 [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(u_*,)]:
                 {
                     x*u_0 - v_1 == 0
-                    u_1 + (-x + 1)*v_0 == 0
+                    u_1 - (x - 1)*v_0 == 0
                 }
                 sage: system.change_variables([v])
                 System over [Ring of operator polynomials in (u, v) over Differential Ring 
                 [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]] with variables [(v_*,)]:
                 {
                     x*u_0 - v_1 == 0
-                    u_1 + (-x + 1)*v_0 == 0
+                    u_1 - (x - 1)*v_0 == 0
                 }
         '''
         if not isinstance(variables, (list, tuple)):
@@ -438,7 +438,7 @@ class DSystem:
                 sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]])
                 sage: system.algebraic_variables()
-                (v_0, v_1, v_2, u_0, u_1, u_2)
+                (u_0, u_1, u_2, v_0, v_1, v_2)
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
                 sage: system.algebraic_variables()
                 (u_0, u_1, u_2)
@@ -1049,13 +1049,13 @@ class DSystem:
                 ....:      -2*v[1] - 3*a[1]
                 ....: ], variables=[u,v])
                 sage: S.solve_linear()
-                {u_*: (-3/4)*a_1, v_*: (-3/2)*a_0}
+                {u_*: -3/4*a_1, v_*: -3/2*a_0}
                 sage: S = DSystem([
                 ....:      -2*u[1] - b*v[2] - 3*a[2],
                 ....:      -2*v[1] - 3*a[1]
                 ....: ], variables=[u,v])
                 sage: sol = S.solve_linear(); sol
-                {u_*: (3/4*b - 3/2)*a_1, v_*: (-3/2)*a_0}
+                {u_*: (3/4*b - 3/2)*a_1, v_*: -3/2*a_0}
 
             We can check that this solutions satisfy all the equations of the systems to be zero::
 

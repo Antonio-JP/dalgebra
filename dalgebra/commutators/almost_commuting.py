@@ -44,28 +44,28 @@ r'''
         sage: from dalgebra import *
         sage: from dalgebra.commutators import *
         sage: n = 3; m = 5 # Preparing variables for an example
-        sage: R = DifferentialPolynomialRing(QQ, [f"p{i+2}" for i in range(m-1)] + [f"u{i}" for i in range(2,n+1)] + ["z"])
+        sage: R = DifferentialPolynomialRing(QQ, [f"p_{i+2}" for i in range(m-1)] + [f"u_{i}" for i in range(2,n+1)] + ["z"])
         sage: p,u,z = R.gens()[:m-1], R.gens()[m-1:m+n-2], R.gens()[-1]
         sage: L = z[n] + sum(z[n-i]*u[i-2][0] for i in range(2,n+1))
         sage: P = z[m] + sum(z[m-i]*p[i-2][0] for i in range(2,m+1))
         sage: L
-        u2_0*z_1 + u3_0*z_0 + z_3
+        u_2_0*z_1 + u_3_0*z_0 + z_3
         sage: P
-        p2_0*z_3 + p3_0*z_2 + p4_0*z_1 + p5_0*z_0 + z_5
+        p_2_0*z_3 + p_3_0*z_2 + p_4_0*z_1 + p_5_0*z_0 + z_5
 
     Now we can compute the commutator `[L, P]` and, then create a system of differential equations with the highest order coefficients of the commutator::
 
         sage: C = L.lie_bracket(P, z)
         sage: C.orders(), len(C.monomials())
         ((3, 3, 3, 3, 5, 5, 5), 38)
-        sage: system = DifferentialSystem([C.coefficient(z[i]) for i in range(n-1, C.order(z)+1)], variables=p)
+        sage: system = DifferentialSystem([C.coefficient_full(z[i]) for i in range(n-1, C.order(z)+1)], variables=p)
         sage: system
-        System over [Ring of operator polynomials in (p2, p3, p4, p5, u2, u3, z) over Differential Ring [[Rational Field], (0,)]] with variables [(p2_*, p3_*, p4_*, p5_*)]:
+        System over [Ring of operator polynomials in (p_2, p_3, p_4, p_5, u_2, u_3, z) over Differential Ring [[Rational Field], (0,)]] with variables [(p_2_*, p_3_*, p_4_*, p_5_*)]:
         {
-            (-3)*p2_0*u2_2 + (-3)*p2_0*u3_1 + p3_1*u2_0 + (-2)*p3_0*u2_1 + p3_3 + 3*p4_2 + 3*p5_1 + (-5)*u2_4 + (-10)*u3_3 == 0
-            p2_1*u2_0 + (-3)*p2_0*u2_1 + p2_3 + 3*p3_2 + 3*p4_1 + (-10)*u2_3 + (-10)*u3_2 == 0
-            3*p2_2 + 3*p3_1 + (-10)*u2_2 + (-5)*u3_1 == 0
-            3*p2_1 + (-5)*u2_1 == 0
+            -3*p_2_0*u_2_2 - 3*p_2_0*u_3_1 - 2*p_3_0*u_2_1 + p_3_1*u_2_0 + p_3_3 + 3*p_4_2 + 3*p_5_1 - 5*u_2_4 - 10*u_3_3 == 0
+            -3*p_2_0*u_2_1 + p_2_1*u_2_0 + p_2_3 + 3*p_3_2 + 3*p_4_1 - 10*u_2_3 - 10*u_3_2 == 0
+            3*p_2_2 + 3*p_3_1 - 10*u_2_2 - 5*u_3_1 == 0
+            3*p_2_1 - 5*u_2_1 == 0
         }
 
     At this state we can simply call a differential solver to find the solution to this system which will provide formulas for the 
@@ -73,13 +73,13 @@ r'''
 
         sage: sols = system.solve_linear()
         sage: sols[p[0]] # p2
-        5/3*u2_0
+        5/3*u_2_0
         sage: sols[p[1]] # p3
-        5/3*u2_1 + 5/3*u3_0
+        5/3*u_2_1 + 5/3*u_3_0
         sage: sols[p[2]] # p4
-        5/9*u2_0^2 + 10/9*u2_2 + 5/3*u3_1
+        5/9*u_2_0^2 + 10/9*u_2_2 + 5/3*u_3_1
         sage: sols[p[3]] # p5
-        10/9*u2_0*u3_0 + 10/9*u3_2
+        10/9*u_2_0*u_3_0 + 10/9*u_3_2
 
     And, as expected by the Theorem from Wilson, we can see these solutions are homogeneous with appropriate weights::
 
@@ -101,11 +101,11 @@ r'''
         sage: P_eval = P(dic=sols); C_eval = L.lie_bracket(P_eval, z)
         sage: C_eval.order(z)
         1
-        sage: C_eval.coefficient(z[0])
-        10/9*u2_1*u2_0*u3_0 + 5/9*u2_0^2*u3_1 + 10/9*u2_3*u3_0 + 20/9*u2_2*u3_1 + 5/3*u2_1*u3_2 + 5/9*u2_0*u3_3 + 
-        (-5/3)*u3_2*u3_0 + (-5/3)*u3_1^2 + 1/9*u3_5
-        sage: C_eval.coefficient(z[1])
-        5/9*u2_1*u2_0^2 + 5/9*u2_3*u2_0 + 5/9*u2_2*u2_1 + 5/3*u2_2*u3_0 + 5/3*u2_1*u3_1 + (-10/3)*u3_1*u3_0 + 1/9*u2_5
+        sage: C_eval.coefficient_full(z[0])
+        10/9*u_2_0*u_2_1*u_3_0 + 5/9*u_2_0*u_3_3 + 5/9*u_2_0^2*u_3_1 + 5/3*u_2_1*u_3_2 + 20/9*u_2_2*u_3_1 + 
+        10/9*u_2_3*u_3_0 - 5/3*u_3_0*u_3_2 - 5/3*u_3_1^2 + 1/9*u_3_5
+        sage: C_eval.coefficient_full(z[1])
+        5/9*u_2_0*u_2_3 + 5/9*u_2_0^2*u_2_1 + 5/9*u_2_1*u_2_2 + 5/3*u_2_1*u_3_1 + 5/3*u_2_2*u_3_0 + 1/9*u_2_5 - 10/3*u_3_0*u_3_1
 
     This module provide a simple method that perform all these operations in one go. More precisely, the 
     method :func:`almost_commuting_wilson` receives as input the values of `n` and `m`, the names for the 
@@ -115,9 +115,9 @@ r'''
         sage: Q, (c0,c1) = almost_commuting_wilson(3,5)
         sage: Q == P_eval
         True
-        sage: c0 == C_eval.coefficient(z[0])
+        sage: c0 == C_eval.coefficient_full(z[0])
         True
-        sage: c1 == C_eval.coefficient(z[1])
+        sage: c1 == C_eval.coefficient_full(z[1])
         True
 
     **Special hierarchies**
@@ -130,17 +130,17 @@ r'''
     For example, for the **kdv hierarchy** we can ge the odd elements (i.e., the non-trivial cases)::
 
         sage: for n in range(4): print(kdv(2*n+1))
-        u_1
-        (-3/2)*u_1*u_0 + (-1/4)*u_3
-        (-15/8)*u_1*u_0^2 + (-5/8)*u_3*u_0 + (-5/4)*u_2*u_1 + (-1/16)*u_5
-        (-35/16)*u_1*u_0^3 + (-35/32)*u_3*u_0^2 + (-35/8)*u_2*u_1*u_0 + (-35/32)*u_1^3 + (-7/32)*u_5*u_0 + (-21/32)*u_4*u_1 + (-35/32)*u_3*u_2 + (-1/64)*u_7
+        -u_1
+        -3/2*u_0*u_1 - 1/4*u_3
+        -5/8*u_0*u_3 - 15/8*u_0^2*u_1 - 5/4*u_1*u_2 - 1/16*u_5
+        -35/8*u_0*u_1*u_2 - 7/32*u_0*u_5 - 35/32*u_0^2*u_3 - 35/16*u_0^3*u_1 - 21/32*u_1*u_4 - 35/32*u_1^3 - 35/32*u_2*u_3 - 1/64*u_7
 
     For the **Boussinesq hierarchy**, for a given value of `m`, we have two polynomials, the one corresponding to the 
     constant coefficient in `[L,P_m]` and the coefficient of ``z[1]``::
 
         sage: for i in range(2): print(boussinesq(5, i))
-        10/9*u2_1*u2_0*u3_0 + 5/9*u2_0^2*u3_1 + 10/9*u2_3*u3_0 + 20/9*u2_2*u3_1 + 5/3*u2_1*u3_2 + 5/9*u2_0*u3_3 + (-5/3)*u3_2*u3_0 + (-5/3)*u3_1^2 + 1/9*u3_5
-        5/9*u2_1*u2_0^2 + 5/9*u2_3*u2_0 + 5/9*u2_2*u2_1 + 5/3*u2_2*u3_0 + 5/3*u2_1*u3_1 + (-10/3)*u3_1*u3_0 + 1/9*u2_5
+        10/9*u_2_0*u_2_1*u_3_0 + 5/9*u_2_0*u_3_3 + 5/9*u_2_0^2*u_3_1 + 5/3*u_2_1*u_3_2 + 20/9*u_2_2*u_3_1 + 10/9*u_2_3*u_3_0 - 5/3*u_3_0*u_3_2 - 5/3*u_3_1^2 + 1/9*u_3_5
+        5/9*u_2_0*u_2_3 + 5/9*u_2_0^2*u_2_1 + 5/9*u_2_1*u_2_2 + 5/3*u_2_1*u_3_1 + 5/3*u_2_2*u_3_0 + 1/9*u_2_5 - 10/3*u_3_0*u_3_1
 
     **Things remaining TODO**
     -----------------------------------------
