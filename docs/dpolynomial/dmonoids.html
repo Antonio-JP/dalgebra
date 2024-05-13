@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>D-Polynomials: monoids and elements for monomials &#8212; Differential Algebra in Sage 0.0.5 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/classic.css?v=514cf933" />
+    
+    <script src="../_static/documentation_options.js?v=282f96c0"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">dalgebra</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">D-Polynomials: monoids and elements for monomials</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="module-dalgebra.dpolynomial.dmonoids">
+<span id="d-polynomials-monoids-and-elements-for-monomials"></span><h1>D-Polynomials: monoids and elements for monomials<a class="headerlink" href="#module-dalgebra.dpolynomial.dmonoids" title="Link to this heading">¶</a></h1>
+<p>Module with the implementation of d-monomials.</p>
+<p>Given a number of operations and a set of variables, the associated d-monomials form a
+commutative Monoid (see <code class="xref py py-class docutils literal notranslate"><span class="pre">sage.categories.monoids.Monoids</span></code>). This is a set
+with an operation <span class="math notranslate nohighlight">\(*\)</span> that is associative, commutative and with a unit <span class="math notranslate nohighlight">\(1\)</span>.</p>
+<p>This module includes all the classes necessary to implement these d-monomials. In particular,
+this will include a bijection between <span class="math notranslate nohighlight">\(\mathbb{N}\)</span> and <span class="math notranslate nohighlight">\(\mathbb{N}^d\)</span> for any <span class="math notranslate nohighlight">\(d \in \mathbb{N}\)</span>
+(see <a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.IndexBijection" title="dalgebra.dpolynomial.dmonoids.IndexBijection"><code class="xref py py-func docutils literal notranslate"><span class="pre">IndexBijection()</span></code></a>), a Parent structure for the d-monoids (see <a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid" title="dalgebra.dpolynomial.dmonoids.DMonomialMonoid"><code class="xref py py-class docutils literal notranslate"><span class="pre">DMonomialMonoid</span></code></a>)
+and the Element class associated for these Parent structures (see <code class="xref py py-class docutils literal notranslate"><span class="pre">DMonomial</span></code>).</p>
+<p>One of the key characteristics of a monoid of d-monomials is that they are free monoids over an
+infinite set of generators. For any given variable <span class="math notranslate nohighlight">\(a_*\)</span>, we need to consider as free variables
+of the monoid all the elements <span class="math notranslate nohighlight">\(a_{I}\)</span> for <span class="math notranslate nohighlight">\(I \in \mathbb{N}^d\)</span> where <span class="math notranslate nohighlight">\(d\)</span> is the number of operations
+associated with the monoid.</p>
+<p>That is why we also provide a class <code class="xref py py-class docutils literal notranslate"><span class="pre">DMonomialGen</span></code> that will represent the <span class="math notranslate nohighlight">\(a_*\)</span> that will
+generate all the associated free variables given the indices.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dmonoids.DMonomialMonoid">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">dalgebra.dpolynomial.dmonoids.</span></span><span class="sig-name descname"><span class="pre">DMonomialMonoid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">noperators</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Parent</span></code></p>
+<p>Class for the monoid generated by some d-variables.</p>
+<p>A d-variable can be seen as a variable indexed by several indices, indicating several operations (either shifts or derivations)
+over a fully independent variable (i.e., no relation or reduction after applying these operations).</p>
+<p>This form a commutative monoid (i.e., a set with a commutative associative operation <span class="math notranslate nohighlight">\(*\)</span> and a unit element).</p>
+<p>Then, a <code class="xref py py-class docutils literal notranslate"><span class="pre">DPolynomialRing_Monoid</span></code> is a free <span class="math notranslate nohighlight">\(\mathbb{K}\)</span>-module over a <code class="xref py py-class docutils literal notranslate"><span class="pre">DMonomialMonoids</span></code>. All these structures
+should help SageMath to do all conversions between the elements.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra.dpolynomial.dmonoids</span> <span class="kn">import</span> <span class="n">DMonomialMonoid</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">MM</span> <span class="o">=</span> <span class="n">DMonomialMonoid</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">);</span> <span class="n">MM</span>
+<span class="n">Monoid</span> <span class="n">of</span> <span class="n">d</span><span class="o">-</span><span class="n">monomials</span> <span class="k">with</span> <span class="mi">2</span> <span class="n">operations</span> <span class="k">with</span> <span class="n">generators</span> <span class="p">(</span><span class="n">a_</span><span class="o">*</span><span class="p">,</span> <span class="n">b_</span><span class="o">*</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">MM</span><span class="o">.</span><span class="n">gens</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span><span class="p">[(</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">)]</span>
+<span class="n">a_2_3</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">b</span><span class="p">[</span><span class="mi">10</span><span class="p">]</span>
+<span class="n">b_0_4</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">a</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)]</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">^</span><span class="mi">3</span>
+<span class="n">a_0_0</span><span class="o">^</span><span class="mi">2</span><span class="o">*</span><span class="n">b_0_1</span><span class="o">^</span><span class="mi">3</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">MM</span><span class="o">.</span><span class="n">one</span><span class="p">()</span>
+<span class="mi">1</span>
+</pre></div>
+</div>
+<p>We can see that the implementation of a DMonomialMonoid pass all the tests inherited by the category:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">sage.misc.sage_unittest</span> <span class="kn">import</span> <span class="n">TestSuite</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">TestSuite</span><span class="p">(</span><span class="n">MM</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">TestSuite</span><span class="p">(</span><span class="n">MM</span><span class="o">.</span><span class="n">_an_element_</span><span class="p">())</span><span class="o">.</span> <span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dmonoids.DMonomialMonoid.Element">
+<span class="sig-name descname"><span class="pre">Element</span></span><a class="headerlink" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.Element" title="Link to this definition">¶</a></dt>
+<dd><p>alias of <code class="xref py py-class docutils literal notranslate"><span class="pre">DMonomial</span></code></p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dmonoids.DMonomialMonoid.gens">
+<span class="sig-name descname"><span class="pre">gens</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.gens" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dmonoids.DMonomialMonoid.ngens">
+<span class="sig-name descname"><span class="pre">ngens</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.ngens" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dmonoids.DMonomialMonoid.noperators">
+<span class="sig-name descname"><span class="pre">noperators</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.noperators" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dmonoids.DMonomialMonoid.one">
+<span class="sig-name descname"><span class="pre">one</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.one" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dmonoids.DMonomialMonoid.semigroup_generators">
+<span class="sig-name descname"><span class="pre">semigroup_generators</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.semigroup_generators" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dmonoids.DMonomialMonoid.submonoid">
+<span class="sig-name descname"><span class="pre">submonoid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">generators</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">category</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.submonoid" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dmonoids.DMonomialMonoid.variable_names">
+<span class="sig-name descname"><span class="pre">variable_names</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.variable_names" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="dalgebra.dpolynomial.dmonoids.IndexBijection">
+<span class="sig-prename descclassname"><span class="pre">dalgebra.dpolynomial.dmonoids.</span></span><span class="sig-name descname"><span class="pre">IndexBijection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#dalgebra.dpolynomial.dmonoids.IndexBijection" title="Link to this definition">¶</a></dt>
+<dd><p>Factory for the bijections of a given size.</p>
+<p>This method returns a unique bijection object that allow to map integers to tuples of
+the given size in a specific order. This order tries to have the appearance of all
+tuples whose sum is fixed as soon as possible.</p>
+<p>For example, for size <span class="math notranslate nohighlight">\(3\)</span> the tuples generated would be as follows:</p>
+<div class="math notranslate nohighlight">
+\[(0,0,0) \rightarrow (0,0,1) \rightarrow (0,1,0) \rightarrow (1,0,0) \rightarrow (0,0,2) \rightarrow (0,1,1)
+\rightarrow (0,2,0) \rightarrow (1,0,1) \rightarrow (1,1,0) \rightarrow (2,0,0) \rightarrow \ldots\]</div>
+<p>These bijections cache some of its results, hence the convenience of always returning the same
+bijection object.</p>
+<p>INPUT:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">size</span></code>: number of elements of the tuples generated by the bijection.</p></li>
+</ul>
+<p>OUTPUT:</p>
+<p>A <code class="xref py py-class docutils literal notranslate"><span class="pre">IndexBijection_Object</span></code> with the given bijection.</p>
+<p>EXAMPLES:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra.dpolynomial.dmonoids</span> <span class="kn">import</span> <span class="n">IndexBijection</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">size2</span> <span class="o">=</span> <span class="n">IndexBijection</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">size2</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">size2</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">size2</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+<span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="n">size4</span> <span class="o">=</span> <span class="n">IndexBijection</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+<span class="n">sage</span><span class="p">:</span> <span class="p">[</span><span class="n">size4</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">)]</span>
+<span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>Since we have a bijection, we can also go back:</p>
+<blockquote>
+<div><p>sage: IndexBijection(10).inverse((1,2,3,4,5,6,7,8,9,10)) # around 2ms
+156289762326</p>
+</div></blockquote>
+</dd></dl>
+
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">D-Polynomials: monoids and elements for monomials</a><ul>
+<li><a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid"><code class="docutils literal notranslate"><span class="pre">DMonomialMonoid</span></code></a><ul>
+<li><a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.Element"><code class="docutils literal notranslate"><span class="pre">DMonomialMonoid.Element</span></code></a></li>
+<li><a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.gens"><code class="docutils literal notranslate"><span class="pre">DMonomialMonoid.gens()</span></code></a></li>
+<li><a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.ngens"><code class="docutils literal notranslate"><span class="pre">DMonomialMonoid.ngens()</span></code></a></li>
+<li><a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.noperators"><code class="docutils literal notranslate"><span class="pre">DMonomialMonoid.noperators()</span></code></a></li>
+<li><a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.one"><code class="docutils literal notranslate"><span class="pre">DMonomialMonoid.one()</span></code></a></li>
+<li><a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.semigroup_generators"><code class="docutils literal notranslate"><span class="pre">DMonomialMonoid.semigroup_generators()</span></code></a></li>
+<li><a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.submonoid"><code class="docutils literal notranslate"><span class="pre">DMonomialMonoid.submonoid()</span></code></a></li>
+<li><a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.DMonomialMonoid.variable_names"><code class="docutils literal notranslate"><span class="pre">DMonomialMonoid.variable_names()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#dalgebra.dpolynomial.dmonoids.IndexBijection"><code class="docutils literal notranslate"><span class="pre">IndexBijection()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/dpolynomial/dmonoids.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">dalgebra</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">D-Polynomials: monoids and elements for monomials</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2021.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    </div>
+  </body>
+</html>

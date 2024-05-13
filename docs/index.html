@@ -1,19 +1,17 @@
-
 <!DOCTYPE html>
 
-<html>
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>dalgebra: Difference and Differential Algebra &#8212; Differential Algebra in Sage 0.0.4.5+is-34 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css" />
+    <title>dalgebra: Difference and Differential Algebra &#8212; Differential Algebra in Sage 0.0.5 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=514cf933" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
-    <script src="_static/doctools.js"></script>
+    <script src="_static/documentation_options.js?v=282f96c0"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
@@ -43,12 +41,12 @@
           <div class="body" role="main">
             
   <section id="module-dalgebra">
-<span id="dalgebra-difference-and-differential-algebra"></span><h1><code class="docutils literal notranslate"><span class="pre">dalgebra</span></code>: Difference and Differential Algebra<a class="headerlink" href="#module-dalgebra" title="Permalink to this headline">¶</a></h1>
+<span id="dalgebra-difference-and-differential-algebra"></span><h1><code class="docutils literal notranslate"><span class="pre">dalgebra</span></code>: Difference and Differential Algebra<a class="headerlink" href="#module-dalgebra" title="Link to this heading">¶</a></h1>
 <section id="difference-and-differential-algebra">
-<h2><strong>Difference and Differential Algebra</strong><a class="headerlink" href="#difference-and-differential-algebra" title="Permalink to this headline">¶</a></h2>
+<h2><strong>Difference and Differential Algebra</strong><a class="headerlink" href="#difference-and-differential-algebra" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">dalgebra</span></code> is a <a class="reference external" href="https://www.sagemath.org">SageMath</a> package that allow to create, manipulate, and study <em>differential</em> and <em>difference</em> structures.</p>
 <section id="some-information-about-the-repository">
-<h3><strong>Some information about the repository</strong><a class="headerlink" href="#some-information-about-the-repository" title="Permalink to this headline">¶</a></h3>
+<h3><strong>Some information about the repository</strong><a class="headerlink" href="#some-information-about-the-repository" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><em>Main Author</em>: Antonio Jiménez-Pastor</p></li>
 <li><p><em>License</em>: GNU Public License v3.0</p></li>
@@ -58,8 +56,8 @@
 </ul>
 </section>
 <section id="main-use-case">
-<h3><strong>Main use-case</strong><a class="headerlink" href="#main-use-case" title="Permalink to this headline">¶</a></h3>
-<p>Let <span class="math notranslate nohighlight">\(R\)</span> be a ring and <span class="math notranslate nohighlight">\(\sigma: R \rightarrow R\)</span> a map such that <span class="math notranslate nohighlight">\(\sigma(r+s) = \sigma(r) + \sigma(r)\)</span>. The package <code class="docutils literal notranslate"><span class="pre">dalgebra</span></code> allows to create the combined structure <span class="math notranslate nohighlight">\((R,\sigma)\)</span> and 
+<h3><strong>Main use-case</strong><a class="headerlink" href="#main-use-case" title="Link to this heading">¶</a></h3>
+<p>Let <span class="math notranslate nohighlight">\(R\)</span> be a ring and <span class="math notranslate nohighlight">\(\sigma: R \rightarrow R\)</span> a map such that <span class="math notranslate nohighlight">\(\sigma(r+s) = \sigma(r) + \sigma(r)\)</span>. The package <code class="docutils literal notranslate"><span class="pre">dalgebra</span></code> allows to create the combined structure <span class="math notranslate nohighlight">\((R,\sigma)\)</span> and
 their elements will know about this operation over themselves. The main cases for this <span class="math notranslate nohighlight">\(\sigma\)</span> are the <em>shifts</em> and the <em>derivations</em>, which defines the behavior of <span class="math notranslate nohighlight">\(\sigma\)</span> with respect
 to the multiplication of <span class="math notranslate nohighlight">\(R\)</span>:</p>
 <ul class="simple">
@@ -98,12 +96,12 @@ This software will allow to create these structures and perform some of the algo
 </div>
 </section>
 <section id="installation">
-<h3><strong>Installation</strong><a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h3>
-<p>This package can be installed, used, modified and distributed freely under the conditions of the 
+<h3><strong>Installation</strong><a class="headerlink" href="#installation" title="Link to this heading">¶</a></h3>
+<p>This package can be installed, used, modified and distributed freely under the conditions of the
 <a class="reference external" href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License v3</a> (see the file <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/blob/master/LICENSE">LICENSE</a>).</p>
 <p>There are two different ways of installing the package into your <a class="reference external" href="https://www.sagemath.org">SageMath</a> distribution:</p>
 <section id="install-from-source-code">
-<h4><em>Install from source code</em><a class="headerlink" href="#install-from-source-code" title="Permalink to this headline">¶</a></h4>
+<h4><em>Install from source code</em><a class="headerlink" href="#install-from-source-code" title="Link to this heading">¶</a></h4>
 <p>The package can be obtained from the public git repository on GitHub:</p>
 <ul class="simple">
 <li><p>by clicking <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/">here</a> for the webpage view,</p></li>
@@ -116,8 +114,8 @@ This software will allow to create these structures and perform some of the algo
 </div>
 </section>
 <section id="install-via-pip">
-<h4><em>Install via pip</em><a class="headerlink" href="#install-via-pip" title="Permalink to this headline">¶</a></h4>
-<p>Another option to install this package is to use the <code class="docutils literal notranslate"><span class="pre">pip</span></code> functionality within <a class="reference external" href="https://www.sagemath.org">SageMath</a>. This will install the latest stable version 
+<h4><em>Install via pip</em><a class="headerlink" href="#install-via-pip" title="Link to this heading">¶</a></h4>
+<p>Another option to install this package is to use the <code class="docutils literal notranslate"><span class="pre">pip</span></code> functionality within <a class="reference external" href="https://www.sagemath.org">SageMath</a>. This will install the latest stable version
 of the package and will take care of any dependencies that may be required.</p>
 <p>To install it via <code class="docutils literal notranslate"><span class="pre">pip</span></code>, run the following in a terminal where <code class="docutils literal notranslate"><span class="pre">sage</span></code> can be executed:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;&gt;</span> <span class="n">sage</span> <span class="o">-</span><span class="n">pip</span> <span class="n">install</span> <span class="p">[</span><span class="o">--</span><span class="n">user</span><span class="p">]</span> <span class="n">git</span><span class="o">+</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">Antonio</span><span class="o">-</span><span class="n">JP</span><span class="o">/</span><span class="n">dalgebra</span><span class="o">.</span><span class="n">git</span>
@@ -126,7 +124,7 @@ of the package and will take care of any dependencies that may be required.</p>
 <p>The optional argument <em>–user</em> allows to install the package just for the current user instead of a global installation.</p>
 </section>
 <section id="pre-refactor-version">
-<h4><em>Pre-refactor version</em><a class="headerlink" href="#pre-refactor-version" title="Permalink to this headline">¶</a></h4>
+<h4><em>Pre-refactor version</em><a class="headerlink" href="#pre-refactor-version" title="Link to this heading">¶</a></h4>
 <p>This repository has suffered a big refactor and has lost some of its functionalities (temporary). The version fo the code before this refactoring can be obtained
 from the tag <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/tree/v0.0.3.pre-refactor">Tag:v0.0.3.pre-refactor</a>. This version of the software (<span class="math notranslate nohighlight">\(v0.0.20220513.1339\)</span>)
 can be obtained using the same procedures as described above but with small differences:</p>
@@ -136,7 +134,7 @@ can be obtained using the same procedures as described above but with small diff
 </ul>
 </section>
 <section id="loading-the-package">
-<h4><em>Loading the package</em><a class="headerlink" href="#loading-the-package" title="Permalink to this headline">¶</a></h4>
+<h4><em>Loading the package</em><a class="headerlink" href="#loading-the-package" title="Link to this heading">¶</a></h4>
 <p>Once installed, the full functionality of the package can be used after importing it with the command:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">sage</span><span class="p">:</span> <span class="kn">from</span> <span class="nn">dalgebra</span> <span class="kn">import</span> <span class="o">*</span>
 </pre></div>
@@ -144,24 +142,24 @@ can be obtained using the same procedures as described above but with small diff
 </section>
 </section>
 <section id="dependencies">
-<h3><strong>Dependencies</strong><a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h3>
-<p>This package has been developed on top of <a class="reference external" href="https://www.sagemath.org">SageMath</a> and currently has no other dependency. However, there are related packages 
+<h3><strong>Dependencies</strong><a class="headerlink" href="#dependencies" title="Link to this heading">¶</a></h3>
+<p>This package has been developed on top of <a class="reference external" href="https://www.sagemath.org">SageMath</a> and currently has no other dependency. However, there are related packages
 available online that will be connected in future versions:</p>
 <ul class="simple">
-<li><p><a class="reference external" href="https://github.com/mkauers/ore_algebra">GitHub: mkauers/ore_algebra</a>: developed by <a class="reference external" href="http://www.kauers.de/">M. Kauers</a> and <a class="reference external" href="http://marc.mezzarobba.net/">M. Mezzarobba</a>.</p></li>
-<li><p><a class="reference external" href="https://github.com/Antonio-JP/dd_functions">GitHub: Antonio-JP/dd_functions</a>: developed by <a class="reference external" href="https://scholar.google.com/citations?user=1gq-jy4AAAAJ&amp;hl=es">A. Jiménez-Pastor</a>.</p></li>
+<li><p><a class="reference external" href="https://github.com/mkauers/ore_algebra">GitHub (mkauers/ore_algebra)</a>: developed by <a class="reference external" href="http://www.kauers.de/">M. Kauers</a> and <a class="reference external" href="http://marc.mezzarobba.net/">M. Mezzarobba</a>.</p></li>
+<li><p><a class="reference external" href="https://github.com/Antonio-JP/dd_functions">GitHub (Antonio-JP/dd_functions)</a>: developed by <a class="reference external" href="https://scholar.google.com/citations?user=1gq-jy4AAAAJ&amp;hl=es">A. Jiménez-Pastor</a>.</p></li>
 </ul>
 </section>
 <section id="package-under-active-development">
-<h3><strong>Package under active development</strong><a class="headerlink" href="#package-under-active-development" title="Permalink to this headline">¶</a></h3>
-<p>This package is still under an active development and further features will be included in future version of the code. This means that several bugs may exist or appear. 
-We would thank anyone that, after detecting any error, would post it in the <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/issues">issues page</a> of the repository using 
+<h3><strong>Package under active development</strong><a class="headerlink" href="#package-under-active-development" title="Link to this heading">¶</a></h3>
+<p>This package is still under an active development and further features will be included in future version of the code. This means that several bugs may exist or appear.
+We would thank anyone that, after detecting any error, would post it in the <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/issues">issues page</a> of the repository using
 the label <a class="reference external" href="https://github.com/github/docs/labels/bug">bug</a>.</p>
-<p>Moreover, any requested feature can be post in the <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/issues">issues page</a> of the repository using the label 
+<p>Moreover, any requested feature can be post in the <a class="reference external" href="https://github.com/Antonio-JP/dalgebra/issues">issues page</a> of the repository using the label
 <a class="reference external" href="https://github.com/github/docs/labels/enhancement">enhancement</a>.</p>
 </section>
 <section id="references">
-<h3><strong>References</strong><a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h3>
+<h3><strong>References</strong><a class="headerlink" href="#references" title="Link to this heading">¶</a></h3>
 <p>This package is based on the work of the following research articles and books:</p>
 <ul class="simple">
 <li><p><em>E.R. Kolchin</em>: <strong>Differential Algebra &amp; Algebraic Groups</strong>. <a class="reference external" href="https://www.elsevier.com/books/differential-algebra-and-algebraic-groups/kolchin/978-0-12-417650-8">ISBN:9780080873695</a></p></li>
@@ -170,7 +168,7 @@ the label <a class="reference external" href="https://github.com/github/docs/lab
 </ul>
 </section>
 <section id="acknowledgements">
-<h3><strong>Acknowledgements</strong><a class="headerlink" href="#acknowledgements" title="Permalink to this headline">¶</a></h3>
+<h3><strong>Acknowledgements</strong><a class="headerlink" href="#acknowledgements" title="Link to this heading">¶</a></h3>
 <p>This package has been developed with the financial support of the following institutions:</p>
 <ul class="simple">
 <li><p>The Austrian Science Fund (FWF): by W1214-N15, project DK15.</p></li>
@@ -183,7 +181,7 @@ the label <a class="reference external" href="https://github.com/github/docs/lab
 </section>
 </section>
 <section id="list-of-packages">
-<h1>List of Packages<a class="headerlink" href="#list-of-packages" title="Permalink to this headline">¶</a></h1>
+<h1>List of Packages<a class="headerlink" href="#list-of-packages" title="Link to this heading">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="dring.html">Rings with Operators: Category, Factory and Wrapper</a></li>
@@ -194,7 +192,7 @@ the label <a class="reference external" href="https://github.com/github/docs/lab
 </div>
 </section>
 <section id="list-of-application-modules">
-<h1>List of Application Modules<a class="headerlink" href="#list-of-application-modules" title="Permalink to this headline">¶</a></h1>
+<h1>List of Application Modules<a class="headerlink" href="#list-of-application-modules" title="Link to this heading">¶</a></h1>
 <p>In the following modules we include some applications of this software in particular problems.</p>
 <div class="toctree-wrapper compound">
 <ul>
@@ -205,7 +203,7 @@ the label <a class="reference external" href="https://github.com/github/docs/lab
 </div>
 </section>
 <section id="indices-and-tables">
-<h1>Indices and Tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<h1>Indices and Tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading">¶</a></h1>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
@@ -269,7 +267,7 @@ the label <a class="reference external" href="https://github.com/github/docs/lab
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -291,8 +289,8 @@ the label <a class="reference external" href="https://github.com/github/docs/lab
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2021.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+    &#169; Copyright 2021.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
     </div>
   </body>
 </html>

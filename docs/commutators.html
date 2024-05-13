@@ -1,24 +1,22 @@
-
 <!DOCTYPE html>
 
-<html>
+<html lang="en" data-content_root="./">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Non-trivial Commutators of Linear Differential Operators &#8212; Differential Algebra in Sage 0.0.4.5+is-34 documentation</title>
-    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
-    <link rel="stylesheet" type="text/css" href="_static/classic.css" />
+    <title>Non-trivial Commutators of Linear Differential Operators &#8212; Differential Algebra in Sage 0.0.5 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="_static/classic.css?v=514cf933" />
     
-    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-    <script src="_static/jquery.js"></script>
-    <script src="_static/underscore.js"></script>
-    <script src="_static/doctools.js"></script>
+    <script src="_static/documentation_options.js?v=282f96c0"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Integrable hierarchies and almost commuting operators" href="commutators/almost_commuting.html" />
-    <link rel="prev" title="Structures for systems of equation over rings with operators" href="dpolynomial/dpolynomial_system.html" /> 
+    <link rel="prev" title="Structures for systems of equation over rings with operators" href="dpolynomial/dsystems.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -33,7 +31,7 @@
           <a href="commutators/almost_commuting.html" title="Integrable hierarchies and almost commuting operators"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="dpolynomial/dpolynomial_system.html" title="Structures for systems of equation over rings with operators"
+          <a href="dpolynomial/dsystems.html" title="Structures for systems of equation over rings with operators"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">dalgebra</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Non-trivial Commutators of Linear Differential Operators</a></li> 
@@ -46,27 +44,27 @@
           <div class="body" role="main">
             
   <section id="module-dalgebra.commutators">
-<span id="non-trivial-commutators-of-linear-differential-operators"></span><h1>Non-trivial Commutators of Linear Differential Operators<a class="headerlink" href="#module-dalgebra.commutators" title="Permalink to this headline">¶</a></h1>
+<span id="non-trivial-commutators-of-linear-differential-operators"></span><h1>Non-trivial Commutators of Linear Differential Operators<a class="headerlink" href="#module-dalgebra.commutators" title="Link to this heading">¶</a></h1>
 <p>Module that contains all the files used in computation of commutators.</p>
-<p>This module contains all the files and code necessary in applications for computing 
+<p>This module contains all the files and code necessary in applications for computing
 non-trivial commutators for differential polynomial. The focus on the differential
-setting is temporal and will be generalized in the future to more generic 
-<code class="xref py py-class docutils literal notranslate"><span class="pre">DPolynomialRing_dense</span></code>.</p>
+setting is temporal and will be generalized in the future to more generic
+<code class="xref py py-class docutils literal notranslate"><span class="pre">DPolynomialRing_Monoid</span></code>.</p>
 <p>This module is split into 3 main subpackages:</p>
 <ul class="simple">
-<li><p><code class="xref py py-mod docutils literal notranslate"><span class="pre">almost_commuting</span></code>: contains all necessary functions to compute the almost-commuting 
+<li><p><code class="xref py py-mod docutils literal notranslate"><span class="pre">almost_commuting</span></code>: contains all necessary functions to compute the almost-commuting
 basis described by Wilson (in <em>Algebraic curves and soliton equations</em> (1985)). These computations
 also allows the computation of integrable hierarchies.</p></li>
-<li><p><code class="xref py py-mod docutils literal notranslate"><span class="pre">ideals</span></code>: contains method that can analyze and study algebraic ideals. This is an auxiliary 
+<li><p><code class="xref py py-mod docutils literal notranslate"><span class="pre">ideals</span></code>: contains method that can analyze and study algebraic ideals. This is an auxiliary
 subpackage that is useful for other packages in the module.</p></li>
 <li><p><code class="xref py py-mod docutils literal notranslate"><span class="pre">commutator</span></code>: contains all the methods necessary for computing non-trivial commutators for
 a differential linear operator. This requires the use of the other packages of the module.</p></li>
-<li><p><code class="xref py py-mod docutils literal notranslate"><span class="pre">spectral</span></code>: contains all the methods and functionality related with the computation of 
+<li><p><code class="xref py py-mod docutils literal notranslate"><span class="pre">spectral</span></code>: contains all the methods and functionality related with the computation of
 spectral curves for a pair of commuting linear differential operators.</p></li>
 </ul>
 </section>
 <section id="list-of-modules">
-<h1>List of Modules<a class="headerlink" href="#list-of-modules" title="Permalink to this headline">¶</a></h1>
+<h1>List of Modules<a class="headerlink" href="#list-of-modules" title="Link to this heading">¶</a></h1>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="commutators/almost_commuting.html">Integrable hierarchies and almost commuting operators</a></li>
@@ -77,7 +75,7 @@ spectral curves for a pair of commuting linear differential operators.</p></li>
 </div>
 </section>
 <section id="indices-and-tables">
-<h1>Indices and Tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<h1>Indices and Tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading">¶</a></h1>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
@@ -103,7 +101,7 @@ spectral curves for a pair of commuting linear differential operators.</p></li>
   </div>
   <div>
     <h4>Previous topic</h4>
-    <p class="topless"><a href="dpolynomial/dpolynomial_system.html"
+    <p class="topless"><a href="dpolynomial/dsystems.html"
                           title="previous chapter">Structures for systems of equation over rings with operators</a></p>
   </div>
   <div>
@@ -127,7 +125,7 @@ spectral curves for a pair of commuting linear differential operators.</p></li>
     </form>
     </div>
 </div>
-<script>$('#searchbox').show(0);</script>
+<script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -145,15 +143,15 @@ spectral curves for a pair of commuting linear differential operators.</p></li>
           <a href="commutators/almost_commuting.html" title="Integrable hierarchies and almost commuting operators"
              >next</a> |</li>
         <li class="right" >
-          <a href="dpolynomial/dpolynomial_system.html" title="Structures for systems of equation over rings with operators"
+          <a href="dpolynomial/dsystems.html" title="Structures for systems of equation over rings with operators"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="index.html">dalgebra</a> &#187;</li>
         <li class="nav-item nav-item-this"><a href="">Non-trivial Commutators of Linear Differential Operators</a></li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &#169; Copyright 2021.
-      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 4.4.0.
+    &#169; Copyright 2021.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
     </div>
   </body>
 </html>
