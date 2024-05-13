@@ -1,9 +1,9 @@
 .. nodoctest
 
-Parent structures for Infinite Polynomials over rings with operators
+Spectral curves of commuting linear differential operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra.dpolynomial.dpolynomial_ring
+.. automodule:: dalgebra.commutators.spectral
    :members:
    :undoc-members:
    :show-inheritance:

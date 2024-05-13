@@ -1,9 +1,9 @@
 .. nodoctest
 
-Integrable hierarchies and almost commuting operators
+D-Polynomials: parent and element srtuctures
 ==============================================================================================================================
 
-.. automodule:: dalgebra.hierarchies.hierarchies
+.. automodule:: dalgebra.dpolynomial.dpolynomial
    :members:
    :undoc-members:
    :show-inheritance:

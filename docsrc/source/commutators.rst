@@ -1,9 +1,9 @@
 .. nodoctest
 
-Integrable Hierarchies
+Non-trivial Commutators of Linear Differential Operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra.hierarchies
+.. automodule:: dalgebra.commutators
    :members:
    :undoc-members:
    :show-inheritance:
@@ -14,7 +14,10 @@ List of Modules
 .. toctree::
    :maxdepth: 1
 
-   hierarchies/hierarchies
+   commutators/almost_commuting
+   commutators/ideals
+   commutators/commutator
+   commutators/spectral
 
 
 Indices and Tables

@@ -1,9 +1,9 @@
 .. nodoctest
 
-Element structures for Infinite Polynomials over rings with operators
+Integrable hierarchies and almost commuting operators
 ==============================================================================================================================
 
-.. automodule:: dalgebra.dpolynomial.dpolynomial_element
+.. automodule:: dalgebra.commutators.almost_commuting
    :members:
    :undoc-members:
    :show-inheritance:
