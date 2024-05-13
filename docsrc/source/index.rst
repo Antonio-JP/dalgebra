@@ -15,6 +15,7 @@ List of Packages
 
    dring
    dpolynomial
+   commutators
 
 List of Application Modules
 ====================================

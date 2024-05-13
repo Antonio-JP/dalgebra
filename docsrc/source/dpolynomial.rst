@@ -14,7 +14,7 @@ List of Modules
 .. toctree::
    :maxdepth: 1
 
-   dpolynomial/dmonomial
+   dpolynomial/dmonoids
    dpolynomial/dpolynomial
    dpolynomial/dsystems
 

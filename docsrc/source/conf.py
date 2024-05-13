@@ -18,6 +18,7 @@ from codecs import open
 from pathlib import Path
 
 try:
+    import sage.all_cmdline # Loading the SageMath library to avoid errors
     from sage.env import SAGE_DOC_SRC, SAGE_SRC
 except ImportError:
     raise RuntimeError("to build the documentation you need to be inside a Sage shell (run first the command 'sage -sh' in a shell")
@@ -119,24 +120,24 @@ pythonversion = sys.version.split(' ')[0]
 
 # Python and Sage trac ticket shortcuts. For example, :trac:`7549` .
 extlinks = {
-    'python': ('https://docs.python.org/release/'+pythonversion+'/%s', ''),
-    'trac': ('http://trac.sagemath.org/%s', 'trac ticket #'),
-    'wiki': ('https://en.wikipedia.org/wiki/%s', 'Wikipedia: '),
-    'arxiv': ('http://arxiv.org/abs/%s', 'Arxiv '),
-    'oeis': ('https://oeis.org/%s', 'OEIS sequence '),
-    'doi': ('https://dx.doi.org/%s', 'doi:'),
-    'mathscinet': ('http://www.ams.org/mathscinet-getitem?mr=%s', 'MathSciNet '),
-    'dlmf': ('https://dlmf.nist.gov/%s', 'DLMF Chapter '),
-    'wolf': ('https://mathworld.wolfram.com/%s.html', 'Wolfram MathWorld: '),
-    'sagemod': ('https://doc.sagemath.org/html/en/reference/%s', 'Sage doc: '),
-    'sageref': ('https://doc.sagemath.org/html/en/reference/%s.html', 'Sage doc: '),
-    'fungrim': ('https://fungrim.org/entry/%s', 'Fungrim:'),
-    'fungrimT': ('https://fungrim.org/topic/%s', 'Fungrim:'),
-    'git': ('https://github.com/%s', 'GitHub: '),
-    'issue': ('https://github.com/Antonio-JP/dalgebra/issues/%s', 'Issue:'),
-    'tag': ('https://github.com/Antonio-JP/dalgebra/tree/%s', 'Tag:'),
-    'home': ('https://github.com/Antonio-JP/dalgebra%s', 'Git:dalgebra'),
-    'hdoc': ('https://antonio-jp.github.io/dalgebra%s', 'Doc:dalgebra')
+    'python': ('https://docs.python.org/release/'+pythonversion+'/%s', None),
+    'trac': ('http://trac.sagemath.org/%s', 'trac ticket #%s'),
+    'wiki': ('https://en.wikipedia.org/wiki/%s', 'Wikipedia (%s)'),
+    'arxiv': ('http://arxiv.org/abs/%s', 'Arxiv (%s)'),
+    'oeis': ('https://oeis.org/%s', 'OEIS sequence (%s)'),
+    'doi': ('https://dx.doi.org/%s', 'doi:%s'),
+    'mathscinet': ('http://www.ams.org/mathscinet-getitem?mr=%s', 'MathSciNet (%s)'),
+    'dlmf': ('https://dlmf.nist.gov/%s', 'DLMF Chapter %s'),
+    'wolf': ('https://mathworld.wolfram.com/%s.html', 'Wolfram MathWorld (%s)'),
+    'sagemod': ('https://doc.sagemath.org/html/en/reference/%s', 'Sage doc (%s)'),
+    'sageref': ('https://doc.sagemath.org/html/en/reference/%s.html', 'Sage doc (%s)'),
+    'fungrim': ('https://fungrim.org/entry/%s', 'Fungrim:%s'),
+    'fungrimT': ('https://fungrim.org/topic/%s', 'Fungrim:%s'),
+    'git': ('https://github.com/%s', 'GitHub (%s)'),
+    'issue': ('https://github.com/Antonio-JP/dalgebra/issues/%s', 'Issue:%s'),
+    'tag': ('https://github.com/Antonio-JP/dalgebra/tree/%s', 'Tag:%s'),
+    'home': ('https://github.com/Antonio-JP/dalgebra%s', 'Git:dalgebra%s'),
+    'hdoc': ('https://antonio-jp.github.io/dalgebra%s', 'Doc:dalgebra%s')
     }
 
 extlinks_detect_hardcoded_links = False
