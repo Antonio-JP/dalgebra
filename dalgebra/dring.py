@@ -1367,11 +1367,11 @@ class DRing_Wrapper(Parent):
             return self._coerce_map_from_(S.wrapped) ## TODO: WARNING: THIS DOES NOT CHECK FOR CORRECTNESS IN OPERATIONS
         return self.wrapped == S or self.wrapped._coerce_map_from_(S) is not None
 
-    def __call__(self, x, *args, **kwds):
-        result = self.wrapped(x, *args, **kwds)
-        if result in self.wrapped:
-            return self._element_constructor_(result)
-        return result
+    # def __call__(self, x, *args, **kwds):
+    #     result = self.wrapped(x, *args, **kwds)
+    #     if result in self.wrapped:
+    #         return self._element_constructor_(result)
+    #     return result
 
     def _element_constructor_(self, x) -> DRing_WrapperElement:
         r'''
