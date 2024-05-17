@@ -1636,12 +1636,7 @@ class DPolynomialRing_Monoid(Parent):
         if x in self.monoids():
             return True
         return super().__contains__(x)
-    # def __call__(self, *args, **kwds) -> DPolynomial:
-    #     res = super().__call__(*args, **kwds)
-    #     if not isinstance(res, self.element_class):
-    #         res = self.element_class(self, res)
-    #     return res
-
+    
     ## Other magic methods
     def __repr__(self):
         return f"Ring of operator polynomials in ({', '.join(self.variable_names())}) over {self.base()}"
