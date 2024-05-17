@@ -1003,9 +1003,9 @@ class DPolynomial(Element):
                 sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: f1 = x*u[0]*v[1] + x^2*u[2]*v[2] + 3*x*v[2] - (1-x)*v[0]
                 sage: f1._mathematica_(v) # correct behavior
-                '(x - 1) + x*u(t)*v + ((3*x) + x^2*diff(u(t), t$2))*v^2'
-                sage: f1._mathematica_(v, "x", "D") # changing ind. variable and diff. operator
-                '(x - 1) + x*u(x)*D + ((3*x) + x^2*diff(u(x), x$2))*D^2'
+                '(x - 1) + x*u[t]*v + ((3*x) + x^2*D[u[t],{t,2}])*v^2'
+                sage: f1._mathematica_(v, "x", "DD") # changing ind. variable and diff. operator
+                '(x - 1) + x*u[x]*DD + ((3*x) + x^2*D[u[x],{x,2}])*DD^2'
                 sage: f1._mathematica_(u) # Not homogeneous in u_*
                 Traceback (most recent call last):
                 ...
@@ -1062,9 +1062,9 @@ class DPolynomial(Element):
         def subs_regex(M):
             var, order = M.groups()
             if order == '0':
-                return var + f"({mathematica_var})"
+                return var + f"[{mathematica_var}]"
             else:
-                return f"diff({var}({mathematica_var}), {mathematica_var}${order})"
+                return f"D[{var}[{mathematica_var}],{{{mathematica_var},{order}}}]"
 
         import re
         for i in coeffs:
