@@ -1017,7 +1017,7 @@ class DPolynomial(Element):
                 TypeError: The given polynomial ... is not linear or homogeneous over v_*
                 sage: f3 = x*u[0] + x^2*u[2] # variable v not appearing
                 sage: f3._mathematica_("v", "x", "partial")
-                'x*u(x) + x^2*diff(u(x), x$2)'
+                'x*u[x] + x^2*D[u[x],{x,2}]'
                 sage: R.one()._mathematica_("u")
                 '1'
                 sage: R.zero()._mathematica_("u")
@@ -1029,7 +1029,7 @@ class DPolynomial(Element):
                 ...
                 TypeError: The given polynomial ... is not linear or homogeneous over small_*
                 sage: f4._mathematica_(big) # correct
-                '(diff(small(t), t$1) + 3*diff(small(t), t$3)^2) - diff(small(t), t$2)*big'
+                '(D[small[t],{t,1}] + 3*D[small[t],{t,3}]^2) - D[small[t],{t,2}]*big'
         '''
         if not isinstance(gen, DMonomialGen):
             gen = self.parent().gen(str(gen))
