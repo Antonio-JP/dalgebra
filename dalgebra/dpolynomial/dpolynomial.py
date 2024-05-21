@@ -169,24 +169,73 @@ class DPolynomial(Element):
     ### Getter methods
     ###################################################################################
     @cached_method
-    def monomials(self) -> tuple[DMonomial]:
+    def monomials(self, *gens : DMonomialGen) -> tuple[DMonomial]:
         r'''
             Method to get a tuple of the monomials appearing in ``self``.
+
+            If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
+            This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in 
+            `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
         '''
-        return tuple(self._content.keys())
+        if len(gens) == 0:
+            return tuple(self._content.keys())
+        
+        ## We check the consistency of the arguments
+        gens = [self.parent().gen(v) if isinstance(v, str) else v for v in gens]
+        if any(v not in self.parent().gens() for v in gens):
+            raise ValueError(f"The variables must be part of the parent ring: got {gens}, expected {self.parent().gens()}")
+        
+        if len(gens) == self.parent().ngens():
+            return self.monomials()
+        else:
+            result = set()
+            for m in self.monomials():
+                collected = dict()
+                for ((v, o), d) in m._variables.items():
+                    if any(g._index == v for g in gens):
+                        collected[(v,o)] = d
+                nm = self.parent().monoids()(collected)
+                result.add(nm)
+            
+            return tuple(sorted(result))
 
     @cached_method
-    def coefficients(self) -> tuple[Element]:
+    def coefficients(self, *gens: DMonomialGen) -> tuple[Element]:
         r'''
             Return a list of elements in the ``self.parent().base()`` of the coefficients.
-        '''
-        return tuple([self._content[m] for m in self.monomials()])
 
-    def coefficient(self, monomial: DMonomial) -> Element:
-        r'''Getter for the coefficient structure for a given monomial'''
+            If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
+            This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in 
+            `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
+        '''
+        if len(gens) == 0:
+            return tuple([self._content[m] for m in self.monomials()])
+        else:
+            return tuple([self.coefficient_full(m).coefficient_without_var(*gens) for m in self.monomials(*gens)])
+        
+    def coefficient(self, monomial: DMonomial, *gens: DMonomialGen) -> Element:
+        r'''
+            Getter for the coefficient structure for a given monomial
+
+            If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
+            This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in 
+            `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
+        '''
         if not isinstance(monomial, DMonomial):
             monomial = self.parent().monoids()(monomial)
-        return self._content.get(monomial, self.parent().base().zero())
+        if len(gens) == 0:
+            return self._content.get(monomial, self.parent().base().zero())
+        else:
+            # We check the monomial
+            if any(all(v[0] != g._index for g in gens) for v in monomial._variables):
+                raise ValueError(f"Requested monomial {monomial} when working only with variables {gens}")
+            monoms = self.monomials(*gens)
+            coeffs = self.coefficients(*gens)
+            
+            if monomial in monoms:
+                return coeffs[monoms.index(monomial)]
+            else:
+                return self.parent().zero()            
 
     def coefficient_full(self, monomial: DMonomial) -> DPolynomial:
         r'''Getter for the polynomial of all the elements for which ``monomial`` is part of the monomial'''
@@ -2572,6 +2621,49 @@ class WeightFunction(SetMorphism):
                 for variable in m.variables()
                 for (i,gen) in enumerate(self.parent().gens()) if variable in gen
             )
+
+    def homogeneous_components(self, element: DPolynomial) -> dict[int, DPolynomial]:
+        r'''
+            Method that decomposes an element into its different homogeneous components.
+
+            INPUT:
+
+            * ``element``: the :class:`DPolynomial` that will be split into homogeneous components.
+
+            OUTPUT:
+
+            A dictionary (empty if ``element`` is zero) where the keys are the weights appearing in the polynomial
+            and the values are the :class:`DPolynomial` that represent the terms of that specific weight. It must always
+            satisfy that ``sum(out.values()) == element``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B.<c,x> = QQ[]
+                sage: R.<a,b> = DPolynomialRing(DifferenceRing(DifferentialRing(B, lambda p : diff(p,x)), B.Hom(B)([c,x+1])))
+                sage: w = R.weight_func([1,2],[2,1])
+                sage: f = a[0,1]*b[0,0] + c*x^2*b[0,1]*a[0,0] - 2*c^2*a[3,1]
+                sage: w.homogeneous_components(f)
+                {4: (c*x^2)*a_0_0*b_0_1 + a_0_1*b_0_0, 8: -(2*c^2)*a_3_1}
+                sage: sum(w.homogeneous_components(f).values()) == f
+                True
+                sage: w.homogeneous_components(R.zero())
+                {}
+        '''
+        solution = dict()
+
+        R = element.parent()
+
+        if not element.is_zero():
+            for c, m in zip(element.coefficients(), element.monomials()):
+                w = self(m)
+                if not w in solution:
+                    solution[w] = element.parent().zero()
+                
+                solution[w] = solution[w] + c*R(m)
+
+        return dict(sorted(solution.items()))
+
 
     @cached_method
     def weighted_variables(self, weight: int) -> set[DPolynomial]:
