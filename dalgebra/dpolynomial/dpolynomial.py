@@ -3288,6 +3288,74 @@ class RankingFunction:
 
         return fa, fb, r
 
+    def partial_remainder(self, p: DPolynomial, A: DPolynomial | list[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
+        r'''
+            Method to compute the partial remainder of `p` w.r.t. `A`. See pp. 77-78 of Kolchin's book.
+        '''
+        logger.info(f"[partial_remainder] STARTING A PARTIAL REMAINDER COMPUTATION")
+        if not isinstance(A, set):
+            A = set(A) if isinstance(A, (list, tuple)) else set([A])
+
+        if not self.is_autoreduced(A):
+            raise TypeError(f"The partial remainder only works for autoreduced sets.")
+        
+        return self._partial_remainder(p, A)
+    
+    def _partial_remainder(self, p: DPolynomial, A: set[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
+        logger.info(f"[partial_remainder] Starting partial remainder with leader {self.leader(p)}")
+        F = p
+
+        ## We look for the first non-partially reduced
+        A_sorted = self.sort(list(A), True) # sorted from biggest to smallest
+        U = [self.leader(a) for a in A_sorted]
+
+        for (a, u) in zip(A_sorted, U):
+            gu = u.infinite_variables()[0]
+            v = self.sort([g for g in F.variables() if g in gu], True)[0]
+            if self.compare_variables(u, v) < 0: # v > u
+                to_apply = tuple([ov - ou for (ou, ov) in zip(gu.index(u, True), gu.index(v, True))])
+                Sc = self.separant(a)
+                e = F.degree(v)
+                T = Sc*v - self.parent().apply_operations(a, to_apply)
+                G = sum(Sc**(e-i) * F.coefficient_full(v**i) * T**i for i in range(F.degree(v)+1))
+
+                rF, rs = self._partial_remainder(G, A)
+                rs[a] += e
+                return rF, rs
+            
+        return F, {a : 0 for a in A}
+
+    def remainder(self, p: DPolynomial, A: DPolynomial | list[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int], dict[DPolynomial,int]]:
+        r'''
+            Method to compute the remainder w.r.t. to an autoreduced set `A`. See pp. 78-79 of Kolchin's book.
+        '''
+        logger.info(f"[partial_remainder] STARTING A PARTIAL REMAINDER COMPUTATION")
+        if not isinstance(A, set):
+            A = set(A) if isinstance(A, (list, tuple)) else set([A])
+
+        if not self.is_autoreduced(A):
+            raise TypeError(f"The partial remainder only works for autoreduced sets.")
+        
+        return self._remainder(p, A)
+    
+    def _remainder(self, p: DPolynomial, A: set[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int], dict[DPolynomial,int]]:
+        p, s = self._partial_remainder(p, A)
+
+        A = self.sort(list(A)) # sorted from smallest to biggest
+
+        i = dict()
+
+        for r in range(len(A), -1, -1): # we go from biggest to smallest
+            u, I = self.leader(A[r]), self.initial(A[r])
+                        
+            I = self.initial(A[r])
+            i[A[r]] = max(0, p.degree(u) - A[r].degree(u) + 1)
+
+            pa, pp, pu = self.parent().as_polynomials(A[r], I**i[A[r]] * p, u)
+            p = self.parent()(pa.parent()(pp.polynomial(pu) % pa.polynomial(pu)))
+
+        return p, s, i
+
     def smallest(self, p: DPolynomial, q: DPolynomial) -> tuple[DPolynomial, DPolynomial]:
         r'''
             Method that return a variation of the arguments so they have the same leading term.
