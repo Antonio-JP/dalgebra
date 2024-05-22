@@ -3292,7 +3292,7 @@ class RankingFunction:
         r'''
             Method to compute the partial remainder of `p` w.r.t. `A`. See pp. 77-78 of Kolchin's book.
         '''
-        logger.info(f"[partial_remainder] STARTING A PARTIAL REMAINDER COMPUTATION")
+        print(f"[partial_remainder] STARTING A PARTIAL REMAINDER COMPUTATION")
         if not isinstance(A, set):
             A = set(A) if isinstance(A, (list, tuple)) else set([A])
 
@@ -3302,7 +3302,7 @@ class RankingFunction:
         return self._partial_remainder(p, A)
     
     def _partial_remainder(self, p: DPolynomial, A: set[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
-        logger.info(f"[partial_remainder] Starting partial remainder with leader {self.leader(p)}")
+        print(f"[partial_remainder] Starting partial remainder with leader {self.leader(p)} vs {[self.leader(a) for a in A]}")
         F = p
 
         ## We look for the first non-partially reduced
@@ -3313,11 +3313,17 @@ class RankingFunction:
             gu = u.infinite_variables()[0]
             v = self.sort([g for g in F.variables() if g in gu], True)[0]
             if self.compare_variables(u, v) < 0: # v > u
+                print(f"[partial_remainder] Found element not partiaully reduced to")
                 to_apply = tuple([ov - ou for (ou, ov) in zip(gu.index(u, True), gu.index(v, True))])
+                print(f"[partial_remainder] Operation to apply: {to_apply}")
                 Sc = self.separant(a)
                 e = F.degree(v)
                 T = Sc*v - self.parent().apply_operations(a, to_apply)
+                print(f"[partial_remainder] Current v: {v}")
+                print(f"[partial_remainder] Found T: {T}")
                 G = sum(Sc**(e-i) * F.coefficient_full(v**i) * T**i for i in range(F.degree(v)+1))
+                print(f"[partial_remainder] Computed G: {G}")
+                raise RuntimeError
 
                 rF, rs = self._partial_remainder(G, A)
                 rs[a] += e
