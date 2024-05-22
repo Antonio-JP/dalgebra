@@ -829,40 +829,38 @@ class DPolynomial(Element):
     ###################################################################################
     ### Ranking methods
     ###################################################################################
-    def __check_ranking_argument(self, ranking, ordering=None, ttype="orderly"):
-        if ranking is None:
-            ranking = self.parent().ranking()
-        elif not isinstance(ranking, RankingFunction):
-            ranking = self.parent().ranking(ordering, ttype)
-        return ranking
-
-    def monic(self, ranking, ordering=None, ttype="orderly"):
+    def monic(self, ranking: RankingFunction = None):
         r'''Method to get the monic polynomial w.r.t. a ranking'''
-        return self.__check_ranking_argument(ranking, ordering, ttype).monic(self)
+        ranking = self.parent().ranking() if ranking is None else ranking
+        return ranking.monic(self)
 
-    def leader(self, ranking=None, ordering=None, ttype="orderly"):
+    def leader(self, ranking: RankingFunction = None):
         r'''
             Gets the leader of ``self`` w.r.t. a ranking.
         '''
-        return self.__check_ranking_argument(ranking,ordering,ttype).leader(self)
+        ranking = self.parent().ranking() if ranking is None else ranking
+        return ranking.leader(self)
 
-    def rank(self, ranking=None, ordering=None, ttype="orderly"):
+    def rank(self, ranking: RankingFunction = None):
         r'''
             Gets the rank of ``self`` w.r.t. a ranking.
         '''
-        return self.__check_ranking_argument(ranking,ordering,ttype).rank(self)
+        ranking = self.parent().ranking() if ranking is None else ranking
+        return ranking.rank(self)
 
-    def initial(self, ranking=None, ordering=None, ttype="orderly"):
+    def initial(self, ranking: RankingFunction = None):
         r'''
             Gets the leader of ``self`` w.r.t. a ranking.
         '''
-        return self.__check_ranking_argument(ranking,ordering,ttype).initial(self)
+        ranking = self.parent().ranking() if ranking is None else ranking
+        return ranking.initial(self)
 
-    def separant(self, ranking=None, ordering=None, ttype="orderly"):
+    def separant(self, ranking: RankingFunction = None):
         r'''
             Gets the leader of ``self`` w.r.t. a ranking.
         '''
-        return self.__check_ranking_argument(ranking,ordering,ttype).separant(self)
+        ranking = self.parent().ranking() if ranking is None else ranking
+        return ranking.separant(self)
 
     ### Some aliases
     lc = initial #: alias for initial (also called "leading coefficient")
@@ -2282,12 +2280,23 @@ class DPolynomialRing_Monoid(Parent):
 
             This method creates a ranking for ``self`` using the arguments as in :class:`RankingFunction`.
         '''
-        if ordering is not None and isinstance(ordering, list):
+        if ordering is None:
+            ordering = self.gens()
+        elif isinstance(ordering, list):
             ordering = tuple(ordering)
 
+        if not ttype in ("orderly", "elimination"):
+            raise ValueError("Only 'orderly' and 'elimination' rankings are allowed")
+
         if (ordering, ttype) not in self.__cache_ranking:
-            self.__cache_ranking[(ordering, ttype)] = RankingFunction(self, ordering, ttype)
+            self.__cache_ranking[(ordering, ttype)] = EliminationRanking(self, ordering) if ttype == "elimination" else OrderlyRanking(self, ordering)
         return self.__cache_ranking[(ordering, ttype)]
+
+    def elimination_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen]):
+        return self.ranking(ordering, "elimination")
+    
+    def orderly_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen]):
+        return self.ranking(ordering, "orderly")
 
     #################################################
     ### Other computation methods
@@ -2846,12 +2855,6 @@ class RankingFunction:
         A ranking is the analog of a term ordering used in Gröbner bases algorithms. However, rankings order the monomials in
         `\mathcal{T}` that is a monoid infinitely generated with some extra properties that relate the operations with the variables.
 
-        In particular, we say that a ranking `\leq` of `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` is an elimination ranking
-        between two d-variables `u, v` (say `u < v`) if they satisfy `\sigma^\alpha(u) < \sigma^\beta(v)` for all `\alpha,\beta\in \mathbb{N}^n`.
-
-        We also say that `\leq` of `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` is an orderly ranking on `u_1,\ldots, u_n` if
-        `\sigma^\alpha(u_i) < \sigma^\beta(u_j)` for all `\alpha,\beta \in \mathbb{N}^n` with `|\alpha| < |\beta|`.
-
         Once a ranking is fully define, the following methods are automatically defined for non-constant d-polynomials:
 
         * ``leader``: given `p(u) \in R\{u\}`, the leader is the actual variable that is maximal on the polynomial
@@ -2863,36 +2866,101 @@ class RankingFunction:
 
         * ``parent``: a :class:`DPolynomialRing_Monoid` where the ranking will be applied.
         * ``ordering``: a list or tuple of :class:`DMonomialGen` that will include the variables of a :class:`DPolynomialRing_Monoid`
-          that will be incorporated to the ranking and the base ordering between the base variables.
+          that will be incorporated to the ranking and the base ordering between the base variables. In the case of missing variables,
+          we will consider the ring `R\{u_1,\ldots,u_n\}` split into two layers `R\{u_1,\ldots,u_k\}\{u_{k+1},\ldots,u_n\}`, and the ranking 
+          will be created for the outer variables.
         * ``ttype``: the type of ranking to be created. Currently, only "elimination" or "orderly" are allowed:
           - "elimination": the ranking will be the elimination ranking where the ``ordering`` determines the order of the variables.
           - "orderly": generates the orderly ranking where ``ordering`` provides the basic ordering between variables.
 
         TODO: add examples
     '''
-    def __init__(self, parent: DPolynomialRing_Monoid, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, ttype: str = "orderly"):
-        ## Processing arguments
+    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int]):
+        ## Checking the argument ``parent``
         if not isinstance(parent, DPolynomialRing_Monoid):
-            raise TypeError(f"[ranking] The parent must be a ring of d-polynomials, but got {type(parent)}")
-        if ordering is None:
-            ordering = parent.gens()
-        elif not isinstance(ordering, (list,tuple)):
-            raise TypeError(f"[ranking] The base ordering must be given as a list or tuple of generators, but got {type(ordering)}")
-        elif any(g not in parent.gens() for g in ordering):
-            raise ValueError(f"[ranking] The base ordering must be given as a list of generators (DMonomialGen) (got {ordering})")
+            raise TypeError(f"[ranking] Rankings only defined over rings of d-polynomials")
 
-        if ttype not in ("elimination", "orderly"):
-            raise ValueError(f"[ranking] The type of a ranking must be either 'elimination' or 'orderly'. Got {ttype}")
-
-        ## Storing the information required for the ranking function
+        ## Checking the argument ``order_operators``
+        if order_operators is None:
+            order_operators = list(range(parent.noperations()))
+        if not isinstance(order_operators, (list,tuple)) or len(order_operators) != parent.noperations():
+            raise TypeError(f"[ranking] The order of operations must be always given")
+        elif any(i not in ZZ or i < 0 or i >= parent.noperations() for i in order_operators):
+            raise ValueError(f"[ranking] Invalid values for ordering the operations of the d-Ring")
+        elif len(set(order_operators)) != len(parent.noperations()):
+            raise ValueError(f"[ranking] Invalid values for ordering the operations of the d-Ring (repeated elements)")
+        
+        ## Checking the argument ``ordering``
+        if not isinstance(ordering, (list, tuple)): 
+            raise TypeError(f"[ranking] Invalid format for ordering: must be a list or tuple")
+        ordering = [parent.gen(v) if isinstance(v, str) else v for v in ordering]
+        if any(v not in parent.gens() for v in ordering):
+            raise ValueError(f"[ranking] Error in ordering of variables: provided a variable that is not in the ring")
+        
+        ## Storing the values into the class
         self.__parent = parent
-        self.base_order : list[DMonomialGen] | tuple[DMonomialGen] = ordering
-        self.type : str = ttype
+        self.__ordering = tuple(ordering)
+        self.__order_operators = tuple(order_operators)
 
+    ## Attribute type methods
     def parent(self) -> DPolynomialRing_Monoid:
         return self.__parent
+    
+    @property
+    def ordering(self) -> tuple[DMonomialGen]:
+        return self.__ordering
+    
+    @property
+    def order_operators(self) -> tuple[int]:
+        return self.__order_operators
+    
+    ## Comparison methods
+    def compare_gens(self, u: DPolynomialGen | str, v: DPolynomialGen | str) -> int:
+        r'''
+            Method that compares two d-variables.
 
-    def compare_variables(self, u: DPolynomial, v: DPolynomial):
+            INPUT:
+
+            * ``u``: first variable to be checked.
+            * ``v``: second variable to be checked.
+
+            OUTPUT:
+
+            It returns a negative integer if `u < v` according to this ranking, a positive integer if `u > v` or `0` when no comparison is available.
+            All variables not included in ``self.__ordering`` are considered smaller than those in sorted.
+        '''
+        u = self.parent().gens(u) if isinstance(u, str) else u
+        v = self.parent().gens(v) if isinstance(v, str) else v
+
+        if any(el not in self.parent().gens() for el in (u,v)):
+            raise ValueError(f"[ranking - gens] Error when comparing generators: they are not generators of ``parent``")
+        
+        if u not in self.__ordering and v not in self.__ordering:
+            return 0
+        elif u not in self.__ordering:
+            return -1
+        elif v not in self.__ordering:
+            return 1
+        else:
+            return self.__ordering.index(v) - self.__ordering.index(u)
+        
+    def compare_operations(self, t1: tuple[int], t2: tuple[int]) -> int:
+        r'''
+            Method that compares two tuples of elements marking how many operations has been performed over an element.
+
+            This method uses :func:`order_operators` to check the ordering.
+        '''
+        t1 = [t1[i] for i in self.order_operators]
+        t2 = [t2[i] for i in self.order_operators]
+
+        if t1 < t2:
+            return -1
+        elif t1 > t2:
+            return 1
+        else:
+            return 0
+
+    def compare_variables(self, u: DPolynomial, v: DPolynomial) -> int:
         r'''
             Method to compare two variables.
 
@@ -2910,48 +2978,9 @@ class RankingFunction:
             This method behaves like the :func:`cmp` method in Python 2.x, returning a negative element if `u < v`,
             a positive element if `u > v` and 0 if they are equal.
         '''
-        u, v = self.parent()(u), self.parent()(v)
-        if not u.is_variable():
-            raise TypeError(f"[ranking] Comparing something that is not a variable: [[{u} < {v}]]?")
-        if not v.is_variable():
-            raise TypeError(f"[ranking] Comparing something that is not a variable: [[{u} < {v}]]?")
-
-        gu, gv = None, None
-        for g in self.base_order:
-            if u in g:
-                gu = g
-            if v in g:
-                gv = g
-            if gu is not None and gv is not None:
-                break
-        else:
-            raise ValueError(f"[ranking] Comparing a variable that is not ordered (allow {self.base_order}): [[{u} < {v}]]?")
-
-        if self.type == "elimination":
-            if self.base_order.index(gu) < self.base_order.index(gv):
-                return -1
-            elif self.base_order.index(gu) > self.base_order.index(gv):
-                return 1
-            else:
-                return gu.index(u, False) - gu.index(v, False)
-        elif self.type == "orderly":
-            ord_u, ord_v = u.order(gu), v.order(gv)
-            if ord_u < ord_v:
-                return -1
-            elif ord_u > ord_v:
-                return 1
-            else:
-                ind_u, ind_v = gu.index(u, False), gv.index(v, False)
-                if ind_u < ind_v:
-                    return -1
-                elif ind_u > ind_v:
-                    return 1
-                else:
-                    return self.base_order.index(gu) - self.base_order.index(gv)
-        else:
-            raise NotImplementedError(f"[ranking] Method 'compare' not yet implemented for type {self.type}")
-
-    def compare(self, p: DPolynomial, q: DPolynomial):
+        raise NotImplementedError(f"[ranking - variables] This is an abstract method")
+        
+    def compare(self, p: DPolynomial, q: DPolynomial) -> int:
         r'''
             Method that compares two d-polynomials.
 
@@ -3000,7 +3029,7 @@ class RankingFunction:
 
         # here the rank are equal
         return self.compare(self.initial(p), self.initial(q))
-
+        
     ################################################################################
     ### Basic extraction methods from d-polynomials
     ################################################################################
@@ -3108,6 +3137,9 @@ class RankingFunction:
         max_var = self.leader(element)
         return self.parent()(element.polynomial().derivative(max_var.polynomial())) if max_var != self.parent().one() else self.parent().zero()
 
+    ################################################################################
+    ### Operations for d-polynomials induced by ranking
+    ################################################################################
     def pseudo_quo_rem(self, p: DPolynomial, q: DPolynomial) -> tuple[DPolynomial, dict[tuple,tuple[DPolynomial,DPolynomial]], DPolynomial]:
         r'''
             Compute a pseudo-operational division of `p` and `q`.
@@ -3294,12 +3326,103 @@ class RankingFunction:
             result.reverse()
         return result
 
+    ################################################################################
+    ### Representation and Python-magic methods
+    ################################################################################
     def __repr__(self) -> str:
-        return f"{self.type.capitalize()} ranking over {self.parent()} where [{' < '.join([repr(el) for el in self.base_order])}]"
+        return f"Ranking over {self.parent()} where [{' < '.join([repr(el) for el in self.__ordering])}]"
 
     def _latex_(self) -> str:
-        return r"\mathbf{" + ("OrdR" if self.type == "orderly" else "ElimR") + r"}(" + "<".join(latex(v) for v in self.base_order) + r")"
+        return r"\mathbf{Ranking}(" + "<".join(latex(v) for v in self.__ordeing) + r")"
+    
+    def __hash__(self) -> int:
+        return hash((self.parent(), self.__ordering, self.__order_operators))
 
+class EliminationRanking(RankingFunction):
+    r'''
+        Class for representing an Elimination Ranking.
+
+        See :class:`RankingFunction`for information about rankings. Since this is an elimination ranking, then it holds (for 
+        the ordered variables) that `u < v` implies `\sigma^\alpha(u) < \sigma^\beta(v)` for all `\alpha,\beta\in \mathbb{N}^n`.
+
+        This class implements a new version for :func:`RankingFunction.compare_variables`.
+
+        TODO: add examples
+    '''
+    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int]):
+        super().__init__(parent, ordering, order_operators)
+
+    def compare_variables(self, u: DPolynomial, v: DPolynomial):
+        u, v = self.parent()(u), self.parent()(v)
+        if not u.is_variable():
+            raise TypeError(f"[ranking @ variables] Comparing something that is not a variable: [[{u} < {v}]]?")
+        if not v.is_variable():
+            raise TypeError(f"[ranking @ variables] Comparing something that is not a variable: [[{u} < {v}]]?")
+
+        gu, gv = u.infinite_variables()[0], v.infinite_variables()[0]
+        if (gu not in self.ordering or gv not in self.ordering):
+            raise ValueError(f"[ranking @ variables] Comparing a variable that is not ordered (allow {self.ordering}): [[{u} < {v}]]?")
+
+        if self.ordering.index(gu) < self.ordering.index(gv):
+            return -1
+        elif self.ordering.index(gu) > self.ordering.index(gv):
+            return 1
+        else:
+            return self.compare_operations(gu.index(u, True), gu.index(v, True))
+
+    ################################################################################
+    ### Representation and Python-magic methods
+    ################################################################################
+    def __repr__(self) -> str:
+        return f"ELIMINATION " + super().__repr__()
+
+    def _latex_(self) -> str:
+        return r"\mathbf{ElimR}(" + "<".join(latex(v) for v in self.base_order) + r")"
+
+class OrderlyRanking(RankingFunction):
+    r'''
+        Class for representing an Orderly Ranking.
+
+        See :class:`RankingFunction`for information about rankings. Since this is an elimination ranking, then it holds (for 
+        the ordered variables) that `\sigma^\alpha(u) < \sigma^\beta(v)` for all `\alpha,\beta \in \mathbb{N}^n` with `|\alpha| < |\beta|`.
+
+        This class implements a new version for :func:`RankingFunction.compare_variables`.
+
+        TODO: add examples
+    '''
+    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int]):
+        super().__init__(parent, ordering, order_operators)
+
+    def compare_variables(self, u: DPolynomial, v: DPolynomial):
+        u, v = self.parent()(u), self.parent()(v)
+        if not u.is_variable():
+            raise TypeError(f"[ranking @ variables] Comparing something that is not a variable: [[{u} < {v}]]?")
+        if not v.is_variable():
+            raise TypeError(f"[ranking @ variables] Comparing something that is not a variable: [[{u} < {v}]]?")
+
+        gu, gv = u.infinite_variables()[0], v.infinite_variables()[0]
+        if (gu not in self.ordering or gv not in self.ordering):
+            raise ValueError(f"[ranking @ variables] Comparing a variable that is not ordered (allow {self.ordering}): [[{u} < {v}]]?")
+
+        ord_u, ord_v = u.order(gu), v.order(gv)
+        if ord_u < ord_v:
+            return -1
+        elif ord_u > ord_v:
+            return 1
+        else:
+            check_in_order = self.compare_operations(gu.index(u, True), gv.index(v, True))
+            if check_in_order == 0:
+                return self.compare_gens(gu,gv)
+            return check_in_order
+
+    ################################################################################
+    ### Representation and Python-magic methods
+    ################################################################################
+    def __repr__(self) -> str:
+        return f"ORDERLY " + super().__repr__()
+
+    def _latex_(self) -> str:
+        return r"\mathbf{OrdR}(" + "<".join(latex(v) for v in self.ordering) + r")"
 
 __all__ = [
     "DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing", # names imported
