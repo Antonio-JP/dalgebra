@@ -1760,6 +1760,10 @@ class DPolynomialRing_Monoid(Parent):
         variables = sorted(variables, key=lambda p : tuple(next(iter(p._content))._variables.items())[0])
 
         PR = PolynomialRing(self.base(), [str(v) for v in variables], sparse=True)
+        try:
+            self.register_coercion(PR.hom(variables, self))
+        except AssertionError:
+            pass # coercion already registered
         result = [PR(str(element)) for element in elements] # TODO: This may be improved?
 
         return result
@@ -2292,10 +2296,10 @@ class DPolynomialRing_Monoid(Parent):
             self.__cache_ranking[(ordering, ttype)] = EliminationRanking(self, ordering) if ttype == "elimination" else OrderlyRanking(self, ordering)
         return self.__cache_ranking[(ordering, ttype)]
 
-    def elimination_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen]):
+    def elimination_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None):
         return self.ranking(ordering, "elimination")
     
-    def orderly_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen]):
+    def orderly_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None):
         return self.ranking(ordering, "orderly")
 
     #################################################
@@ -2875,19 +2879,19 @@ class RankingFunction:
 
         TODO: add examples
     '''
-    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int]):
+    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int] = None):
         ## Checking the argument ``parent``
         if not isinstance(parent, DPolynomialRing_Monoid):
             raise TypeError(f"[ranking] Rankings only defined over rings of d-polynomials")
 
         ## Checking the argument ``order_operators``
         if order_operators is None:
-            order_operators = list(range(parent.noperations()))
-        if not isinstance(order_operators, (list,tuple)) or len(order_operators) != parent.noperations():
+            order_operators = list(range(parent.noperators()))
+        if not isinstance(order_operators, (list,tuple)) or len(order_operators) != parent.noperators():
             raise TypeError(f"[ranking] The order of operations must be always given")
-        elif any(i not in ZZ or i < 0 or i >= parent.noperations() for i in order_operators):
+        elif any(i not in ZZ or i < 0 or i >= parent.noperators() for i in order_operators):
             raise ValueError(f"[ranking] Invalid values for ordering the operations of the d-Ring")
-        elif len(set(order_operators)) != len(parent.noperations()):
+        elif len(set(order_operators)) != parent.noperators():
             raise ValueError(f"[ranking] Invalid values for ordering the operations of the d-Ring (repeated elements)")
         
         ## Checking the argument ``ordering``
@@ -3055,7 +3059,7 @@ class RankingFunction:
         element = self.parent()(element)
 
         ## we get the variables that must be ordered
-        variables = [self.parent()(v) for v in element.variables() if any(v in g for g in self.base_order)]
+        variables = [self.parent()(v) for v in element.variables() if any(v in g for g in self.ordering)]
         if len(variables) == 0: # if nothing is there, the leader is the `1`
             return self.parent().one()
 
@@ -3087,6 +3091,8 @@ class RankingFunction:
         element = self.parent()(element)
 
         max_var = self.leader(element)
+        if max_var == 1: # Special case when the polynomial do not involve any ranked variable
+            return self.parent().zero()
         deg = element.degree(max_var) if max_var != self.parent().one() else 1
         return max_var**deg
 
@@ -3111,7 +3117,7 @@ class RankingFunction:
         '''
         element = self.parent()(element)
 
-        return element.coefficient(self.rank(element), _poly=True)
+        return element.coefficient_full(self.rank(element)) 
 
     @cached_method
     def separant(self, element: DPolynomial) -> DPolynomial:
@@ -3135,7 +3141,84 @@ class RankingFunction:
         element = self.parent()(element)
 
         max_var = self.leader(element)
-        return self.parent()(element.polynomial().derivative(max_var.polynomial())) if max_var != self.parent().one() else self.parent().zero()
+        if max_var == 1: # Special case when no ranked variable is present
+            return self.parent().zero()
+        
+        ## Else, we compute the partial derivative. For that, we convert the structure to usual polynomials
+        poly_element, poly_var = self.parent().as_polynomials(element, max_var)
+        return self.parent()(poly_element.derivative(poly_var)) 
+
+    ################################################################################
+    ### Boolean methods
+    ################################################################################
+    def is_partially_reduced(self, p: DPolynomial, A: DPolynomial | list[DPolynomial]) -> bool:
+        r'''
+            Method to check whether a d-polynomial `p` is *partially reduced* w.r.t. `A`.
+
+            Let `A` be a d-polynomial and let `u_A` be its leader w.r.t. ``self``. We say that `p` is
+            partially reduced w.r.t. `A` if no derivated element from `u_A` appear in `p`. For example,
+            if `u_3\'\'` is the leader of `A`, then `u_3\'` may appear in `p`, but `u_3\'\'\'` cannot.
+
+            For further information about this property, we refer to "Differential Algebra and Algebraic
+            Groups" by E.R. Kolchin (1973). 
+        '''
+        if not isinstance(A, (list, tuple, set)):
+            A = [A]
+        p = self.parent()(p)
+        A = [self.parent()(a) for a in A]
+
+        if p == 0: # Special case, 0 is always aprtially reduced
+            return True
+        
+        for a in A:
+            u = self.leader(a)
+            gu = u.infinite_variables()[0] # the generator of the leader
+            if any(self.compare_variables(u, v) > 0 for v in p.variables() if v in gu):
+                return False
+        
+        return True
+    
+    def is_reduced(self, p: DPolynomial, A: DPolynomial |list[DPolynomial]) -> bool:
+        r'''
+            Method to check whether a d-polynomial `p` is *partially reduced* w.r.t. `A`.
+
+            We say that a d-polynomial `p` is reduced w.r.t. `A` if it is partially reduced (see :func:`is_partially_reduced`)
+            and the degree of the leader of `A` is lower in `p` than in `A`.
+
+            For further information about this property, we refer to "Differential Algebra and Algebraic
+            Groups" by E.R. Kolchin (1973). 
+        '''
+        if not isinstance(A, (list, tuple, set)):
+            A = [A]
+        p = self.parent()(p)
+        A = [self.parent()(a) for a in A]
+
+        if p == 0: # Special case, 0 is always aprtially reduced
+            return True
+        
+        if not self.is_partially_reduced(p, A):
+            return False
+
+        return all(p.degree(self.leader(a)) < a.degree(self.leader(a)) for a in A)            
+    
+    def is_autoreduced(self, A: DPolynomial | list[DPolynomial]) -> bool:
+        r'''
+            Method to check whether a set of d-polynomials `A` is autoreduced or not.
+
+            A set `A` of d-polynomials is called *autoreduced* if, for every `p\in A`, `p`
+            is reduced w.r.t. `A\setminus\{p\`}` (see :func:`is_reduced` for further information).
+
+            In particular, singleton sets or empty sets are autoreduced.
+        '''
+        if A is None:
+            raise TypeError(f"None is not a valid input for 'is_autoreduced'")
+        if not isinstance(A, (list, tuple, set)):
+            A = [A]
+
+        if len(A) <= 1:
+            return True
+        
+        return all(self.is_reduced(p, [a for a in A if a != p]) for p in A)
 
     ################################################################################
     ### Operations for d-polynomials induced by ranking
@@ -3349,7 +3432,7 @@ class EliminationRanking(RankingFunction):
 
         TODO: add examples
     '''
-    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int]):
+    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int] = None):
         super().__init__(parent, ordering, order_operators)
 
     def compare_variables(self, u: DPolynomial, v: DPolynomial):
@@ -3377,7 +3460,7 @@ class EliminationRanking(RankingFunction):
         return f"ELIMINATION " + super().__repr__()
 
     def _latex_(self) -> str:
-        return r"\mathbf{ElimR}(" + "<".join(latex(v) for v in self.base_order) + r")"
+        return r"\mathbf{ElimR}(" + "<".join(latex(v) for v in self.ordering) + r")"
 
 class OrderlyRanking(RankingFunction):
     r'''
@@ -3390,7 +3473,7 @@ class OrderlyRanking(RankingFunction):
 
         TODO: add examples
     '''
-    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int]):
+    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int] = None):
         super().__init__(parent, ordering, order_operators)
 
     def compare_variables(self, u: DPolynomial, v: DPolynomial):
