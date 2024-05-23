@@ -1014,7 +1014,7 @@ class DPolynomial(Element):
                 Traceback (most recent call last):
                 ...
                 TypeError: The given polynomial ... is not linear or homogeneous over u_*
-                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homoeneous in v_*
+                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homogeneous in v_*
                 sage: f2._maple_(v)
                 Traceback (most recent call last):
                 ...
@@ -3235,7 +3235,7 @@ class RankingFunction:
         p = self.parent()(p)
         A = [self.parent()(a) for a in A]
 
-        if p == 0: # Special case, 0 is always aprtially reduced
+        if p == 0: # Special case, 0 is always partially reduced
             return True
         
         for a in A:
@@ -3261,7 +3261,7 @@ class RankingFunction:
         p = self.parent()(p)
         A = [self.parent()(a) for a in A]
 
-        if p == 0: # Special case, 0 is always aprtially reduced
+        if p == 0: # Special case, 0 is always partially reduced
             return True
         
         if not self.is_partially_reduced(p, A):
@@ -3381,7 +3381,7 @@ class RankingFunction:
             gu = u.infinite_variables()[0]
             v = self.sort([g for g in F.variables() if g in gu], True)[0]
             if self.compare_variables(u, v) < 0: # v > u
-                print(f"[partial_remainder] Found element not partiaully reduced to")
+                print(f"[partial_remainder] Found element not partially reduced to")
                 to_apply = tuple([ov - ou for (ou, ov) in zip(gu.index(u, True), gu.index(v, True))])
                 print(f"[partial_remainder] Operation to apply: {to_apply}")
                 Sc = self.separant(a)
@@ -3558,7 +3558,7 @@ class RankingFunction:
         return f"Ranking over {self.parent()} where [{' < '.join([repr(el) for el in self.__ordering])}]"
 
     def _latex_(self) -> str:
-        return r"\mathbf{Ranking}(" + "<".join(latex(v) for v in self.__ordeing) + r")"
+        return r"\mathbf{Ranking}(" + "<".join(latex(v) for v in self.__ordering) + r")"
     
     def __hash__(self) -> int:
         return hash((self.parent(), self.__ordering, self.__order_operators))
