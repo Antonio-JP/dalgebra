@@ -266,13 +266,13 @@ class SolutionBranch:
 ###
 #################################################################################################
 @loglevel(logger)
-def analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent=None, groebner: bool = True, parallel: int = None) -> list[SolutionBranch]:
+def analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = [], final_parent=None, groebner: bool = True, parallel: int = None) -> list[SolutionBranch]:
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
 
     StartPool(parallel) # starting (if needed) the processes pool
 
     logger.info(f"[IDEAL] We start with a general overview.")
-    branches = _analyze_ideal(I, partial_solution, decisions, final_parent, groebner=groebner)
+    branches = _analyze_ideal(I, partial_solution, to_avoid, decisions, final_parent, groebner=groebner)
 
     if not isinstance(I, (list, tuple)):
         I = I.gens()
@@ -291,7 +291,7 @@ def analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent=
             final_branches.add(branch)
         else:
             logger.debug(f"[IDEAL] New equations merged: analyzing more branches")
-            new_branches = _analyze_ideal(equations, dict(), list(), final_parent, groebner=groebner)
+            new_branches = _analyze_ideal(equations, dict(), to_avoid, list(), final_parent, groebner=groebner)
             logger.debug(f"[IDEAL] Adding the new branches ({len(new_branches)})")
             for new_branch in new_branches:
                 branches.append(
@@ -302,6 +302,11 @@ def analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent=
                         branch.parent()
                     )
                 )
+
+    ## Filtering solutions with data to avoid
+    logger.info(f"[IDEAL] Removing solutions to avoid (starting with {len(final_branches)})")
+    final_branches = [branch for branch in final_branches if all(branch[k] != v for k,v in to_avoid.items())]
+    
     ## Filtering subsolutions
     logger.info(f"[IDEAL] Removing subsolutions (starting with {len(final_branches)})")
     output: list[SolutionBranch] = list()
@@ -320,21 +325,29 @@ def analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent=
     logger.info(f"[IDEAL] Remaining branches: {len(output)}")
     return output
 
-def _analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent=None, groebner: bool = True) -> list[SolutionBranch]:
+def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = [], final_parent=None, groebner: bool = True) -> list[SolutionBranch]:
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
+    ## First we prune the solution
+    logger.info(f"[ideal] +++ Starting new execution of _analyze_ideal")
+    if any(partial_solution[k] == to_avoid.get(k, None) for k in partial_solution):
+        logger.info(f"[ideal] ??? Pruning a branch where an undesired solution appear")
+        return list()
+
     if not isinstance(I, (list, tuple)):
         I = I.gens()
 
     if len(I) == 0:
-        logger.log(15, f"[ideal] !!! No more polynomials to analyze. Returning this path")
+        logger.info(f"[ideal] !!! No more polynomials to analyze. Returning this path")
         return [SolutionBranch(I, partial_solution, decisions, final_parent)]
 
     ## We copy the arguments to avoid possible collisions
     partial_solution = partial_solution.copy()
     decisions = decisions.copy()
 
+    logger.info(f"[ideal] +++ analyze_ideal ({len(I)} equations, {len(partial_solution)}/{I[0].parent().ngens()} variables)")
+
     if any(poly.degree() == 0  for poly in I): ## No solution case
-        logger.log(15, f"[ideal] Found a branch without a solution.")
+        logger.info(f"[ideal] Found a branch without a solution.")
         return []
 
     ###########################################################################################################
@@ -348,7 +361,7 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent
 
             value = poly.parent()(v - poly/c)
             if str(v) in to_eval and to_eval[str(v)] != value:
-                logger.debug(f"[ideal] Found incompatibility for ({poly}): {v} = {to_eval[str(v)]}")
+                logger.info(f"[ideal] Found incompatibility for ({poly}): {v} = {to_eval[str(v)]}")
                 return [] # no solution for incompatibility of two equations
             elif str(v) not in to_eval:
                 logger.debug(f"[ideal] ### Found simple polynomial ({poly}): adding solution {v} = {value}")
@@ -357,12 +370,13 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent
             v = poly.variables()[0]
             value = poly.parent().zero()
             if str(v) in to_eval and to_eval[str(v)] != value:
-                logger.debug(f"[ideal] Found incompatibility for ({poly}): {v} = {to_eval[str(v)]}")
+                logger.info(f"[ideal] Found incompatibility for ({poly}): {v} = {to_eval[str(v)]}")
                 return [] # no solution for incompatibility of two equations
             elif str(v) not in to_eval:
                 logger.debug(f"[ideal] ### Found simple polynomial ({poly}): adding solution {v} = {value}")
                 to_eval[str(v)] = value
         elif poly.degree() == 0 and poly != 0: # No solution in the ideal
+            logger.info(f"[ideal] Found no solution for an ideal")
             return []
     if len(to_eval):
         logger.debug(f"[ideal] ### Applying easy variables...")
@@ -370,7 +384,7 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent
         I = [el for el in I if el != 0] # removing zeros from the ideal
         logger.debug(f"[ideal] ### Applying recursively to the remaining polynomials ({len(I)})")
         partial_solution.update(to_eval)
-        return _analyze_ideal(I, partial_solution, decisions, final_parent, groebner=groebner)
+        return _analyze_ideal(I, partial_solution, to_avoid, decisions, final_parent, groebner=groebner)
 
     ###########################################################################################################
     ## Third we try an easy type of splitting
@@ -386,7 +400,7 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent
                 path_ideal = [el for el in path_ideal if el != 0]
 
                 logger.debug(f"[ideal] $$$ SPLITTING WITH (({v} = 0))")
-                args.append((path_ideal, path_sol, decisions + [("var", str(v), 0)], final_parent, groebner))
+                args.append((path_ideal, path_sol, to_avoid, decisions + [("var", str(v), 0)], final_parent, groebner))
 
             return sum((solutions for solutions in LoopInParallel(_analyze_ideal, args)), [])
 
@@ -398,12 +412,14 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent
         factors = poly.factor()
         if len(factors) > 1: # we can split
             logger.log(15, f"[ideal] [[[ Found a splitting into {len(factors)} factors")
+            for factor in factors:
+                logger.debug(f"[ideal] [[[    {str(factor)[:20]}...")
             args = []
             for factor,_ in factors:
                 path_ideal = [factor] + [p for p in I if p != poly]
                 path_sol = partial_solution.copy()
                 path_decisions = decisions + [("factor", factor, poly)]
-                args.append((path_ideal, path_sol, path_decisions, final_parent, groebner))
+                args.append((path_ideal, path_sol, to_avoid, path_decisions, final_parent, groebner))
             return sum((solutions for solutions in LoopInParallel(_analyze_ideal, args)), [])
 
     ###########################################################################################################
@@ -429,7 +445,7 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent
         I = [el for el in I if el != 0] # removing zeros from the ideal
         logger.debug(f"[ideal] ??? Applying recursively to the remaining polynomials ({len(I)})")
         partial_solution.update(to_eval)
-        return _analyze_ideal(I, partial_solution, decisions, final_parent, groebner=groebner)
+        return _analyze_ideal(I, partial_solution, to_avoid, decisions, final_parent, groebner=groebner)
 
     if groebner:
         ###########################################################################################################
@@ -440,7 +456,7 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent
         I_gb = ideal(I).groebner_basis()
         if not all(poly in I_gb for poly in I): # we improved with a Gröbner basis
             logger.debug(f"[ideal] %%% The ideal was changed when computing a Groebner basis: we apply recursively to the GB")
-            return _analyze_ideal(I_gb, partial_solution, decisions, final_parent, groebner=groebner)
+            return _analyze_ideal(I_gb, partial_solution, to_avoid, decisions, final_parent, groebner=groebner)
 
         ###########################################################################################################
         ## Seventh we try a primary decomposition
@@ -456,12 +472,11 @@ def _analyze_ideal(I, partial_solution: dict, decisions: list = [], final_parent
                 logger.debug(f"[ideal] --- Computing radical ideal of primary component")
                 primary = primary.radical()
                 logger.debug(f"[ideal] --- Applying recursively to the radical ideal ({len(primary.gens())})")
-                args.append((primary, partial_solution, decisions + [("prim", primary.gens())], final_parent, groebner))
+                args.append((primary, partial_solution, to_avoid, decisions + [("prim", primary.gens())], final_parent, groebner))
 
             return sum((solutions for solutions in LoopInParallel(_analyze_ideal, args)), [])
 
-    logger.log(15, f"[ideal] !!! Reached ending point for analyzing an ideal. Returning this path")
-
+    logger.info(f"[ideal] !!! Reached ending point for analyzing an ideal. Returning this path")
     return [SolutionBranch(I, partial_solution, decisions, final_parent)]
 
 
