@@ -185,7 +185,7 @@ def GetEquationsForSolution(m : int,
 
     ### Computing the almost commuting basis up to order `m` and the hierarchy up to this point
     logger.debug(f"[GEFS] ++ Computing the basis of almost commuting and the hierarchies...")
-    Ps, Hs = [z[0]], [(n-1)*[L.parent().zero()]] # the case with m = 0
+    Ps, Hs = [z[0](dic=U)], [(n-1)*[L.parent().zero()]] # the case with m = 0
     for i in range(1, m+1):
         ## TODO: should we remove the i with m%n = 0?
         nP, nH = almost_commuting_wilson(n, i, name_z=name_partial)
