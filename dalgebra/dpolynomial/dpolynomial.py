@@ -211,7 +211,7 @@ class DPolynomial(Element):
         if len(gens) == 0:
             return tuple([self._content[m] for m in self.monomials()])
         else:
-            return tuple([self.coefficient_full(m).coefficient_without_var(*gens) for m in self.monomials(*gens)])
+            return tuple([self.coefficient_full(m).constant_coefficient(*gens) for m in self.monomials(*gens)])
         
     def coefficient(self, monomial: DMonomial, *gens: DMonomialGen) -> Element:
         r'''
@@ -252,9 +252,24 @@ class DPolynomial(Element):
             return self.parent().zero()
         return self.parent().element_class(self.parent(), output)
 
-    def coefficient_without_var(self, *gens: DPolynomialGen) -> DPolynomial:
+    def constant_coefficient(self, *gens) -> Element: #: Method to get the coefficient without variables
         r'''
-            Similar to :func:`coefficient_full` but for terms without the given variables
+            Method to get the constant coefficient of a :class:`DPolynomial`.
+
+            This method allows to obtain the constant coefficient of a d-polynomial, i.e., that coefficient
+            that do not contain any of the d-variables of the ring.
+
+            As we can only build d-rings in the form `R\{u_1,\ldots,u_n\}` this method allows to specify
+            a set of d-variables to interpret the element as an element of `R\{u_1,\ldots,u_k\}\{u_{k+1},\ldots,u_n\}`
+            (see method :func:`coefficients` or :func:`monomials`).
+
+            INPUT:
+
+            * ``gens``: a sequence of :class:`DMonomialGen` indicating the outer d-variables of the ring.
+
+            OUTPUT:
+
+            The corresponding constant coefficient in the corresponding d-ring.
 
             EXAMPLES::
 
@@ -263,23 +278,23 @@ class DPolynomial(Element):
                 sage: R.<u,v> = DPolynomialRing(B)
                 sage: P = (3*x -1)*u[0]*v[0] + x^2*v[1]*u[0] + u[2] + 1
                 sage: Q = 7*x*v[0] + x^2*v[0]*u[1]
-                sage: P.coefficient_without_var(u,v) == P.constant_coefficient()
-                True
-                sage: P.coefficient_without_var(u)
+                sage: P.constant_coefficient()
                 1
-                sage: P.coefficient_without_var(v)
+                sage: P.constant_coefficient(u,v)
+                1
+                sage: P.constant_coefficient(u)
+                1
+                sage: P.constant_coefficient(v)
                 1 + u_2
-                sage: Q.coefficient_without_var(u)
+                sage: Q.constant_coefficient(u)
                 (7*x)*v_0
-                sage: Q.coefficient_without_var(v)
+                sage: Q.constant_coefficient(v)
                 0
-                sage: P.coefficient_without_var() == P
-                True
         '''
         if len(gens) == 1 and isinstance(gens[0], (list,tuple)):
             gens = gens[0]
         if len(gens) == 0:
-            return self
+            return self.coefficient(())
 
         output = dict()
         for (m,c) in self._content.items():
@@ -289,9 +304,62 @@ class DPolynomial(Element):
         if len(output) == 0:
             return self.parent().zero()
         return self.parent().element_class(self.parent(), output)
+    
+    def coefficient_without_var(self, *vars: DPolynomial) -> DPolynomial:
+        r'''
+            Method to compute the part of a d-polynomial without specific sets of algebraic variables.
 
-    def constant_coefficient(self) -> Element: #: Method to get the coefficient without variables
-        return self.coefficient(())
+            This method is similar to :func:`constant_coefficient` but in this case we consider the d-polynomial
+            as an usual polynomial and we compute the coefficient without some algebraic variables (instead of 
+            complete appearances of d-variables).
+
+            INPUT:
+
+            * ``vars``: variables that we are going to remove from ``self``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: R.<u,v> = DPolynomialRing(B)
+                sage: P = (3*x -1)*u[0]*v[0] + x^2*v[1]*u[0] + u[2] + 1
+                sage: Q = 7*x*v[0] + x^2*v[0]*u[1]
+                sage: P.coefficient_without_var([u[i] for i in range(P.order(u)+1)]) == P.constant_coefficient(u)
+                True
+                sage: P.coefficient_without_var(u[2])
+                1 + (3*x - 1)*u_0*v_0 + x^2*u_0*v_1
+                sage: P.coefficient_without_var(v[0], v[1])
+                1 + u_2
+                sage: P.coefficient_without_var(v[0])
+                1 + x^2*u_0*v_1 + u_2
+                sage: Q.coefficient_without_var(u[0]) == Q
+                True
+                sage: Q.coefficient_without_var(v[0])
+                0
+                sage: P.coefficient_without_var() == P
+                True
+        '''
+        if len(vars) == 1 and isinstance(vars[0], (list,tuple)):
+            vars = vars[0]
+        if len(vars) == 0:
+            return self
+        if any(not v.is_variable() for v in vars):
+            raise ValueError(f"Requested constant coefficient w.r.t. something that is not a variable")
+        
+        gens = [v.infinite_variables()[0] for v in vars]
+        vars = [(gens[i]._index, gens[i].index(v, True)) for i,v in enumerate(vars)]
+
+        output = dict()
+
+        for (m,c) in self._content.items():
+            if all(all(v != el for el in m._variables) for v in vars):
+                output[m] = c
+
+        if len(output) == 0:
+            return self.parent().zero()
+        return self.parent().element_class(self.parent(), output)
+
+            
 
     @cached_method
     def orders(self, operation: int = -1) -> tuple[int]:
@@ -2166,7 +2234,7 @@ class DPolynomialRing_Monoid(Parent):
         elif N >= 0 and (k < 0 or k > N):
             raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
 
-        homogeneous = any(poly.coefficient_without_var(gen) != 0 for poly in (P,Q))
+        homogeneous = any(poly.constant_coefficient(gen) != 0 for poly in (P,Q))
 
         if homogeneous and k > 0:
             raise NotImplementedError(f"[sylvester_matrix] The case of inhomogeneous operators and positive {k=} is not implemented.")
@@ -2185,7 +2253,7 @@ class DPolynomialRing_Monoid(Parent):
         ## We get the coefficient of the sylvester matrix
         nrows = len(equations)
         ncols = len(cols) + (1 if homogeneous else 0)
-        output = sum([([self(equation).coefficient_without_var(gen)] if homogeneous else []) + [self(equation.coefficient_full(m)) for m in cols] for equation in equations], [])
+        output = sum([([self(equation).constant_coefficient(gen)] if homogeneous else []) + [self(equation.coefficient_full(m)) for m in cols] for equation in equations], [])
 
         output = matrix([output[r*ncols:r*ncols + ncols] for r in range(nrows)])
 
@@ -3321,7 +3389,7 @@ class RankingFunction:
                 T = Sc*v - self.parent().apply_operations(a, to_apply)
                 print(f"[partial_remainder] Current v: {v}")
                 print(f"[partial_remainder] Found T: {T}")
-                G = sum(Sc**(e-i) * F.coefficient_full(v**i) * T**i for i in range(F.degree(v)+1))
+                G = sum(Sc**(e-i) * F.coefficient_full(v**i) * T**i for i in range(1, F.degree(v)+1))
                 print(f"[partial_remainder] Computed G: {G}")
                 raise RuntimeError
 
