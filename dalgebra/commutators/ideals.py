@@ -232,6 +232,9 @@ class SolutionBranch:
             other = other.subsolution(**to_subs)
         return self == other
 
+    def is_avoiding(self, to_avoid: list[dict[str, int]]) -> bool:
+        return not _check_avoid(self.__solution, to_avoid)
+
     ######################################################################################################
     ### Equality methods
     ######################################################################################################
@@ -266,10 +269,14 @@ class SolutionBranch:
 ###
 #################################################################################################
 @loglevel(logger)
-def analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = [], final_parent=None, groebner: bool = True, parallel: int = None) -> list[SolutionBranch]:
+def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: list = [], final_parent=None, groebner: bool = True, parallel: int = None) -> list[SolutionBranch]:
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
 
     StartPool(parallel) # starting (if needed) the processes pool
+
+    ## We process the "to_avoid" argument
+    if isinstance(to_avoid, dict):
+        to_avoid = [to_avoid]
 
     logger.info(f"[IDEAL] We start with a general overview.")
     branches = _analyze_ideal(I, partial_solution, to_avoid, decisions, final_parent, groebner=groebner)
@@ -305,7 +312,7 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = [
 
     ## Filtering solutions with data to avoid
     logger.info(f"[IDEAL] Removing solutions to avoid (starting with {len(final_branches)})")
-    final_branches = [branch for branch in final_branches if all(branch[k] != v for k,v in to_avoid.items())]
+    final_branches = [branch for branch in final_branches if branch.is_avoiding(to_avoid)]
     
     ## Filtering subsolutions
     logger.info(f"[IDEAL] Removing subsolutions (starting with {len(final_branches)})")
@@ -325,11 +332,13 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = [
     logger.info(f"[IDEAL] Remaining branches: {len(output)}")
     return output
 
+from ..logging.logging import count_calls
+@count_calls(logger)
 def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = [], final_parent=None, groebner: bool = True) -> list[SolutionBranch]:
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
     ## First we prune the solution
     logger.info(f"[ideal] +++ Starting new execution of _analyze_ideal")
-    if any(partial_solution[k] == to_avoid.get(k, None) for k in partial_solution):
+    if _check_avoid(partial_solution, to_avoid):
         logger.info(f"[ideal] ??? Pruning a branch where an undesired solution appear")
         return list()
 
@@ -436,6 +445,8 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
         value = poly.parent()(variable - poly/c)
         if str(variable) in to_eval:
             logger.debug(f"[ideal] ??? Found a repeated variable: {variable}")
+        if any(str(w) in to_eval for w in value.variables()):
+            logger.debug(f"[ideal] ??? Found a cyclic linear evaluation: discarding this simplification for now.")
         else:
             logger.debug(f"[ideal] ??? Found linear polynomial {poly}: adding solution {variable} = {value}")
             to_eval[str(variable)] = value
@@ -447,13 +458,15 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
         partial_solution.update(to_eval)
         return _analyze_ideal(I, partial_solution, to_avoid, decisions, final_parent, groebner=groebner)
 
-    if groebner:
+    if groebner and len(I) > 1:
         ###########################################################################################################
         ## Sixth we try a Groebner basis
         logger.log(15, f"[ideal] %%% Computing a GROEBNER BASIS of {len(I)} polynomials")
         for (i,poly_I) in enumerate(I):
             logger.debug(f"[ideal] %%% \t{i:4} -> {cut_string(poly_I, 50)}")
+
         I_gb = ideal(I).groebner_basis()
+
         if not all(poly in I_gb for poly in I): # we improved with a Gröbner basis
             logger.debug(f"[ideal] %%% The ideal was changed when computing a Groebner basis: we apply recursively to the GB")
             return _analyze_ideal(I_gb, partial_solution, to_avoid, decisions, final_parent, groebner=groebner)
@@ -479,5 +492,16 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
     logger.info(f"[ideal] !!! Reached ending point for analyzing an ideal. Returning this path")
     return [SolutionBranch(I, partial_solution, decisions, final_parent)]
 
+def _check_avoid(partial_solution: dict, to_avoid: list):
+    r'''
+        Method to check whether a partial solution has an undesired configuration.
+
+        The argument ``to_avoid`` is provided as a list of dictionaries. This can be translated into 
+        a logical formula:
+
+        * A dictionary `D` can be translated into `\bigwedge_{(k,v)\in D} k = v`.
+        * A list `L` can be translated into `\bigvee_{l \in L} l`.
+    '''
+    return any(all(partial_solution.get(v, None) == avoiding[v] for v in avoiding) for avoiding in to_avoid)
 
 __all__ = ["analyze_ideal"]

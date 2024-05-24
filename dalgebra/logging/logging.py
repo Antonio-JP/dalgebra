@@ -45,6 +45,22 @@ def print_args(size, *args, **kwds):
         output += f"\n\t* kwds: {dict([(k, cut_string(v, size)) for (k,v) in kwds.items()])}"
     return output
 
+COUNTING_CALLS : dict[str, int] = dict()
+def count_calls(logger : logging.Logger):
+    def inner(func):
+        @functools.wraps(func)
+        def wrap(*args, **kwds):
+            COUNTING_CALLS[func.__name__] = COUNTING_CALLS.get(func.__name__, 0) + 1
+            try: 
+                output = func(*args, **kwds)
+                return output
+            finally:
+                COUNTING_CALLS[func.__name__] = COUNTING_CALLS.get(func.__name__, 0) - 1
+                print(f"[{func.__name__}] Remaining {COUNTING_CALLS[func.__name__]} calls".ljust(50), end="\r", flush=True)
+
+        return wrap
+    return inner
+
 def loglevel(logger : logging.Logger):
     def inner(func):
         @functools.wraps(func)
@@ -79,6 +95,7 @@ def loglevel(logger : logging.Logger):
                     __USED_LOGLEVEL.remove(logger)
                 if logfile is not None and file_handler is not None: # Removed the file handler if created
                     logger.removeHandler(file_handler)
+
         return wrap
     return inner
 
