@@ -24,13 +24,13 @@ develop: clean_build
 	$(SAGE) -pip install --upgrade -e .
 
 test: no-deps
-	$(SAGE) -tox -e doctest -- pseries_basis
+	$(SAGE) -tox -e doctest -- dalgebra
 
 coverage:
-	$(SAGE) -tox -e coverage -- pseries_basis
+	$(SAGE) -tox -e coverage -- dalgebra
 
 lint:
-	$(SAGE) -tox -e relint,pycodestyle-minimal -- pseries_basis
+	$(SAGE) -tox -e relint,pycodestyle-minimal -- dalgebra
 
 ready: lint test
 	@echo "Repository is ready to push: check with act th actions in case of changes."

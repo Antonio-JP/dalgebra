@@ -983,6 +983,117 @@ class DPolynomial(Element):
 
         return result
 
+    def _mathematica_(self, gen: DMonomialGen | str, mathematica_var: str = "t", mathematica_diff: str = None) -> str:
+        r'''
+            Method to convert the polynomial into a differential polynomial in Maple.
+
+            This method requires a d-variable as input to determine which is the operator variable.
+
+            INPUT:
+
+            * ``gen``: variable to be used as an operator variable. If the polynomial is not linear in this variable, an error is
+              raised. It can be also the name of a d-variable in ``self.parent()``.
+            * ``mathematica_var``: the name that the independent variable will take. This is the variable over which we differentiate.
+            * ``mathematica_diff``: name for the differential operator in Maple. If none is given, we will take the name of the d-variable
+              given by ``gen``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: f1 = x*u[0]*v[1] + x^2*u[2]*v[2] + 3*x*v[2] - (1-x)*v[0]
+                sage: f1._mathematica_(v) # correct behavior
+                '(x - 1) + x*u[t]*v + ((3*x) + x^2*D[u[t],{t,2}])*v^2'
+                sage: f1._mathematica_(v, "x", "DD") # changing ind. variable and diff. operator
+                '(x - 1) + x*u[x]*DD + ((3*x) + x^2*D[u[x],{x,2}])*DD^2'
+                sage: f1._mathematica_(u) # Not homogeneous in u_*
+                Traceback (most recent call last):
+                ...
+                TypeError: The given polynomial ... is not linear or homogeneous over u_*
+                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homoeneous in v_*
+                sage: f2._mathematica_(v)
+                Traceback (most recent call last):
+                ...
+                TypeError: The given polynomial ... is not linear or homogeneous over v_*
+                sage: f3 = x*u[0] + x^2*u[2] # variable v not appearing
+                sage: f3._mathematica_("v", "x", "partial")
+                'x*u[x] + x^2*D[u[x],{x,2}]'
+                sage: R.one()._mathematica_("u")
+                '1'
+                sage: R.zero()._mathematica_("u")
+                '0'
+                sage: S.<big,small> = DifferentialPolynomialRing(QQ)
+                sage: f4 = big[0]*small[1] + 3*big[0]*small[3]^2 - big[1]*small[2]
+                sage: f4._mathematica_(small) # not linear in small_*
+                Traceback (most recent call last):
+                ...
+                TypeError: The given polynomial ... is not linear or homogeneous over small_*
+                sage: f4._mathematica_(big) # correct
+                '(D[small[t],{t,1}] + 3*D[small[t],{t,3}]^2) - D[small[t],{t,2}]*big'
+        '''
+        if not isinstance(gen, DMonomialGen):
+            gen = self.parent().gen(str(gen))
+        if gen not in self.parent().gens():
+            raise ValueError("The given variable must be a valid generator of the parent.")
+
+        if self.is_zero():
+            return r"0"
+
+        if not self.is_linear([gen]) or any(self.parent()(m).order(gen) == -1 for m in self.monomials()):
+            if self.order(gen) != -1:
+                raise TypeError(f"The given polynomial ({self}) is not linear or homogeneous over {gen}")
+
+        if mathematica_diff is None:
+            mathematica_diff = gen.variable_name()
+
+        coeffs = dict()
+        mons = dict()
+        if self.order(gen) != -1: # Normal case
+            for i in range(self.order(gen)+1):
+                c = self.coefficient_full(gen[i])
+                if c != 0:
+                    coeffs[i] = str(c) if len(c._content) == 1 else f"({c})" # we cast the coefficients to strings
+        else: # special case for polynomials without the differential operator
+            coeffs[0] = str(self)
+
+        ## We transform the coefficients to fit the Maple format
+        regex = r"(" + "|".join([el.variable_name() for el in self.infinite_variables()]) + r")_(\d+)"
+
+        def subs_regex(M):
+            var, order = M.groups()
+            if order == '0':
+                return var + f"[{mathematica_var}]"
+            else:
+                return f"D[{var}[{mathematica_var}],{{{mathematica_var},{order}}}]"
+
+        import re
+        for i in coeffs:
+            coeffs[i] = re.sub(regex, subs_regex, coeffs[i])
+            mons[i] = "" if i == 0 else mathematica_diff if i == 1 else f"{mathematica_diff}^{i}"
+
+        ## We put everything together
+        def mix_coeff_mon(coeff, mon):
+            if coeff == "1" and mon == "":
+                return "1"
+            elif mon == "":
+                return f"{coeff}"
+            elif coeff == "1":
+                return mon
+            else:
+                return f"{coeff}*{mon}"
+
+        result = ""
+        for to_add in (mix_coeff_mon(coeffs[i], mons[i]) for i in coeffs):
+            to_add = to_add.strip() # Removing white-spaces
+            if result == "": # first iteration
+                result += to_add
+            elif to_add[0] == "-":
+                result += " - " + to_add[1:]
+            else:
+                result += " + " + to_add
+
+        return result
+
     def __call__(self, *args, dic : dict = None, **kwds):
         return self.eval(*args, dic=dic, **kwds)
 
