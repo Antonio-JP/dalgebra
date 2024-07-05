@@ -56,7 +56,7 @@ def count_calls(logger : logging.Logger):
                 return output
             finally:
                 COUNTING_CALLS[func.__name__] = COUNTING_CALLS.get(func.__name__, 0) - 1
-                print(f"[{func.__name__}] Remaining {COUNTING_CALLS[func.__name__]} calls".ljust(50), end="\r", flush=True)
+                logger.debug(f"[{func.__name__}] Remaining {COUNTING_CALLS[func.__name__]} calls")
 
         return wrap
     return inner

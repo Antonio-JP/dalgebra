@@ -206,7 +206,7 @@ def GetEquationsForSolution(m : int,
     H = [sum(C[i]*Hs[i][j] for i in range(len(C))) for j in range(n-1)] # the equations that need to be 0
     logger.debug(f"[GEFS] Extracting the algebraic equation from the commuting equations...")
     if len(U) > 0: # Something is given
-        H = sum([extract(h.numerator()) for h in H], []) # extract the true equations from
+        H = sum([extract(h.numerator()) for h in H if h != 0], [ZZ(0)]) # extract the true equations from
 
         return L, P, ideal(H)
     else:
