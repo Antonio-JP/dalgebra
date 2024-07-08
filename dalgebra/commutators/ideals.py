@@ -27,7 +27,7 @@ from functools import reduce
 from sage.categories.pushout import pushout
 from sage.misc.cachefunc import cached_method
 from sage.parallel.multiprocessing_sage import Pool
-from sage.rings.fraction_field import is_FractionField
+from sage.rings.fraction_field import FractionField_generic
 from sage.rings.integer_ring import ZZ
 from sage.rings.ideal import Ideal_generic as Ideal, Ideal as ideal
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -151,7 +151,7 @@ class SolutionBranch:
         r'''Recreate the differential structure over the :func:`final_parent` for this solution branch.'''
         if is_DPolynomialRing(origin):
             output = DPolynomialRing(self.diff_parent(origin.base()), origin.variable_names())
-        elif is_FractionField(origin) and origin in _DRings:
+        elif isinstance(origin, FractionField_generic) and origin in _DRings:
             output = self.diff_parent(origin.base()).fraction_field()
         else:
             imgs_of_gens = {str(v): self.parent()(origin(str(v)).derivative()) if v in origin else 0 for v in self.final_parent().gens()}
@@ -178,7 +178,7 @@ class SolutionBranch:
             return element(**self.__solution) # this should evaluate coefficients and monomials
 
         # case of coefficients
-        if is_FractionField(element.parent()): # case of fractions
+        if isinstance(element.parent(), FractionField_generic): # case of fractions
             numer = self.eval(element.numerator())
             denom = self.eval(element.denominator())
             return numer / denom

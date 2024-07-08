@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 from collections.abc import Sequence as ListType
 
 from sage.arith.misc import GCD as gcd
-from sage.rings.fraction_field import is_FractionField
+from sage.rings.fraction_field import FractionField_generic
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.polynomial_element_generic import Polynomial
 from sage.rings.polynomial.multi_polynomial_element import MPolynomial
@@ -113,11 +113,11 @@ def spectral_operators(L: DPolynomial, P: DPolynomial, name_lambda: str = "lambd
         raise TypeError(f"[spectral] Method only implemented with same parent for operators.")
 
     ## We extract the main polynomial ring / base field
-    PR = DR.base() # this is a wrapped of `F[x]`
-    R = PR.wrapped # we removed the differential structure
+    PR = DR.base() # this is a wrapped of `F[x]` or a Fraction Field of such thing
+    R = PR.base().wrapped  if isinstance(PR, FractionField_generic) else PR.wrapped # we removed the differential structure
 
     ## We check if the ring `R` is a FractionField or not
-    was_fraction_field = is_FractionField(R)
+    was_fraction_field = isinstance(R, FractionField_generic)
     R = R.base() if was_fraction_field else R
 
     ## We treat the base ring `R`
@@ -151,7 +151,7 @@ def spectral_operators(L: DPolynomial, P: DPolynomial, name_lambda: str = "lambd
 def __simplify(element, curve):
     r'''Reduces the element with the generator of a curve'''
     P = element.parent()
-    if is_FractionField(P): # element is a rational function
+    if isinstance(P, FractionField_generic): # element is a rational function
         return __simplify(element.numerator(), curve) / __simplify(element.denominator(), curve)
     return element % curve
 
