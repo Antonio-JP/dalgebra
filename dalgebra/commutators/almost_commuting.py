@@ -835,7 +835,7 @@ def recursion(n: int):
 
     variables_solved = [
         [
-            [[B(BwC(f"c_{i}_{j}_{o}_{k}").reduce(ideal_gb)) for k in range(len(T[o]))] for o in range(order_in_matrix(i,j)+2)]
+            [[B(ideal_gb.reduce(BwC(f"c_{i}_{j}_{o}_{k}"))) for k in range(len(T[o]))] for o in range(order_in_matrix(i,j)+2)]
             for j in range(n-1)
         ]
         for i in range(n-1)

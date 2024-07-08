@@ -248,6 +248,21 @@ class SolutionBranch:
 
     def __hash__(self) -> int:
         return hash((self.I, tuple(sorted(self.__solution.keys()))))
+    
+    def __repr__(self) -> str:
+        r'''
+            Method to print the Solution Branch
+        '''
+        parts = [f"Solution Branch"]
+        if len(self.__solution) > 0:
+            parts.append(f"[{','.join(f'{var}={val}' for (var, val) in self.__solution.items())}]")
+        if self.__I.ngens() > 1 and self.__I.gens()[0] != 0:
+            parts.append(f"with {self.__I.ngens()} relations {self.__I.gens()}")
+        if len(self.__decisions) > 0:
+            parts.append(f"with {len(self.__decisions)} decisions")
+        if len(self.remaining_variables()) > 0:
+            parts.append(f"and {','.join([str(v) for v in self.remaining_variables()])} as free variables")
+        return f'{" ".join(parts)}.'
 
     ######################################################################################################
     ### STATIC METHODS OF THE CLASS
@@ -259,7 +274,7 @@ class SolutionBranch:
 
         while(solution != old_solution):
             old_solution = solution
-            solution = {k: v(**old_solution).reduce(ideal) for (k,v) in solution.items()}
+            solution = {k: ideal.reduce(v(**old_solution)) for (k,v) in solution.items()}
 
         return solution
 
@@ -291,7 +306,7 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: 
         branch = branches.pop()
         branch_GB = branch.I.groebner_basis() # This should be efficient since the branches have passed through GB computations
         logger.debug(f"[IDEAL] We compute the original equations in the resulting branch.")
-        equations = [equ(**branch._SolutionBranch__solution).reduce(branch_GB) for equ in I]
+        equations = [ideal(branch_GB).reduce(equ(**branch._SolutionBranch__solution)) for equ in I]
         equations = [el for el in equations if el != 0] # cleaning zeros
         if len(equations) == 0:
             logger.debug(f"[IDEAL] All equations satisfied: we add this branch to final solution.")

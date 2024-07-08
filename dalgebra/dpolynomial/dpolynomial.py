@@ -1950,43 +1950,95 @@ class DPolynomialRing_Monoid(Parent):
             non-integrable part and a constant part. We ignore the constant part (we always assume it to
             be zero).
         '''
+        A,B = self.integral_decomposition(element, operation)
+        if B != 0:
+            raise ValueError(f"[inverse_derivation] Element {element} not integrable -> non-zero non-integrable part in decomposition: {B}")
+        
+        return A
+
+    def __inverse_skew(self, element: DPolynomial, operation: int):
+        raise NotImplementedError("[inverse_skew] Skew-derivation operation not yet implemented")
+    
+    def integral_decomposition(self, element: DPolynomial, operation: int = 0) -> tuple[DPolynomial, DPolynomial]:
+        r'''
+            Method to compute an integral decomposition of an element.
+
+            Method that perform an integral decomposition, i.e., takes an element `f` and computes two new values 
+            `A` and `B` such that ``f = partial(A) + B``.
+
+            A good integral decomposition is such that `f` is integrable if and only if `B = 0`.
+            
+            In the article by Bilge (:doi:``), an integral decomposition is computed where `f = partial(A) + B + C`
+            where `C` is an element of the base field, obtaining that `f` is integrable if and only if `B = 0` and 
+            `C` is integrable.
+
+            This is the algorithm we are implementing here in the context of :class:`DPolynomial`, after the computation w.r.t. `C`.
+        '''
         logger.debug(f"[inverse_derivation] Called with {element}")
+        if self.operator_types()[operation] != "derivation":
+            raise TypeError(f"Computing inverse derivation for an operation ({operation}) that is not a derivation.")
+        
+        ## Casting the element to ``self``
+        element = self(element) if not hasattr(element, "parent") or element.parent() != self else element
+
+        ## Calling the recursive method with the beginning arguments
+        return self.__integral_decomposition(element, operation, self.zero(), self.zero())
+
+    def __integral_decomposition(self, element: DPolynomial, operation: int, integral: DPolynomial, nintegral: DPolynomial) -> tuple[DPolynomial, DPolynomial]:
         if element == 0:
-            logger.debug(f"[inverse_derivation] Found a zero --> Easy")
-            solution = self.zero()
+            logger.debug(f"[integral_decomposition] Found a zero --> Easy (we do nothing)")
+            return integral, nintegral
+        elif element.constant_coefficient() != 0:
+            logger.debug(f"[integral_decomposition] Found a constant coefficient --> Computing this part first")
+            coeff = element.constant_coefficient()
+            try:
+                integral += self(coeff.inverse_operation(operation))
+            except Exception:
+                nintegral += self(coeff)
+            return self.__integral_decomposition(element - coeff, operation, integral, nintegral)
         elif element.degree() == 1:
-            logger.debug(f"[inverse_derivation] Found linear element --> Easy to do")
-            solution = self.zero()
+            logger.debug(f"[integral_decomposition] Found linear element --> Easy to do")
             for monomial, coeff in element._content.items():
                 if monomial.is_one():
-                    raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
-                coeff = coeff.inverse_operation(operation) if not coeff.d_constant() else coeff
-                var = next(iter(monomial.variables())) # we know there is only 1, since the element is linear
-                try:
-                    new_mon = self(var._inverse_(operation))
-                except ValueError: # impossible to integrate a monomial
-                    raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
-                solution += coeff*new_mon
+                    raise RuntimeError(f"[integral_decomposition] (Constant coefficient) This should never happen!!")
+                else:
+                    var = next(iter(monomial.variables()))
+                    var, (i,) = next(iter(monomial._variables))
+                    var = self.gens()[var]
+                    integral += sum((-1)**j*coeff.operation(operation, times=j)*var[i-i-j] for j in range(i))
+                    nintegral += (-1)**i*coeff.operation(operation, times=i)*var[0]
+            return integral, nintegral
         else:
-            logger.debug(f"[inverse_derivation] Element is not linear")
+            logger.debug(f"[integral_decomposition] Element is not linear")
             monomials = element.monomials()
             if 1 in monomials:
-                raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
+                raise RuntimeError(f"[integral_decomposition] (Constant coefficient) This should never happen!!")
             monomials_with_points = []
             for mon in monomials:
                 bv = max(k[0] for k in mon._variables) # index of the maximum variable
                 bo = mon.order(bv, operation) # order of the biggest variable w.r.t. operation
                 monomials_with_points.append((bv, bo))
 
-            aux = max(o for (_,o) in monomials_with_points) # element with highest order -> used as a balance option to use "max"
-            V, O = max(monomials_with_points, key=lambda p: p[0]*aux + p[1])
+            V, O = max(monomials_with_points)
             V = self.gens()[V]
-            logger.debug(f"[inverse_derivation] Maximal variable: {V[O]}")
+            logger.debug(f"[integral_decomposition] Maximal variable: {V[O]}")
 
-            if element.degree(V[O]) > 1:
-                raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
+            D = element.degree(V[O])
+            highest_part = element.coefficient_full(V[O]**D)
+
+            if D > 1: ## Highest variable non linear --> non-integrable
+                return self.__integral_decomposition(
+                    element - highest_part * V[O]**D, operation, 
+                    integral, 
+                    nintegral + highest_part * V[O]**D
+                )
+            elif O == 0: ## Highest variable without derivatives --> non-integrable
+                return self.__integral_decomposition(
+                    element - highest_part * V[O], operation,
+                    integral,
+                    nintegral + highest_part * V[O]
+                )
             else:
-                highest_part = element.coefficient_full(V[O])
                 deg_order_1 = highest_part.degree(V[O-1])
 
                 cs = [highest_part.coefficient_full(V[O-1]**i) for i in range(deg_order_1+1)]
@@ -1996,16 +2048,11 @@ class DPolynomialRing_Monoid(Parent):
                 ## we compute remaining polynomial
                 partial_integral = sum(cs[i]/ZZ(i+1) * V[O-1]**(i+1) for i in range(deg_order_1+1)) + V[O-1]*q1 # division is on coeff. level
 
-            logger.debug(f"[inverse_derivation] Partial integral: {partial_integral}")
-            rem = element - partial_integral.operation(operation)
-            logger.debug(f"[inverse_derivation] Remaining to integrate: {rem}")
-            solution = partial_integral + self.inverse_operation(rem, operation)
-
-        logger.debug(f"[inverse_derivation] Result: {solution}")
-        return solution
-
-    def __inverse_skew(self, element: DPolynomial, operation: int):
-        raise NotImplementedError("[inverse_skew] Skew-derivation operation not yet implemented")
+                logger.debug(f"[integral_decomposition] Partial integral: {partial_integral}")
+                integral += partial_integral
+                element -= partial_integral.operation(operation)
+                logger.debug(f"[integral_decomposition] Remaining to integrate: {element}")
+                return self.__integral_decomposition(element, operation, integral, nintegral)
 
     #################################################
     ### Sylvester methods
