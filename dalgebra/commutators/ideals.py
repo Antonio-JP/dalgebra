@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 from functools import reduce
 
 from sage.categories.pushout import pushout
+from sage.matrix.constructor import Matrix
 from sage.misc.cachefunc import cached_method
 from sage.parallel.multiprocessing_sage import Pool
 from sage.rings.fraction_field import FractionField_generic
@@ -112,6 +113,10 @@ class SolutionBranch:
             else:
                 raise TypeError(f"Format of decision incorrect: {decision[0]}")
 
+    @staticmethod
+    def AllSolution(parent):
+        return SolutionBranch([0], {}, [], base_parent=parent)
+    
     ######################################################################################################
     ### PROPERTIES OF THE CLASS
     ######################################################################################################
@@ -232,8 +237,82 @@ class SolutionBranch:
             other = other.subsolution(**to_subs)
         return self == other
 
+    def combine(self, other: SolutionBranch) -> list[SolutionBranch]:
+        sol = SolutionBranch._dir_combine(self, other)
+        if sol == []:
+            sol = SolutionBranch._dir_combine(other, self)
+        return sol
+
+    @staticmethod
+    def _dir_combine(self, other):
+        ## We first check the common solutions are equal
+        ots_values = dict()
+        sto_values = dict()
+
+        if not (self.is_linear() and other.is_linear()):
+            for v, val in other.__solution.items():
+                if v in self.__solution:
+                    if self.eval(val) != self.__solution[v]:
+                        return [] # No solution
+                else:
+                    ots_values[v] = val
+            for v, val in self.__solution.items():
+                if v not in other.__solution:
+                    sto_values[v] = val
+            ## The other branch is compatible. We create the subsolution with these new values
+            extended_self = self.subsolution(**ots_values) if len(ots_values) > 0 else self
+            extended_other = other.subsolution(**sto_values) if len(sto_values) > 0 else other
+            new_dict = extended_self.__solution
+            I = extended_self.I.gens() + extended_other.I.gens()
+        else:
+            C = self.matrix_solution()
+            D = other.matrix_solution()
+            new_sol = C.right_kernel().intersection(D.right_kernel())
+            if new_sol.dimension() == 0:
+                # the zero is always a solution
+                new_dict = {str(g): self.parent().zero() for g in self.parent().gens()}
+                I = []
+            else:
+                ## Finding the generators
+                generators = []
+                for (i,column) in enumerate(new_sol.matrix().columns()):
+                    if list(column).count(0) == len(column)-1 and list(column).count(1) == 1:
+                        generators.append(self.parent().gens()[i])
+                new_dict = {
+                    str(g) : sum(column[i]*generators[i] for i in range(len(generators))) 
+                    for (g,column) in zip(self.parent().gens(), new_sol.matrix().columns()) 
+                    if g not in generators
+                }
+                I = [el(**new_dict) for el in self.I.gens()+other.I.gens()]
+        
+
+        ## We now analyze the resulting ideal
+        I = [el for el in I if el != 0]
+        return analyze_ideal(I, new_dict, [])
+
+    def matrix_solution(self):
+        if not self.is_linear():
+            raise ValueError(f"Impossible to compute the matrix of solution with a non-linear solution branch.")
+        coeff = lambda c,h : 0 if c == 0 else c.coefficient(h) if hasattr(c, "coefficient") else c.coefficients(True)[1]
+        return Matrix([[
+                    (coeff(self.__solution[str(g)],h) if str(g) in self.__solution else (0 if i != j else 1)) - (1 if i == j else 0)
+                for j,h in enumerate(self.parent().gens())]
+            for i,g in enumerate(self.parent().gens())], base_ring = self.parent().base())
+
     def is_avoiding(self, to_avoid: list[dict[str, int]]) -> bool:
         return not _check_avoid(self.__solution, to_avoid)
+    
+    def is_linear(self) -> bool:
+        r'''
+            Method to know if the Branch has a similar known values.
+
+            Checks whether the solution is of linear fashion, i.e., all elements appearing in 
+            the r.h.s. of ``self.__solution`` is linear in the variables.
+        '''
+        return all(
+            value == 0 or (value.degree() == 1 and (value.ct if hasattr(value, "ct") else value.constant_coefficient()) == 0) 
+            for value in self.__solution.values()
+        )
 
     ######################################################################################################
     ### Equality methods

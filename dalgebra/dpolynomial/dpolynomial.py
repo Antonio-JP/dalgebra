@@ -2374,6 +2374,8 @@ class DPolynomialRing_Monoid(Parent):
             raise ValueError(f"[sylvester_checking] The variable {repr(gen)} do not belong to {self}")
         elif self.ngens() == 1 and gen is None:
             gen = self.gens()[0]
+        elif isinstance(gen, str):
+            gen = self.gen(gen)
 
         ## Checking the operator polynomials are correct
         P, Q = self(P), self(Q)
