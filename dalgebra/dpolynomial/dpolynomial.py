@@ -13,9 +13,10 @@ from sage.categories.sets_cat import Sets
 from sage.matrix.constructor import matrix
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
+from sage.misc.misc_c import prod
 from sage.modules.free_module_element import vector
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
-from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
+from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing, InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.integer_ring import ZZ
 from sage.rings.ring import Ring
 from sage.sets.family import LazyFamily
@@ -2005,7 +2006,7 @@ class DPolynomialRing_Monoid(Parent):
                     var = next(iter(monomial.variables()))
                     var, (i,) = next(iter(monomial._variables))
                     var = self.gens()[var]
-                    integral += sum((-1)**j*coeff.operation(operation, times=j)*var[i-i-j] for j in range(i))
+                    integral += sum((-1)**j*coeff.operation(operation, times=j)*var[i-j] for j in range(i))
                     nintegral += (-1)**i*coeff.operation(operation, times=i)*var[0]
             return integral, nintegral
         else:
@@ -2053,6 +2054,17 @@ class DPolynomialRing_Monoid(Parent):
                 element -= partial_integral.operation(operation)
                 logger.debug(f"[integral_decomposition] Remaining to integrate: {element}")
                 return self.__integral_decomposition(element, operation, integral, nintegral)
+
+    @cached_method
+    def to_sage(self):
+        result = InfinitePolynomialRing(self.base().to_sage(), [el.replace("_", "") for el in self.variable_names()])
+        map_of_variables = dict(zip(self.gens(), result.gens()))
+        inverse_map_of_variables = list(zip(result.gens(), self.gens()))
+        ## Creating the conversion between ``self`` and the plain sage equivalent
+        self.register_conversion(MapSageToDalgebra_Infinite(result, self, inverse_map_of_variables))
+        result.register_conversion(MapDalgebraToSage_Infinite(self, result, map_of_variables))
+
+        return result
 
     #################################################
     ### Sylvester methods
@@ -2524,7 +2536,9 @@ def is_DPolynomialRing(element):
 
 is_RWOPolynomialRing = is_DPolynomialRing #: alias for is_DPolynomialRing (used for backward compatibility)
 
-
+#################################################################################################
+### FUNCTORS AND MORPHISMS
+#################################################################################################
 class DPolyRingFunctor (ConstructionFunctor):
     r'''
         Class representing Functor for creating :class:`DPolynomialRing_Monoid`.
@@ -2645,6 +2659,58 @@ class DPolynomialSimpleMorphism (Morphism):
 
         return self.codomain()(str(p))
 
+class MapSageToDalgebra_Infinite(Morphism):
+    def __init__(self, domain, codomain, map_of_variables):
+        super().__init__(domain, codomain)
+        self.__map = map_of_variables
+
+    def _call_(self, element):
+        output = self.codomain().zero()
+        for (c, m) in zip(element.coefficients(), element.monomials()):
+            nc = self.codomain().base()(c)
+            nm = self.codomain().one()
+            for v in m.variables():
+                vname, vindex = str(v).split("_")
+                vindex = int(vindex)
+                deg = m.degree(v)
+                for g in self.domain().gens():
+                    if vname == repr(g).removesuffix("_*"):
+                        for (g_old, g_new) in self.__map:
+                            if g_old == g:
+                                nm *= g_new[vindex]**deg
+                                break
+                        else:
+                            return NotImplementedError(f"We could not find new generator for gen {g}")
+                        break
+                else:
+                    return NotImplementedError(f"We could not find generator for variable {v}")
+            output += nc*nm
+        return output
+    
+class MapDalgebraToSage_Infinite(Morphism):
+    def __init__(self, domain, codomain, map_of_variables):
+        super().__init__(domain, codomain)
+        self.__map = map_of_variables
+    
+    def _call_(self, element):
+        output = self.codomain().zero()
+        for (c, m) in zip(element.coefficients(), element.monomials()):
+            nc = self.codomain().base()(c)
+            nm = self.codomain().one()
+            for v in m.variables():
+                deg = m.degree(v)
+                for g in self.domain().gens():
+                    if v in g:
+                        nm *= self.__map[g][g.index(v, False)]**deg
+                        break
+                else:
+                    return NotImplementedError(f"We could not find generator for variable {v}")
+            output += nc*nm
+        return output
+
+#################################################################################################
+### WEIGHT AND RANKING FUNCTIONS
+#################################################################################################
 class WeightFunction(SetMorphism):
     r'''
         Class to represent a weight or grading function for a ring of d-polynomials.

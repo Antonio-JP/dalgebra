@@ -1350,6 +1350,7 @@ class DRing_Wrapper(Parent):
         return self.__linear_operator_ring
 
     def to_sage(self):
+        ## No need to create the conversion morphism because they already exist
         return self.wrapped
 
     def inverse_operation(self, element: DRing_WrapperElement, operator: int = None) -> DRing_WrapperElement:
@@ -1589,6 +1590,9 @@ class DFractionField(FractionField_generic):
 
     def inverse_operation(self, element, operator: int = 0):
         return self.base().inverse_operation(element, operator)
+    
+    def to_sage(self):
+        return self.base().to_sage().fraction_field()
 
 ####################################################################################################
 ###
