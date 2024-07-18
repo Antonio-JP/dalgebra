@@ -2003,10 +2003,16 @@ class DPolynomialRing_Monoid(Parent):
                 if monomial.is_one():
                     raise RuntimeError(f"[integral_decomposition] (Constant coefficient) This should never happen!!")
                 else:
+                    # We are in the term (c*v^(d)), we can see that:
+                    #     (c*v^(d-1))' = c'*v^(d-1) + c*v^(d)
+                    # So we can then write
+                    #     c*v^(d) = (c*v^(d-1))' - c'v^(d-1)
+                    # We now iterate this process on the c'v^(d-1) term, obtaining:
+                    #     c*v^(d) = (c*v^(d-1) - c'*v^(d-2)) + c''*v^(d-2)
                     var = next(iter(monomial.variables()))
                     var, (i,) = next(iter(monomial._variables))
                     var = self.gens()[var]
-                    integral += sum((-1)**j*coeff.operation(operation, times=j)*var[i-j] for j in range(i))
+                    integral += sum((-1)**j*coeff.operation(operation, times=j)*var[i-1-j] for j in range(i))
                     nintegral += (-1)**i*coeff.operation(operation, times=i)*var[0]
             return integral, nintegral
         else:
