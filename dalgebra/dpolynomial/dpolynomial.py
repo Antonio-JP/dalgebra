@@ -793,6 +793,13 @@ class DPolynomial(Element):
 
             ngen = gen.variable_name()
             return H1(**{ngen: H2})
+        
+    def reduce_algebraic(self, polynomials) -> DPolynomial:
+        r'''
+            Method that tries to reduce the coefficients of the polynomial using algebraic relations
+        '''
+        output = {m : coeff.reduce_algebraic(polynomials) for (m, coeff) in zip(self.monomials(), self.coefficients())}
+        return self.parent().element_class(self.parent(), output)
 
     ###################################################################################
     ### Sylvester methods
@@ -3476,6 +3483,20 @@ class RankingFunction:
         fb.update(rb)
 
         return fa, fb, r
+    
+    def pqr_to_operator(self, b):
+        r'''
+            Convert (if possible) the result of a pseudo-division to an operator that 
+            applied to the divisor, it will generate the dividend minus the remainder.
+        '''
+        if not all(prev == 1 for (_,prev) in b.values()):
+            raise ValueError(f"Impossible to convert to an operator")
+        
+        if len(self.parent().gens()) > 1:
+            raise NotImplementedError(f"The case with several d-variables is not yet considered")
+        
+        z = self.parent().gens()[0]
+        return sum(fact*z[k] for (k, (fact,_)) in b.items())
 
     def partial_remainder(self, p: DPolynomial, A: DPolynomial | list[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
         r'''

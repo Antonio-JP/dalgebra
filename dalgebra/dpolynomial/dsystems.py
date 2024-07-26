@@ -561,7 +561,7 @@ class DSystem:
         ## We split the polynomial ring into two steps
         NR = PolynomialRing(PR.remove_var(*high_level_vars), high_level_vars)
         ## We create the map from ``PR`` to ``NR`` so we can directly cast the equations
-        map_to_new = PR.hom([NR(v) if v not in high_level_vars else NR(str(v)) for v in PR.gens()], NR)
+        map_to_new = PR.hom([NR(str(v)) if v not in high_level_vars else NR(str(v)) for v in PR.gens()], NR)
 
         return tuple(map_to_new(equation) for equation in equations)
 
@@ -676,7 +676,7 @@ class DSystem:
         result = []
         while len(allowed) > 0:
             candidate = allowed.pop()
-            if all(not candidate.issubset(r) for r in result):
+            if all(any(e not in r for e in candidate) for r in result):
                 result.append(tuple(candidate))
         return result
 
@@ -770,7 +770,7 @@ class DSystem:
             OR = output.parent() # This will be a polynomial ring in the variables not used in system
             imgs = []
             for v in OR.gens():
-                for g in self.parameters:
+                for g in self.parent().gens():
                     if str(v) in g:
                         imgs.append(g[g.index(str(v))])
                         break
@@ -975,6 +975,7 @@ class DSystem:
             logger.info(f"Iterating to remove all the algebraic variables...")
             logger.info(f"--------------------------------------------------")
             last_index = lambda l, value : len(l) - 1 - l[::-1].index(value)
+            alg_equs = [equ for equ in alg_equs if equ != 0]
             while(len(alg_equs) > 1 and len(alg_vars) > 0):
                 logger.info(f"\tRemaining variables: {alg_vars}")
                 logger.info(f"\tPicking best algebraic variable to eliminate...")
@@ -1013,6 +1014,7 @@ class DSystem:
 
                         logger.info(f"\tComputing Sylvester determinant...")
                         alg_equs[i] = R(str(syl_mat.determinant()))
+                alg_equs = [equ for equ in alg_equs if equ != 0]
             ## Checking the result
             logger.info(f"--------------------------------------------------")
             logger.info(f"Elimination procedure finished. Checking that we have a result...")
@@ -1025,7 +1027,9 @@ class DSystem:
 
             ## We pick the minimal equation remaining
             logger.info(f"Return the smallest result obtained")
-            return sorted(alg_equs, key=lambda p: p.degree()**2 + len(p.monomials()))[0]
+            if len(alg_equs) > 0:
+                return sorted(alg_equs, key=lambda p: p.degree()**2 + len(p.monomials()))[0]
+            return self.parent().zero()
 
     def __iterative_best_variable(self) -> DMonomialGen:
         r'''

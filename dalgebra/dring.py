@@ -633,6 +633,9 @@ class DRings(Category):
             else:
                 return self.parent().operation(self.operation(operation=operation, times=times-1), operation)
 
+        def operations(self, operations: list[int] | tuple[int], *, _ordered=False):
+            return self.parent().apply_operations(self, operations, _ordered=_ordered)
+
         def inverse_operation(self, operation: int = None, times : int = 1) -> Element:
             r'''
                 Apply the inverse operation to ``self`` a given amount of times.
@@ -1069,6 +1072,11 @@ class DRing_WrapperElement(Element):
             return self.parent().element_class(self.parent(), output)
         except AttributeError:
             raise AttributeError(f"[DRing] Wrapped element {self.wrapped} do no have method `lcm`")
+        
+    def reduce_algebraic(self, polynomials):
+        if hasattr(self.wrapped, "reduce"):
+            return self.parent()(self.wrapped.reduce([self.parent().wrapped(el) for el in polynomials]))
+        return self
 
     def is_unit(self) -> bool:
         return self.wrapped.is_unit()
@@ -1523,6 +1531,15 @@ class DFractionFieldElement(FractionFieldElement):
     def derivative(self, derivation: int = None, times: int = 1):
         r'''Overridden method to force the use of the DRings structure'''
         return DRings.ElementMethods.derivative(self, derivation, times)
+    
+    def reduce_algebraic(self, polynomials):
+        num = self.numerator().reduce_algebraic(polynomials)
+        den = self.denominator().reduce_algebraic(polynomials)
+
+        if den != 0:
+            return num/den
+        
+        raise ZeroDivisionError(f"Found a reduction to zero on the denominator")
 
     def variables(self):
         try:
