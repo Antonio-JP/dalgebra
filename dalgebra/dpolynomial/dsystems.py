@@ -41,9 +41,30 @@ from typing import Collection, Callable
 
 from .dmonoids import DMonomialGen
 from .dpolynomial import is_DPolynomialRing, DPolynomial
-from ..logging.logging import verbose
+from ..logging.logging import loglevel
 
 logger = logging.getLogger(__name__)
+
+def key_variable(varname: str) -> tuple:
+    r'''
+        Method to create a key for a variable to sort them naturally
+
+        EXAMPLES::
+
+            sage: from dalgebra.dpolynomial.dsystems import key_variable
+            sage: key_variable("AB_1_1")
+            ('AB', 1, 1)
+            sage: key_variable("10_ab.x")
+            (10, 'ab.x')
+    '''
+    split = varname.split("_")
+    result = []
+    for part in split:
+        try:
+            result.append(int(part))
+        except ValueError:
+            result.append(part)
+    return tuple(result)
 
 class DSystem:
     r'''
@@ -449,7 +470,7 @@ class DSystem:
         '''
         all_vars = list(set(sum((equ.variables() for equ in self.equations()), tuple())))
         filtered = [el for el in all_vars if any(el in g for g in self.variables)]
-        filtered.sort(key=lambda p: str(p))
+        filtered.sort(key=lambda p : key_variable(str(p)))
         return tuple(filtered)
 
     @cached_method
@@ -534,10 +555,13 @@ class DSystem:
                 Ring in x over Rational Field], (d/dx,)]
         '''
         equations = tuple(self.parent().as_polynomials(*self.equations())) # These are already polynomials
-        PR = equations[0].parent()
+        PR = equations[0].parent() # This parent is the same for all ``equations``
+        ## We select all variables that are in ``self.variables``
         high_level_vars = [v for v in PR.gens() if any(str(v) in g for g in self.variables)]
+        ## We split the polynomial ring into two steps
         NR = PolynomialRing(PR.remove_var(*high_level_vars), high_level_vars)
-        map_to_new = PR.hom([NR(v) if v not in high_level_vars else NR(str(v)) for v in PR.gens()], NR)
+        ## We create the map from ``PR`` to ``NR`` so we can directly cast the equations
+        map_to_new = PR.hom([NR(str(v)) if v not in high_level_vars else NR(str(v)) for v in PR.gens()], NR)
 
         return tuple(map_to_new(equation) for equation in equations)
 
@@ -652,7 +676,7 @@ class DSystem:
         result = []
         while len(allowed) > 0:
             candidate = allowed.pop()
-            if all(not candidate.issubset(r) for r in result):
+            if all(any(e not in r for e in candidate) for r in result):
                 result.append(tuple(candidate))
         return result
 
@@ -702,7 +726,7 @@ class DSystem:
         return len(self.algebraic_variables()) == self.size() - 1
 
     ## resultant methods
-    @verbose(logger)
+    @loglevel(logger)
     def diff_resultant(self, bound_L: int = 10, operation: int = None, alg_res: str = "auto") -> DPolynomial:
         r'''
             Method to compute the operator resultant of this system.
@@ -746,7 +770,7 @@ class DSystem:
             OR = output.parent() # This will be a polynomial ring in the variables not used in system
             imgs = []
             for v in OR.gens():
-                for g in self.parameters:
+                for g in self.parent().gens():
                     if str(v) in g:
                         imgs.append(g[g.index(str(v))])
                         break
@@ -766,19 +790,19 @@ class DSystem:
         '''
         operation = 0 if operation is None else operation
         if alg_res == "iterative":
-            logging.info(f"We compute the resultant using iterative algorithm")
+            logger.info(f"We compute the resultant using iterative algorithm")
             return self.__iterative
         elif alg_res == "dixon":
-            logging.info(f"We compute the resultant using Dixon resultant")
+            logger.info(f"We compute the resultant using Dixon resultant")
             return self.__dixon
         elif alg_res == "sylvester":
-            logging.info(f"We compute the resultant using Sylvester resultant")
+            logger.info(f"We compute the resultant using Sylvester resultant")
             return self.__sylvester
         elif alg_res == "macaulay":
-            logging.info(f"We compute the resultant using Macaulay resultant")
+            logger.info(f"We compute the resultant using Macaulay resultant")
             return self.__macaulay
         elif alg_res == "auto":
-            logging.info("Deciding automatically the algorithm for the resultant...")
+            logger.info("Deciding automatically the algorithm for the resultant...")
             if self.is_linear() and self.size() == 2 and len(self.variables) == 1 and self.parent().noperators() == 1:
                 logger.info(("The system is linear with 2 equations and 1 variable: we use Sylvester resultant"))
                 return self.__sylvester
@@ -841,7 +865,7 @@ class DSystem:
         elif self.size() != 2:
             raise TypeError(f"The Sylvester algorithm only works with 2 equations (not {self.size()})")
 
-        logger.info(f"Computing Sylvester resultant between these two polynomials:")
+        logger.info(f"Computing Sylvester resultant (w.r.t. {self.variables[0]}) between these two polynomials:")
         logger.info(f"\t{self.equation(0)}")
         logger.info(f"\t{self.equation(1)}")
         output = self.parent().sylvester_resultant(self.equation(0), self.equation(1), self.variables[0])
@@ -951,6 +975,7 @@ class DSystem:
             logger.info(f"Iterating to remove all the algebraic variables...")
             logger.info(f"--------------------------------------------------")
             last_index = lambda l, value : len(l) - 1 - l[::-1].index(value)
+            alg_equs = [equ for equ in alg_equs if equ != 0]
             while(len(alg_equs) > 1 and len(alg_vars) > 0):
                 logger.info(f"\tRemaining variables: {alg_vars}")
                 logger.info(f"\tPicking best algebraic variable to eliminate...")
@@ -989,6 +1014,7 @@ class DSystem:
 
                         logger.info(f"\tComputing Sylvester determinant...")
                         alg_equs[i] = R(str(syl_mat.determinant()))
+                alg_equs = [equ for equ in alg_equs if equ != 0]
             ## Checking the result
             logger.info(f"--------------------------------------------------")
             logger.info(f"Elimination procedure finished. Checking that we have a result...")
@@ -1001,20 +1027,22 @@ class DSystem:
 
             ## We pick the minimal equation remaining
             logger.info(f"Return the smallest result obtained")
-            return sorted(alg_equs, key=lambda p: p.degree()**2 + len(p.monomials()))[0]
+            if len(alg_equs) > 0:
+                return sorted(alg_equs, key=lambda p: p.degree()**2 + len(p.monomials()))[0]
+            return self.parent().zero()
 
     def __iterative_best_variable(self) -> DMonomialGen:
         r'''
             Method to choose the best variable to do univariate elimination.
         '''
-        v = self.variables[0],
+        v = self.variables[0]
 
         def measure(v):
             c = 0
             for equ in self.equations():
-                for t in equ.polynomial().variables():
+                for t in equ.variables():
                     if t in v:
-                        c += v.index(t)**equ.polynomial().degree(t)
+                        c += v.index(t)**equ.degree(t)
             return c
 
         m = measure(v)
@@ -1068,6 +1096,8 @@ class DSystem:
             We can check that this solutions satisfy all the equations of the systems to be zero::
 
                 sage: all(equation(dic=sol) == 0 for equation in S.equations())
+                doctest:warning
+                ...
                 True
         '''
         if not self.is_linear():

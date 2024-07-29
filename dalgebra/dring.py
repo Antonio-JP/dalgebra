@@ -633,6 +633,9 @@ class DRings(Category):
             else:
                 return self.parent().operation(self.operation(operation=operation, times=times-1), operation)
 
+        def operations(self, operations: list[int] | tuple[int], *, _ordered=False):
+            return self.parent().apply_operations(self, operations, _ordered=_ordered)
+
         def inverse_operation(self, operation: int = None, times : int = 1) -> Element:
             r'''
                 Apply the inverse operation to ``self`` a given amount of times.
@@ -1070,6 +1073,11 @@ class DRing_WrapperElement(Element):
         except AttributeError:
             raise AttributeError(f"[DRing] Wrapped element {self.wrapped} do no have method `lcm`")
 
+    def reduce_algebraic(self, polynomials):
+        if hasattr(self.wrapped, "reduce"):
+            return self.parent()(self.wrapped.reduce([self.parent().wrapped(el) for el in polynomials]))
+        return self
+
     def is_unit(self) -> bool:
         return self.wrapped.is_unit()
 
@@ -1289,6 +1297,8 @@ class DRing_Wrapper(Parent):
                 sage: from dalgebra import *
                 sage: R = DifferentialRing(QQ[x], diff)
                 sage: R.linear_operator_ring()
+                doctest:warning
+                ...
                 Univariate Ore algebra in D over Univariate Polynomial Ring in x over Rational Field
 
             This also works when having several operators::
@@ -1350,6 +1360,7 @@ class DRing_Wrapper(Parent):
         return self.__linear_operator_ring
 
     def to_sage(self):
+        ## No need to create the conversion morphism because they already exist
         return self.wrapped
 
     def inverse_operation(self, element: DRing_WrapperElement, operator: int = None) -> DRing_WrapperElement:
@@ -1367,11 +1378,11 @@ class DRing_Wrapper(Parent):
             return self._coerce_map_from_(S.wrapped) ## TODO: WARNING: THIS DOES NOT CHECK FOR CORRECTNESS IN OPERATIONS
         return self.wrapped == S or self.wrapped._coerce_map_from_(S) is not None
 
-    def __call__(self, x, *args, **kwds):
-        result = self.wrapped(x, *args, **kwds)
-        if result in self.wrapped:
-            return self._element_constructor_(result)
-        return result
+    # def __call__(self, x, *args, **kwds):
+    #     result = self.wrapped(x, *args, **kwds)
+    #     if result in self.wrapped:
+    #         return self._element_constructor_(result)
+    #     return result
 
     def _element_constructor_(self, x) -> DRing_WrapperElement:
         r'''
@@ -1523,6 +1534,15 @@ class DFractionFieldElement(FractionFieldElement):
         r'''Overridden method to force the use of the DRings structure'''
         return DRings.ElementMethods.derivative(self, derivation, times)
 
+    def reduce_algebraic(self, polynomials):
+        num = self.numerator().reduce_algebraic(polynomials)
+        den = self.denominator().reduce_algebraic(polynomials)
+
+        if den != 0:
+            return num/den
+
+        raise ZeroDivisionError(f"Found a reduction to zero on the denominator")
+
     def variables(self):
         try:
             return tuple(set(self.numerator().variables()).union(set(self.denominator().variables())))
@@ -1589,6 +1609,9 @@ class DFractionField(FractionField_generic):
 
     def inverse_operation(self, element, operator: int = 0):
         return self.base().inverse_operation(element, operator)
+
+    def to_sage(self):
+        return self.base().to_sage().fraction_field()
 
 ####################################################################################################
 ###

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 from collections.abc import Sequence as ListType
 
 from sage.arith.misc import GCD as gcd
-from sage.rings.fraction_field import is_FractionField
+from sage.rings.fraction_field import FractionField_generic
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.polynomial_element_generic import Polynomial
 from sage.rings.polynomial.multi_polynomial_element import MPolynomial
@@ -31,7 +31,7 @@ from time import time
 from typing import TypedDict
 
 from ..dring import DifferentialRing
-from ..dpolynomial.dpolynomial import DPolynomial, DifferentialPolynomialRing
+from ..dpolynomial.dpolynomial import DPolynomial, DifferentialPolynomialRing, is_DPolynomialRing
 from ..logging.logging import loglevel
 from .ideals import SolutionBranch
 
@@ -95,63 +95,49 @@ def SpectralCurveOverIdeal(L: DPolynomial, P: DPolynomial, branches: ListType[So
         final_output[branch] = data
     return final_output
 
-def spectral_operators(L: DPolynomial, P: DPolynomial, name_lambda: str = "lambda_", name_mu: str = "mu"):
+def spectral_operators(*operators: DPolynomial, names: list[str] = None) -> tuple[DPolynomial]:
     r'''
-        Method to create the spectral operators associated with two differential operators.
+        Method to create the spectral operators associated with several differential operators.
 
-        This method assumes `L` and `P` are two linear differential operators in the same parent
+        This method assumes all the operators two linear differential operators in the same parent
         of the form `F[\textbf{x}]\{z\}`, i.e., one differential variable, then a set of algebraic variables
         (may or not be constant) and a base field `F` such that `\partial(F) = 0`.
 
-        To create the spectral operators we need to add algebraically the two constants `\lambda` and
-        `\mu` to `F[\textbf{x}]` at the same level. Then we will need to add again the variable `z`.
+        To create the spectral operators we need to add algebraically the constants
+        to `F[\textbf{x}]` at the same level. Then we will need to add again the variable `z`.
 
-        This method will then return the two operators `L_\lambda = L - \lambda` and `P_\mu = P - \mu`.
+        This method will then return the spectral operators `L_\lambda = L - \lambda` for each
+        operator and constant.
     '''
-    DR = L.parent()
-    if not P.parent() == DR:
-        raise TypeError(f"[spectral] Method only implemented with same parent for operators.")
+    if len(operators) < 2:
+        raise ValueError(f"[spectral_operators] This method requires ate least 2 operators")
 
-    ## We extract the main polynomial ring / base field
-    PR = DR.base() # this is a wrapped of `F[x]`
-    R = PR.wrapped # we removed the differential structure
+    DR = operators[0].parent()
+    if not is_DPolynomialRing(DR):
+        raise TypeError(f"[spectral_operators] This method requires the input to be differential operators")
+    if any(P.parent() != DR for P in operators[1:]):
+        raise TypeError(f"[spectral_operators] Method only implemented with same parent for operators.")
 
-    ## We check if the ring `R` is a FractionField or not
-    was_fraction_field = is_FractionField(R)
-    R = R.base() if was_fraction_field else R
+    ## Creating the names for the spectral constants
+    if names is None:
+        default_names = ["lambda_", "mu", "nu", "psi", "zeta"]
+        if len(operators) <= len(default_names):
+            names = default_names[:len(operators)]
+        else:
+            names = [f"mu_{i}" for i in range(len(operators))]
+    if len(names) < len(operators):
+        raise ValueError(f"[spectral_operators] Not enough names provided for the spectral operators")
 
-    ## We treat the base ring `R`
-    if R.is_field(): # case R is NumberField
-        R = PolynomialRing(R, [name_lambda, name_mu])
-    else: # We assume R is a polynomial ring
-        R = PolynomialRing(R.base(), list(R.variable_names()) + [name_lambda, name_mu])
-    l, m = R(name_lambda), R(name_mu)
-
-    if was_fraction_field: # we set the type of ring to fraction_field if needed
-        R = R.fraction_field()
-
-    ## At this point R is the desired algebraic base ring where `l`,`m` are the new variables.
-    ## We add now the differential structure again
-    gens_img = {str(v) : v.derivative() for v in PR.gens()}
-    gens_img[name_lambda] = 0
-    gens_img[name_mu] = 0
-    PR = DifferentialRing(R, lambda p : gens_img[str(p)])
-
-    ## We create again teh ring of differential polynomials
-    DR = DifferentialPolynomialRing(PR, DR.variable_names())
-
-    ## We cast everything to the goal ring
+    ## We add the constants to the ring of operators
+    DR = DR.add_constants(*names)
     z = DR.gens()[0]
-    l, m = DR(l), DR(m)
-    L, P = DR(L), DR(P)
-
-    ## We return the spectral operators
-    return L - l*z[0], P - m*z[0]
+    constants = [DR(DR.base()(name)) for name in names]
+    return tuple(DR(op) - c*z[0] for (op, c) in zip(operators, constants))
 
 def __simplify(element, curve):
     r'''Reduces the element with the generator of a curve'''
     P = element.parent()
-    if is_FractionField(P): # element is a rational function
+    if isinstance(P, FractionField_generic): # element is a rational function
         return __simplify(element.numerator(), curve) / __simplify(element.denominator(), curve)
     return element % curve
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # sample documentation build configuration file,
-# inspried by slabbed configuration file created sphinx-quickstart
+# inspired by slabbed configuration file created sphinx-quickstart
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -45,7 +45,7 @@ release = readfile(str(path)).strip()
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath(package_folder)) # we add the version in repository to be documented
+sys.path.append(os.path.abspath(package_folder)) # we add the version in repository to be documented
 sys.path.append(os.path.join(SAGE_SRC, "sage_docbuild", "ext"))
 
 # -- General configuration ------------------------------------------------

@@ -45,6 +45,23 @@ def print_args(size, *args, **kwds):
         output += f"\n\t* kwds: {dict([(k, cut_string(v, size)) for (k,v) in kwds.items()])}"
     return output
 
+
+COUNTING_CALLS : dict[str, int] = dict()
+def count_calls(logger : logging.Logger):
+    def inner(func):
+        @functools.wraps(func)
+        def wrap(*args, **kwds):
+            COUNTING_CALLS[func.__name__] = COUNTING_CALLS.get(func.__name__, 0) + 1
+            try:
+                output = func(*args, **kwds)
+                return output
+            finally:
+                COUNTING_CALLS[func.__name__] = COUNTING_CALLS.get(func.__name__, 0) - 1
+                logger.debug(f"[{func.__name__}] Remaining {COUNTING_CALLS[func.__name__]} calls")
+
+        return wrap
+    return inner
+
 def loglevel(logger : logging.Logger):
     def inner(func):
         @functools.wraps(func)
@@ -79,6 +96,7 @@ def loglevel(logger : logging.Logger):
                     __USED_LOGLEVEL.remove(logger)
                 if logfile is not None and file_handler is not None: # Removed the file handler if created
                     logger.removeHandler(file_handler)
+
         return wrap
     return inner
 
@@ -160,23 +178,17 @@ logger = logging.getLogger("dalgebra")
 logger.setLevel(logging.ERROR)
 FORMATTER = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
-GENERAL_FILE_HANDLER = logging.FileHandler(os.path.join(os.path.dirname(__file__), "dalgebra.log"))
+#GENERAL_FILE_HANDLER = logging.FileHandler(os.path.join(os.path.dirname(__file__), "dalgebra.log"))
 GENERAL_STDERR_HANDLER = logging.StreamHandler(sys.stderr)
 
-## Setting up default levels for handlers
-GENERAL_FILE_HANDLER.setLevel(logging.INFO)
-
 ## Setting up the default formatter for handlers
-for handler in (GENERAL_FILE_HANDLER, GENERAL_STDERR_HANDLER):
-    handler.setFormatter(FORMATTER)
+GENERAL_STDERR_HANDLER.setFormatter(FORMATTER)
 
 ## Adding the default handlers to the main logger
-for handler in (GENERAL_FILE_HANDLER, GENERAL_STDERR_HANDLER):
-    logger.addHandler(handler)
+logger.addHandler(GENERAL_STDERR_HANDLER)
 logger.propagate = False
 
 #### METHODS TO MANIPULATE THE LEVELS FOR DEFAULT HANDLERS
-def logging_file_level(new_level: int): GENERAL_FILE_HANDLER.setLevel(new_level)
 def logging_stderr_level(new_level: int): GENERAL_STDERR_HANDLER.setLevel(new_level)
 
 

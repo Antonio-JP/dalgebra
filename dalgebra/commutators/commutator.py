@@ -120,8 +120,9 @@ def GetEquationsForSolution(m : int,
         INPUT:
 
         * ``m``: order bound for the commutator to be found.
-        * ``L``: linear differential operator in normal form to be used as base operator.
-        * ``n``: if `L` is not given directly, `n` provides the order of the operator `L` to be used.
+        * ``U``: list or dictionary with the shape for the functions `a_{n-2},\ldots,a_0`. If given as a
+          list, it is read as ``[a_0,\ldots,a_{n-2}]``. If given as a map, then it maps `i \mapsto a_i`.
+        * ``n``: provides the order of the operator `L` to be used.
           Then, the coefficients are given in the input ``U``, either as a list or as a dictionary.
         * ``extract``: a method to extract from the final set of values the equations for
           the obtained operator to actually commute. These equations will include any variable
@@ -130,20 +131,25 @@ def GetEquationsForSolution(m : int,
 
         OUTPUT:
 
-        A pair `(P, H)` where `P` is an operator of order at most `m` such that it **commutes** with `L_n` (see method
-        :func:`generic_normal`) for the given set of ``U`` whenever the equations in `H` all vanish. The equations
-        on `H` are only *algebraic* equations.
+        A tuple `(L, P, H)` where `L` is the main operator we are looking for a commutator, `P` is an operator
+        of order at most `m` such that it **commutes** with `L` (see method :func:`generic_normal`) for the given
+        set of ``U`` whenever the equations in `H` all vanish.
+
+        If ``extract`` is given, the equations in `H` are in **algebraic** form, i.e., as an ideal.
     '''
-    ## If the operator `L` is given, we transform it into the inputs `U` and `n`
-    if U is None or n is None:
-        raise ValueError(f"[GEFS] Too few arguments given. Either `L` or (`U`,`n`) must be provided")
+    ## We need `n` to know the order that is being used for the `L`.
+    if n is None:
+        raise ValueError(f"[GEFS] Necessary information: `n` (order of the main operator)")
 
     ## Checking correctness of arguments
     if n not in ZZ or n < 2:
-        raise ValueError(f"[GEFS] The value for `n` must be a integer greater than 1")
-    if m not in ZZ or m < n:
-        raise ValueError(f"[GEFS] The value for `m` must be a integer greater than `n`")
-    if isinstance(U, (list,tuple)):
+        raise ValueError(f"[GEFS] The value for `n` must be an integer greater than 1")
+    if m not in ZZ:
+        raise ValueError(f"[GEFS] The value for `m` must be an integer")
+    if U is None:
+        logger.warning(f"[GEFS] No values for `U` provided. Impossible to get algebraic equations.")
+        U = dict()
+    elif isinstance(U, (list,tuple)):
         if len(U) != n-1:
             raise ValueError(f"[GEFS] The size of the given functions ``U`` must be of length `n-1` ({n-1})")
         U = {i: U[i] for i in range(len(U))}
@@ -152,20 +158,20 @@ def GetEquationsForSolution(m : int,
     elif any(el not in ZZ for el in U.keys()) or min(U.keys()) < 0 or max(U.keys()) > n-2:
         raise KeyError(f"[GEFS] The argument ``U`` as dictionary must have integers as keys between 0 and `n-2` ({n-2})")
 
-    if not callable(extract):
-        raise TypeError(f"[GEFS] The argument ``extract`` must be a callable.")
-
-    ## Analyzing the functions in ``U``
-    logger.debug(f"[GEFS] Computing common parent for the ansatz functions")
-    parent_us = reduce(lambda p, q: pushout(p,q), (parent(v) for v in U.values()))
-    if parent_us not in _DRings:
-        raise TypeError(f"[GEFS] We need the coefficient of `L` to be in a differential ring/field")
+    if extract is not None and not callable(extract):
+        raise TypeError(f"[GEFS] The argument ``extract`` must be a callable or `None`")
 
     ### Computing the generic `L` operator
     logger.debug(f"[GEFS] Computing the generic L_{n} operator...")
     L = generic_normal(n, name_partial=name_partial)
     z = L.parent().gen(name_partial)
     logger.debug(f"[GEFS] {L=}")
+
+    ## Analyzing the functions in ``U``
+    logger.debug(f"[GEFS] Computing common parent for the ansatz functions")
+    parent_us = reduce(lambda p, q: pushout(p,q), (parent(v) for v in U.values()), L.parent().base())
+    if parent_us not in _DRings:
+        raise TypeError(f"[GEFS] We need the coefficient of `L` to be in a differential ring/field")
 
     ## Adding the appropriate number of flag constants
     logger.debug(f"[GEFS] Creating the ring for having the flag of constants...")
@@ -179,8 +185,8 @@ def GetEquationsForSolution(m : int,
 
     ### Computing the almost commuting basis up to order `m` and the hierarchy up to this point
     logger.debug(f"[GEFS] ++ Computing the basis of almost commuting and the hierarchies...")
-    Ps, Hs = list(), list()
-    for i in range(0, m+1):
+    Ps, Hs = [z[0](dic=U)], [(n-1)*[L.parent().zero()]] # the case with m = 0
+    for i in range(1, m+1):
         ## TODO: should we remove the i with m%n = 0?
         nP, nH = almost_commuting_wilson(n, i, name_z=name_partial)
 
@@ -191,14 +197,20 @@ def GetEquationsForSolution(m : int,
 
     logger.debug(f"[GEFS] -- Computed the basis of almost commuting and the hierarchies")
 
+    Ps = [p.parent().change_ring(diff_base)(p) for p in Ps]
+    Hs = [[h.parent().change_ring(diff_base)(h) for h in H] for H in Hs]
+
     logger.debug(f"[GEFS] Computing the guessed commutator...")
     P = sum(c*p for (c,p) in zip(C, Ps)) # this is the evaluated operator that will commute
     logger.debug(f"[GEFS] Computing the commuting equations...")
     H = [sum(C[i]*Hs[i][j] for i in range(len(C))) for j in range(n-1)] # the equations that need to be 0
     logger.debug(f"[GEFS] Extracting the algebraic equation from the commuting equations...")
-    H = sum([extract(h.numerator()) for h in H], []) # extract the true equations from
+    if len(U) > 0: # Something is given
+        H = sum([extract(h.numerator()) for h in H if h != 0], [ZZ(0)]) # extract the true equations from
 
-    return L, P, ideal(H)
+        return L, P, ideal(H)
+    else:
+        return L, P, H
 
 @loglevel(logger)
 def PolynomialCommutator(n: int, m: int, d: int) -> tuple[DPolynomial, DPolynomial, Ideal]:

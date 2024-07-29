@@ -13,9 +13,10 @@ from sage.categories.sets_cat import Sets
 from sage.matrix.constructor import matrix
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
+from sage.misc.misc_c import prod
 from sage.modules.free_module_element import vector
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
-from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
+from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing, InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.integer_ring import ZZ
 from sage.rings.ring import Ring
 from sage.sets.family import LazyFamily
@@ -169,24 +170,73 @@ class DPolynomial(Element):
     ### Getter methods
     ###################################################################################
     @cached_method
-    def monomials(self) -> tuple[DMonomial]:
+    def monomials(self, *gens : DMonomialGen) -> tuple[DMonomial]:
         r'''
             Method to get a tuple of the monomials appearing in ``self``.
+
+            If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
+            This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in
+            `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
         '''
-        return tuple(self._content.keys())
+        if len(gens) == 0:
+            return tuple(self._content.keys())
+
+        ## We check the consistency of the arguments
+        gens = [self.parent().gen(v) if isinstance(v, str) else v for v in gens]
+        if any(v not in self.parent().gens() for v in gens):
+            raise ValueError(f"The variables must be part of the parent ring: got {gens}, expected {self.parent().gens()}")
+
+        if len(gens) == self.parent().ngens():
+            return self.monomials()
+        else:
+            result = set()
+            for m in self.monomials():
+                collected = dict()
+                for ((v, o), d) in m._variables.items():
+                    if any(g._index == v for g in gens):
+                        collected[(v,o)] = d
+                nm = self.parent().monoids()(collected)
+                result.add(nm)
+
+            return tuple(sorted(result))
 
     @cached_method
-    def coefficients(self) -> tuple[Element]:
+    def coefficients(self, *gens: DMonomialGen) -> tuple[Element]:
         r'''
             Return a list of elements in the ``self.parent().base()`` of the coefficients.
-        '''
-        return tuple([self._content[m] for m in self.monomials()])
 
-    def coefficient(self, monomial: DMonomial) -> Element:
-        r'''Getter for the coefficient structure for a given monomial'''
+            If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
+            This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in
+            `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
+        '''
+        if len(gens) == 0:
+            return tuple([self._content[m] for m in self.monomials()])
+        else:
+            return tuple([self.coefficient_full(m).constant_coefficient(*gens) for m in self.monomials(*gens)])
+
+    def coefficient(self, monomial: DMonomial, *gens: DMonomialGen) -> Element:
+        r'''
+            Getter for the coefficient structure for a given monomial
+
+            If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
+            This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in
+            `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
+        '''
         if not isinstance(monomial, DMonomial):
             monomial = self.parent().monoids()(monomial)
-        return self._content.get(monomial, self.parent().base().zero())
+        if len(gens) == 0:
+            return self._content.get(monomial, self.parent().base().zero())
+        else:
+            # We check the monomial
+            if any(all(v[0] != g._index for g in gens) for v in monomial._variables):
+                raise ValueError(f"Requested monomial {monomial} when working only with variables {gens}")
+            monoms = self.monomials(*gens)
+            coeffs = self.coefficients(*gens)
+
+            if monomial in monoms:
+                return coeffs[monoms.index(monomial)]
+            else:
+                return self.parent().zero()
 
     def coefficient_full(self, monomial: DMonomial) -> DPolynomial:
         r'''Getter for the polynomial of all the elements for which ``monomial`` is part of the monomial'''
@@ -203,9 +253,24 @@ class DPolynomial(Element):
             return self.parent().zero()
         return self.parent().element_class(self.parent(), output)
 
-    def coefficient_without_var(self, *gens: DPolynomialGen) -> DPolynomial:
+    def constant_coefficient(self, *gens) -> Element: #: Method to get the coefficient without variables
         r'''
-            Similar to :func:`coefficient_full` but for terms without the given variables
+            Method to get the constant coefficient of a :class:`DPolynomial`.
+
+            This method allows to obtain the constant coefficient of a d-polynomial, i.e., that coefficient
+            that do not contain any of the d-variables of the ring.
+
+            As we can only build d-rings in the form `R\{u_1,\ldots,u_n\}` this method allows to specify
+            a set of d-variables to interpret the element as an element of `R\{u_1,\ldots,u_k\}\{u_{k+1},\ldots,u_n\}`
+            (see method :func:`coefficients` or :func:`monomials`).
+
+            INPUT:
+
+            * ``gens``: a sequence of :class:`DMonomialGen` indicating the outer d-variables of the ring.
+
+            OUTPUT:
+
+            The corresponding constant coefficient in the corresponding d-ring.
 
             EXAMPLES::
 
@@ -214,23 +279,23 @@ class DPolynomial(Element):
                 sage: R.<u,v> = DPolynomialRing(B)
                 sage: P = (3*x -1)*u[0]*v[0] + x^2*v[1]*u[0] + u[2] + 1
                 sage: Q = 7*x*v[0] + x^2*v[0]*u[1]
-                sage: P.coefficient_without_var(u,v) == P.constant_coefficient()
-                True
-                sage: P.coefficient_without_var(u)
+                sage: P.constant_coefficient()
                 1
-                sage: P.coefficient_without_var(v)
+                sage: P.constant_coefficient(u,v)
+                1
+                sage: P.constant_coefficient(u)
+                1
+                sage: P.constant_coefficient(v)
                 1 + u_2
-                sage: Q.coefficient_without_var(u)
+                sage: Q.constant_coefficient(u)
                 (7*x)*v_0
-                sage: Q.coefficient_without_var(v)
+                sage: Q.constant_coefficient(v)
                 0
-                sage: P.coefficient_without_var() == P
-                True
         '''
         if len(gens) == 1 and isinstance(gens[0], (list,tuple)):
             gens = gens[0]
         if len(gens) == 0:
-            return self
+            return self.coefficient(())
 
         output = dict()
         for (m,c) in self._content.items():
@@ -241,8 +306,59 @@ class DPolynomial(Element):
             return self.parent().zero()
         return self.parent().element_class(self.parent(), output)
 
-    def constant_coefficient(self) -> Element: #: Method to get the coefficient without variables
-        return self.coefficient(())
+    def coefficient_without_var(self, *vars: DPolynomial) -> DPolynomial:
+        r'''
+            Method to compute the part of a d-polynomial without specific sets of algebraic variables.
+
+            This method is similar to :func:`constant_coefficient` but in this case we consider the d-polynomial
+            as an usual polynomial and we compute the coefficient without some algebraic variables (instead of
+            complete appearances of d-variables).
+
+            INPUT:
+
+            * ``vars``: variables that we are going to remove from ``self``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ[x], diff); x = B(x)
+                sage: R.<u,v> = DPolynomialRing(B)
+                sage: P = (3*x -1)*u[0]*v[0] + x^2*v[1]*u[0] + u[2] + 1
+                sage: Q = 7*x*v[0] + x^2*v[0]*u[1]
+                sage: P.coefficient_without_var([u[i] for i in range(P.order(u)+1)]) == P.constant_coefficient(u)
+                True
+                sage: P.coefficient_without_var(u[2])
+                1 + (3*x - 1)*u_0*v_0 + x^2*u_0*v_1
+                sage: P.coefficient_without_var(v[0], v[1])
+                1 + u_2
+                sage: P.coefficient_without_var(v[0])
+                1 + x^2*u_0*v_1 + u_2
+                sage: Q.coefficient_without_var(u[0]) == Q
+                True
+                sage: Q.coefficient_without_var(v[0])
+                0
+                sage: P.coefficient_without_var() == P
+                True
+        '''
+        if len(vars) == 1 and isinstance(vars[0], (list,tuple)):
+            vars = vars[0]
+        if len(vars) == 0:
+            return self
+        if any(not v.is_variable() for v in vars):
+            raise ValueError(f"Requested constant coefficient w.r.t. something that is not a variable")
+
+        gens = [v.infinite_variables()[0] for v in vars]
+        vars = [(gens[i]._index, gens[i].index(v, True)) for i,v in enumerate(vars)]
+
+        output = dict()
+
+        for (m,c) in self._content.items():
+            if all(all(v != el for el in m._variables) for v in vars):
+                output[m] = c
+
+        if len(output) == 0:
+            return self.parent().zero()
+        return self.parent().element_class(self.parent(), output)
 
     @cached_method
     def orders(self, operation: int = -1) -> tuple[int]:
@@ -676,6 +792,13 @@ class DPolynomial(Element):
             ngen = gen.variable_name()
             return H1(**{ngen: H2})
 
+    def reduce_algebraic(self, polynomials) -> DPolynomial:
+        r'''
+            Method that tries to reduce the coefficients of the polynomial using algebraic relations
+        '''
+        output = {m : coeff.reduce_algebraic(polynomials) for (m, coeff) in zip(self.monomials(), self.coefficients())}
+        return self.parent().element_class(self.parent(), output)
+
     ###################################################################################
     ### Sylvester methods
     ###################################################################################
@@ -728,7 +851,7 @@ class DPolynomial(Element):
                 sage: p.solve(v)
                 Traceback (most recent call last):
                 ...
-                ValueError: [inverse_derivation] Found an element impossible to invert: u_0
+                ValueError: [inverse_derivation] Element u_0 not integrable -> non-zero non-integrable part in decomposition: u_0
                 sage: p = u[1] - 2*v[0]*v[1]
                 sage: p.solve(u)
                 v_0^2
@@ -780,40 +903,38 @@ class DPolynomial(Element):
     ###################################################################################
     ### Ranking methods
     ###################################################################################
-    def __check_ranking_argument(self, ranking, ordering=None, ttype="orderly"):
-        if ranking is None:
-            ranking = self.parent().ranking()
-        elif not isinstance(ranking, RankingFunction):
-            ranking = self.parent().ranking(ordering, ttype)
-        return ranking
-
-    def monic(self, ranking, ordering=None, ttype="orderly"):
+    def monic(self, ranking: RankingFunction = None):
         r'''Method to get the monic polynomial w.r.t. a ranking'''
-        return self.__check_ranking_argument(ranking, ordering, ttype).monic(self)
+        ranking = self.parent().ranking() if ranking is None else ranking
+        return ranking.monic(self)
 
-    def leader(self, ranking=None, ordering=None, ttype="orderly"):
+    def leader(self, ranking: RankingFunction = None):
         r'''
             Gets the leader of ``self`` w.r.t. a ranking.
         '''
-        return self.__check_ranking_argument(ranking,ordering,ttype).leader(self)
+        ranking = self.parent().ranking() if ranking is None else ranking
+        return ranking.leader(self)
 
-    def rank(self, ranking=None, ordering=None, ttype="orderly"):
+    def rank(self, ranking: RankingFunction = None):
         r'''
             Gets the rank of ``self`` w.r.t. a ranking.
         '''
-        return self.__check_ranking_argument(ranking,ordering,ttype).rank(self)
+        ranking = self.parent().ranking() if ranking is None else ranking
+        return ranking.rank(self)
 
-    def initial(self, ranking=None, ordering=None, ttype="orderly"):
+    def initial(self, ranking: RankingFunction = None):
         r'''
             Gets the leader of ``self`` w.r.t. a ranking.
         '''
-        return self.__check_ranking_argument(ranking,ordering,ttype).initial(self)
+        ranking = self.parent().ranking() if ranking is None else ranking
+        return ranking.initial(self)
 
-    def separant(self, ranking=None, ordering=None, ttype="orderly"):
+    def separant(self, ranking: RankingFunction = None):
         r'''
             Gets the leader of ``self`` w.r.t. a ranking.
         '''
-        return self.__check_ranking_argument(ranking,ordering,ttype).separant(self)
+        ranking = self.parent().ranking() if ranking is None else ranking
+        return ranking.separant(self)
 
     ### Some aliases
     lc = initial #: alias for initial (also called "leading coefficient")
@@ -899,7 +1020,7 @@ class DPolynomial(Element):
                 Traceback (most recent call last):
                 ...
                 TypeError: The given polynomial ... is not linear or homogeneous over u_*
-                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homoeneous in v_*
+                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homogeneous in v_*
                 sage: f2._maple_(v)
                 Traceback (most recent call last):
                 ...
@@ -1206,6 +1327,8 @@ class DPolynomialRing_Monoid(Parent):
 
             sage: from dalgebra import *
             sage: R.<y> = DifferentialPolynomialRing(QQ['x']); x = R.base().gens()[0]; R
+            doctest:warning
+            ...
             Ring of operator polynomials in (y) over Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
             sage: S.<a,b> = DifferentialPolynomialRing(ZZ); S
             Ring of operator polynomials in (a, b) over Differential Ring [[Integer Ring], (0,)]
@@ -1747,11 +1870,6 @@ class DPolynomialRing_Monoid(Parent):
         if x in self.monoids():
             return True
         return super().__contains__(x)
-    # def __call__(self, *args, **kwds) -> DPolynomial:
-    #     res = super().__call__(*args, **kwds)
-    #     if not isinstance(res, self.element_class):
-    #         res = self.element_class(self, res)
-    #     return res
 
     ## Other magic methods
     def __repr__(self):
@@ -1829,6 +1947,10 @@ class DPolynomialRing_Monoid(Parent):
         variables = sorted(variables, key=lambda p : tuple(next(iter(p._content))._variables.items())[0])
 
         PR = PolynomialRing(self.base(), [str(v) for v in variables], sparse=True)
+        try:
+            self.register_coercion(PR.hom(variables, self))
+        except AssertionError:
+            pass # coercion already registered
         result = [PR(str(element)) for element in elements] # TODO: This may be improved?
 
         return result
@@ -1947,43 +2069,101 @@ class DPolynomialRing_Monoid(Parent):
             non-integrable part and a constant part. We ignore the constant part (we always assume it to
             be zero).
         '''
+        A,B = self.integral_decomposition(element, operation)
+        if B != 0:
+            raise ValueError(f"[inverse_derivation] Element {element} not integrable -> non-zero non-integrable part in decomposition: {B}")
+
+        return A
+
+    def __inverse_skew(self, element: DPolynomial, operation: int):
+        raise NotImplementedError("[inverse_skew] Skew-derivation operation not yet implemented")
+
+    def integral_decomposition(self, element: DPolynomial, operation: int = 0) -> tuple[DPolynomial, DPolynomial]:
+        r'''
+            Method to compute an integral decomposition of an element.
+
+            Method that perform an integral decomposition, i.e., takes an element `f` and computes two new values
+            `A` and `B` such that ``f = partial(A) + B``.
+
+            A good integral decomposition is such that `f` is integrable if and only if `B = 0`.
+
+            In the article by Bilge (:doi:``), an integral decomposition is computed where `f = partial(A) + B + C`
+            where `C` is an element of the base field, obtaining that `f` is integrable if and only if `B = 0` and
+            `C` is integrable.
+
+            This is the algorithm we are implementing here in the context of :class:`DPolynomial`, after the computation w.r.t. `C`.
+        '''
         logger.debug(f"[inverse_derivation] Called with {element}")
+        if self.operator_types()[operation] != "derivation":
+            raise TypeError(f"Computing inverse derivation for an operation ({operation}) that is not a derivation.")
+
+        ## Casting the element to ``self``
+        element = self(element) if not hasattr(element, "parent") or element.parent() != self else element
+
+        ## Calling the recursive method with the beginning arguments
+        return self.__integral_decomposition(element, operation, self.zero(), self.zero())
+
+    def __integral_decomposition(self, element: DPolynomial, operation: int, integral: DPolynomial, nintegral: DPolynomial) -> tuple[DPolynomial, DPolynomial]:
         if element == 0:
-            logger.debug(f"[inverse_derivation] Found a zero --> Easy")
-            solution = self.zero()
+            logger.debug(f"[integral_decomposition] Found a zero --> Easy (we do nothing)")
+            return integral, nintegral
+        elif element.constant_coefficient() != 0:
+            logger.debug(f"[integral_decomposition] Found a constant coefficient --> Computing this part first")
+            coeff = element.constant_coefficient()
+            try:
+                integral += self(coeff.inverse_operation(operation))
+            except Exception:
+                nintegral += self(coeff)
+            return self.__integral_decomposition(element - coeff, operation, integral, nintegral)
         elif element.degree() == 1:
-            logger.debug(f"[inverse_derivation] Found linear element --> Easy to do")
-            solution = self.zero()
+            logger.debug(f"[integral_decomposition] Found linear element --> Easy to do")
             for monomial, coeff in element._content.items():
                 if monomial.is_one():
-                    raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {monomial}")
-                coeff = coeff.inverse_operation(operation) if not coeff.d_constant() else coeff
-                var = next(iter(monomial.variables())) # we know there is only 1, since the element is linear
-                try:
-                    new_mon = self(var._inverse_(operation))
-                except ValueError: # impossible to integrate a monomial
-                    raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
-                solution += coeff*new_mon
+                    raise RuntimeError(f"[integral_decomposition] (Constant coefficient) This should never happen!!")
+                else:
+                    # We are in the term (c*v^(d)), we can see that:
+                    #     (c*v^(d-1))' = c'*v^(d-1) + c*v^(d)
+                    # So we can then write
+                    #     c*v^(d) = (c*v^(d-1))' - c'v^(d-1)
+                    # We now iterate this process on the c'v^(d-1) term, obtaining:
+                    #     c*v^(d) = (c*v^(d-1) - c'*v^(d-2)) + c''*v^(d-2)
+                    var = next(iter(monomial.variables()))
+                    var, (i,) = next(iter(monomial._variables))
+                    var = self.gens()[var]
+                    integral += sum((-1)**j*coeff.operation(operation, times=j)*var[i-1-j] for j in range(i))
+                    nintegral += (-1)**i*coeff.operation(operation, times=i)*var[0]
+            return integral, nintegral
         else:
-            logger.debug(f"[inverse_derivation] Element is not linear")
+            logger.debug(f"[integral_decomposition] Element is not linear")
             monomials = element.monomials()
             if 1 in monomials:
-                raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
+                raise RuntimeError(f"[integral_decomposition] (Constant coefficient) This should never happen!!")
             monomials_with_points = []
             for mon in monomials:
                 bv = max(k[0] for k in mon._variables) # index of the maximum variable
                 bo = mon.order(bv, operation) # order of the biggest variable w.r.t. operation
                 monomials_with_points.append((bv, bo))
 
-            aux = max(o for (_,o) in monomials_with_points) # element with highest order -> used as a balance option to use "max"
-            V, O = max(monomials_with_points, key=lambda p: p[0]*aux + p[1])
+            V, O = max(monomials_with_points)
             V = self.gens()[V]
-            logger.debug(f"[inverse_derivation] Maximal variable: {V[O]}")
+            logger.debug(f"[integral_decomposition] Maximal variable: {V[O]}")
 
-            if element.degree(V[O]) > 1:
-                raise ValueError(f"[inverse_derivation] Found an element impossible to invert: {element}")
+            D = element.degree(V[O])
+            highest_part = element.coefficient_full(V[O]**D)
+
+            if D > 1: ## Highest variable non linear --> non-integrable
+                return self.__integral_decomposition(
+                    element - highest_part * V[O]**D, operation,
+                    integral,
+                    nintegral + highest_part * V[O]**D
+                )
+            elif O == 0: ## Highest variable without derivatives --> non-integrable
+                return self.__integral_decomposition(
+                    element - highest_part * V[O], operation,
+                    integral,
+                    nintegral + highest_part * V[O]
+                )
             else:
-                highest_part = element.coefficient_full(V[O])
                 deg_order_1 = highest_part.degree(V[O-1])
 
                 cs = [highest_part.coefficient_full(V[O-1]**i) for i in range(deg_order_1+1)]
@@ -1993,16 +2173,22 @@ class DPolynomialRing_Monoid(Parent):
                 ## we compute remaining polynomial
                 partial_integral = sum(cs[i]/ZZ(i+1) * V[O-1]**(i+1) for i in range(deg_order_1+1)) + V[O-1]*q1 # division is on coeff. level
 
-            logger.debug(f"[inverse_derivation] Partial integral: {partial_integral}")
-            rem = element - partial_integral.operation(operation)
-            logger.debug(f"[inverse_derivation] Remaining to integrate: {rem}")
-            solution = partial_integral + self.inverse_operation(rem, operation)
+                logger.debug(f"[integral_decomposition] Partial integral: {partial_integral}")
+                integral += partial_integral
+                element -= partial_integral.operation(operation)
+                logger.debug(f"[integral_decomposition] Remaining to integrate: {element}")
+                return self.__integral_decomposition(element, operation, integral, nintegral)
 
-        logger.debug(f"[inverse_derivation] Result: {solution}")
-        return solution
+    @cached_method
+    def to_sage(self):
+        result = InfinitePolynomialRing(self.base().to_sage(), [el.replace("_", "") for el in self.variable_names()])
+        map_of_variables = dict(zip(self.gens(), result.gens()))
+        inverse_map_of_variables = list(zip(result.gens(), self.gens()))
+        ## Creating the conversion between ``self`` and the plain sage equivalent
+        self.register_conversion(MapSageToDalgebra_Infinite(result, self, inverse_map_of_variables))
+        result.register_conversion(MapDalgebraToSage_Infinite(self, result, map_of_variables))
 
-    def __inverse_skew(self, element: DPolynomial, operation: int):
-        raise NotImplementedError("[inverse_skew] Skew-derivation operation not yet implemented")
+        return result
 
     #################################################
     ### Sylvester methods
@@ -2231,7 +2417,7 @@ class DPolynomialRing_Monoid(Parent):
         elif N >= 0 and (k < 0 or k > N):
             raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
 
-        homogeneous = any(poly.coefficient_without_var(gen) != 0 for poly in (P,Q))
+        homogeneous = any(poly.constant_coefficient(gen) != 0 for poly in (P,Q))
 
         if homogeneous and k > 0:
             raise NotImplementedError(f"[sylvester_matrix] The case of inhomogeneous operators and positive {k=} is not implemented.")
@@ -2250,7 +2436,7 @@ class DPolynomialRing_Monoid(Parent):
         ## We get the coefficient of the sylvester matrix
         nrows = len(equations)
         ncols = len(cols) + (1 if homogeneous else 0)
-        output = sum([([self(equation).coefficient_without_var(gen)] if homogeneous else []) + [self(equation.coefficient_full(m)) for m in cols] for equation in equations], [])
+        output = sum([([self(equation).constant_coefficient(gen)] if homogeneous else []) + [self(equation.coefficient_full(m)) for m in cols] for equation in equations], [])
 
         output = matrix([output[r*ncols:r*ncols + ncols] for r in range(nrows)])
 
@@ -2324,6 +2510,8 @@ class DPolynomialRing_Monoid(Parent):
             raise ValueError(f"[sylvester_checking] The variable {repr(gen)} do not belong to {self}")
         elif self.ngens() == 1 and gen is None:
             gen = self.gens()[0]
+        elif isinstance(gen, str):
+            gen = self.gen(gen)
 
         ## Checking the operator polynomials are correct
         P, Q = self(P), self(Q)
@@ -2349,12 +2537,23 @@ class DPolynomialRing_Monoid(Parent):
 
             This method creates a ranking for ``self`` using the arguments as in :class:`RankingFunction`.
         '''
-        if ordering is not None and isinstance(ordering, list):
+        if ordering is None:
+            ordering = self.gens()
+        elif isinstance(ordering, list):
             ordering = tuple(ordering)
 
+        if ttype not in ("orderly", "elimination"):
+            raise ValueError("Only 'orderly' and 'elimination' rankings are allowed")
+
         if (ordering, ttype) not in self.__cache_ranking:
-            self.__cache_ranking[(ordering, ttype)] = RankingFunction(self, ordering, ttype)
+            self.__cache_ranking[(ordering, ttype)] = EliminationRanking(self, ordering) if ttype == "elimination" else OrderlyRanking(self, ordering)
         return self.__cache_ranking[(ordering, ttype)]
+
+    def elimination_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None):
+        return self.ranking(ordering, "elimination")
+
+    def orderly_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None):
+        return self.ranking(ordering, "orderly")
 
     #################################################
     ### Other computation methods
@@ -2461,7 +2660,9 @@ def is_DPolynomialRing(element):
 
 is_RWOPolynomialRing = is_DPolynomialRing #: alias for is_DPolynomialRing (used for backward compatibility)
 
-
+#################################################################################################
+### FUNCTORS AND MORPHISMS
+#################################################################################################
 class DPolyRingFunctor (ConstructionFunctor):
     r'''
         Class representing Functor for creating :class:`DPolynomialRing_Monoid`.
@@ -2582,6 +2783,58 @@ class DPolynomialSimpleMorphism (Morphism):
 
         return self.codomain()(str(p))
 
+class MapSageToDalgebra_Infinite(Morphism):
+    def __init__(self, domain, codomain, map_of_variables):
+        super().__init__(domain, codomain)
+        self.__map = map_of_variables
+
+    def _call_(self, element):
+        output = self.codomain().zero()
+        for (c, m) in zip(element.coefficients(), element.monomials()):
+            nc = self.codomain().base()(c)
+            nm = self.codomain().one()
+            for v in m.variables():
+                vname, vindex = str(v).split("_")
+                vindex = int(vindex)
+                deg = m.degree(v)
+                for g in self.domain().gens():
+                    if vname == repr(g).removesuffix("_*"):
+                        for (g_old, g_new) in self.__map:
+                            if g_old == g:
+                                nm *= g_new[vindex]**deg
+                                break
+                        else:
+                            return NotImplementedError(f"We could not find new generator for gen {g}")
+                        break
+                else:
+                    return NotImplementedError(f"We could not find generator for variable {v}")
+            output += nc*nm
+        return output
+
+class MapDalgebraToSage_Infinite(Morphism):
+    def __init__(self, domain, codomain, map_of_variables):
+        super().__init__(domain, codomain)
+        self.__map = map_of_variables
+
+    def _call_(self, element):
+        output = self.codomain().zero()
+        for (c, m) in zip(element.coefficients(), element.monomials()):
+            nc = self.codomain().base()(c)
+            nm = self.codomain().one()
+            for v in m.variables():
+                deg = m.degree(v)
+                for g in self.domain().gens():
+                    if v in g:
+                        nm *= self.__map[g][g.index(v, False)]**deg
+                        break
+                else:
+                    return NotImplementedError(f"We could not find generator for variable {v}")
+            output += nc*nm
+        return output
+
+#################################################################################################
+### WEIGHT AND RANKING FUNCTIONS
+#################################################################################################
 class WeightFunction(SetMorphism):
     r'''
         Class to represent a weight or grading function for a ring of d-polynomials.
@@ -2688,6 +2941,48 @@ class WeightFunction(SetMorphism):
                 for variable in m.variables()
                 for (i,gen) in enumerate(self.parent().gens()) if variable in gen
             )
+
+    def homogeneous_components(self, element: DPolynomial) -> dict[int, DPolynomial]:
+        r'''
+            Method that decomposes an element into its different homogeneous components.
+
+            INPUT:
+
+            * ``element``: the :class:`DPolynomial` that will be split into homogeneous components.
+
+            OUTPUT:
+
+            A dictionary (empty if ``element`` is zero) where the keys are the weights appearing in the polynomial
+            and the values are the :class:`DPolynomial` that represent the terms of that specific weight. It must always
+            satisfy that ``sum(out.values()) == element``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B.<c,x> = QQ[]
+                sage: R.<a,b> = DPolynomialRing(DifferenceRing(DifferentialRing(B, lambda p : diff(p,x)), B.Hom(B)([c,x+1])))
+                sage: w = R.weight_func([1,2],[2,1])
+                sage: f = a[0,1]*b[0,0] + c*x^2*b[0,1]*a[0,0] - 2*c^2*a[3,1]
+                sage: w.homogeneous_components(f)
+                {4: (c*x^2)*a_0_0*b_0_1 + a_0_1*b_0_0, 8: -(2*c^2)*a_3_1}
+                sage: sum(w.homogeneous_components(f).values()) == f
+                True
+                sage: w.homogeneous_components(R.zero())
+                {}
+        '''
+        solution = dict()
+
+        R = element.parent()
+
+        if not element.is_zero():
+            for c, m in zip(element.coefficients(), element.monomials()):
+                w = self(m)
+                if w not in solution:
+                    solution[w] = element.parent().zero()
+
+                solution[w] = solution[w] + c*R(m)
+
+        return dict(sorted(solution.items()))
 
     @cached_method
     def weighted_variables(self, weight: int) -> set[DPolynomial]:
@@ -2870,12 +3165,6 @@ class RankingFunction:
         A ranking is the analog of a term ordering used in Gröbner bases algorithms. However, rankings order the monomials in
         `\mathcal{T}` that is a monoid infinitely generated with some extra properties that relate the operations with the variables.
 
-        In particular, we say that a ranking `\leq` of `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` is an elimination ranking
-        between two d-variables `u, v` (say `u < v`) if they satisfy `\sigma^\alpha(u) < \sigma^\beta(v)` for all `\alpha,\beta\in \mathbb{N}^n`.
-
-        We also say that `\leq` of `(R,(\sigma_1,\ldots,\sigma_n))\{u_1,\ldots,u_m\}` is an orderly ranking on `u_1,\ldots, u_n` if
-        `\sigma^\alpha(u_i) < \sigma^\beta(u_j)` for all `\alpha,\beta \in \mathbb{N}^n` with `|\alpha| < |\beta|`.
-
         Once a ranking is fully define, the following methods are automatically defined for non-constant d-polynomials:
 
         * ``leader``: given `p(u) \in R\{u\}`, the leader is the actual variable that is maximal on the polynomial
@@ -2887,36 +3176,101 @@ class RankingFunction:
 
         * ``parent``: a :class:`DPolynomialRing_Monoid` where the ranking will be applied.
         * ``ordering``: a list or tuple of :class:`DMonomialGen` that will include the variables of a :class:`DPolynomialRing_Monoid`
-          that will be incorporated to the ranking and the base ordering between the base variables.
+          that will be incorporated to the ranking and the base ordering between the base variables. In the case of missing variables,
+          we will consider the ring `R\{u_1,\ldots,u_n\}` split into two layers `R\{u_1,\ldots,u_k\}\{u_{k+1},\ldots,u_n\}`, and the ranking
+          will be created for the outer variables.
         * ``ttype``: the type of ranking to be created. Currently, only "elimination" or "orderly" are allowed:
           - "elimination": the ranking will be the elimination ranking where the ``ordering`` determines the order of the variables.
           - "orderly": generates the orderly ranking where ``ordering`` provides the basic ordering between variables.
 
         TODO: add examples
     '''
-    def __init__(self, parent: DPolynomialRing_Monoid, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, ttype: str = "orderly"):
-        ## Processing arguments
+    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int] = None):
+        ## Checking the argument ``parent``
         if not isinstance(parent, DPolynomialRing_Monoid):
-            raise TypeError(f"[ranking] The parent must be a ring of d-polynomials, but got {type(parent)}")
-        if ordering is None:
-            ordering = parent.gens()
-        elif not isinstance(ordering, (list,tuple)):
-            raise TypeError(f"[ranking] The base ordering must be given as a list or tuple of generators, but got {type(ordering)}")
-        elif any(g not in parent.gens() for g in ordering):
-            raise ValueError(f"[ranking] The base ordering must be given as a list of generators (DMonomialGen) (got {ordering})")
+            raise TypeError(f"[ranking] Rankings only defined over rings of d-polynomials")
 
-        if ttype not in ("elimination", "orderly"):
-            raise ValueError(f"[ranking] The type of a ranking must be either 'elimination' or 'orderly'. Got {ttype}")
+        ## Checking the argument ``order_operators``
+        if order_operators is None:
+            order_operators = list(range(parent.noperators()))
+        if not isinstance(order_operators, (list,tuple)) or len(order_operators) != parent.noperators():
+            raise TypeError(f"[ranking] The order of operations must be always given")
+        elif any(i not in ZZ or i < 0 or i >= parent.noperators() for i in order_operators):
+            raise ValueError(f"[ranking] Invalid values for ordering the operations of the d-Ring")
+        elif len(set(order_operators)) != parent.noperators():
+            raise ValueError(f"[ranking] Invalid values for ordering the operations of the d-Ring (repeated elements)")
 
-        ## Storing the information required for the ranking function
+        ## Checking the argument ``ordering``
+        if not isinstance(ordering, (list, tuple)):
+            raise TypeError(f"[ranking] Invalid format for ordering: must be a list or tuple")
+        ordering = [parent.gen(v) if isinstance(v, str) else v for v in ordering]
+        if any(v not in parent.gens() for v in ordering):
+            raise ValueError(f"[ranking] Error in ordering of variables: provided a variable that is not in the ring")
+
+        ## Storing the values into the class
         self.__parent = parent
-        self.base_order : list[DMonomialGen] | tuple[DMonomialGen] = ordering
-        self.type : str = ttype
+        self.__ordering = tuple(ordering)
+        self.__order_operators = tuple(order_operators)
 
+    ## Attribute type methods
     def parent(self) -> DPolynomialRing_Monoid:
         return self.__parent
 
-    def compare_variables(self, u: DPolynomial, v: DPolynomial):
+    @property
+    def ordering(self) -> tuple[DMonomialGen]:
+        return self.__ordering
+
+    @property
+    def order_operators(self) -> tuple[int]:
+        return self.__order_operators
+
+    ## Comparison methods
+    def compare_gens(self, u: DPolynomialGen | str, v: DPolynomialGen | str) -> int:
+        r'''
+            Method that compares two d-variables.
+
+            INPUT:
+
+            * ``u``: first variable to be checked.
+            * ``v``: second variable to be checked.
+
+            OUTPUT:
+
+            It returns a negative integer if `u < v` according to this ranking, a positive integer if `u > v` or `0` when no comparison is available.
+            All variables not included in ``self.__ordering`` are considered smaller than those in sorted.
+        '''
+        u = self.parent().gens(u) if isinstance(u, str) else u
+        v = self.parent().gens(v) if isinstance(v, str) else v
+
+        if any(el not in self.parent().gens() for el in (u,v)):
+            raise ValueError(f"[ranking - gens] Error when comparing generators: they are not generators of ``parent``")
+
+        if u not in self.__ordering and v not in self.__ordering:
+            return 0
+        elif u not in self.__ordering:
+            return -1
+        elif v not in self.__ordering:
+            return 1
+        else:
+            return self.__ordering.index(v) - self.__ordering.index(u)
+
+    def compare_operations(self, t1: tuple[int], t2: tuple[int]) -> int:
+        r'''
+            Method that compares two tuples of elements marking how many operations has been performed over an element.
+
+            This method uses :func:`order_operators` to check the ordering.
+        '''
+        t1 = [t1[i] for i in self.order_operators]
+        t2 = [t2[i] for i in self.order_operators]
+
+        if t1 < t2:
+            return -1
+        elif t1 > t2:
+            return 1
+        else:
+            return 0
+
+    def compare_variables(self, u: DPolynomial, v: DPolynomial) -> int:
         r'''
             Method to compare two variables.
 
@@ -2934,48 +3288,9 @@ class RankingFunction:
             This method behaves like the :func:`cmp` method in Python 2.x, returning a negative element if `u < v`,
             a positive element if `u > v` and 0 if they are equal.
         '''
-        u, v = self.parent()(u), self.parent()(v)
-        if not u.is_variable():
-            raise TypeError(f"[ranking] Comparing something that is not a variable: [[{u} < {v}]]?")
-        if not v.is_variable():
-            raise TypeError(f"[ranking] Comparing something that is not a variable: [[{u} < {v}]]?")
+        raise NotImplementedError(f"[ranking - variables] This is an abstract method")
 
-        gu, gv = None, None
-        for g in self.base_order:
-            if u in g:
-                gu = g
-            if v in g:
-                gv = g
-            if gu is not None and gv is not None:
-                break
-        else:
-            raise ValueError(f"[ranking] Comparing a variable that is not ordered (allow {self.base_order}): [[{u} < {v}]]?")
-
-        if self.type == "elimination":
-            if self.base_order.index(gu) < self.base_order.index(gv):
-                return -1
-            elif self.base_order.index(gu) > self.base_order.index(gv):
-                return 1
-            else:
-                return gu.index(u, False) - gu.index(v, False)
-        elif self.type == "orderly":
-            ord_u, ord_v = u.order(gu), v.order(gv)
-            if ord_u < ord_v:
-                return -1
-            elif ord_u > ord_v:
-                return 1
-            else:
-                ind_u, ind_v = gu.index(u, False), gv.index(v, False)
-                if ind_u < ind_v:
-                    return -1
-                elif ind_u > ind_v:
-                    return 1
-                else:
-                    return self.base_order.index(gu) - self.base_order.index(gv)
-        else:
-            raise NotImplementedError(f"[ranking] Method 'compare' not yet implemented for type {self.type}")
-
-    def compare(self, p: DPolynomial, q: DPolynomial):
+    def compare(self, p: DPolynomial, q: DPolynomial) -> int:
         r'''
             Method that compares two d-polynomials.
 
@@ -3050,7 +3365,7 @@ class RankingFunction:
         element = self.parent()(element)
 
         ## we get the variables that must be ordered
-        variables = [self.parent()(v) for v in element.variables() if any(v in g for g in self.base_order)]
+        variables = [self.parent()(v) for v in element.variables() if any(v in g for g in self.ordering)]
         if len(variables) == 0: # if nothing is there, the leader is the `1`
             return self.parent().one()
 
@@ -3082,6 +3397,8 @@ class RankingFunction:
         element = self.parent()(element)
 
         max_var = self.leader(element)
+        if max_var == 1: # Special case when the polynomial do not involve any ranked variable
+            return self.parent().zero()
         deg = element.degree(max_var) if max_var != self.parent().one() else 1
         return max_var**deg
 
@@ -3106,7 +3423,7 @@ class RankingFunction:
         '''
         element = self.parent()(element)
 
-        return element.coefficient(self.rank(element), _poly=True)
+        return element.coefficient_full(self.rank(element))
 
     @cached_method
     def separant(self, element: DPolynomial) -> DPolynomial:
@@ -3130,8 +3447,88 @@ class RankingFunction:
         element = self.parent()(element)
 
         max_var = self.leader(element)
-        return self.parent()(element.polynomial().derivative(max_var.polynomial())) if max_var != self.parent().one() else self.parent().zero()
+        if max_var == 1: # Special case when no ranked variable is present
+            return self.parent().zero()
 
+        ## Else, we compute the partial derivative. For that, we convert the structure to usual polynomials
+        poly_element, poly_var = self.parent().as_polynomials(element, max_var)
+        return self.parent()(poly_element.derivative(poly_var))
+
+    ################################################################################
+    ### Boolean methods
+    ################################################################################
+    def is_partially_reduced(self, p: DPolynomial, A: DPolynomial | list[DPolynomial]) -> bool:
+        r'''
+            Method to check whether a d-polynomial `p` is *partially reduced* w.r.t. `A`.
+
+            Let `A` be a d-polynomial and let `u_A` be its leader w.r.t. ``self``. We say that `p` is
+            partially reduced w.r.t. `A` if no derivated element from `u_A` appear in `p`. For example,
+            if `u_3\'\'` is the leader of `A`, then `u_3\'` may appear in `p`, but `u_3\'\'\'` cannot.
+
+            For further information about this property, we refer to "Differential Algebra and Algebraic
+            Groups" by E.R. Kolchin (1973).
+        '''
+        if not isinstance(A, (list, tuple, set)):
+            A = [A]
+        p = self.parent()(p)
+        A = [self.parent()(a) for a in A]
+
+        if p == 0: # Special case, 0 is always partially reduced
+            return True
+
+        for a in A:
+            u = self.leader(a)
+            gu = u.infinite_variables()[0] # the generator of the leader
+            if any(self.compare_variables(u, v) < 0 for v in p.variables() if v in gu):
+                return False
+
+        return True
+
+    def is_reduced(self, p: DPolynomial, A: DPolynomial | list[DPolynomial]) -> bool:
+        r'''
+            Method to check whether a d-polynomial `p` is *partially reduced* w.r.t. `A`.
+
+            We say that a d-polynomial `p` is reduced w.r.t. `A` if it is partially reduced (see :func:`is_partially_reduced`)
+            and the degree of the leader of `A` is lower in `p` than in `A`.
+
+            For further information about this property, we refer to "Differential Algebra and Algebraic
+            Groups" by E.R. Kolchin (1973).
+        '''
+        if not isinstance(A, (list, tuple, set)):
+            A = [A]
+        p = self.parent()(p)
+        A = [self.parent()(a) for a in A]
+
+        if p == 0: # Special case, 0 is always partially reduced
+            return True
+
+        if not self.is_partially_reduced(p, A):
+            return False
+
+        return all(p.degree(self.leader(a)) < a.degree(self.leader(a)) for a in A)
+
+    def is_autoreduced(self, A: DPolynomial | list[DPolynomial]) -> bool:
+        r'''
+            Method to check whether a set of d-polynomials `A` is autoreduced or not.
+
+            A set `A` of d-polynomials is called *autoreduced* if, for every `p\in A`, `p`
+            is reduced w.r.t. `A\setminus\{p\`}` (see :func:`is_reduced` for further information).
+
+            In particular, singleton sets or empty sets are autoreduced.
+        '''
+        if A is None:
+            raise TypeError(f"None is not a valid input for 'is_autoreduced'")
+        if not isinstance(A, (list, tuple, set)):
+            A = [A]
+
+        if len(A) <= 1:
+            return True
+
+        return all(self.is_reduced(p, [a for a in A if a != p]) for p in A)
+
+    ################################################################################
+    ### Operations for d-polynomials induced by ranking
+    ################################################################################
     def pseudo_quo_rem(self, p: DPolynomial, q: DPolynomial) -> tuple[DPolynomial, dict[tuple,tuple[DPolynomial,DPolynomial]], DPolynomial]:
         r'''
             Compute a pseudo-operational division of `p` and `q`.
@@ -3196,6 +3593,93 @@ class RankingFunction:
         fb.update(rb)
 
         return fa, fb, r
+
+    def pqr_to_operator(self, b):
+        r'''
+            Convert (if possible) the result of a pseudo-division to an operator that
+            applied to the divisor, it will generate the dividend minus the remainder.
+        '''
+        if not all(prev == 1 for (_,prev) in b.values()):
+            raise ValueError(f"Impossible to convert to an operator")
+
+        if len(self.parent().gens()) > 1:
+            raise NotImplementedError(f"The case with several d-variables is not yet considered")
+
+        z = self.parent().gens()[0]
+        return sum(fact*z[k] for (k, (fact,_)) in b.items())
+
+    def partial_remainder(self, p: DPolynomial, A: DPolynomial | list[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
+        r'''
+            Method to compute the partial remainder of `p` w.r.t. `A`. See pp. 77-78 of Kolchin's book.
+        '''
+        print(f"[partial_remainder] STARTING A PARTIAL REMAINDER COMPUTATION")
+        if not isinstance(A, set):
+            A = set(A) if isinstance(A, (list, tuple)) else set([A])
+
+        if not self.is_autoreduced(A):
+            raise TypeError(f"The partial remainder only works for autoreduced sets.")
+
+        return self._partial_remainder(p, A)
+
+    def _partial_remainder(self, p: DPolynomial, A: set[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
+        logger.info(f"[partial_remainder] Starting partial remainder with leader {self.leader(p)} vs {[self.leader(a) for a in A]}")
+        F = p
+
+        ## We look for the first non-partially reduced
+        A_sorted = self.sort(list(A), True) # sorted from biggest to smallest
+        U = [self.leader(a) for a in A_sorted]
+
+        for (a, u) in zip(A_sorted, U):
+            gu = u.infinite_variables()[0]
+            v = self.sort([g for g in F.variables() if g in gu], True)[0]
+            if self.compare_variables(u, v) < 0: # v > u
+                logger.debug(f"[partial_remainder] Found element not partially reduced to")
+                to_apply = tuple([ov - ou for (ou, ov) in zip(gu.index(u, True), gu.index(v, True))])
+                logger.debug(f"[partial_remainder] Operation to apply: {to_apply}")
+                Sc = self.separant(a)
+                e = F.degree(v)
+                T = Sc*v - self.parent().apply_operations(a, to_apply)
+                logger.debug(f"[partial_remainder] Current v: {v}")
+                logger.debug(f"[partial_remainder] Found T: {T}")
+                G = Sc**e * F.coefficient_without_var(v) + sum(Sc**(e-i) * F.coefficient_full(v**i) * T**i for i in range(1, F.degree(v)+1))
+                logger.debug(f"[partial_remainder] Computed G: {G}")
+
+                rF, rs = self._partial_remainder(G, A)
+                rs[a] += e
+                return rF, rs
+
+        return F, {a : 0 for a in A}
+
+    def remainder(self, p: DPolynomial, A: DPolynomial | list[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int], dict[DPolynomial,int]]:
+        r'''
+            Method to compute the remainder w.r.t. to an autoreduced set `A`. See pp. 78-79 of Kolchin's book.
+        '''
+        logger.info(f"[partial_remainder] STARTING A PARTIAL REMAINDER COMPUTATION")
+        if not isinstance(A, set):
+            A = set(A) if isinstance(A, (list, tuple)) else set([A])
+
+        if not self.is_autoreduced(A):
+            raise TypeError(f"The partial remainder only works for autoreduced sets.")
+
+        return self._remainder(p, A)
+
+    def _remainder(self, p: DPolynomial, A: set[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int], dict[DPolynomial,int]]:
+        p, s = self._partial_remainder(p, A)
+
+        A = self.sort(list(A)) # sorted from smallest to biggest
+
+        i = dict()
+
+        for r in range(len(A)-1, -1, -1): # we go from biggest to smallest
+            u, I = self.leader(A[r]), self.initial(A[r])
+
+            I = self.initial(A[r])
+            i[A[r]] = max(0, p.degree(u) - A[r].degree(u) + 1)
+
+            pa, pp, pu = self.parent().as_polynomials(A[r], I**i[A[r]] * p, u)
+            p = self.parent()(pa.parent()(pp.polynomial(pu) % pa.polynomial(pu)))
+
+        return p, s, i
 
     def smallest(self, p: DPolynomial, q: DPolynomial) -> tuple[DPolynomial, DPolynomial]:
         r'''
@@ -3318,11 +3802,103 @@ class RankingFunction:
             result.reverse()
         return result
 
+    ################################################################################
+    ### Representation and Python-magic methods
+    ################################################################################
     def __repr__(self) -> str:
-        return f"{self.type.capitalize()} ranking over {self.parent()} where [{' < '.join([repr(el) for el in self.base_order])}]"
+        return f"Ranking over {self.parent()} where [{' < '.join([repr(el) for el in self.__ordering])}]"
 
     def _latex_(self) -> str:
-        return r"\mathbf{" + ("OrdR" if self.type == "orderly" else "ElimR") + r"}(" + "<".join(latex(v) for v in self.base_order) + r")"
+        return r"\mathbf{Ranking}(" + "<".join(latex(v) for v in self.__ordering) + r")"
+
+    def __hash__(self) -> int:
+        return hash((self.parent(), self.__ordering, self.__order_operators))
+
+class EliminationRanking(RankingFunction):
+    r'''
+        Class for representing an Elimination Ranking.
+
+        See :class:`RankingFunction`for information about rankings. Since this is an elimination ranking, then it holds (for
+        the ordered variables) that `u < v` implies `\sigma^\alpha(u) < \sigma^\beta(v)` for all `\alpha,\beta\in \mathbb{N}^n`.
+
+        This class implements a new version for :func:`RankingFunction.compare_variables`.
+
+        TODO: add examples
+    '''
+    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int] = None):
+        super().__init__(parent, ordering, order_operators)
+
+    def compare_variables(self, u: DPolynomial, v: DPolynomial):
+        u, v = self.parent()(u), self.parent()(v)
+        if not u.is_variable():
+            raise TypeError(f"[ranking @ variables] Comparing something that is not a variable: [[{u} < {v}]]?")
+        if not v.is_variable():
+            raise TypeError(f"[ranking @ variables] Comparing something that is not a variable: [[{u} < {v}]]?")
+
+        gu, gv = u.infinite_variables()[0], v.infinite_variables()[0]
+        if (gu not in self.ordering or gv not in self.ordering):
+            raise ValueError(f"[ranking @ variables] Comparing a variable that is not ordered (allow {self.ordering}): [[{u} < {v}]]?")
+
+        if self.ordering.index(gu) < self.ordering.index(gv):
+            return -1
+        elif self.ordering.index(gu) > self.ordering.index(gv):
+            return 1
+        else:
+            return self.compare_operations(gu.index(u, True), gu.index(v, True))
+
+    ################################################################################
+    ### Representation and Python-magic methods
+    ################################################################################
+    def __repr__(self) -> str:
+        return f"ELIMINATION " + super().__repr__()
+
+    def _latex_(self) -> str:
+        return r"\mathbf{ElimR}(" + "<".join(latex(v) for v in self.ordering) + r")"
+
+class OrderlyRanking(RankingFunction):
+    r'''
+        Class for representing an Orderly Ranking.
+
+        See :class:`RankingFunction`for information about rankings. Since this is an elimination ranking, then it holds (for
+        the ordered variables) that `\sigma^\alpha(u) < \sigma^\beta(v)` for all `\alpha,\beta \in \mathbb{N}^n` with `|\alpha| < |\beta|`.
+
+        This class implements a new version for :func:`RankingFunction.compare_variables`.
+
+        TODO: add examples
+    '''
+    def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int] = None):
+        super().__init__(parent, ordering, order_operators)
+
+    def compare_variables(self, u: DPolynomial, v: DPolynomial):
+        u, v = self.parent()(u), self.parent()(v)
+        if not u.is_variable():
+            raise TypeError(f"[ranking @ variables] Comparing something that is not a variable: [[{u} < {v}]]?")
+        if not v.is_variable():
+            raise TypeError(f"[ranking @ variables] Comparing something that is not a variable: [[{u} < {v}]]?")
+
+        gu, gv = u.infinite_variables()[0], v.infinite_variables()[0]
+        if (gu not in self.ordering or gv not in self.ordering):
+            raise ValueError(f"[ranking @ variables] Comparing a variable that is not ordered (allow {self.ordering}): [[{u} < {v}]]?")
+
+        ord_u, ord_v = u.order(gu), v.order(gv)
+        if ord_u < ord_v:
+            return -1
+        elif ord_u > ord_v:
+            return 1
+        else:
+            check_in_order = self.compare_operations(gu.index(u, True), gv.index(v, True))
+            if check_in_order == 0:
+                return self.compare_gens(gu,gv)
+            return check_in_order
+
+    ################################################################################
+    ### Representation and Python-magic methods
+    ################################################################################
+    def __repr__(self) -> str:
+        return f"ORDERLY " + super().__repr__()
+
+    def _latex_(self) -> str:
+        return r"\mathbf{OrdR}(" + "<".join(latex(v) for v in self.ordering) + r")"
 
 
 __all__ = [
