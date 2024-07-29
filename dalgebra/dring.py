@@ -1072,7 +1072,7 @@ class DRing_WrapperElement(Element):
             return self.parent().element_class(self.parent(), output)
         except AttributeError:
             raise AttributeError(f"[DRing] Wrapped element {self.wrapped} do no have method `lcm`")
-        
+
     def reduce_algebraic(self, polynomials):
         if hasattr(self.wrapped, "reduce"):
             return self.parent()(self.wrapped.reduce([self.parent().wrapped(el) for el in polynomials]))
@@ -1297,6 +1297,8 @@ class DRing_Wrapper(Parent):
                 sage: from dalgebra import *
                 sage: R = DifferentialRing(QQ[x], diff)
                 sage: R.linear_operator_ring()
+                doctest:warning
+                ...
                 Univariate Ore algebra in D over Univariate Polynomial Ring in x over Rational Field
 
             This also works when having several operators::
@@ -1531,14 +1533,14 @@ class DFractionFieldElement(FractionFieldElement):
     def derivative(self, derivation: int = None, times: int = 1):
         r'''Overridden method to force the use of the DRings structure'''
         return DRings.ElementMethods.derivative(self, derivation, times)
-    
+
     def reduce_algebraic(self, polynomials):
         num = self.numerator().reduce_algebraic(polynomials)
         den = self.denominator().reduce_algebraic(polynomials)
 
         if den != 0:
             return num/den
-        
+
         raise ZeroDivisionError(f"Found a reduction to zero on the denominator")
 
     def variables(self):
@@ -1607,7 +1609,7 @@ class DFractionField(FractionField_generic):
 
     def inverse_operation(self, element, operator: int = 0):
         return self.base().inverse_operation(element, operator)
-    
+
     def to_sage(self):
         return self.base().to_sage().fraction_field()
 

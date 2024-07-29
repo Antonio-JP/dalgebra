@@ -1096,6 +1096,8 @@ class DSystem:
             We can check that this solutions satisfy all the equations of the systems to be zero::
 
                 sage: all(equation(dic=sol) == 0 for equation in S.equations())
+                doctest:warning
+                ...
                 True
         '''
         if not self.is_linear():

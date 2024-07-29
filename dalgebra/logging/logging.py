@@ -45,13 +45,14 @@ def print_args(size, *args, **kwds):
         output += f"\n\t* kwds: {dict([(k, cut_string(v, size)) for (k,v) in kwds.items()])}"
     return output
 
+
 COUNTING_CALLS : dict[str, int] = dict()
 def count_calls(logger : logging.Logger):
     def inner(func):
         @functools.wraps(func)
         def wrap(*args, **kwds):
             COUNTING_CALLS[func.__name__] = COUNTING_CALLS.get(func.__name__, 0) + 1
-            try: 
+            try:
                 output = func(*args, **kwds)
                 return output
             finally:

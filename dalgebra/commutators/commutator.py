@@ -120,7 +120,7 @@ def GetEquationsForSolution(m : int,
         INPUT:
 
         * ``m``: order bound for the commutator to be found.
-        * ``U``: list or dictionary with the shape for the functions `a_{n-2},\ldots,a_0`. If given as a 
+        * ``U``: list or dictionary with the shape for the functions `a_{n-2},\ldots,a_0`. If given as a
           list, it is read as ``[a_0,\ldots,a_{n-2}]``. If given as a map, then it maps `i \mapsto a_i`.
         * ``n``: provides the order of the operator `L` to be used.
           Then, the coefficients are given in the input ``U``, either as a list or as a dictionary.
@@ -131,16 +131,16 @@ def GetEquationsForSolution(m : int,
 
         OUTPUT:
 
-        A tuple `(L, P, H)` where `L` is the main operator we are looking for a commutator, `P` is an operator 
-        of order at most `m` such that it **commutes** with `L` (see method :func:`generic_normal`) for the given 
-        set of ``U`` whenever the equations in `H` all vanish. 
-        
+        A tuple `(L, P, H)` where `L` is the main operator we are looking for a commutator, `P` is an operator
+        of order at most `m` such that it **commutes** with `L` (see method :func:`generic_normal`) for the given
+        set of ``U`` whenever the equations in `H` all vanish.
+
         If ``extract`` is given, the equations in `H` are in **algebraic** form, i.e., as an ideal.
     '''
     ## We need `n` to know the order that is being used for the `L`.
     if n is None:
         raise ValueError(f"[GEFS] Necessary information: `n` (order of the main operator)")
-    
+
     ## Checking correctness of arguments
     if n not in ZZ or n < 2:
         raise ValueError(f"[GEFS] The value for `n` must be an integer greater than 1")

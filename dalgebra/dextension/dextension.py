@@ -7,7 +7,6 @@ from sage.categories.algebras import Algebras
 from sage.categories.category import Category
 from sage.categories.morphism import Morphism
 from sage.categories.pushout import ConstructionFunctor
-from sage.functions.other import binomial
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
 from sage.rings.infinity import Infinity
@@ -18,7 +17,7 @@ from sage.structure.factory import UniqueFactory
 from sage.structure.parent import Parent
 from sage.symbolic.ring import SR
 
-from typing import Collection, Mapping
+from typing import Collection
 
 from ..dring import AdditiveMap, DFractionField, DRings
 
@@ -32,27 +31,27 @@ class DExtensionFactory(UniqueFactory):
         # We check now whether the base ring is valid or not
         if base not in _DRings:
             raise TypeError("The base ring must have operators attached")
-        
+
         # We check the format of the input
-        if names != None:
+        if names is not None:
             if imgs is None:
                 raise ValueError(f"When providing names, we need to provide the images")
             map = dict(zip(names, imgs))
-        
+
         if map is None:
             raise ValueError(f"No information provided for new d-variables")
         else:
             if base.noperators() == 1: # Common format to tuples
                 map = {k : v if isinstance(v, (list, tuple)) else (v,) for (k,v) in map.items()}
             if not all(
-                isinstance(value, (list, tuple)) and 
-                len(value) == base.noperators() and 
+                isinstance(value, (list, tuple)) and
+                len(value) == base.noperators() and
                 all(isinstance(v, (Element, str)) for v in value)
                 for value in map.values()
             ):
                 raise TypeError(f"Error in the format to provide the images of the new variables")
             map = {k : tuple(str(v) if isinstance(v, Element) else v for v in value) for (k,value) in map.items()}
-        
+
         return (base,tuple(sorted(map.items())))
 
     def create_object(self, _, key) -> DExtension_PolyRing:
@@ -60,6 +59,7 @@ class DExtensionFactory(UniqueFactory):
         map = dict(map) # reconverting to dictionary
 
         return DExtension_PolyRing(base, map)
+
 
 DExtension = DExtensionFactory("dalgebra.dpolynomial.pseudo_doperator.DExtension")
 
@@ -70,13 +70,13 @@ class DExtension_Monomial(dict):
 
         to_rem = [k for k in self if self[k] == 0]
         for k in to_rem:
-            del self[k]    
+            del self[k]
 
-        self.__blocked = True            
+        self.__blocked = True
 
     def is_one(self) -> bool: #: Checks if the monomial is the 1 (i.e., it is empty)
         return len(self) == 0
-    
+
     def degree(self) -> int:
         return sum(self.values())
 
@@ -87,7 +87,7 @@ class DExtension_Monomial(dict):
 
     def __hash__(self) -> int:
         return hash(tuple(sorted(self.items())))
-    
+
     def __mul__(self, other) -> DExtension_Monomial:
         if isinstance(other, DExtension_Monomial):
             result = self.copy() # this is a dict
@@ -112,7 +112,7 @@ class DExtension_Monomial(dict):
                 return DExtension_Monomial(result)
         return NotImplemented
 
-class DExtensionElement(Element): 
+class DExtensionElement(Element):
     def __init__(self, parent, *monomials: tuple[dict, Element], dic: dict[DExtension_Monomial, Element] = None):
         if len(monomials) > 0 and dic is not None:
             raise ValueError(f"Too much information to create a DExtensionElement")
@@ -128,7 +128,7 @@ class DExtensionElement(Element):
     ###################################################################################
     def is_zero(self) -> bool: #: Checker for the zero element
         return len(self.__content) == 0
-    
+
     def is_one(self) -> bool: #: Checker for the one element
         if len(self.__content) != 1:
             return False
@@ -140,34 +140,33 @@ class DExtensionElement(Element):
             return False
         c = next(iter(self.__content.values()))
         return c == 1
-    
+
     def is_variable(self) -> bool: #: Checker for an element to be a variable
         return self.is_monomial() and self.degree() == 1
-    
+
     @cached_method
     def monomials(self) -> tuple[DExtensionElement]:
         P = self.parent()
         return tuple(P.element_class(P, (m, P.base().one())) for m in self.__content.keys())
-    
+
     @cached_method
     def coefficients(self) -> tuple[Element]:
         return tuple(self.__content.values())
-    
+
     def degree(self, variable: DExtensionElement = None):
         variable = variable if variable is None else self.parent()(variable)
         if variable is not None and not variable.is_variable():
             raise TypeError(f"The input to check a degree must be a variable")
-        
+
         if self.is_zero():
             return -Infinity
-        
+
         if variable is None:
             return max(m.degree() for m in self.__content)
         else:
             i = self.parent().gen_index(str(variable))
             return max(m.get(i,0) for m in self.__content)
 
-        
     # ###################################################################################
     # ### Arithmetic operations
     # ###################################################################################
@@ -182,22 +181,22 @@ class DExtensionElement(Element):
     #     ## Adding the negative parts (if possible)
     #     negative = self.__negative.copy()
     #     for (k, oa), ob in other.__negative.items():
-    #         if (k, oa) not in negative: 
+    #         if (k, oa) not in negative:
     #             negative[(k, oa)] = ob
     #         else:
-    #             negative[(k, oa)] += ob                
-        
+    #             negative[(k, oa)] += ob
+
     #     return self.parent().element_class(self.parent(), positive, negative)
-    
+
     # def __neg__(self) -> PseudoDOperator:
     #     positive = {k: -element for (k,element) in self.__positive.items()}
     #     negative = {(k, after): -before for ((k, after), before) in self.__negative.items()}
 
     #     return self.parent().element_class(self.parent(), positive, negative)
-    
+
     # def _sub_(self, other: PseudoDOperator) -> PseudoDOperator:
     #     return self + (-other)
-    
+
     # def _mul_(self, other: PseudoDOperator) -> PseudoDOperator:
     #     sp, sn = self.__positive, self.__negative
     #     op, on = other.__positive, other.__negative
@@ -226,7 +225,7 @@ class DExtensionElement(Element):
     #                     negative[(k-i-n, d)] = binomial(k,i) * a * c.derivative(times=i)
     #                 else:
     #                     negative[(k-i-n, d)] += binomial(k,i) * a * c.derivative(times=i)
-        
+
     #     ## NEGATIVE PART OF SELF
     #     for ((k, b), a) in sn.items():
     #         k = -k # we make it positive
@@ -254,9 +253,9 @@ class DExtensionElement(Element):
     #                     negative[(-n-k, d)] += a*b*c
     #             else:
     #                 return NotImplemented ## These cases are not well implemented yet
-        
+
     #     return self.parent().element_class(self.parent(), positive, negative)
-            
+
     # @cached_method
     # def __pow__(self, power: int) -> PseudoDOperator:
     #     if power == 0:
@@ -268,36 +267,36 @@ class DExtensionElement(Element):
     #     else:
     #         a,A = (self**(power//2 + power % 2), self**(power//2))
     #         return a*A
-        
+
     # def __eq__(self, other) -> bool:
     #     if not isinstance(other, self.__class__) or other.parent() != self.parent():
     #         try:
     #             other = self.parent()(other)
     #         except Exception:
     #             return False
-        
+
     #     return (self - other).is_zero()
-    
+
     # def __ne__(self, other) -> bool:
     #     return not (self == other)
-    
+
     # def __hash__(self) -> int:
     #     return hash((sorted(self.__positive.items()), sorted(self.__negative.items(), key=lambda t : (t[0][0], len(str(t[0][1]))))))
-    
+
     # def __call__(self, element: Element) -> Element:
     #     result = sum((C*element.derivative(times=i) for (i, C) in self.__positive.items()), self.parent().base().zero())
     #     for ((i,a), b) in self.__negative.items():
     #         result += b * (element*a).integrate(times=-i)
 
     #     return result
-    
+
     # @cached_method
     # def __repr__(self) -> str:
     #     if self.is_zero():
     #         return "0"
     #     elif self.is_identity():
     #         return "1"
-        
+
     #     ## We know there is something in the element
     #     g = self.parent().gen_name()
     #     def term_str(order, element):
@@ -311,7 +310,7 @@ class DExtensionElement(Element):
     #         order = f"{g}^({order})" if order < 0 else f"{g}^{order}" if order > 1 else g if order == 1 else ""
 
     #         return "*".join([el for el in [before, order, after] if el != ""])
-        
+
     #     def sorting_key(_tuple):
     #         if not isinstance(_tuple[0], (list, tuple)):
     #             return (_tuple[0],)
@@ -319,17 +318,17 @@ class DExtensionElement(Element):
     #             return (_tuple[0][0], len(str(_tuple[0][1])), str(_tuple[0][1]))
 
     #     return " + ".join(
-    #         term_str(o, el) for (o,el) in 
+    #         term_str(o, el) for (o,el) in
     #         sorted(list(self.__positive.items()) + list(self.__negative.items()), key=sorting_key, reverse=True)
     #     )
-        
+
     # @cached_method
     # def _latex_(self) -> str:
     #     if self.is_zero():
     #         return "0"
     #     elif self.is_identity():
     #         return "1"
-        
+
     #     ## We know there is something in the element
     #     g = self.parent().gen_name()
     #     def term_str(order, element):
@@ -343,13 +342,13 @@ class DExtensionElement(Element):
     #         order = f"{g}^{{{order}}}" if order not in {0,1} else g if order == 1 else ""
 
     #         return f"{before}{order}{after}"
-        
+
     #     def sorting_key(_tuple):
     #         if not isinstance(_tuple[0], (list, tuple)):
     #             return (_tuple[0],)
     #         else:
     #             return (_tuple[0][0], len(str(_tuple[0][1])), str(_tuple[0][1]))
-        
+
     #     return " + ".join(term_str(o, el) for (o,el) in sorted(list(self.__positive.items()) + list(self.__negative.items()), key=sorting_key, reverse=True))
     pass
 
@@ -363,7 +362,7 @@ class DExtension_PolyRing(Parent):
 
     def __init__(self, base : Parent, map: dict[str, str], category=None):
         if base not in _DRings:
-            raise TypeError("The base must be a ring with operators")        
+            raise TypeError("The base must be a ring with operators")
         ## Calling the super __init__ to stablish the categories and the main attributes
         super().__init__(base, category=tuple(self._set_categories(base, category)))
 
@@ -376,7 +375,7 @@ class DExtension_PolyRing(Parent):
         except NotImplementedError:
             self.__poly_ring = PolynomialRing(base, self.__var_names)
         map_imgs = {self.__poly_ring(k) : tuple(self.__poly_ring(v) for v in value) for (k,value) in map.values()}
-        
+
         ## Creating the conversion maps
         self.register_conversion(MapSageToDalgebra_PolyRing(self.__poly_ring, self, dict(zip(self.__var_names,self.__var_names))))
         self.register_conversion(MapDalgebraToSage_PolyRing(self.__poly_ring, self, dict(zip(self.__var_names,self.__var_names))))
@@ -391,25 +390,25 @@ class DExtension_PolyRing(Parent):
     ################################################################################
     def gens(self) -> tuple[DExtensionElement]:
         return self.__gens
-    
+
     def gen_index(self, variable: DExtensionElement | str):
         if not isinstance(variable, str):
             variable = str(variable)
-        
-        if not variable in self.__var_names:
+
+        if variable not in self.__var_names:
             raise ValueError(f"Variable {variable} not found as a generator")
-        
+
         return self.__var_names.index(variable)
-    
+
     def variable(self, name) -> DExtensionElement:
         r'''Create the variable object for a given name'''
         return self.element_class(self, ({self.gen_index(name) : 1}, self.base().one()))
-    
+
     def one(self) -> DExtensionElement:
         return self.element_class(self, (dict(), self.base().one()))
     def zero(self) -> DExtensionElement:
         return self.element_class(self, tuple())
-    
+
     #################################################
     ### Coercion methods
     #################################################
@@ -498,21 +497,21 @@ class DExtension_PolyRing(Parent):
             This method builds the ring of linear operators on the base ring. It only works when the
             ring of operator polynomials only have one variable.
         '''
-        return self
+        raise NotImplementedError(f"Ring of linear operators not yet implemented for D-Extensions")
 
     def inverse_operation(self, element: DExtensionElement, operation: int = 0) -> DExtensionElement:
         if element not in self:
             raise TypeError(f"[inverse_operation] Impossible to apply operation to {element}")
         element = self(element)
 
-        if operation != 0: 
+        if operation != 0:
             raise ValueError(f"The given operation({operation}) is not valid")
 
         try:
             return self.Di * element
         except Exception:
             raise NotImplementedError(f"The multiplication of {self.__gens[0]}^(-1) * {element} can not be computed.")
-        
+
     def to_sage(self):
         return self.__poly_ring
 
@@ -546,7 +545,7 @@ class DExtensionFunctor(ConstructionFunctor):
     def __eq__(self, other):
         if(other.__class__ == self.__class__):
             return self.__names == other.__names and self.__imgs == other.__imgs
-        
+
     def merge(self, other):
         if isinstance(other, DExtensionFunctor):
             sdict = dict(zip(self.__names, self.__imgs))
@@ -556,7 +555,7 @@ class DExtensionFunctor(ConstructionFunctor):
                 if v in odict:
                     if sdict[v] != odict[v]:
                         return None # Incompatible images for the same variable
-            
+
             ## All chekings done
             sdict.update(odict) # since when they coincide they are equal, this simply adds the new
             return DExtensionFunctor(tuple(sdict.keys()), tuple(sdict.values()))
@@ -592,20 +591,20 @@ class MapDalgebraToSage_PolyRing(Morphism):
                 nm *= self.codomain().variable(self.__map[str(v)])**m.degree(v)
             result += nc*nm
         return result
-    
+
 class CoerceFromBase(Morphism):
     def __init__(self, domain, codomain):
         super().__init__(domain, codomain)
 
     def _call_(self, element):
         return self.codomain().element_class(self.codomain(), (dict(), element))
-    
+
 class CoerceBetweenBases(Morphism):
     def __init__(self, domain, codomain):
         if not isinstance(domain, DExtension_PolyRing) or not isinstance(codomain, DExtension_PolyRing):
             raise TypeError("Inconsistent domain/codomain for Morphism")
         elif domain.construction()[0] != codomain.construction()[0]:
             raise ValueError("It seems domain and codomain are not related with the same d-variables")
-        
+
     def _call_(self, element):
         return self.codomain().element_class(self.codomain(), *((m, self.codomain().base()(c)) for (m,c) in element._DExtensionElement__content.items))

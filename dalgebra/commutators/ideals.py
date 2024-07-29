@@ -39,7 +39,7 @@ from typing import Any
 
 from ..dring import DifferentialRing, DRings
 from ..dpolynomial.dpolynomial import DPolynomial, DPolynomialRing, is_DPolynomialRing
-from ..logging.logging import loglevel, cut_string
+from ..logging.logging import count_calls, cut_string, loglevel
 
 _DRings = DRings.__classcall__(DRings)
 
@@ -116,7 +116,7 @@ class SolutionBranch:
     @staticmethod
     def AllSolution(parent):
         return SolutionBranch([0], {}, [], base_parent=parent)
-    
+
     ######################################################################################################
     ### PROPERTIES OF THE CLASS
     ######################################################################################################
@@ -279,12 +279,11 @@ class SolutionBranch:
                     if list(column).count(0) == len(column)-1 and list(column).count(1) == 1:
                         generators.append(self.parent().gens()[i])
                 new_dict = {
-                    str(g) : sum(column[i]*generators[i] for i in range(len(generators))) 
-                    for (g,column) in zip(self.parent().gens(), new_sol.matrix().columns()) 
+                    str(g) : sum(column[i]*generators[i] for i in range(len(generators)))
+                    for (g,column) in zip(self.parent().gens(), new_sol.matrix().columns())
                     if g not in generators
                 }
                 I = [el(**new_dict) for el in self.I.gens()+other.I.gens()]
-        
 
         ## We now analyze the resulting ideal
         I = [el for el in I if el != 0]
@@ -297,20 +296,20 @@ class SolutionBranch:
         return Matrix([[
                     (coeff(self.__solution[str(g)],h) if str(g) in self.__solution else (0 if i != j else 1)) - (1 if i == j else 0)
                 for j,h in enumerate(self.parent().gens())]
-            for i,g in enumerate(self.parent().gens())], base_ring = self.parent().base())
+            for i,g in enumerate(self.parent().gens())], base_ring=self.parent().base())
 
     def is_avoiding(self, to_avoid: list[dict[str, int]]) -> bool:
         return not _check_avoid(self.__solution, to_avoid)
-    
+
     def is_linear(self) -> bool:
         r'''
             Method to know if the Branch has a similar known values.
 
-            Checks whether the solution is of linear fashion, i.e., all elements appearing in 
+            Checks whether the solution is of linear fashion, i.e., all elements appearing in
             the r.h.s. of ``self.__solution`` is linear in the variables.
         '''
         return all(
-            value == 0 or (value.degree() == 1 and (value.ct if hasattr(value, "ct") else value.constant_coefficient()) == 0) 
+            value == 0 or (value.degree() == 1 and (value.ct if hasattr(value, "ct") else value.constant_coefficient()) == 0)
             for value in self.__solution.values()
         )
 
@@ -327,7 +326,7 @@ class SolutionBranch:
 
     def __hash__(self) -> int:
         return hash((self.I, tuple(sorted(self.__solution.keys()))))
-    
+
     def __repr__(self) -> str:
         r'''
             Method to print the Solution Branch
@@ -407,7 +406,7 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: 
     ## Filtering solutions with data to avoid
     logger.info(f"[IDEAL] Removing solutions to avoid (starting with {len(final_branches)})")
     final_branches = [branch for branch in final_branches if branch.is_avoiding(to_avoid)]
-    
+
     ## Filtering subsolutions
     logger.info(f"[IDEAL] Removing subsolutions (starting with {len(final_branches)})")
     output: list[SolutionBranch] = list()
@@ -426,7 +425,7 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: 
     logger.info(f"[IDEAL] Remaining branches: {len(output)}")
     return output
 
-from ..logging.logging import count_calls
+
 @count_calls(logger)
 def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = [], final_parent=None, groebner: bool = True) -> list[SolutionBranch]:
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
@@ -590,12 +589,13 @@ def _check_avoid(partial_solution: dict, to_avoid: list):
     r'''
         Method to check whether a partial solution has an undesired configuration.
 
-        The argument ``to_avoid`` is provided as a list of dictionaries. This can be translated into 
+        The argument ``to_avoid`` is provided as a list of dictionaries. This can be translated into
         a logical formula:
 
         * A dictionary `D` can be translated into `\bigwedge_{(k,v)\in D} k = v`.
         * A list `L` can be translated into `\bigvee_{l \in L} l`.
     '''
     return any(all(partial_solution.get(v, None) == avoiding[v] for v in avoiding) for avoiding in to_avoid)
+
 
 __all__ = ["analyze_ideal"]

@@ -111,13 +111,13 @@ def spectral_operators(*operators: DPolynomial, names: list[str] = None) -> tupl
     '''
     if len(operators) < 2:
         raise ValueError(f"[spectral_operators] This method requires ate least 2 operators")
-    
+
     DR = operators[0].parent()
     if not is_DPolynomialRing(DR):
         raise TypeError(f"[spectral_operators] This method requires the input to be differential operators")
     if any(P.parent() != DR for P in operators[1:]):
         raise TypeError(f"[spectral_operators] Method only implemented with same parent for operators.")
-    
+
     ## Creating the names for the spectral constants
     if names is None:
         default_names = ["lambda_", "mu", "nu", "psi", "zeta"]
@@ -127,7 +127,7 @@ def spectral_operators(*operators: DPolynomial, names: list[str] = None) -> tupl
             names = [f"mu_{i}" for i in range(len(operators))]
     if len(names) < len(operators):
         raise ValueError(f"[spectral_operators] Not enough names provided for the spectral operators")
-            
+
     ## We add the constants to the ring of operators
     DR = DR.add_constants(*names)
     z = DR.gens()[0]

@@ -46,7 +46,7 @@ class PseudoDOperatorRingFactory(UniqueFactory):
             raise TypeError("The base ring must have operators attached")
         elif base.noperators() != 1 or not base.is_differential():
             raise TypeError("The given ring must e a differential ring with just 1 derivation.")
-        
+
         if name in (str(v) for v in base.gens()):
             raise TypeError(f"The given name ({name}) already exist in the base ring.")
 
@@ -58,9 +58,10 @@ class PseudoDOperatorRingFactory(UniqueFactory):
 
         return PseudoDOperator_Ring(base, name)
 
+
 PseudoDOperatorRing = PseudoDOperatorRingFactory("dalgebra.dpolynomial.pseudo_doperator.PseudoDOperator")
 
-class PseudoDOperator(Element): 
+class PseudoDOperator(Element):
     def __init__(self, parent: PseudoDOperator_Ring, positive: Collection[Element] | Mapping[int, Element], negative: Mapping[tuple[int,Element], Element]):
         base = parent.base()
         ## Managing the positive part (usual differential operator)
@@ -102,17 +103,17 @@ class PseudoDOperator(Element):
     ###################################################################################
     def is_zero(self) -> bool: #: Checker for the zero element
         return len(self.__positive) + len(self.__negative) == 0
-    
+
     def is_identity(self) -> bool: #: Checker for the one element of the ring
-        return (len(self.__positive) == 1 and len(self.__negative) == 0 
+        return (len(self.__positive) == 1 and len(self.__negative) == 0
                 and self.__positive.get(0, None) == self.parent().one())
-    
+
     def is_differential(self) -> bool: #: Checker whether the operator is differential or not (i.e., has no pseudo part)
         return len(self.__negative) == 0
-    
+
     def is_simple(self) -> bool: #: Checker for all pseudo part be of the form a*D^{-1} (without afters)
         return all(after == self.parent().one() for (_,after) in self.__negative.keys())
-    
+
     def positive_order(self) -> int:
         r'''
             Method to get the positive order of a pseudo-differential operator.
@@ -125,7 +126,7 @@ class PseudoDOperator(Element):
             return max(k for k,_ in self.__negative)
         else:
             return -Infinity
-        
+
     def negative_order(self) -> int:
         r'''
             Method to get the positive order of a pseudo-differential operator.
@@ -138,15 +139,15 @@ class PseudoDOperator(Element):
             return min(self.__positive)
         else:
             return Infinity
-        
+
     def differential_part(self) -> PseudoDOperator:
         r'''Return a :class:`PseudoDOperator` that contains only the differential part of ``self``'''
         return self.parent().element_class(self.parent(), self.__positive, dict())
-    
+
     def pseudo_part(self) -> PseudoDOperator:
         r'''Return a :class:`PseudoDOperator` that contains only the pseudo-differential part of ``self``'''
         return self.parent().element_class(self.parent(), dict(), self.__negative)
-    
+
     def lie_bracket(self, other: PseudoDOperator) -> PseudoDOperator:
         if not isinstance(other, self.__class__) or other.parent() != self.parent():
             other = self.parent()(other)
@@ -167,22 +168,22 @@ class PseudoDOperator(Element):
         ## Adding the negative parts (if possible)
         negative = self.__negative.copy()
         for (k, oa), ob in other.__negative.items():
-            if (k, oa) not in negative: 
+            if (k, oa) not in negative:
                 negative[(k, oa)] = ob
             else:
-                negative[(k, oa)] += ob                
-        
+                negative[(k, oa)] += ob
+
         return self.parent().element_class(self.parent(), positive, negative)
-    
+
     def __neg__(self) -> PseudoDOperator:
         positive = {k: -element for (k,element) in self.__positive.items()}
         negative = {(k, after): -before for ((k, after), before) in self.__negative.items()}
 
         return self.parent().element_class(self.parent(), positive, negative)
-    
+
     def _sub_(self, other: PseudoDOperator) -> PseudoDOperator:
         return self + (-other)
-    
+
     def _mul_(self, other: PseudoDOperator) -> PseudoDOperator:
         sp, sn = self.__positive, self.__negative
         op, on = other.__positive, other.__negative
@@ -211,7 +212,7 @@ class PseudoDOperator(Element):
                         negative[(k-i-n, d)] = binomial(k,i) * a * c.derivative(times=i)
                     else:
                         negative[(k-i-n, d)] += binomial(k,i) * a * c.derivative(times=i)
-        
+
         ## NEGATIVE PART OF SELF
         for ((k, b), a) in sn.items():
             k = -k # we make it positive
@@ -239,9 +240,9 @@ class PseudoDOperator(Element):
                         negative[(-n-k, d)] += a*b*c
                 else:
                     return NotImplemented ## These cases are not well implemented yet
-        
+
         return self.parent().element_class(self.parent(), positive, negative)
-            
+
     @cached_method
     def __pow__(self, power: int) -> PseudoDOperator:
         if power == 0:
@@ -253,38 +254,39 @@ class PseudoDOperator(Element):
         else:
             a,A = (self**(power//2 + power % 2), self**(power//2))
             return a*A
-        
+
     def __eq__(self, other) -> bool:
         if not isinstance(other, self.__class__) or other.parent() != self.parent():
             try:
                 other = self.parent()(other)
             except Exception:
                 return False
-        
+
         return (self - other).is_zero()
-    
+
     def __ne__(self, other) -> bool:
         return not (self == other)
-    
+
     def __hash__(self) -> int:
         return hash((sorted(self.__positive.items()), sorted(self.__negative.items(), key=lambda t : (t[0][0], len(str(t[0][1]))))))
-    
+
     def __call__(self, element: Element) -> Element:
         result = sum((C*element.derivative(times=i) for (i, C) in self.__positive.items()), self.parent().base().zero())
         for ((i,a), b) in self.__negative.items():
             result += b * (element*a).integrate(times=-i)
 
         return result
-    
+
     @cached_method
     def __repr__(self) -> str:
         if self.is_zero():
             return "0"
         elif self.is_identity():
             return "1"
-        
+
         ## We know there is something in the element
         g = self.parent().gen_name()
+
         def term_str(order, element):
             if isinstance(order, (list, tuple)):
                 order, after = order
@@ -296,7 +298,7 @@ class PseudoDOperator(Element):
             order = f"{g}^({order})" if order < 0 else f"{g}^{order}" if order > 1 else g if order == 1 else ""
 
             return "*".join([el for el in [before, order, after] if el != ""])
-        
+
         def sorting_key(_tuple):
             if not isinstance(_tuple[0], (list, tuple)):
                 return (_tuple[0],)
@@ -304,19 +306,20 @@ class PseudoDOperator(Element):
                 return (_tuple[0][0], len(str(_tuple[0][1])), str(_tuple[0][1]))
 
         return " + ".join(
-            term_str(o, el) for (o,el) in 
+            term_str(o, el) for (o,el) in
             sorted(list(self.__positive.items()) + list(self.__negative.items()), key=sorting_key, reverse=True)
         )
-        
+
     @cached_method
     def _latex_(self) -> str:
         if self.is_zero():
             return "0"
         elif self.is_identity():
             return "1"
-        
+
         ## We know there is something in the element
         g = self.parent().gen_name()
+
         def term_str(order, element):
             if isinstance(order, (list, tuple)):
                 order, after = order
@@ -328,15 +331,15 @@ class PseudoDOperator(Element):
             order = f"{g}^{{{order}}}" if order not in {0,1} else g if order == 1 else ""
 
             return f"{before}{order}{after}"
-        
+
         def sorting_key(_tuple):
             if not isinstance(_tuple[0], (list, tuple)):
                 return (_tuple[0],)
             else:
                 return (_tuple[0][0], len(str(_tuple[0][1])), str(_tuple[0][1]))
-        
+
         return " + ".join(term_str(o, el) for (o,el) in sorted(list(self.__positive.items()) + list(self.__negative.items()), key=sorting_key, reverse=True))
-    
+
 class PseudoDOperator_Ring(Parent):
     r'''
         Class for a ring of pseudo-differential operators over a :class:`~dalgebra.dring.DRing`.
@@ -352,15 +355,15 @@ class PseudoDOperator_Ring(Parent):
 
             \partial f = f' + f\partial,
 
-        for any element `f \in R`. For the `\partial^{-1}`, we use the only reasonable choice, who leads to an infinite 
+        for any element `f \in R`. For the `\partial^{-1}`, we use the only reasonable choice, who leads to an infinite
         tail of negative derivations:
 
         .. MATH::
 
             partial^{-1} f = f\partial^{-1} + \partial^{-1} f' \partial^{-1} = f\partial^{-1} - f'\partial^{-2} + f''\partial^{-3} - \ldots
 
-        This make the computation with these objects terribly difficult. Hence we propose here an implementation of a *subring* 
-        of the pseudo differential operators that include the ring of linear differential operators and allow all possible computations 
+        This make the computation with these objects terribly difficult. Hence we propose here an implementation of a *subring*
+        of the pseudo differential operators that include the ring of linear differential operators and allow all possible computations
         that keep the tail as finit eas possible (keeping all computations exact).
 
         INPUT:
@@ -379,7 +382,7 @@ class PseudoDOperator_Ring(Parent):
             raise TypeError("The base must be a ring with operators")
         if base.noperators() != 1 or not base.is_differential():
             raise TypeError("The base must be a differential ring with 1 operation")
-        
+
         ## Setting the inner variables of the ring
         super().__init__(base, category=tuple(self._set_categories(base, category)))
 
@@ -400,7 +403,7 @@ class PseudoDOperator_Ring(Parent):
         if not isinstance(x, PseudoDOperator):
             x = self.base()(x) # Casting to the base ring
             return self.element_class(self, [x], dict())
-        
+
         ## This should fail if the base of `x.parent()` is not included in `self.base()`
         return self.element_class(self, x._PseudoDOperator__positive, x._PseudoDOperator__negative)
 
@@ -495,7 +498,7 @@ class PseudoDOperator_Ring(Parent):
             raise TypeError(f"[inverse_operation] Impossible to apply operation to {element}")
         element = self(element)
 
-        if operation != 0: 
+        if operation != 0:
             raise ValueError(f"The given operation({operation}) is not valid")
 
         try:
@@ -542,12 +545,12 @@ class CoerceFromBaseMorphism(Morphism):
 
     def _call_(self, element):
         return self.codomain().element_class(self.codomain(), [self.domain()(element)], dict())
-    
+
 class CoerceMapBetweenBases(Morphism):
     def __init__(self, domain, codomain, map):
         if not map.domain() == domain.base() or not map.codomain() == codomain.base():
             raise ValueError("Error in the format for the morphism")
-        
+
         self.base_map = map
 
         super().__init__(domain, codomain)
