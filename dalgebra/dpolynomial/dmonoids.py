@@ -144,6 +144,12 @@ class IndexBijection_Object (Morphism):
         for i in range(quantity):
             yield self(i)
 
+    def iter_sum(self, sum_value: int):
+        starting = sum(IndexBijection_Object.elements_summing(i, self.dim) for i in range(sum_value))
+        quantity = IndexBijection_Object.elements_summing(sum_value, self.dim)
+        for i in range(starting, starting + quantity):
+            yield self(i)
+
 class DMonomial(Element):
     r'''
         Class to represent a differential monomial.
