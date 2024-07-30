@@ -1907,7 +1907,7 @@ class DPolynomialRing_Monoid(Parent):
 
         return self(p)
 
-    def as_polynomials(self, *elements : DPolynomial) -> list[Element]:
+    def as_polynomials(self, *elements : DPolynomial, as_sage: bool = False) -> list[Element]:
         r'''
             Transform the list of elements to polynomials in a common parent
 
@@ -1946,7 +1946,7 @@ class DPolynomialRing_Monoid(Parent):
         # This sort the variables first by index (i.e., alphabetically) then by order
         variables = sorted(variables, key=lambda p : tuple(next(iter(p._content))._variables.items())[0])
 
-        PR = PolynomialRing(self.base(), [str(v) for v in variables], sparse=True)
+        PR = PolynomialRing(self.base().to_sage() if as_sage else self.base(), [str(v) for v in variables], sparse=True)
         try:
             self.register_coercion(PR.hom(variables, self))
         except AssertionError:
@@ -3527,6 +3527,19 @@ class RankingFunction:
         return all(self.is_reduced(p, [a for a in A if a != p]) for p in A)
 
     ################################################################################
+    ### Some values for computations
+    ################################################################################
+    def H(self, A: DPolynomial | Collection[DPolynomial]):
+        r'''
+            Computes the value `H_A` given in page 77 of Kolchin's book.
+
+            This method assumes that `A` is autoreduced.
+        '''
+        if isinstance(A, DPolynomial):
+            return self.initial(A)*self.separant(A)
+        return prod(self.initial(a)*self.separant(a) for a in A)
+
+    ################################################################################
     ### Operations for d-polynomials induced by ranking
     ################################################################################
     def pseudo_quo_rem(self, p: DPolynomial, q: DPolynomial) -> tuple[DPolynomial, dict[tuple,tuple[DPolynomial,DPolynomial]], DPolynomial]:
@@ -3608,21 +3621,29 @@ class RankingFunction:
         z = self.parent().gens()[0]
         return sum(fact*z[k] for (k, (fact,_)) in b.items())
 
-    def partial_remainder(self, p: DPolynomial, A: DPolynomial | list[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
+    def partial_remainder(self, p: DPolynomial | list[DPolynomial], A: DPolynomial | list[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
         r'''
             Method to compute the partial remainder of `p` w.r.t. `A`. See pp. 77-78 of Kolchin's book.
         '''
-        print(f"[partial_remainder] STARTING A PARTIAL REMAINDER COMPUTATION")
         if not isinstance(A, set):
             A = set(A) if isinstance(A, (list, tuple)) else set([A])
 
         if not self.is_autoreduced(A):
             raise TypeError(f"The partial remainder only works for autoreduced sets.")
 
-        return self._partial_remainder(p, A)
-
+        if isinstance(p, DPolynomial): # Lemma 6
+            return self._partial_remainder(p, A)
+        elif isinstance(p, (list,tuple)): # Corollary of Lemma 6
+            par_reds = [self._partial_remainder(q, A) for q in p]
+            Fs = [par[0] for par in par_reds]
+            ss = [par[1] for par in par_reds]
+            t = {a : max(s[a] for s in ss) for a in A}
+            Gs = [prod(self.separant(a)**(t[a]-s[a]) for a in A)*F for (F,s) in zip(Fs, ss)]
+            
+            return Gs, t
+        
     def _partial_remainder(self, p: DPolynomial, A: set[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
-        logger.info(f"[partial_remainder] Starting partial remainder with leader {self.leader(p)} vs {[self.leader(a) for a in A]}")
+        logger.debug(f"[partial_remainder] Starting partial remainder with leader {self.leader(p)} vs {[self.leader(a) for a in A]}")
         F = p
 
         ## We look for the first non-partially reduced
@@ -3654,7 +3675,7 @@ class RankingFunction:
         r'''
             Method to compute the remainder w.r.t. to an autoreduced set `A`. See pp. 78-79 of Kolchin's book.
         '''
-        logger.info(f"[partial_remainder] STARTING A PARTIAL REMAINDER COMPUTATION")
+        logger.info(f"[partial_remainder] ++ STARTING A REMAINDER COMPUTATION")
         if not isinstance(A, set):
             A = set(A) if isinstance(A, (list, tuple)) else set([A])
 
@@ -3669,17 +3690,101 @@ class RankingFunction:
         A = self.sort(list(A)) # sorted from smallest to biggest
 
         i = dict()
-
+        
+        logger.debug(f"[partial_remainder] Starting polynomial: {p}")
         for r in range(len(A)-1, -1, -1): # we go from biggest to smallest
             u, I = self.leader(A[r]), self.initial(A[r])
+            logger.debug(f"[partial_remainder] Getting reduced up to index {r}. Leader: {u}, Initial: {I}")
 
-            I = self.initial(A[r])
             i[A[r]] = max(0, p.degree(u) - A[r].degree(u) + 1)
 
             pa, pp, pu = self.parent().as_polynomials(A[r], I**i[A[r]] * p, u)
-            p = self.parent()(pa.parent()(pp.polynomial(pu) % pa.polynomial(pu)))
+            rem = pp.polynomial(pu) % pa.polynomial(pu)
+            rem = rem.parent().flattening_morphism()(rem) 
 
+            map_to_dring = list()
+            for v in rem.parent().gens():
+                for g in self.parent().gens():
+                    if str(v) in g:
+                        map_to_dring.append(g[g.index(str(v))])
+            hom = rem.parent().hom(map_to_dring, self.parent())
+            
+            logger.debug(f"[partial_remainder] Computed remainder: {rem}")
+            p = hom(rem)
+            logger.debug(f"[partial_remainder] New polynomial: {p}")
+
+        logger.debug(f"[partial_remainder] -- FINISHED A REMAINDER COMPUTATION")
         return p, s, i
+    
+    def autoreduce(self, *polynomials: DPolynomial):
+        r'''
+            Computes an autoreduce set for a given list of polynomials.
+
+            The method works as follows:
+
+            * We extend the set of autoreduce introducing elements one by one.
+            * Each time we add an element, we restart the computation from where this element was placed.
+            * We start by sorting the elements in decreasing ranking order to use .pop for getting the next
+        '''
+        if len(polynomials) == 1 and isinstance(polynomials[0], (list, tuple)):
+            polynomials = polynomials[0]
+        # orig = list(polynomials)
+        logger.info(f"[autoreduce] Computing autoreduce set")
+        polynomials = list(self.sort(polynomials, reverse=True))
+        logger.debug(f"[autoreduce] Starting set (sorted): {polynomials}")
+
+        A = [polynomials.pop()] # `A` is sorted in ascending order
+
+        while len(polynomials) > 0:
+            logger.debug(f"[autoreduce] {len(polynomials)} elements remaining...")
+            p = polynomials.pop()
+            logger.debug(f"[autoreduce] Reducing {p} w.r.t. {A}")
+            p, _, _ = self.remainder(p, A)
+            if p == 0:
+                continue
+
+            logger.debug(f"[autoreduce] Adding {p} to the set...")
+            logger.debug(f"[autoreduce] Current set: {A}")
+            for ti in range(len(A)):
+                if self.compare(p, A[ti]) <= 0:
+                    # new element is smaller than some: we reduce them using this
+                    logger.debug(f"[autoreduce] Added on index {ti}. Adding {len(A)-ti} new elements to the queue")
+                    polynomials += list(reversed(A[ti:]))
+                    A = A[:ti] + [p]
+                    break
+            else: 
+                # new element is bigger than everything, so everything is autoreduced still
+                logger.debug(f"[autoreduce] Found simple new element {p}. We continue")
+                A.append(p)
+        
+        # assert self.is_autoreduced(A), "The result is not autoreduced"
+        # assert all(self.remainder(p, A)[0] == 0 for p in orig), "Some element is not in the final ideal"
+
+        return A
+    
+    def comparative_rank(self, A: DPolynomial | list[DPolynomial], B: DPolynomial | list[DPolynomial]):
+        r'''Implementation of comparative rank defined in page 81 of Kolchin's book'''
+        if isinstance(A, DPolynomial):
+            A = [A]
+        if isinstance(B, DPolynomial):
+            B = [B]
+
+        if not self.is_autoreduced(A):
+            raise TypeError(f"Comparative rank only implemented for autoreduced sets")
+        elif not self.is_autoreduced(B):
+            raise TypeError(f"Comparative rank only implemented for autoreduced sets")
+        
+        A_sorted = self.sort(list(A)) # sorted from smallest to biggest
+        B_sorted = self.sort(list(A)) # sorted from smallest to biggest
+        r = len(A_sorted)
+        s = len(B_sorted)
+
+        for i in range(min(r,s)):
+            cmp = self.compare(A_sorted[i],B_sorted[i])
+            if cmp != 0: # We found a difference in rank
+                return cmp
+        ## We did not find a difference in rank: we compare lengths
+        return (s-r)
 
     def smallest(self, p: DPolynomial, q: DPolynomial) -> tuple[DPolynomial, DPolynomial]:
         r'''
