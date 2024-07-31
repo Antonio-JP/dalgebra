@@ -1119,12 +1119,12 @@ class DSystem:
         elif alg_res == "algebraic":
             logger.info(f"We compute the elimination ideal using algebraic methods")
             return self.__elimination_algebraic
-        elif alg_res == "autoreduce":
+        elif alg_res == "autoreduced":
             logger.info(f"We compute the elimination ideal using algebraic methods")
-            return self.__elimination_autoreduce
+            return self.__elimination_autoreduced
         elif alg_res == "auto":
             logger.info(f"We compute the elimination ideal using algebraic methods")
-            return self.__elimination_autoreduce
+            return self.__elimination_autoreduced
         else:
             raise NotImplementedError(f"Method {alg_res} for elimination ideal not recognized")
         
@@ -1195,12 +1195,12 @@ class DSystem:
         logger.info(f"[eliminate-algebraic] No elimination ideal found until {bound_L}. Aborting")
         return 0
 
-    def __elimination_autoreduce(self, *variables, bound_L: int = 10):
+    def __elimination_autoreduced(self, *variables, bound_L: int = 10):
         if bound_L in ZZ:
             bound_L = self.size()*[bound_L]
         rem_vars = tuple(v for v in self.parent().gens() if v not in variables)
         r = self.parent().ranking(rem_vars + variables, "elimination")
-        A = r.autoreduce(*self.equations())
+        A = r.autoreduced(*self.equations())
         ## Get the equations without the `variables`
         A = [p for p in A if all(g not in p.infinite_variables() for g in variables)]
 

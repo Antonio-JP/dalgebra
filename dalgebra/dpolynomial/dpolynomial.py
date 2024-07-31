@@ -1131,7 +1131,7 @@ class DPolynomial(Element):
                 Traceback (most recent call last):
                 ...
                 TypeError: The given polynomial ... is not linear or homogeneous over u_*
-                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homoeneous in v_*
+                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homogeneous in v_*
                 sage: f2._mathematica_(v)
                 Traceback (most recent call last):
                 ...
@@ -2537,6 +2537,8 @@ class DPolynomialRing_Monoid(Parent):
 
             This method creates a ranking for ``self`` using the arguments as in :class:`RankingFunction`.
         '''
+        if not self.is_differential():
+            raise NotImplementedError(f"Rankings only implemented for differential polynomials")
         if ordering is None:
             ordering = self.gens()
         elif isinstance(ordering, list):
@@ -3526,6 +3528,15 @@ class RankingFunction:
 
         return all(self.is_reduced(p, [a for a in A if a != p]) for p in A)
 
+    def is_characteristic_set(self, A: list[DPolynomial]) -> bool:
+        r'''
+            Method that checks whether a set of d-polynomials is a characteristic set
+
+            This method uses the definition on page 82 of characteristic set on Kolchin's book,
+            namely, an autoreduced set is a characteristic set if it does not reduce to zero 
+            the separants of its elements.
+        '''
+        return self.is_autoreduced(A) and all(self.remainder(self.separant(a), A)[0] != 0 for a in A)
     ################################################################################
     ### Some values for computations
     ################################################################################
@@ -3644,30 +3655,36 @@ class RankingFunction:
         
     def _partial_remainder(self, p: DPolynomial, A: set[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
         logger.debug(f"[partial_remainder] Starting partial remainder with leader {self.leader(p)} vs {[self.leader(a) for a in A]}")
-        F = p
+        
+        ## Special case: element in base field/ring
+        if p in self.parent().base():
+            return p, {a: 0 for a in A}
 
         ## We look for the first non-partially reduced
+        F = p
         A_sorted = self.sort(list(A), True) # sorted from biggest to smallest
         U = [self.leader(a) for a in A_sorted]
 
         for (a, u) in zip(A_sorted, U):
             gu = u.infinite_variables()[0]
-            v = self.sort([g for g in F.variables() if g in gu], True)[0]
-            if self.compare_variables(u, v) < 0: # v > u
-                logger.debug(f"[partial_remainder] Found element not partially reduced to")
-                to_apply = tuple([ov - ou for (ou, ov) in zip(gu.index(u, True), gu.index(v, True))])
-                logger.debug(f"[partial_remainder] Operation to apply: {to_apply}")
-                Sc = self.separant(a)
-                e = F.degree(v)
-                T = Sc*v - self.parent().apply_operations(a, to_apply)
-                logger.debug(f"[partial_remainder] Current v: {v}")
-                logger.debug(f"[partial_remainder] Found T: {T}")
-                G = Sc**e * F.coefficient_without_var(v) + sum(Sc**(e-i) * F.coefficient_full(v**i) * T**i for i in range(1, F.degree(v)+1))
-                logger.debug(f"[partial_remainder] Computed G: {G}")
+            vs = self.sort([g for g in F.variables() if g in gu], True)
+            if len(vs) > 0:
+                v = vs[0]
+                if self.compare_variables(u, v) < 0: # v > u
+                    logger.debug(f"[partial_remainder] Found element not partially reduced to")
+                    to_apply = tuple([ov - ou for (ou, ov) in zip(gu.index(u, True), gu.index(v, True))])
+                    logger.debug(f"[partial_remainder] Operation to apply: {to_apply}")
+                    Sc = self.separant(a)
+                    e = F.degree(v)
+                    T = Sc*v - self.parent().apply_operations(a, to_apply)
+                    logger.debug(f"[partial_remainder] Current v: {v}")
+                    logger.debug(f"[partial_remainder] Found T: {T}")
+                    G = Sc**e * F.coefficient_without_var(v) + sum(Sc**(e-i) * F.coefficient_full(v**i) * T**i for i in range(1, F.degree(v)+1))
+                    logger.debug(f"[partial_remainder] Computed G: {G}")
 
-                rF, rs = self._partial_remainder(G, A)
-                rs[a] += e
-                return rF, rs
+                    rF, rs = self._partial_remainder(G, A)
+                    rs[a] += e
+                    return rF, rs
 
         return F, {a : 0 for a in A}
 
@@ -3716,45 +3733,63 @@ class RankingFunction:
         logger.debug(f"[partial_remainder] -- FINISHED A REMAINDER COMPUTATION")
         return p, s, i
     
-    def autoreduce(self, *polynomials: DPolynomial):
+    def autoreduced(self, *polynomials: DPolynomial):
         r'''
-            Computes an autoreduce set for a given list of polynomials.
+            Computes an autoreduced set for a given list of polynomials.
 
             The method works as follows:
 
-            * We extend the set of autoreduce introducing elements one by one.
+            * We extend the set of autoreduced introducing elements one by one.
             * Each time we add an element, we restart the computation from where this element was placed.
             * We start by sorting the elements in decreasing ranking order to use .pop for getting the next
+
+            INPUT:
+
+            * A list of :class:`DPolynomial` to compute the autoreduced set that generates the same differential ideal.
+
+            OUTPUT:
+
+            A list of :class:`DPolynomial` that are autoreduced and generate the same differential ideal that the input.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
+                sage: r = R.ranking([v,u], "elimination")
+                sage: A = r.autoreduced(system.equations()); A
+                [-v_0 + x*v_1 + (x^3 - x^2)*v_3 - x^3*v_4,
+                 x*u_0 + (x - 1)*v_0 - x^2*v_2 + x^2*v_3]
         '''
         if len(polynomials) == 1 and isinstance(polynomials[0], (list, tuple)):
             polynomials = polynomials[0]
         # orig = list(polynomials)
-        logger.info(f"[autoreduce] Computing autoreduce set")
+        logger.info(f"[autoreduced] Computing autoreduced set")
         polynomials = list(self.sort(polynomials, reverse=True))
-        logger.debug(f"[autoreduce] Starting set (sorted): {polynomials}")
+        logger.debug(f"[autoreduced] Starting set (sorted): {polynomials}")
 
         A = [polynomials.pop()] # `A` is sorted in ascending order
 
         while len(polynomials) > 0:
-            logger.debug(f"[autoreduce] {len(polynomials)} elements remaining...")
+            logger.debug(f"[autoreduced] {len(polynomials)} elements remaining...")
             p = polynomials.pop()
-            logger.debug(f"[autoreduce] Reducing {p} w.r.t. {A}")
+            logger.debug(f"[autoreduced] Reducing {p} w.r.t. {A}")
             p, _, _ = self.remainder(p, A)
             if p == 0:
                 continue
 
-            logger.debug(f"[autoreduce] Adding {p} to the set...")
-            logger.debug(f"[autoreduce] Current set: {A}")
+            logger.debug(f"[autoreduced] Adding {p} to the set...")
+            logger.debug(f"[autoreduced] Current set: {A}")
             for ti in range(len(A)):
                 if self.compare(p, A[ti]) <= 0:
                     # new element is smaller than some: we reduce them using this
-                    logger.debug(f"[autoreduce] Added on index {ti}. Adding {len(A)-ti} new elements to the queue")
+                    logger.debug(f"[autoreduced] Added on index {ti}. Adding {len(A)-ti} new elements to the queue")
                     polynomials += list(reversed(A[ti:]))
                     A = A[:ti] + [p]
                     break
             else: 
                 # new element is bigger than everything, so everything is autoreduced still
-                logger.debug(f"[autoreduce] Found simple new element {p}. We continue")
+                logger.debug(f"[autoreduced] Found simple new element {p}. We continue")
                 A.append(p)
         
         # assert self.is_autoreduced(A), "The result is not autoreduced"
