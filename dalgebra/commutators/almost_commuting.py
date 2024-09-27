@@ -176,7 +176,7 @@ from ..logging.logging import cache_in_file
 ### METHODS FOR COMPUTING GENERIC HIERARCHIES
 ###
 #################################################################################################
-def __names_variables(order:int, var_name: str, *, simplify_names: bool = True) -> list[str]:
+def __names_variables(order:int, var_name: str, *, simplify_names: bool = True, full_order = False) -> list[str]:
     r'''
         Method that creates a list with the names of the variables for an operator in normal form.
 
@@ -212,7 +212,84 @@ def __names_variables(order:int, var_name: str, *, simplify_names: bool = True) 
             sage: __names_variables(2, "u", simplify_names=False)
             ['u_2']
     '''
-    return [f"{var_name}_{i+2}" for i in range(order-1)] if (order > 2 or (not simplify_names)) else [var_name] if order == 2 else []
+    if full_order:
+        if order == 0:
+            return [f"{var_name}"]
+        elif order > 0:
+            return [f"{var_name}_{i}" for i in range(order+1)]
+        else:
+            return []
+    else:
+        return [f"{var_name}_{i+2}" for i in range(order-1)] if (order > 2 or (not simplify_names)) else [var_name] if order == 2 else []
+
+@lru_cache(maxsize=64)
+def generic_operator(n: int,
+                     name_var: str = "u", name_partial: str = "z", *,
+                     output_ring: DRings.ParentMethods | None = None, simplify_names: bool = True
+) -> DPolynomial:
+    r'''
+        Method to create the generic differential operator of order `n`.
+
+        A fully generic operator of order `n` has the following shape
+
+        .. MATH::
+
+            L = u_0\partial^n + u_1\partial^{n-1} + u_{2}\partial^{n-2} + \ldots + u_{n-1}\partial + u_n,
+
+        where all the elements `u_i` are differential variables. This method creates this
+        operator for a given set of differential variables `u` and a specific order.
+
+        INPUT:
+
+        * ``n``: the order of the generic operator in normal form `L`.
+        * ``name_var`` (optional): base name for the `u` variables that will appear in `L`.
+        * ``name_partial`` (optional): base name for the differential variable to represent `\partial`.
+        * ``output_ring`` (optional): if provided, we use this ring as a base ring for creating the differential operator.
+          It raises an error if any of the required variables is not included in the ring.
+        * ``simplify_names`` (optional): used for the argument ``simplify_names`` in method :func:`__names_variables`.
+
+        OUTPUT:
+
+        An generic operator in a :class:`~dalgebra.dpolynomial.dpolynomial.DPolynomialRing_Monoid` of order ``n``.
+
+        If `n < 0` we raise a :class:`ValueError`.
+
+        EXAMPLES::
+
+            sage: from dalgebra.commutators.almost_commuting import generic_operator
+            sage: generic_operator(2)
+            u_0_0*z_2 + u_1_0*z_1 + u_2_0*z_0
+            sage: generic_operator(3)
+            u_0_0*z_3 + u_1_0*z_2 + u_2_0*z_1 + u_3_0*z_0
+            sage: generic_operator(4)
+            u_0_0*z_4 + u_1_0*z_3 + u_2_0*z_2 + u_3_0*z_1 + u_4_0*z_0 
+            sage: generic_operator(4, "a")
+            a_0_0*z_4 + a_1_0*z_3 + a_2_0*z_2 + a_3_0*z_1 + a_4_0*z_0
+            sage: generic_operator(4, "a", "p")
+            a_0_0*p_4 + a_1_0*p_3 + a_2_0*p_2 + a_3_0*p_1 + a_4_0*p_0
+            sage: from dalgebra import DifferentialPolynomialRing
+            sage: R = DifferentialPolynomialRing(QQ, ["u_0", "u_1", "u_2", "u_3", "u_4", "p", "a", "z"])
+            sage: generic_operator(4, output_ring=R).parent() is R
+            True
+            sage: generic_operator(4).parent()
+            Ring of operator polynomials in (u_0, u_1, u_2, u_3, u_4, z) over Differential Ring [[Rational Field], (0,)]
+    '''
+    ## Checking the input
+    if (n not in ZZ) or ZZ(n) < 0:
+        raise ValueError(f"[generic] The value {n = } must be a positive integer")
+    if name_var == name_partial:
+        raise ValueError(f"[generic] The names for the differential variables must be different. Given {name_var} and {name_partial}")
+    if output_ring is not None and not isinstance(output_ring, DPolynomialRing_Monoid):
+        raise TypeError(f"[generic] The optional argument `output_ring` must be a ring of d-polynomials or ``None``")
+
+    names_u = __names_variables(n, name_var, simplify_names=simplify_names, full_order=True)
+    output_ring = DifferentialPolynomialRing(QQ, names_u + [name_partial]) if output_ring is None else output_ring
+    try:
+        output_z = output_ring.gen(name_partial)
+        output_u = [output_ring.gen(name) for name in names_u] # output_u = [u0,u1,u2, u3, ..., un]
+    except ValueError:
+        raise IndexError(f"[generic] An output ring was given but does not include all necessary variable: {names_u + [name_partial]}")
+    return sum(output_u[i][0]*output_z[n-i] for i in range(n+1))
 
 @lru_cache(maxsize=64)
 def generic_normal(n: int,
@@ -266,7 +343,6 @@ def generic_normal(n: int,
             True
             sage: generic_normal(4).parent()
             Ring of operator polynomials in (u_2, u_3, u_4, z) over Differential Ring [[Rational Field], (0,)]
-
     '''
     ## Checking the input
     if (n not in ZZ) or ZZ(n) <= 0:
