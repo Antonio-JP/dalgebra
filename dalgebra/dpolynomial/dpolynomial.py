@@ -162,6 +162,12 @@ class DPolynomial(Element):
 
         return max(sum(m.degree(next(iter(v._content))) for v in variables) for m in self.monomials()) <= 1
 
+    def is_linear_operator(self, variable: DMonomialGen) -> bool:
+        r'''
+            Method to check if a d-polynomial is a linear d-operator w.r.t. a particular variable.
+        '''
+        return self.is_linear([variable]) and self.constant_coefficient(variable) == self.parent().zero()
+
     def divides(self, other: DPolynomial) -> bool:
         pself, pother = self.parent().as_polynomials(self, other)
         return pself.divides(pother)
@@ -2832,6 +2838,52 @@ class MapDalgebraToSage_Infinite(Morphism):
             output += nc*nm
         return output
 
+class DOperatorAutomorphism (Morphism):
+    r'''
+        Class representing automorphisms of rings of d-operators.
+
+        This class requires to know a variable to be fixed as the "d-operator" 
+        and d-polynomials will be considered operators.
+    '''
+    def __init__(self, domain, variable: str | DPolynomialGen, image: DPolynomial):
+        if not isinstance(domain, DPolynomialRing_Monoid):
+            raise TypeError(f"DOperatorAutomorphism can only be defined over a DPolynomialRing")
+        
+        if not isinstance(variable, DPolynomialGen):
+            variable = domain.gen(variable)
+
+        if not variable in domain.gens():
+            raise ValueError(f"The given variable is not in the DPolynomialRing.")
+        
+        ## Checking the coherence of the image to have an automorphism.
+        image = domain(image)
+        if not image.is_linear_operator(variable) or image.order(variable) != 1:
+            raise TypeError(f"The image for {variable} must be a linear operator of order one. Got {image}")
+        
+        super().__init__(domain, domain)
+        
+        self.__variable = variable
+        self.__image = image
+
+    @cached_method
+    def variable_pow(self, pow: int) -> DPolynomial:
+        if pow == 0:
+            return self.__variable[0]
+        elif pow == 1:
+            return self.__image
+        else:
+            var_name = self.__variable._name
+            return self.variable_pow(pow//2)(**{var_name: self.variable_pow(pow//2 + pow%2)})
+
+    def _call_(self, p: DPolynomial) -> DPolynomial:
+        z = self.__variable
+        if not p.is_linear_operator(z):
+            raise TypeError(f"The polynomial {p} is not a linear operator on {z}")
+        
+        return sum(
+            (p.coefficient_full(z[i]) * self.variable_pow(i) for i in range(p.order(z)+1) if p.coefficient_full(z[i]) != 0), 
+            self.domain().zero())
+        
 #################################################################################################
 ### WEIGHT AND RANKING FUNCTIONS
 #################################################################################################
@@ -4007,6 +4059,6 @@ class OrderlyRanking(RankingFunction):
 
 
 __all__ = [
-    "DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing", # names imported
+    "DPolynomialRing", "DifferentialPolynomialRing", "DifferencePolynomialRing", "is_DPolynomialRing", "DOperatorAutomorphism", # names imported
     "RWOPolynomialRing", "is_RWOPolynomialRing" # deprecated names (backward compatibilities)
 ]
