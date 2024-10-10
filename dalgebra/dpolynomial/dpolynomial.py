@@ -162,11 +162,6 @@ class DPolynomial(Element):
 
         return max(sum(m.degree(next(iter(v._content))) for v in variables) for m in self.monomials()) <= 1
 
-    def is_linear_operator(self, variable: DMonomialGen) -> bool:
-        r'''
-            Method to check if a d-polynomial is a linear d-operator w.r.t. a particular variable.
-        '''
-        return self.is_linear([variable]) and self.constant_coefficient(variable) == self.parent().zero()
 
     def divides(self, other: DPolynomial) -> bool:
         pself, pother = self.parent().as_polynomials(self, other)
@@ -211,7 +206,7 @@ class DPolynomial(Element):
         r'''
             Return a list of elements in the ``self.parent().base()`` of the coefficients.
 
-            If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
+            If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` as the main variables.
             This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in
             `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
         '''
@@ -804,6 +799,52 @@ class DPolynomial(Element):
         '''
         output = {m : coeff.reduce_algebraic(polynomials) for (m, coeff) in zip(self.monomials(), self.coefficients())}
         return self.parent().element_class(self.parent(), output)
+
+    ###################################################################################
+    ### Method for linear d-operators
+    ###################################################################################
+    def is_linear_operator(self, variable: DMonomialGen) -> bool:
+        r'''
+            Method to check if a d-polynomial is a linear d-operator w.r.t. a particular variable.
+        '''
+        return self.is_linear([variable]) and self.constant_coefficient(variable) == self.parent().zero()
+    
+    def normalizing_automorphism(self, variable: DMonomialGen, leading: DPolynomial = 1):
+        r'''
+            Method to get the normalizing automorphism for ``self``.
+
+            A _normalized_ operator is an equivalent (up to automorphism) operator that has no coefficient of order `n-1`, where
+            `n = \ord(self)`. 
+            
+            Let ``self`` be the operator `L = a_n\partial^n + \ldots + a_0`. These normalizing automorphism `\varphi` maps the 
+            linear d-operator to a linear operator of order 1 of the form `b\partial + c`, where `\partial` is the linear operator,
+            and the coefficients `b` and `c` satisfy certain conditions, depending on the nature of the linear operator.
+
+            * If the operator is a derivation, then it holds that `\partial b = b\partial + b'`. In this case, we can see that normalized
+              operators always exist for `ord(L) > 1`, when:
+
+            .. MATH::
+
+                \frac{-2 \varphi(a_{n-1})}{n(n-1)\varphi(a_n)} = c + \frac{(n-2)}{3}b'.
+
+            * If the operator is a shift, then it holds that `\partial b = b'\partial` (where now, `b'` represents the shift of the element
+            `b`). Hence, we can find a normalizing automorphism when
+
+            .. MATH::
+
+                \frac{-\varphi(a_{n-1})}{\varphi(a_n)} = c + c' + \ldots + c^{(n-1)}
+
+            INPUT:
+
+            * ``variable``: the d-variable which will be taken as `\partial`.
+            * ``leading``: a value for `b` (takes `1` by default)
+
+            OUTPUT:
+
+            A :class:`DOperatorAutomorphism_Element` representing the normalizing automorphism.
+        '''
+
+        pass
 
     ###################################################################################
     ### Sylvester methods
@@ -2838,16 +2879,12 @@ class MapDalgebraToSage_Infinite(Morphism):
             output += nc*nm
         return output
 
-class DOperatorAutomorphism (Morphism):
-    r'''
-        Class representing automorphisms of rings of d-operators.
-
-        This class requires to know a variable to be fixed as the "d-operator" 
-        and d-polynomials will be considered operators.
-    '''
-    def __init__(self, domain, variable: str | DPolynomialGen, image: DPolynomial):
+class DOperatorAutomorphismFactory(UniqueFactory):
+    def create_key(self, domain, variable: str | DPolynomialGen, image: DPolynomial):
         if not isinstance(domain, DPolynomialRing_Monoid):
             raise TypeError(f"DOperatorAutomorphism can only be defined over a DPolynomialRing")
+        elif domain.noperators() != 1:
+            raise TypeError(f"DOperatorAutomorphism only valid for domains with only 1 operation.")
         
         if not isinstance(variable, DPolynomialGen):
             variable = domain.gen(variable)
@@ -2860,20 +2897,30 @@ class DOperatorAutomorphism (Morphism):
         if not image.is_linear_operator(variable) or image.order(variable) != 1:
             raise TypeError(f"The image for {variable} must be a linear operator of order one. Got {image}")
         
+        return tuple([domain, variable, image])
+
+    def create_object(self, _, key):
+        domain, variable, image = key
+        return DOperatorAutomorphism_Element(domain, variable, image)
+
+DOperatorAutomorphism = DOperatorAutomorphismFactory("dalgebra.dpolynomial.dpolynomial.DOperatorAutomorphism")
+
+class DOperatorAutomorphism_Element (Morphism):
+    r'''
+        Class representing automorphisms of rings of d-operators.
+
+        This class requires to know a variable to be fixed as the "d-operator" 
+        and d-polynomials will be considered operators.
+    '''
+    def __init__(self, domain, variable: str | DPolynomialGen, image: DPolynomial):
+        ## We can assume that ``domain``, ``variable`` and ``image`` has been all checked in the factory
         super().__init__(domain, domain)
         
         self.__variable = variable
         self.__image = image
 
-    @cached_method
     def variable_pow(self, pow: int) -> DPolynomial:
-        if pow == 0:
-            return self.__variable[0]
-        elif pow == 1:
-            return self.__image
-        else:
-            var_name = self.__variable._name
-            return self.variable_pow(pow//2)(**{var_name: self.variable_pow(pow//2 + pow%2)})
+        return self.__image.sym_power(pow, self.__variable)
 
     def _call_(self, p: DPolynomial) -> DPolynomial:
         z = self.__variable
@@ -2883,6 +2930,41 @@ class DOperatorAutomorphism (Morphism):
         return sum(
             (p.coefficient_full(z[i]) * self.variable_pow(i) for i in range(p.order(z)+1) if p.coefficient_full(z[i]) != 0), 
             self.domain().zero())
+    
+    def inverse(self) -> DOperatorAutomorphism_Element:
+        r'''
+            Method to compute the inverse automorphism.
+
+            If `\varphi` is an automorphism in a ring of linear operators of the form `\mathbb{K}[\partial]`, then
+            we have that `\varphi|_{\mathbb{K}}` is an automorphism of `\mathbb{K}` and that `\varphi(\partial) = a\partial + b`
+            for some `a,b\in \mathbb{K}` and `a \neq 0`.
+
+            Then, we can easily compute the inverse automorphism by taking:
+
+            * `\varphi^{-1}|_{\mathbb{K}} = \left(\varphi|_{\mathbb{K}}\right)^{-1}`,
+            * `\varphi^{-1}(\partial) = \frac{1}{\varphi^{-1}(a)}\partial - \frac{\varphi^{-1}(b)}{\varphi^{-1}(a)}`.
+
+            This definition only works when `a = 1` or both `a` and `b` are constants.
+
+            This method compupte this inverse in a natural way.
+        '''
+        ## TODO: This is failing when taking z[2]. Why?
+        z = self.__variable # this is my linear operator
+        a = self.__image.coefficient_full(z[1])
+        b = self.__image.coefficient_full(z[0])
+
+        if a not in self.domain().base():
+            raise TypeError(f"The leading coefficient must be an element in the ground field to have an inverse")
+        a = self.domain().base()(a)
+
+        if a.domain().is_differential(): ## We check the conditions to build the inverse in the differential case
+            if a != 1 and (a.derivative() != 0 or b.derivative() != 0):
+                raise ValueError(f"We do not know how to compute an inverse (CHECK THEORY)")
+        if a.domain().is_difference(): ## We check the conditions to build the inverse in the difference case
+            if b != 0:
+                raise ValueError(f"In order to have an inverse we need `b != 0`")
+
+        return DOperatorAutomorphism(self.domain(), self.__variable, (self.domain().base().one()/a)*z[1] - (b/a)*z[0])
         
 #################################################################################################
 ### WEIGHT AND RANKING FUNCTIONS
