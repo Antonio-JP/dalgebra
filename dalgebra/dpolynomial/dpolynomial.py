@@ -843,8 +843,25 @@ class DPolynomial(Element):
 
             A :class:`DOperatorAutomorphism_Element` representing the normalizing automorphism.
         '''
+        if not self.is_linear_operator(variable):
+            raise TypeError(f"The operator is not linear in the given variable ({variable})")
+        if self.order(variable) < 2:
+            raise ValueError(f"The operator needs to have order at least 2.")
+        
+        if self.parent().is_differential(): ## The differential case
+            ord = self.order(variable)
+            b = self.parent()(leading)
+            c = 1/(ord*(ord-1)) * self.coefficient_full(variable[ord-1]) / self.coefficient_full(variable[ord]) + (ord-2)/3*b.derivative()
 
-        pass
+            return DOperatorAutomorphism(self.parent(), variable, b*variable[1] - c*variable[0])
+        elif self.parent().is_difference(): ## The difference case
+            raise TypeError(f"The difference case is not implemented: require solving a non-linear difference equation.")
+        else:
+            raise NotImplementedError(f"The domain is not difference nor differential.")
+        
+    @cached_method
+    def normal_form(self, variable: DMonomialGen, leading: DPolynomial = 1):
+        return self.normalizing_automorphism(variable, leading)(self)
 
     ###################################################################################
     ### Sylvester methods
@@ -1178,7 +1195,7 @@ class DPolynomial(Element):
                 Traceback (most recent call last):
                 ...
                 TypeError: The given polynomial ... is not linear or homogeneous over u_*
-                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homoeneous in v_*
+                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homogeneous in v_*
                 sage: f2._mathematica_(v)
                 Traceback (most recent call last):
                 ...
@@ -2924,13 +2941,15 @@ class DOperatorAutomorphism_Element (Morphism):
 
     def _call_(self, p: DPolynomial) -> DPolynomial:
         z = self.__variable
-        if not p.is_linear_operator(z):
-            raise TypeError(f"The polynomial {p} is not a linear operator on {z}")
+        if p.order(z) > 0 and p.is_linear_operator(z):
+            return sum(
+                (p.coefficient_full(z[i]) * self.variable_pow(i) for i in range(p.order(z)+1) if p.coefficient_full(z[i]) != 0), 
+                self.domain().zero())
+        elif p.order(z) == 0:
+            return p ## nothing to do: we have the identity
+        else:
+            raise TypeError(f"The polynomial {p} is not a linear operator on {z} or an element on the ground field")
         
-        return sum(
-            (p.coefficient_full(z[i]) * self.variable_pow(i) for i in range(p.order(z)+1) if p.coefficient_full(z[i]) != 0), 
-            self.domain().zero())
-    
     def inverse(self) -> DOperatorAutomorphism_Element:
         r'''
             Method to compute the inverse automorphism.
@@ -2946,7 +2965,7 @@ class DOperatorAutomorphism_Element (Morphism):
 
             This definition only works when `a = 1` or both `a` and `b` are constants.
 
-            This method compupte this inverse in a natural way.
+            This method compute this inverse in a natural way.
         '''
         ## TODO: This is failing when taking z[2]. Why?
         z = self.__variable # this is my linear operator
@@ -2957,14 +2976,17 @@ class DOperatorAutomorphism_Element (Morphism):
             raise TypeError(f"The leading coefficient must be an element in the ground field to have an inverse")
         a = self.domain().base()(a)
 
-        if a.domain().is_differential(): ## We check the conditions to build the inverse in the differential case
+        if self.domain().is_differential(): ## We check the conditions to build the inverse in the differential case
             if a != 1 and (a.derivative() != 0 or b.derivative() != 0):
                 raise ValueError(f"We do not know how to compute an inverse (CHECK THEORY)")
-        if a.domain().is_difference(): ## We check the conditions to build the inverse in the difference case
+        if self.domain().is_difference(): ## We check the conditions to build the inverse in the difference case
             if b != 0:
                 raise ValueError(f"In order to have an inverse we need `b != 0`")
 
         return DOperatorAutomorphism(self.domain(), self.__variable, (self.domain().base().one()/a)*z[1] - (b/a)*z[0])
+    
+    def __repr__(self) -> str:
+        return f"Endomorphism of {self.domain()} as linear operators on {self.__variable} with\n\t{self.__variable[1]} --> {self.__image}"
         
 #################################################################################################
 ### WEIGHT AND RANKING FUNCTIONS
