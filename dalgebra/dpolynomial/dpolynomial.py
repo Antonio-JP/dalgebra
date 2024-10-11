@@ -809,7 +809,8 @@ class DPolynomial(Element):
         '''
         return self.is_linear([variable]) and self.constant_coefficient(variable) == self.parent().zero()
     
-    def normalizing_automorphism(self, variable: DMonomialGen, leading: DPolynomial = 1):
+    @cached_method
+    def normalizing_automorphism(self, variable: DMonomialGen, leading: DPolynomial = 1, to_monic: bool = False):
         r'''
             Method to get the normalizing automorphism for ``self``.
 
@@ -847,10 +848,17 @@ class DPolynomial(Element):
             raise TypeError(f"The operator is not linear in the given variable ({variable})")
         if self.order(variable) < 2:
             raise ValueError(f"The operator needs to have order at least 2.")
-        
+
         if self.parent().is_differential(): ## The differential case
             ord = self.order(variable)
-            b = self.parent()(leading)
+            ## If we requested a leading coefficient, we keep it that way
+            if leading != 1 or (not to_monic):
+                b = self.parent().base()(leading)
+            else: ## We create the coefficient to guarantee the result is monic
+                try:
+                    b = 1/self.parent().base()(self.coefficient_full(variable[ord]))**(1/ord)
+                except (ValueError, ZeroDivisionError):
+                    raise ValueError(f"Impossible to compute monic normal form: the leading coefficient is not a {ord}-power")
             c = 1/(ord*(ord-1)) * self.coefficient_full(variable[ord-1]) / self.coefficient_full(variable[ord]) + (ord-2)/3*b.derivative()
 
             return DOperatorAutomorphism(self.parent(), variable, b*variable[1] - c*variable[0])
@@ -858,10 +866,40 @@ class DPolynomial(Element):
             raise TypeError(f"The difference case is not implemented: require solving a non-linear difference equation.")
         else:
             raise NotImplementedError(f"The domain is not difference nor differential.")
-        
+
     @cached_method
-    def normal_form(self, variable: DMonomialGen, leading: DPolynomial = 1):
-        return self.normalizing_automorphism(variable, leading)(self)
+    def inverted_normalizing_automorphism(self, variable: DMonomialGen) -> DOperatorAutomorphism_Element:
+        r'''
+            Similar to :func:`normalizing_automorphism`, but it computes a `\varphi` such that ``self`` is the image of
+            monic operator in normal form.
+        '''
+        if not self.is_linear_operator(variable):
+            raise TypeError(f"The operator is not linear in the given variable ({variable})")
+        if self.order(variable) < 2:
+            raise ValueError(f"The operator needs to have order at least 2.")
+
+        if self.parent().is_differential(): ## The differential case
+            ord = self.order(variable)
+            
+            try:
+                a = self.parent().base()(self.coefficient_full(variable[ord]))**(1/ord)
+            except (ValueError, ZeroDivisionError):
+                raise ValueError(f"We could not find a {ord}-root of the element {self.coefficient_full(variable[ord])}")
+            
+            u_ord_1 = self.coefficient_full(variable[ord-1])
+            b = u_ord_1 / (a**(ord-1) * ord) - (ord-1)*a.derivative()/2
+
+            return DOperatorAutomorphism(self.parent(), variable, a*variable[1] + b*variable[0])
+        elif self.parent().is_difference(): ## The difference case
+            raise TypeError(f"The difference case is not implemented: require solving a non-linear difference equation.")
+        else:
+            raise NotImplementedError(f"The domain is not difference nor differential.")
+
+    @cached_method
+    def normal_form(self, variable: DMonomialGen, inverted: bool = True):
+        if inverted:
+            return self.inverted_normalizing_automorphism(variable).inverse_call(self)
+        return self.normalizing_automorphism(variable, to_monic=True)(self)
 
     ###################################################################################
     ### Sylvester methods
@@ -2941,11 +2979,11 @@ class DOperatorAutomorphism_Element (Morphism):
 
     def _call_(self, p: DPolynomial) -> DPolynomial:
         z = self.__variable
-        if p.order(z) > 0 and p.is_linear_operator(z):
+        if p.order(z) >= 0 and p.is_linear_operator(z):
             return sum(
                 (p.coefficient_full(z[i]) * self.variable_pow(i) for i in range(p.order(z)+1) if p.coefficient_full(z[i]) != 0), 
                 self.domain().zero())
-        elif p.order(z) == 0:
+        elif p.order(z) == -1:
             return p ## nothing to do: we have the identity
         else:
             raise TypeError(f"The polynomial {p} is not a linear operator on {z} or an element on the ground field")
@@ -2985,6 +3023,30 @@ class DOperatorAutomorphism_Element (Morphism):
 
         return DOperatorAutomorphism(self.domain(), self.__variable, (self.domain().base().one()/a)*z[1] - (b/a)*z[0])
     
+    def inverse_call(self, element: DPolynomial) -> DPolynomial:
+        element = self.codomain()(element) ## We convert the input to an element on the codomain
+
+        z = self.__variable
+        
+        if not element.is_linear_operator(z) and element.order(z) >= 0:
+            raise TypeError(f"Impossible to apply an Operator Automorphism when the input is not a coefficient or a linear operator.")
+        elif element.order(z) == -1:
+            return element
+        else: ## Usual case of a linear operator
+            ## We assume element = u_n D^n + ... + u_0
+            ## Then we have that self(u_n/a^n D) have the same leading coefficient as element
+            ## So we can compute element' = element - self(u_n/a^n D), obtaining lower order.
+            ## After repeating this, we get 0 = element - self(E) --> E is the inverse of element.
+            inverted = self.domain().zero()
+            a = self.__image.coefficient_full(z[1])
+            while element != 0:
+                new_part = element.coefficient_full(z[element.order(z)])/a**(element.order(z)) * z[element.order(z)]
+                inverted += new_part
+                element -= self(new_part)
+            
+            return inverted
+            
+
     def __repr__(self) -> str:
         return f"Endomorphism of {self.domain()} as linear operators on {self.__variable} with\n\t{self.__variable[1]} --> {self.__image}"
         
