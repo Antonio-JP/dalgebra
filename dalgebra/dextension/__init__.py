@@ -21,3 +21,4 @@ AUTHORS:
 # ****************************************************************************
 
 from .dextension import *
+from .delliptic import *
