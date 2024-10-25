@@ -89,7 +89,7 @@ r'''
         sage: z
         z
 
-    We can see we can perform aritmetic operations with these objects::
+    We can see we can perform arithmetic operations with these objects::
 
         sage: (x^2 - 1)*y - x^3
         (x^2 - 1)*y - x^3
@@ -124,8 +124,10 @@ from sage.categories.category import Category
 from sage.categories.fields import Fields
 from sage.categories.morphism import Morphism
 from sage.categories.pushout import ConstructionFunctor
+from sage.misc.latex import latex_variable_name
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
+from sage.rings.ideal import Ideal_generic as Ideal, Ideal as ideal
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.structure.element import Element
 from sage.structure.factory import UniqueFactory
@@ -155,7 +157,7 @@ class DEllipticFactory(UniqueFactory):
 
         # We make 'varname' the name of the variable
         if varname is not None and names is not None and len(names) > 0:
-            raise ValueError(f"Repeated information provided by arguments. Either use 'varname' (thord argument) or 'names")
+            raise ValueError(f"Repeated information provided by arguments. Either use 'varname' (third argument) or 'names")
         elif varname is None and names is not None and len(names) > 1:
             raise ValueError(f"Incorrect use of 'names' argument. Only 1 name is allowed")
         elif varname is None and names is None:
@@ -174,7 +176,7 @@ class DEllipticFactory(UniqueFactory):
         return DElliptic_Field(base, polynomial, varname, category)
 
 
-DElliptic = DEllipticFactory("dalgebra.dpolynomial.pseudo_doperator.DElliptic")
+DElliptic = DEllipticFactory("dalgebra.dextension.delliptic.DElliptic")
 
 #########################################################################
 ### ELEMENT AND PARENT CLASSES FOR ELLIPTIC EXTENSIONS
@@ -241,6 +243,29 @@ class DElliptic_Element(Element):
         as_algebraic = sum(self.parent().inner_derivative(coeff) * eta_p**i for (i,coeff) in enumerate(self.__coeffs) if coeff !=0)
 
         return self.parent()(as_algebraic)
+    
+    ###################################################################################
+    ### Other operational methods
+    ###################################################################################
+    def conditions_to_zero(self) -> Ideal:
+        r'''
+            This method computes the ideal of conditions so ``self`` would be zero.
+
+            In general, we work with elements that are clearly non-zero. However, there are occasions
+            (usually when working with arbitrary constants), where the fact that ``self`` is non-zero is
+            generic and there is an algebraic variety for these constants that would make
+            ``self`` vanish.
+
+            This method computes this ideal for ``self``.
+        '''
+        self_poly_eta_p = self.algebraic().lift() # the algebraic element as polynomial
+        conditions = list()
+        for coeff in self_poly_eta_p.coefficients(True): # we do not need to check the zero coefficients
+            ## Here ``coeff`` is a rational function in ``self.base().to_sage()(eta)``.
+            num = coeff.numerator() # polynomial in eta
+            conditions.extend([el.numerator() for el in num.coefficients(True)]) # again, we do not add the zero coefficients
+        
+        return ideal(conditions)
 
     ###################################################################################
     ### Arithmetic operations
@@ -257,7 +282,7 @@ class DElliptic_Element(Element):
     def _mul_(self, other: DElliptic_Element) -> DElliptic_Element:
         return self.parent()(self.algebraic() * other.algebraic())
 
-    def _inv_(self) -> DElliptic_Element:
+    def __invert__(self) -> DElliptic_Element:
         return self.parent()(~self.algebraic())
         
     @cached_method
@@ -293,14 +318,14 @@ class DElliptic_Element(Element):
 
     @cached_method
     def _latex_(self) -> str:
-        if self.is_zero():
-            return "0"
-        parts = []
-        for i,coeff in enumerate(self.__coeffs):
-            if coeff != 0:
-                var = "" if i == 0 else f"{self.parent().varname()}'" if i == 1 else r"\left(" + f"{self.parent().varname()}'" + r"\right)^{" + i + r"}"
-                parts.append(r"\left(" + coeff + r"\right)" + var)
-        return "+".join(parts)
+        direct_latex = str(latex(self.algebraic()))
+        ## Replacing the variable_p
+        var_p_latex = self.parent().var_p_name()
+        var_latex = latex_variable_name(self.parent().varname())
+        direct_latex = direct_latex.replace(var_p_latex + r"^", f"\\left({var_latex}'\\right)^")
+        direct_latex = direct_latex.replace(var_p_latex, f"{var_latex}'")
+
+        return direct_latex
 
 class DElliptic_Field(Parent):
     r'''
@@ -349,6 +374,8 @@ class DElliptic_Field(Parent):
     ################################################################################
     def varname(self) -> str: return self.__varname
 
+    def var_p_name(self) -> str: return self.__variable_prime
+
     def gen(self) -> DElliptic_Element:
         r'''Method to obtain `\eta` as an element of ``self``'''
         return self(self.variable())
@@ -369,7 +396,7 @@ class DElliptic_Field(Parent):
         return self.__poly_var
 
     def variable_p(self) -> Element:
-        r'''Method to obtain the quotiented (without d-structure) variable for `\eta'`'''
+        r'''Method to obtain the real (without d-structure) variable for `\eta'`'''
         return self.__algebraic_var
 
     def algebraic_base(self) -> Parent:
@@ -381,11 +408,14 @@ class DElliptic_Field(Parent):
         return self.__algebraic_poly
 
     def algebraic(self) -> Parent:
-        r'''Method to obtain the algebraic structure (quotient of a polynomial ring) behinf this field'''
+        r'''Method to obtain the algebraic structure (quotient of a polynomial ring) behind this field'''
         return self.__algebraic
 
     def degree(self) -> int:
         return self.__degree
+    
+    def min_poly(self) -> Element:
+        return self.__min_poly
 
     def one(self) -> DElliptic_Element:
         return self.element_class(self, 1)
@@ -495,7 +525,19 @@ class DElliptic_Field(Parent):
         return f"D-Elliptic extension of {self.base()} with element {self.__varname} whose derivative satisfies \n\t[{self.__min_poly} = 0]"
 
     def _latex_(self):
-        return r"\frac{" + latex(self.base()) + r"\langle" + self.__varname + r"\rangle[" + self.__variable_prime + r"]}{\left(" + latex(self.__min_poly) + r"\right)}"
+        poly_latex = str(latex(self.__min_poly))
+        poly_latex = poly_latex.replace(f"{latex_variable_name(self.__variable_prime)}^", f"\\left({latex_variable_name(self.__varname)}'\\right)^")
+        poly_latex = poly_latex.replace(f"{latex_variable_name(self.__variable_prime)}", f"{latex_variable_name(self.__varname)}'")
+        return "".join([r"\frac{",
+                        latex(self.base()),
+                        r"\left(",
+                        latex_variable_name(self.__varname),
+                        r"\right)[",
+                        latex_variable_name(self.__varname), "'"
+                        r"]}{\left(",
+                        poly_latex,
+                        r"\right)}"
+        ])
 
     # #################################################
     # ### Method from DRing category
