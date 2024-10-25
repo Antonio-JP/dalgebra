@@ -161,17 +161,19 @@ def GetEquationsForSolution(m : int,
     if extract is not None and not callable(extract):
         raise TypeError(f"[GEFS] The argument ``extract`` must be a callable or `None`")
 
-    ### Computing the generic `L` operator
-    logger.debug(f"[GEFS] Computing the generic L_{n} operator...")
-    L = generic_normal(n, name_partial=name_partial)
-    z = L.parent().gen(name_partial)
-    logger.debug(f"[GEFS] {L=}")
 
     ## Analyzing the functions in ``U``
     logger.debug(f"[GEFS] Computing common parent for the ansatz functions")
-    parent_us = reduce(lambda p, q: pushout(p,q), (parent(v) for v in U.values()), L.parent().base())
+    parent_us = reduce(lambda p, q: pushout(p,q), (parent(v) for v in U.values()), QQ)
     if parent_us not in _DRings:
         raise TypeError(f"[GEFS] We need the coefficient of `L` to be in a differential ring/field")
+    
+    ### Computing the generic `L` operator
+    logger.debug(f"[GEFS] Computing the generic L_{n} operator...")
+    L = generic_normal(n, name_partial=name_partial,output_base=parent_us)
+    z = L.parent().gen(name_partial)
+    parent_L_with_us = L.parent()
+    logger.debug(f"[GEFS] {L=}")
 
     ## Adding the appropriate number of flag constants
     logger.debug(f"[GEFS] Creating the ring for having the flag of constants...")
@@ -189,7 +191,9 @@ def GetEquationsForSolution(m : int,
     for i in range(1, m+1):
         ## TODO: should we remove the i with m%n = 0?
         nP, nH = almost_commuting_wilson(n, i, name_z=name_partial)
-
+        nP = parent_L_with_us(nP) # casting to have the ring of the Us
+        nH = tuple(parent_L_with_us(h) for h in nH) # casting to have the ring of the Us
+        
         Ps.append(nP(dic=U))
         Hs.append([h(dic=U) for h in nH])
 
