@@ -667,6 +667,7 @@ class DPolynomial(Element):
             We rely on the variable names of the parent. There are no coercions in this method, it simply computes the corresponding product
             with the corresponding values.
         '''
+        ## Processing the arguments
         if len(args) != 0:
             if dic is not None or len(kwds) != 0:
                 raise TypeError("Incorrect format for evaluating a DMonomial")
@@ -691,52 +692,9 @@ class DPolynomial(Element):
         if len(inner_kwds) > 0: # Evaluating coefficients -> this forces everything to remain in the same base ring
             return self.eval_coefficients(**inner_kwds)(**kwds)
 
-        if len(kwds) > 0:
-            ## Computing the final ring
-            from functools import reduce
-            final_base = reduce(pushout,
-                                (el.parent() if not is_DPolynomialRing(el.parent()) else el.parent().base()
-                                    for el in kwds.values()),
-                                self.parent().base())
-            R_w_kwds = self.parent().remove_variables(*list(kwds.keys())) # conversion from self.parent() to R_w_kwds is created
-            final_dvariables = set(R_w_kwds.variable_names()) if is_DPolynomialRing(R_w_kwds) else set()
-            for value in kwds.values():
-                if is_DPolynomialRing(value.parent()):
-                    final_dvariables.update(value.parent().variable_names())
-            if len(final_dvariables) > 0 and is_DPolynomialRing(R_w_kwds):
-                output_ring = DPolynomialRing(final_base, list(final_dvariables))
-                self_to_output = DPolynomialVariableMorphism(R_w_kwds, output_ring) * R_w_kwds.convert_map_from(self.parent())
-            elif len(final_dvariables) > 0:
-                output_ring = DPolynomialRing(final_base, list(final_dvariables))
-                self_to_output = output_ring.coerce_map_from(R_w_kwds) * R_w_kwds.convert_map_from(self.parent())
-            else:
-                output_ring = final_base
-                self_to_output = output_ring.coerce_map_from(R_w_kwds) * R_w_kwds.convert_map_from(self.parent())
+        ev_morph = self.parent().get_evaluation_morphism(kwds)
 
-            ## Changing names to integers
-            kwds = {
-                self.parent().variable_names().index(k) :
-                    DPolynomialVariableMorphism(v.parent(), output_ring)(v) if is_DPolynomialRing(v.parent()) else
-                    final_base(v)
-                for (k,v) in kwds.items()}
-
-            result = output_ring.zero()
-            for (m, c) in self._content.items():
-                ## Evaluating the monomial
-                ev_mon = final_base.one() # ev_mon will be in final_base or output_ring
-                rem_mon = dict() # rem_mon will be in output_ring using ``self_to_output``
-                for (v,o),e in m._variables.items():
-                    if v in kwds:
-                        el = kwds[v]
-                        P = el.parent()
-                        ev_mon *= P.apply_operations(el, o)**e
-                    else:
-                        rem_mon[(v,o)] = m._variables[(v,o)]
-                rem_mon = self.parent()(self.parent().monoids().element_class(self.parent().monoids(), rem_mon)) if len(rem_mon) > 0 else self.parent().one()
-                result += self_to_output(rem_mon) * final_base(c) * ev_mon
-            return result
-        else: # Nothing to evaluate -> we return the object
-            return self
+        return ev_morph(self)
 
     def lie_bracket(self, other: DPolynomial, gen: DMonomialGen = None) -> DPolynomial:
         r'''
@@ -1478,6 +1436,7 @@ class DPolynomialRing_Monoid(Parent):
         self.__cache : list[dict[DPolynomial, DPolynomial]] = [dict() for _ in range(len(self.__operators))]
         self.__cache_ranking : dict[tuple[tuple[DPolynomial], str], RankingFunction] = dict()
         self.__fraction_field : DFractionField = None
+        self.__CACHED_EVALUATION_MORPHISM = dict()
 
         # registering conversion to simpler structures
         current = self.base()
@@ -1862,6 +1821,16 @@ class DPolynomialRing_Monoid(Parent):
         if self.__fraction_field is None:
             self.__fraction_field = DFractionField(self)
         return self.__fraction_field
+    
+    def get_evaluation_morphism(self, images: dict) -> Morphism:
+        if len(images) == 0:
+            return self.hom(self) #identity morphism
+        
+        key = tuple(sorted(images.items()))
+        if not key in self.__CACHED_EVALUATION_MORPHISM:
+            codomain, morphism = EvaluationMorphism_DPolynomial.decide_codomain(self, images)
+            self.__CACHED_EVALUATION_MORPHISM[key] = EvaluationMorphism_DPolynomial(self, codomain, images, domain_to_codomain=morphism)
+        return self.__CACHED_EVALUATION_MORPHISM[key]
 
     #################################################
     ### Magic python methods
@@ -2833,6 +2802,61 @@ class MapDalgebraToSage_Infinite(Morphism):
                     return NotImplementedError(f"We could not find generator for variable {v}")
             output += nc*nm
         return output
+
+class EvaluationMorphism_DPolynomial(Morphism):
+    @staticmethod
+    def decide_codomain(domain: DPolynomialRing_Monoid, images: dict[Element]) -> tuple[Parent, Morphism]:
+        r'''Returns the codomain for a given set of evaluations with a morphism to cast variables'''
+        from functools import reduce
+        final_base = reduce(pushout,
+                            (el.parent() if not is_DPolynomialRing(el.parent()) else el.parent().base()
+                                for el in images.values()),
+                            domain.base())
+        R_w_kwds = domain.remove_variables(*list(images.keys())) # conversion from domain to R_w_kwds is created
+        final_dvariables = set(R_w_kwds.variable_names()) if is_DPolynomialRing(R_w_kwds) else set()
+        for value in images.values():
+            if is_DPolynomialRing(value.parent()):
+                final_dvariables.update(value.parent().variable_names())
+        if len(final_dvariables) > 0 and is_DPolynomialRing(R_w_kwds):
+            output_ring = DPolynomialRing(final_base, list(final_dvariables))
+            self_to_output = DPolynomialVariableMorphism(R_w_kwds, output_ring) * R_w_kwds.convert_map_from(domain)
+        elif len(final_dvariables) > 0:
+            output_ring = DPolynomialRing(final_base, list(final_dvariables))
+            self_to_output = output_ring.coerce_map_from(R_w_kwds) * R_w_kwds.convert_map_from(domain)
+        else:
+            output_ring = final_base
+            self_to_output = output_ring.coerce_map_from(R_w_kwds) * R_w_kwds.convert_map_from(domain)
+        
+        return output_ring, self_to_output
+
+    def __init__(self, domain: DPolynomialRing_Monoid, codomain: Parent, images: dict[Element], 
+                 domain_to_codomain: Morphism):
+        super().__init__(domain, codomain)
+        ## Changing names to integers
+        self.__images = {
+            domain.variable_names().index(k) :
+                DPolynomialVariableMorphism(v.parent(), codomain)(v) if is_DPolynomialRing(v.parent()) else
+                codomain.base()(v)
+            for (k,v) in images.items()}
+        ## Storing (if ne)
+        self.__domain_to_codomain = domain_to_codomain
+
+    def _call_(self, element: DPolynomial) -> Element:
+        result = self.codomain().zero()
+        for (m, c) in element._content.items():
+            ## Evaluating the monomial
+            ev_mon = self.codomain().base().one() # ev_mon will be in final_base or output_ring
+            rem_mon = dict() # rem_mon will be in output_ring using ``self_to_output``
+            for (v,o),e in m._variables.items():
+                if v in self.__images:
+                    el = self.__images[v]
+                    P = el.parent()
+                    ev_mon *= P.apply_operations(el, o)**e
+                else:
+                    rem_mon[(v,o)] = m._variables[(v,o)]
+            rem_mon = self.domain()(self.domain().monoids().element_class(self.domain().monoids(), rem_mon)) if len(rem_mon) > 0 else self.domain().one()
+            result += self.__domain_to_codomain(rem_mon) * self.codomain().base()(c) * ev_mon
+        return result
 
 #################################################################################################
 ### WEIGHT AND RANKING FUNCTIONS
