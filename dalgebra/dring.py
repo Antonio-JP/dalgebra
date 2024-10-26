@@ -1264,7 +1264,7 @@ class DRing_Wrapper(Parent):
         operations = list()
         old_gens = [str(v) for v in new_base.gens() if str(v) not in new_constants]
         for (operator, ttype) in zip(self.operators(), self.operator_types()):
-            if ttype == "homomorpshims":
+            if ttype == "homomorphisms":
                 operations.append(new_base.Hom(new_base)([operator(self(v)) for v in old_gens] + [new_base(c) for c in new_constants])) # extension by identity
             elif ttype in ("derivation","skew"):
                 imgs_on_gens = [new_base(operator(self(v))) for v in old_gens] + len(new_constants)*[new_base.zero()]
@@ -1604,8 +1604,8 @@ class DFractionField(FractionField_generic):
         except Exception as e:
             raise e
 
-    def add_constants(self, *new_constans: str) -> DFractionField:
-        return self.base().add_constants(*new_constans).fraction_field()
+    def add_constants(self, *new_constants: str) -> DFractionField:
+        return self.base().add_constants(*new_constants).fraction_field()
 
     def inverse_operation(self, element, operator: int = 0):
         return self.base().inverse_operation(element, operator)
