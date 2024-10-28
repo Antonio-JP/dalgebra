@@ -24,9 +24,14 @@ logger = logging.getLogger(__name__)
 
 from functools import reduce
 
+import shutil
+
 from sage.categories.pushout import pushout
+from sage.combinat.combination import Combinations
+from sage.functions.other import binomial
 from sage.matrix.constructor import Matrix
 from sage.misc.cachefunc import cached_method
+from sage.modules.free_module_element import free_module_element as vector
 from sage.parallel.multiprocessing_sage import Pool
 from sage.rings.fraction_field import FractionField_generic
 from sage.rings.integer_ring import ZZ
@@ -597,5 +602,63 @@ def _check_avoid(partial_solution: dict, to_avoid: list):
     '''
     return any(all(partial_solution.get(v, None) == avoiding[v] for v in avoiding) for avoiding in to_avoid)
 
+#################################################################################################
+###
+### PARTIAL ANALYSIS METHOD
+###
+#################################################################################################
+def eliminate_linear_variables(I: Ideal, variables):
+    r'''
+        Method to eliminate the linear variables that are not relevant for the ideal. 
+
+        Assume that `I \subset R[x_1,\ldots,x_n,y_1,\ldots,y_n]`, that we are interested in the 
+        elimination ideal `I \cap R[x_1,\ldots, x_n]` and that the variables `y_1,\ldots,y_n` 
+        appear linearly in the generators of `I`. 
+
+        This method computes the elimination ideal by considering the induced linear system 
+        by the generators of `I` and using the rank condition on this linear system to 
+        obtain non-linear conditions on `x_1,\ldots,x_n`.
+
+        Need to be done: 
+        * Check this is exactly the elimination ideal
+        * Perform a fast computation
+        * Compute GB while computing equations or not?
+    '''
+    generators = I.gens()
+    ring = I.parent().ring()
+
+    variables = [ring(v) for v in variables] # we make sure the variables are in the correct ring
+    if not all(v.is_generator() for v in variables):
+        raise ValueError(f"We can only remove linear variables if variables are provided (given {variables})")
+    if not all(all(g.degree(v) <= 1 for v in variables) for g in generators):
+        raise ValueError(f"We can only remove linear variables if the generators are linear in these variables.")
+    
+    ring = ring.remove_var(*variables)
+    variables = [v for v in variables if any(g.degree(v) > 0 for g in generators)] # removing unnecessary variables
+    generators = [g for g in generators if g != 0] # removing zero generators
+    
+    A = Matrix([[ring(g.coefficient(v)) for v in variables] for g in generators]) # matrix of linear system
+    b = vector([ring(g.coefficient({v: 0 for v in variables})) for g in generators]) # inhomogeneous term
+    if b != 0:
+        raise NotImplementedError(f"Elimination of linear variables for inhomogeneous systems not yet implemented.")
+    n = A.ncols()
+    m = A.nrows()
+
+    total = binomial(m,n) # this is how many minors we need to compute
+    final_ideal = ideal(ring)
+
+    print(f"++ Starting computation: n-generators={len(generators)} -- n-variables={len(variables)}")
+    for i,c in enumerate(Combinations(range(m), n)):
+        print(f"++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)", end="\r")
+        A_ = A.matrix_from_rows(c)
+        red_det = final_ideal.reduce(A_.determinant())
+
+        if red_det != 0: # there is something to add
+            final_ideal = ideal(ideal(final_ideal.gens() + (red_det,)).groebner_basis())
+            if 1 in final_ideal:
+                break
+            
+    print(f"\n-- Finished elimination of linear variables".ljust(shutil.get_terminal_size().columns, " "))
+    return final_ideal
 
 __all__ = ["analyze_ideal"]
