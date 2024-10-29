@@ -661,4 +661,4 @@ def eliminate_linear_variables(I: Ideal, variables):
     print(f"\n-- Finished elimination of linear variables".ljust(shutil.get_terminal_size().columns, " "))
     return final_ideal
 
-__all__ = ["analyze_ideal"]
+__all__ = ["analyze_ideal", "eliminate_linear_variables"]

@@ -80,6 +80,7 @@ from ..dring import DRings, DifferentialRing, DFractionField
 from ..dpolynomial.dpolynomial import DPolynomial
 from ..logging.logging import loglevel
 from .almost_commuting import generic_normal, almost_commuting_wilson
+from .ideals import analyze_ideal, eliminate_linear_variables
 
 _DRings = DRings.__classcall__(DRings)
 
@@ -212,7 +213,28 @@ def GetEquationsForSolution(m : int,
     if len(U) > 0: # Something is given
         H = sum([extract(h.numerator()) for h in H if h != 0], [ZZ(0)]) # extract the true equations from
 
-        return L, P, ideal(H)
+        ## We proceed now to analyze the solution
+        ## We first clean the ideal removing unnecessary constants and the zeros
+        H = [h(**{str(C[i]) : 0 for i in range(0, len(C), n)}) for h in ideal(H).gens()]
+        H = [h for h in H if h != 0]
+
+        ## We compute the ideal for the coefficients of L
+        final_ideal = eliminate_linear_variables(ideal(H), C)
+        solutions = []
+        ## We study each solution
+        for primary in final_ideal.primary_decomposition():
+            solutions.extend(analyze_ideal(primary.radical(), dict(),list()))
+
+        ## We now evaluate the equations to get the remaining linear equations
+        output = list()
+        for solution in solutions:
+            system = list()
+            for h in H:
+                h = solution.eval(L.parent()(h))
+                if h != 0:
+                    system.append(h)
+            output.append((solution, system))
+        return L, P, tuple(output)
     else:
         return L, P, H
 

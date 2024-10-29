@@ -326,6 +326,11 @@ class DElliptic_Element(Element):
         direct_latex = direct_latex.replace(var_p_latex, f"{var_latex}'")
 
         return direct_latex
+    
+    def __call__(self, *args, **kwds):
+        if self.parent().varname() in kwds:
+            raise ValueError(f"The algebraic function can not be evaluated")
+        return self.parent().element_class(self.parent(), *[coeff(*args, **kwds) if callable(coeff) else coeff for coeff in self.__coeffs])
 
 class DElliptic_Field(Parent):
     r'''
