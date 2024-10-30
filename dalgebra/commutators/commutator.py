@@ -63,7 +63,7 @@ from __future__ import annotations
 import logging
 logger = logging.getLogger(__name__)
 
-from functools import reduce
+from functools import reduce, lru_cache
 
 from sage.calculus.functional import diff
 from sage.categories.pushout import pushout
@@ -89,6 +89,49 @@ _DRings = DRings.__classcall__(DRings)
 ### METHODS TO OBTAIN EQUATIONS FROM TEMPLATES
 ###
 #################################################################################################
+@lru_cache
+def GetEquationsForLevel(level: int,
+        n: int = None, U: tuple | dict = None, *,
+        extract: Callable[[Polynomial], list[Polynomial]],
+        ):
+    r'''
+        Method to compute conditions for a template to be of fixed `level`.
+
+        The level of a monic differential operator in normal form of order `n` is the minimal order
+        non-congruent with `n` such that there is an element of the centralizer. This is a very rare
+        thing to happen.
+
+        We ensure that the output are the conditions and remaining equations determines solutions
+        that have exactly level `m`.
+    '''
+    print(f"Calling method GetEquationsForLevel with arguments {level=}, {n=}, {U=}, {extract=}", flush=True)
+    L, P, conditions = GetEquationsForSolution(level, n, U, extract=extract, flag_name="c", name_partial="z")
+
+    n = L.order(L.parent().gen("z"))
+
+    ## We filter for cases without solution
+    filtered_conditions = list()
+    for (sol_branch, rem_equs) in conditions:
+        if len(rem_equs) == 0:
+            filtered_conditions.append((sol_branch, rem_equs))
+        elif 1 not in ideal(equ(**{f"c_{level}": 1}) for equ in rem_equs).groebner_basis():
+            filtered_conditions.append((sol_branch, rem_equs))
+
+    ## We collect old solutions
+    smaller_conditions = tuple()
+    for m in range(n+1, level):
+        if m%n != 0:
+            smaller_conditions += GetEquationsForLevel(m, n, U, extract=extract)[2]
+    
+    ## We compare the solutions
+    final_conditions = tuple(
+        condition for condition in filtered_conditions 
+        if all(
+            not condition[0].is_subsolution(other[0]) for other in smaller_conditions
+    ))            
+
+    return L, P, final_conditions
+
 @loglevel(logger)
 def GetEquationsForSolution(m : int,
         n: int = None, U: list | dict = None, *,
@@ -230,7 +273,7 @@ def GetEquationsForSolution(m : int,
         for solution in solutions:
             system = list()
             for h in H:
-                h = solution.eval(L.parent()(h))
+                h = h.parent()(solution.eval(L.parent()(h)))
                 if h != 0:
                     system.append(h)
             output.append((solution, system))
@@ -300,7 +343,7 @@ def generate_polynomial_equations(H: DPolynomial, var_name: str = "x") -> list[P
 
 
 __all__ = [
-    "GetEquationsForSolution", "PolynomialCommutator",
+    "GetEquationsForLevel", "GetEquationsForSolution", "PolynomialCommutator",
     "generate_polynomial_ansatz",
     "generate_polynomial_equations"
 ]

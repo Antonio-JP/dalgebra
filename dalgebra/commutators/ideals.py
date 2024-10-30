@@ -647,9 +647,9 @@ def eliminate_linear_variables(I: Ideal, variables):
     total = binomial(m,n) # this is how many minors we need to compute
     final_ideal = ideal(ring)
 
-    print(f"++ Starting computation: n-generators={len(generators)} -- n-variables={len(variables)}")
+    print(f"++ Starting computation: n-generators={len(generators)} -- n-variables={len(variables)}", flush=True)
     for i,c in enumerate(Combinations(range(m), n)):
-        print(f"++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)", end="\r")
+        print(f"++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)", end="\r", flush=True)
         A_ = A.matrix_from_rows(c)
         red_det = final_ideal.reduce(A_.determinant())
 
@@ -658,7 +658,14 @@ def eliminate_linear_variables(I: Ideal, variables):
             if 1 in final_ideal:
                 break
             
-    print(f"\n-- Finished elimination of linear variables".ljust(shutil.get_terminal_size().columns, " "))
+    print(f"\n-- Finished elimination of linear variables".ljust(shutil.get_terminal_size().columns, " "), flush=True)
     return final_ideal
 
+def find_nonzero_minor(A, size):
+    from itertools import product
+    for rows in product(*[[i for i in range(A.nrows()) if A[i][c] != 0] for c in range(A.ncols())]):
+        for cols in Combinations(range(A.ncols()), size):
+            mrows = [rows[i] for i in cols]
+            if A.matrix_from_rows_and_columns(mrows, cols).determinant() != 0:
+                return (mrows, cols)
 __all__ = ["analyze_ideal", "eliminate_linear_variables"]
