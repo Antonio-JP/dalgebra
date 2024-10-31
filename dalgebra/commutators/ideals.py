@@ -647,7 +647,12 @@ def eliminate_linear_variables(I: Ideal, variables):
     total = binomial(m,n) # this is how many minors we need to compute
     final_ideal = ideal(ring)
 
+    C = [[i for i in range(A.nrows()) if A[i][j] != 0] for j in range(A.ncols())]
+
     print(f"++ Starting computation: n-generators={len(generators)} -- n-variables={len(variables)}", flush=True)
+    print(f"Rows foe each column with non-zero elements:")
+    for c in C:
+        print(f"\t{c}")
     for i,c in enumerate(Combinations(range(m), n)):
         print(f"++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)", end="\r", flush=True)
         A_ = A.matrix_from_rows(c)

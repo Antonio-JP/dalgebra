@@ -119,7 +119,7 @@ def GetEquationsForLevel(level: int,
 
     ## We collect old solutions
     smaller_conditions = tuple()
-    for m in range(n+1, level):
+    for m in range(1, level):
         if m%n != 0:
             smaller_conditions += GetEquationsForLevel(m, n, U, extract=extract)[2]
     
