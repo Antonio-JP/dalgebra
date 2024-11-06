@@ -24,8 +24,6 @@ logger = logging.getLogger(__name__)
 
 from functools import reduce
 
-import shutil
-
 from sage.categories.pushout import pushout
 from sage.combinat.combination import Combinations
 from sage.functions.other import binomial
@@ -180,6 +178,15 @@ class SolutionBranch:
             key = str(key)
         return self.__solution.get(key, self.parent()(key)) # we get the value for the key or the key itself
 
+    @cached_method
+    def full_ideal(self, groebner: bool = True) -> Ideal:
+        polynomials = tuple(self.parent()(k) - v for (k,v) in self.__solution.items()) + tuple(self.I.gens())
+        full_ideal = ideal(polynomials)
+
+        if groebner:
+            return ideal(full_ideal.groebner_basis())
+        return full_ideal
+
     ######################################################################################################
     ### UTILITY METHODS
     ######################################################################################################
@@ -231,16 +238,7 @@ class SolutionBranch:
         return SolutionBranch(I, solution, decisions, self.parent())
 
     def is_subsolution(self, other: SolutionBranch) -> bool:
-        self_vars = self.remaining_variables()
-        other_vars = other.remaining_variables()
-
-        if any(v not in other_vars for v in self_vars):
-            return False
-
-        to_subs = {str(v): self[str(v)] for v in other_vars if (v not in self_vars)}
-        if len(to_subs) > 0:
-            other = other.subsolution(**to_subs)
-        return self == other
+        return all(self.full_ideal().reduce(g_other) == 0 for g_other in other.full_ideal(False).gens())
 
     def combine(self, other: SolutionBranch) -> list[SolutionBranch]:
         sol = SolutionBranch._dir_combine(self, other)
@@ -607,6 +605,7 @@ def _check_avoid(partial_solution: dict, to_avoid: list):
 ### PARTIAL ANALYSIS METHOD
 ###
 #################################################################################################
+@loglevel(logger)
 def eliminate_linear_variables(I: Ideal, variables):
     r'''
         Method to eliminate the linear variables that are not relevant for the ideal. 
@@ -624,37 +623,44 @@ def eliminate_linear_variables(I: Ideal, variables):
         * Perform a fast computation
         * Compute GB while computing equations or not?
     '''
+    logger.debug(f"[ELV] Eliminating linear variables {variables=} from ideal using minors")
     generators = I.gens()
     ring = I.parent().ring()
 
     variables = [ring(v) for v in variables] # we make sure the variables are in the correct ring
     if not all(v.is_generator() for v in variables):
-        raise ValueError(f"We can only remove linear variables if variables are provided (given {variables})")
+        raise ValueError(f"[ELV] We can only remove linear variables if variables are provided (given {variables})")
     if not all(all(g.degree(v) <= 1 for v in variables) for g in generators):
-        raise ValueError(f"We can only remove linear variables if the generators are linear in these variables.")
+        raise ValueError(f"[ELV] We can only remove linear variables if the generators are linear in these variables.")
     
+    logger.debug(f"[ELV] Checking and filtering the input...")
     ring = ring.remove_var(*variables)
     variables = [v for v in variables if any(g.degree(v) > 0 for g in generators)] # removing unnecessary variables
     generators = [g for g in generators if g != 0] # removing zero generators
     
+    logger.debug(f"[ELV] Building the matrix with n={len(generators)} rows and m={len(variables)} columns")
     A = Matrix([[ring(g.coefficient(v)) for v in variables] for g in generators]) # matrix of linear system
+    logger.debug(f"[ELV] Computing the inhomogeneous vector...")
     b = vector([ring(g.coefficient({v: 0 for v in variables})) for g in generators]) # inhomogeneous term
     if b != 0:
-        raise NotImplementedError(f"Elimination of linear variables for inhomogeneous systems not yet implemented.")
+        raise NotImplementedError(f"[ELV] Elimination of linear variables for inhomogeneous systems not yet implemented.")
     n = A.ncols()
     m = A.nrows()
 
     total = binomial(m,n) # this is how many minors we need to compute
+    total_10 = total//10
+    total_100 = total//100
     final_ideal = ideal(ring)
 
     C = [[i for i in range(A.nrows()) if A[i][j] != 0] for j in range(A.ncols())]
 
-    print(f"++ Starting computation: n-generators={len(generators)} -- n-variables={len(variables)}", flush=True)
-    print(f"Rows foe each column with non-zero elements:")
-    for c in C:
-        print(f"\t{c}")
+    logger.debug(f"[ELV] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C))
+    print(f"[ELV] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C), flush=True)
     for i,c in enumerate(Combinations(range(m), n)):
-        print(f"++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)", end="\r", flush=True)
+        if total_10 == 0 or i == total-1 or i % total_10 == 0: 
+            logger.debug(f"[ELV] ++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)")
+            print(f"[ELV] ++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)", end="\r", flush=True)
+        
         A_ = A.matrix_from_rows(c)
         red_det = final_ideal.reduce(A_.determinant())
 
@@ -662,8 +668,9 @@ def eliminate_linear_variables(I: Ideal, variables):
             final_ideal = ideal(ideal(final_ideal.gens() + (red_det,)).groebner_basis())
             if 1 in final_ideal:
                 break
+    print("\n[ELV] -- Finished the computation of minors")
             
-    print(f"\n-- Finished elimination of linear variables".ljust(shutil.get_terminal_size().columns, " "), flush=True)
+    logger.debug(f"[ELV] -- Finished elimination of linear variables")
     return final_ideal
 
 def find_nonzero_minor(A, size):
@@ -673,4 +680,5 @@ def find_nonzero_minor(A, size):
             mrows = [rows[i] for i in cols]
             if A.matrix_from_rows_and_columns(mrows, cols).determinant() != 0:
                 return (mrows, cols)
+            
 __all__ = ["analyze_ideal", "eliminate_linear_variables"]

@@ -513,7 +513,7 @@ class DElliptic_Field(Parent):
         return self ## self is already a field
 
     def change_base(self, R) -> DElliptic_Field:
-        new_ring = DElliptic_Field(R, self.__min_poly, self.__varname)
+        new_ring = DElliptic(R, self.__min_poly, self.__varname)
         ## Creating the coercion map if possible
         try:
             M = CoerceBetweenBases_DElliptic(self, new_ring, R.coerce_map_from(self.base()))
@@ -593,10 +593,10 @@ class DEllipticFunctor(ConstructionFunctor):
 
     ### Methods to implement
     def _apply_functor(self, x):
-        return DElliptic_Field(x,self.__min_poly,self.__varname)
+        return DElliptic(x,self.__min_poly,self.__varname)
 
     def _repr_(self):
-        return f"DElliptic_Field(*,{self.__min_poly},{self.__varname})"
+        return f"DElliptic(*,{self.__min_poly},{self.__varname})"
 
     def __eq__(self, other):
         if(other.__class__ == self.__class__):

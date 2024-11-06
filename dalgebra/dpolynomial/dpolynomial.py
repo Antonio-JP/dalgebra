@@ -1734,6 +1734,7 @@ class DPolynomialRing_Monoid(Parent):
     #     return destiny_ring(str(polynomial.polynomial()))
         raise NotImplementedError("This method is not yet implemented")
 
+    @cached_method
     def change_ring(self, R):
         r'''
             Return the operator polynomial ring changing the base ring to `R`.
@@ -1749,7 +1750,33 @@ class DPolynomialRing_Monoid(Parent):
 
             A :class:`DPolynomialRing_Monoid` over ``R`` with the same variables as ``self``.
         '''
-        return DPolynomialRing(R, *self.variable_names())
+        if self.base() == R:
+            return self
+        
+        output = DPolynomialRing(R, *self.variable_names())
+        if self.base().has_coerce_map_from(R):
+            try:
+                output.register_coercion(DPolynomial_Base2BaseMorphism(output, self, R.coerce_map_from(self.base())))
+            except AssertionError:
+                pass
+        elif R.has_coerce_map_from(self.base()):
+            try:
+                self.register_coercion(DPolynomial_Base2BaseMorphism(self, output, self.base().coerce_map_from(R)))
+            except AssertionError:
+                pass
+        
+        if self.base().convert_map_from(R):
+            try:
+                output.register_conversion(DPolynomial_Base2BaseMorphism(output, self, R.convert_map_from(self.base())))
+            except AssertionError:
+                pass
+        if R.convert_map_from(self.base()):
+            try:
+                self.register_conversion(DPolynomial_Base2BaseMorphism(self, output, self.base().convert_map_from(R)))
+            except AssertionError:
+                pass
+        
+        return output
 
     def append_variables(self, *variables) -> DPolynomialRing_Monoid:
         r'''Add new d-variables to the current ring'''
@@ -2714,6 +2741,29 @@ class DPolynomialVariableMorphism (Morphism):
                 self.codomain().monoids().element_class(
                     self.codomain().monoids(), {(self.__map_vars[v], o): e for ((v,o),e) in m._variables.items()}
                 ) : c for (m,c) in p._content.items()
+            }
+        )
+    
+class DPolynomial_Base2BaseMorphism (Morphism):
+    r'''
+        Class representing maps between rings of d-polynomial that changes the base ring.
+    '''
+    def __init__(self, domain, codomain, morphism):
+        if not isinstance(domain, DPolynomialRing_Monoid) or not isinstance(codomain, DPolynomialRing_Monoid):
+            raise TypeError(f"Morphism only valid for rings of d-polynomials")
+        if domain.construction()[0] != codomain.construction()[0]:
+            raise TypeError(f"Morphism only valid for rings of d-polynomials that are built equally")
+        if morphism.domain() != domain.base() or morphism.codomain() != codomain.base():
+            raise TypeError(f"Morphism only valid when the morphism given is between bases")
+        
+        super().__init__(domain, codomain)
+        self.__morphism = morphism
+
+    def _call_(self, p:DPolynomial) -> DPolynomial:
+        return self.codomain().element_class(
+            self.codomain(),
+            {
+                m : self.__morphism(c) for (m,c) in p._content.items()
             }
         )
 
