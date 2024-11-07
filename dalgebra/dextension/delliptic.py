@@ -247,7 +247,7 @@ class DElliptic_Element(Element):
     ###################################################################################
     ### Other operational methods
     ###################################################################################
-    def conditions_to_zero(self) -> Ideal:
+    def conditions_to_zero(self) -> tuple[tuple[DElliptic_Element,Element]]:
         r'''
             This method computes the ideal of conditions so ``self`` would be zero.
 
@@ -260,12 +260,14 @@ class DElliptic_Element(Element):
         '''
         self_poly_eta_p = self.algebraic().lift() # the algebraic element as polynomial
         conditions = list()
-        for coeff in self_poly_eta_p.coefficients(True): # we do not need to check the zero coefficients
+        # we do not need to check the zero coefficients
+        for (mon,coeff) in zip(reversed(self_poly_eta_p.monomials()),self_poly_eta_p.coefficients()): 
             ## Here ``coeff`` is a rational function in ``self.base().to_sage()(eta)``.
             num = coeff.numerator() # polynomial in eta
-            conditions.extend([el.numerator() for el in num.coefficients(True)]) # again, we do not add the zero coefficients
+            for (mon2, c) in zip(reversed(num.monomials()),num.coefficients()):
+                conditions.append((self.parent()(mon)*self.parent()(mon2), c))
         
-        return ideal(conditions)
+        return tuple(conditions)
 
     ###################################################################################
     ### Arithmetic operations

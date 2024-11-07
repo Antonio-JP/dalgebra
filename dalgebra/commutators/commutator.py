@@ -67,6 +67,9 @@ from functools import reduce, lru_cache
 
 from sage.calculus.functional import diff
 from sage.categories.pushout import pushout
+from sage.combinat.combination import Combinations
+from sage.functions.other import binomial
+from sage.matrix.constructor import Matrix
 from sage.rings.ideal import Ideal_generic as Ideal, Ideal as ideal
 from sage.rings.integer_ring import ZZ
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -90,10 +93,10 @@ _DRings = DRings.__classcall__(DRings)
 ###
 #################################################################################################
 @lru_cache
-def GetEquationsForLevel(level: int,
-        n: int = None, U: tuple | dict = None, *,
+def GetEquationsForLevel(n: int, level: int,
+        U: tuple | dict = None, *,
         extract: Callable[[Polynomial], list[Polynomial]],
-        ):
+    ):
     r'''
         Method to compute conditions for a template to be of fixed `level`.
 
@@ -104,24 +107,25 @@ def GetEquationsForLevel(level: int,
         We ensure that the output are the conditions and remaining equations determines solutions
         that have exactly level `m`.
     '''
-    print(f"Calling method GetEquationsForLevel with arguments {level=}, {n=}, {U=}, {extract=}", flush=True)
-    L, P, conditions = GetEquationsForSolution(level, n, U, extract=extract, flag_name="c", name_partial="z")
+    L, P, conditions = GetEquationsForSolution(n, level, U, extract=extract)
 
     n = L.order(L.parent().gen("z"))
 
     ## We filter for cases without solution
     filtered_conditions = list()
-    for (sol_branch, rem_equs) in conditions:
-        if len(rem_equs) == 0:
-            filtered_conditions.append((sol_branch, rem_equs))
-        elif 1 not in ideal(equ(**{f"c_{level}": 1}) for equ in rem_equs).groebner_basis():
-            filtered_conditions.append((sol_branch, rem_equs))
+    for (sol_branch, lin_system) in conditions:
+        try:
+            lin_system[:,:-1].solve_right(-lin_system[:,-1])
+            filtered_conditions.append((sol_branch, lin_system))
+        except ValueError:
+            ## no solution -- we skip this branch
+            pass
 
     ## We collect old solutions
     smaller_conditions = tuple()
     for m in range(1, level):
         if m%n != 0:
-            smaller_conditions += GetEquationsForLevel(m, n, U, extract=extract)[2]
+            smaller_conditions += GetEquationsForLevel(n, m, U, extract=extract)[2]
     
     ## We compare the solutions
     final_conditions = tuple(
@@ -133,10 +137,8 @@ def GetEquationsForLevel(level: int,
     return L, P, final_conditions
 
 @loglevel(logger)
-def GetEquationsForSolution(m : int,
-        n: int = None, U: list | dict = None, *,
-        extract: Callable[[Polynomial], list[Polynomial]],
-        flag_name: str = "c", name_partial: str = "z") -> tuple[DPolynomial, DPolynomial, Ideal]:
+def GetEquationsForSolution(n: int, m : int, U: list | dict = None, *,
+        extract: Callable[[Polynomial], list[Polynomial]]) -> tuple[DPolynomial, DPolynomial, Ideal]:
     r'''
         Method to get the equations for a specific type of solutions for non-trivial commutator.
 
@@ -163,123 +165,206 @@ def GetEquationsForSolution(m : int,
 
         INPUT:
 
+        * ``n``: provides the order of the operator `L` to be used.
+          Then, the coefficients are given in the input ``U``, either as a list or as a dictionary.
         * ``m``: order bound for the commutator to be found.
         * ``U``: list or dictionary with the shape for the functions `a_{n-2},\ldots,a_0`. If given as a
           list, it is read as ``[a_0,\ldots,a_{n-2}]``. If given as a map, then it maps `i \mapsto a_i`.
-        * ``n``: provides the order of the operator `L` to be used.
-          Then, the coefficients are given in the input ``U``, either as a list or as a dictionary.
         * ``extract``: a method to extract from the final set of values the equations for
           the obtained operator to actually commute. These equations will include any variable
           within the given functions ``U`` and the flag of constants created.
-        * ``flag_name``: name use for the variables used in the flag of constants.
 
         OUTPUT:
 
-        A tuple `(L, P, H)` where `L` is the main operator we are looking for a commutator, `P` is an operator
-        of order at most `m` such that it **commutes** with `L` (see method :func:`generic_normal`) for the given
-        set of ``U`` whenever the equations in `H` all vanish.
-
-        If ``extract`` is given, the equations in `H` are in **algebraic** form, i.e., as an ideal.
+        A tuple `(L, P, H)` where `L` is the main operator we are looking for a commutator, `P` is a list 
+        of the almost commuting operators used for building the commutator and `H` is an ideal or set of 
+        conditions for `P` to commute with `L`.
     '''
-    ## We need `n` to know the order that is being used for the `L`.
-    if n is None:
-        raise ValueError(f"[GEFS] Necessary information: `n` (order of the main operator)")
+    logger.debug(f"[GEFS] Getting the linear system associated for having a centralizer of order `m`")
+    L, Ps, Hs = GetHierarchyLinearEquations(n,m,U,tuple(i for i in range(m+1) if i%n != 0),extract=extract)
 
-    ## Checking correctness of arguments
-    if n not in ZZ or n < 2:
-        raise ValueError(f"[GEFS] The value for `n` must be an integer greater than 1")
-    if m not in ZZ:
-        raise ValueError(f"[GEFS] The value for `m` must be an integer")
-    if U is None:
-        logger.warning(f"[GEFS] No values for `U` provided. Impossible to get algebraic equations.")
-        U = dict()
-    elif isinstance(U, (list,tuple)):
-        if len(U) != n-1:
-            raise ValueError(f"[GEFS] The size of the given functions ``U`` must be of length `n-1` ({n-1})")
-        U = {i: U[i] for i in range(len(U))}
-    elif not isinstance(U, dict):
-        raise TypeError(f"[GEFS] The argument ``U`` must be a list or a dictionary")
-    elif any(el not in ZZ for el in U.keys()) or min(U.keys()) < 0 or max(U.keys()) > n-2:
-        raise KeyError(f"[GEFS] The argument ``U`` as dictionary must have integers as keys between 0 and `n-2` ({n-2})")
+    ## Hs is a matrix with the linear equations -- each row is an equation
+    if len(U) > 0: ## some information is given, we can do something else
+        ## We make sure we take a ring of polynomials
+        Hs = Hs.change_ring(Hs.parent().base_ring().base()) if Hs.parent().base_ring().is_field() else Hs
+        ring = Hs.parent().base_ring()
 
-    if extract is not None and not callable(extract):
-        raise TypeError(f"[GEFS] The argument ``extract`` must be a callable or `None`")
+        ###############################################################################
+        ## COMPUTING THE IDEAL OF MINORS
+        ###############################################################################
+        n = Hs.ncols()
+        m = Hs.nrows()
 
+        total = binomial(m,n) # this is how many minors we need to compute
+        total_10 = total//10
+        total_100 = total//100
+        final_ideal = ideal(ring)
 
-    ## Analyzing the functions in ``U``
-    logger.debug(f"[GEFS] Computing common parent for the ansatz functions")
-    parent_us = reduce(lambda p, q: pushout(p,q), (parent(v) for v in U.values()), QQ)
-    if parent_us not in _DRings:
-        raise TypeError(f"[GEFS] We need the coefficient of `L` to be in a differential ring/field")
-    
-    ### Computing the generic `L` operator
-    logger.debug(f"[GEFS] Computing the generic L_{n} operator...")
-    L = generic_normal(n, name_partial=name_partial,output_base=parent_us)
-    z = L.parent().gen(name_partial)
-    parent_L_with_us = L.parent()
-    logger.debug(f"[GEFS] {L=}")
+        C = [[i for i in range(Hs.nrows()) if Hs[i][j] != 0] for j in range(Hs.ncols())]
 
-    ## Adding the appropriate number of flag constants
-    logger.debug(f"[GEFS] Creating the ring for having the flag of constants...")
-    C = [f"{flag_name}_{i}" for i in range(m+1)]
-    diff_base = parent_us.add_constants(*C)
-    C = [diff_base(c) for c in C]
-    logger.debug(f"[GEFS] Ring with flag-constants: {diff_base=}")
+        logger.debug(f"[GEFS] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C))
+        print(f"[GEFS] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C), flush=True)
+        for i,c in enumerate(Combinations(range(m), n)):
+            if total_10 == 0 or i == total-1 or i % total_10 == 0: 
+                logger.debug(f"[GEFS] ++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)")
+            if total_100 == 0 or i == total-1 or i % total_100 == 0:
+                print(f"[GEFS] ++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)", end="\r", flush=True)
+            
+            A_ = Hs.matrix_from_rows(c)
+            red_det = final_ideal.reduce(A_.determinant())
 
-    U = {L.coefficient_full(z[i]).infinite_variables()[0]: diff_base(U.get(i,0)) for i in U} # Dictionary to evaluate generic polynomials
-    L = L(dic=U) # parent now without any u variable
-
-    ### Computing the almost commuting basis up to order `m` and the hierarchy up to this point
-    logger.debug(f"[GEFS] ++ Computing the basis of almost commuting and the hierarchies...")
-    Ps, Hs = [z[0](dic=U)], [(n-1)*[L.parent().zero()]] # the case with m = 0
-    for i in range(1, m+1):
-        ## TODO: should we remove the i with m%n = 0?
-        nP, nH = almost_commuting_wilson(n, i, name_z=name_partial)
-        nP = parent_L_with_us(nP) # casting to have the ring of the Us
-        nH = tuple(parent_L_with_us(h) for h in nH) # casting to have the ring of the Us
-        
-        Ps.append(nP(dic=U))
-        Hs.append([h(dic=U) for h in nH])
-
-        logger.debug(f"[GEFS]    Computed for order {i}")
-
-    logger.debug(f"[GEFS] -- Computed the basis of almost commuting and the hierarchies")
-
-    Ps = [p.parent().change_ring(diff_base)(p) for p in Ps]
-    Hs = [[h.parent().change_ring(diff_base)(h) for h in H] for H in Hs]
-
-    logger.debug(f"[GEFS] Computing the guessed commutator...")
-    P = sum(c*p for (c,p) in zip(C, Ps)) # this is the evaluated operator that will commute
-    logger.debug(f"[GEFS] Computing the commuting equations...")
-    H = [sum(C[i]*Hs[i][j] for i in range(len(C))) for j in range(n-1)] # the equations that need to be 0
-    logger.debug(f"[GEFS] Extracting the algebraic equation from the commuting equations...")
-    if len(U) > 0: # Something is given
-        H = sum([extract(h.numerator()) for h in H if h != 0], [ZZ(0)]) # extract the true equations from
-
-        ## We proceed now to analyze the solution
-        ## We first clean the ideal removing unnecessary constants and the zeros
-        H = [h(**{str(C[i]) : 0 for i in range(0, len(C), n)}) for h in ideal(H).gens()]
-        H = [h for h in H if h != 0]
-
-        ## We compute the ideal for the coefficients of L
-        final_ideal = eliminate_linear_variables(ideal(H), C)
-        solutions = []
-        ## We study each solution
+            if red_det != 0: # there is something to add
+                final_ideal = ideal(ideal(final_ideal.gens() + (red_det,)).groebner_basis())
+                if 1 in final_ideal:
+                    break
+        print("\n[GEFS] -- Finished the computation of minors")
+                
+        logger.debug(f"[GEFS] -- Finished elimination of linear variables")
+        ###############################################################################
+        ## ANALYZING THE SOLUTION IDEAL
+        ###############################################################################
+        solutions = list()
         for primary in final_ideal.primary_decomposition():
             solutions.extend(analyze_ideal(primary.radical(), dict(),list()))
 
         ## We now evaluate the equations to get the remaining linear equations
         output = list()
         for solution in solutions:
-            system = list()
-            for h in H:
-                h = h.parent()(solution.eval(L.parent()(h)))
-                if h != 0:
-                    system.append(h)
+            system = Matrix([[solution.eval(el) for el in row] for row in Hs])
             output.append((solution, system))
-        return L, P, tuple(output)
+        return L, Ps, tuple(output)
     else:
-        return L, P, H
+        return L, Ps, Hs
+
+def GetHierarchyLinearEquations(n: int, m : int,
+        U: list | dict = None, c_list: list = None,
+        *,
+        extract: Callable):
+    r'''
+        Method to compute the linear system induced by the hierarchy of an operator.
+
+        Let `L` be a differential operator in normal form of order `n`. We know that if there 
+        is another operator `Q_m` of order `m` that commutes with `L`, it is a linear combination
+        of the Wilson basis of almost commuting operators for `L`.
+
+        In general, if we write:
+
+        .. MATH::
+
+            Q = \sum_{i=0}^{m} c_i P_i,
+
+        where `P_i` are the basic operators of the almost commuting basis, then we know that
+        `[L, P_i] = H_{i,0} + H_{i,1}\partial + \ldots + H_{i,n-2}\partial^{n-2}`, so, for `Q`
+        to commute with `L` we need that, for all `j = 0,\ldots, n-2`:
+
+        .. MATH::
+
+            c_0 H_{0,j} + c_1 H_{1,j} + \ldots + c_m H_{m,j} = 0.
+
+        This is a linear system in `m+1` variables in the field of coefficients of `L`. In 
+        order to compute a solution with constants, we need some extra information on the structure
+        of these coefficients (see method ``extract`` in the input)
+
+        This method computes the best possible linear system induced for an operator of
+        order `n` when we look for an element in the centralizer of order at most `m`.
+
+        INPUT:
+
+        * ``m``: bound for the order of the element in the centralizer.
+        * ``n``: order of the operator `L`.
+        * ``U``: list or dictionary of the coefficients of `L` such that `[\partial^i]L = U[i]`.
+        * ``c_list`` (optional): list of constants to be considered in the sum for the linear system.
+          If not provided, we consider all constants possible.
+        * ``extract``: method to get a real set of equations for an element of the field of 
+          coefficients for `L` to be equal to zero.
+
+        OUTPUT:
+
+        A tuple `(L,(P_j), S)`, where `L` is the operator `L` for which we are computing the 
+        conditions for an element in the centralizer, `P_j` are the operator in the almost commuting 
+        basis such that when added with a solution of `S` we obtain an element in the centralizer of 
+        `L`. This system `S` will be given in matrix form where the columns are indexed by the 
+        constants `c_i`, `i` going through the input ``c``.
+    '''
+    ## Converting the input so it can be cached
+    ### Coefficients of the operator `L`
+    if not isinstance(U, dict):
+        U = {i: U[i] for i in range(len(U))}
+    U = tuple(sorted(U.items()))
+
+    ### Elements of c
+    if c_list is None:
+        c_list = range(m+1)
+    c_list = tuple(sorted(i for i in c_list if i >= 0 and i <= m)) ## remove bad elements - c_list is sorted now
+
+    ## We return the cached result with these keys
+    return _GetHierarchyLinearEquations(n,m,U,c_list,extract)
+
+@lru_cache
+def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple, extract: Callable):
+    print(f"[GHLE] Calling method with {n=}, {m=}, {U=}, {c_list=}")
+    ## Checking correctness of arguments
+    if n not in ZZ or n < 2:
+        raise ValueError(f"[GHLE] The value for `n` must be an integer greater than 1")
+    if m not in ZZ:
+        raise ValueError(f"[GHLE] The value for `m` must be an integer")
+    if U is None:
+        logger.warning(f"[GHLE] No values for `U` provided. Impossible to get algebraic equations.")
+    U = dict(U)
+    if any(el not in ZZ for el in U.keys()) or min(U.keys()) < 0 or max(U.keys()) > n-2:
+        raise KeyError(f"[GHLE] The argument ``U`` as dictionary must have integers as keys between 0 and `n-2` ({n-2})")
+
+    if extract is not None and not callable(extract):
+        raise TypeError(f"[GHLE] The argument ``extract`` must be a callable or `None`")
+    
+    ## Analyzing the functions in ``U``
+    logger.debug(f"[GHLE] Computing common parent for the ansatz functions")
+    parent_us = reduce(lambda p, q: pushout(p,q), (parent(v) for v in U.values()), QQ)
+    if parent_us not in _DRings:
+        raise TypeError(f"[GHLE] We need the coefficient of `L` to be in a differential ring/field")
+    
+    ### Computing the generic `L` operator
+    logger.debug(f"[GHLE] Computing the generic L_{n} operator...")
+    L = generic_normal(n, output_base=parent_us)
+    z = L.parent().gen("z")
+    parent_L_with_us = L.parent()
+    logger.debug(f"[GHLE] {L=}")
+
+    U = {L.coefficient_full(z[i]).infinite_variables()[0]: parent_us(U.get(i,0)) for i in U} # Dictionary to evaluate generic polynomials
+    L = L(dic=U) # parent now without any u variable
+
+    ### Computing the almost commuting basis up to order `m` and the hierarchy up to this point
+    logger.debug(f"[GHLE] ++ Computing the basis of almost commuting and the hierarchies...")
+    Ps, Hs = list(), list() # [z[0](dic=U)], [(n-1)*[L.parent().zero()]] # the case with m = 0
+    for i in c_list:
+        nP, nH = almost_commuting_wilson(n, i)
+        nP = parent_L_with_us(nP) # casting to have the ring of the Us
+        nH = tuple(parent_L_with_us(h) for h in nH) # casting to have the ring of the Us
+        
+        Ps.append(nP(dic=U))
+        Hs.append([h(dic=U) for h in nH])
+
+        logger.debug(f"[GHLE]    Computed for order {i}")
+
+    logger.debug(f"[GHLE] -- Computed the basis of almost commuting and the hierarchies")
+
+    ### Getting the linear system. We use the method extract on the Hs to get the monomials and the coefficients
+    ### for each section of the Hs
+    if len(U) > 0: ## Some information is given
+        rows = list()
+        for j in range(n-1):
+            equs = dict()
+            for i,c in enumerate(c_list):
+                for (mon, coeff) in extract(Hs[i][j]):
+                    if not mon in equs:
+                        equs[mon] = dict()
+                    
+                    equs[mon][c] = coeff
+            rows.extend([[equs[mon].get(c, 0) for c in c_list] for mon in equs])
+        
+        return L, Ps, Matrix(rows)
+    else: ## simple approach
+        return L, Ps, Matrix(Hs)
 
 @loglevel(logger)
 def PolynomialCommutator(n: int, m: int, d: int) -> tuple[DPolynomial, DPolynomial, Ideal]:
@@ -288,7 +373,7 @@ def PolynomialCommutator(n: int, m: int, d: int) -> tuple[DPolynomial, DPolynomi
     U = generate_polynomial_ansatz(QQ, n, d)
     logger.debug(f"[PolyComm] --- Generated the ansatz functions:\n\t{U=}")
     logger.debug(f"[PolyComm] --- Computing the equations necessary for the ansatz to commute with L_{n}...")
-    L, P, H = GetEquationsForSolution(m, n=n, U=U, extract=generate_polynomial_equations)
+    L, P, H = GetEquationsForSolution(n, m, U, extract=generate_polynomial_equations)
     return L,P,H
 #################################################################################################
 ###
@@ -335,15 +420,18 @@ def generate_polynomial_equations(H: DPolynomial, var_name: str = "x") -> list[P
 
     if B.is_field() and B != QQ: # field of fractions of polynomials
         x = B.base()(var_name) # this is the polynomial variable that will be removed
-        output = list(H.numerator().polynomial(x).coefficients())
+        H = H.numerator().polynomial(x)    
     else:
         x = B(var_name) # this is the polynomial variable that will be removed
-        output = list(H.polynomial(x).coefficients())
+        H.polynomial(x)
+
+    output = tuple(zip(reversed(H.monomials()), H.coefficients()))
+    
     return output
 
 
 __all__ = [
-    "GetEquationsForLevel", "GetEquationsForSolution", "PolynomialCommutator",
+    "GetEquationsForLevel", "GetHierarchyLinearEquations", "PolynomialCommutator",
     "generate_polynomial_ansatz",
     "generate_polynomial_equations"
 ]
