@@ -127,7 +127,6 @@ from sage.categories.pushout import ConstructionFunctor
 from sage.misc.latex import latex_variable_name
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
-from sage.rings.ideal import Ideal_generic as Ideal, Ideal as ideal
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.structure.element import Element
 from sage.structure.factory import UniqueFactory
