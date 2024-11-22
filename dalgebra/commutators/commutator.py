@@ -194,6 +194,8 @@ def GetCentralizer(
         logger.info(f"[GC] -- Concluded study at level {current}")
         current += 1
     
+    ## We change the first element to be the actual "constant" operator
+    Goodearl_Basis[0] = L.parent().gen("z")[0]
     return L, Goodearl_Basis
 
 def __compute_bounds(n, *K, global_bound):
