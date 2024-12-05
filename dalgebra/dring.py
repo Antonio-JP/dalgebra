@@ -1548,6 +1548,10 @@ class DFractionFieldElement(FractionFieldElement):
             return tuple(set(self.numerator().variables()).union(set(self.denominator().variables())))
         except AttributeError:
             raise AttributeError("'DFractionFieldElement' object has no attribute 'variables'")
+        
+    def lcm_denominators(self, *other: DFractionFieldElement):
+        from sage.arith.functions import lcm
+        return lcm([self.denominator()] + [el.denominator() for el in other])
 
 class DFractionField(FractionField_generic):
     r'''

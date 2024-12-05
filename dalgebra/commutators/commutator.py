@@ -484,13 +484,15 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple, extrac
 
     ### Getting the linear system. We use the method extract on the Hs to get the monomials and the coefficients
     ### for each section of the Hs
+    ## We compute the lcm of the denominators of the elements by columns
+    D = [Hs[0][i].lcm_denominators(*[Hs[j][i] for j in range(1,len(Hs))]) for i in range(n-1)]
     if len(U) > 0: ## Some information is given
         rows = list()
         mons = list()
         for j in range(n-1):
             equs = dict()
             for i,c in enumerate(c_list):
-                for (mon, coeff) in extract(Hs[i][j]):
+                for (mon, coeff) in extract(D[j]*Hs[i][j]):
                     if not mon in equs:
                         equs[mon] = dict()
                     

@@ -29,6 +29,7 @@ from sage.combinat.combination import Combinations
 from sage.functions.other import binomial
 from sage.matrix.constructor import Matrix
 from sage.misc.cachefunc import cached_method
+from sage.misc.latex import latex
 from sage.modules.free_module_element import free_module_element as vector
 from sage.parallel.multiprocessing_sage import Pool
 from sage.rings.fraction_field import FractionField_generic
@@ -144,7 +145,7 @@ class SolutionBranch:
             try:
                 B = reduce(lambda p, q : p.extension(q, names=str(q.variables()[0])), [QQ] + [poly.polynomial(poly.variables()[0]).change_ring(QQ) for poly in I.gens()])
             except Exception as e:
-                logger.error(f"Found an error: {e}")
+                logger.info(f"Found an error: {e}")
                 B = BB.quotient(I, names=BB.variable_names())
         else:
             algebraic_variables = []
@@ -191,8 +192,10 @@ class SolutionBranch:
     ### UTILITY METHODS
     ######################################################################################################
     def eval(self, element):
+        evaluating = (lambda p : p(**self.__solution)) if len(self.__solution) > 0 else (lambda p : p)
         if isinstance(element, DPolynomial): # case of differential polynomials
-            return element(**self.__solution) # this should evaluate coefficients and monomials
+            # this should evaluate coefficients and monomials
+            return evaluating(element)
 
         # case of coefficients
         if isinstance(element.parent(), FractionField_generic): # case of fractions
@@ -205,9 +208,9 @@ class SolutionBranch:
             except Exception:
                 element = self.parent().fraction_field()(element)
             try:
-                return self.final_parent()(str(element(**self.__solution)))
+                return self.final_parent()(str(evaluating(element)))
             except Exception:
-                return self.final_parent(True)(str(element(**self.__solution)))
+                return self.final_parent(True)(str(evaluating(element)))
 
     def remaining_variables(self):
         return [v for v in self.parent().gens() if str(v) not in self.__solution]
@@ -337,13 +340,23 @@ class SolutionBranch:
         parts = [f"Solution Branch"]
         if len(self.__solution) > 0:
             parts.append(f"[{','.join(f'{var}={val}' for (var, val) in self.__solution.items())}]")
-        if self.__I.ngens() > 1 and self.__I.gens()[0] != 0:
+        if self.__I.ngens() > 1 or self.__I.gens()[0] != 0:
             parts.append(f"with {self.__I.ngens()} relations {self.__I.gens()}")
         if len(self.__decisions) > 0:
             parts.append(f"with {len(self.__decisions)} decisions")
         if len(self.remaining_variables()) > 0:
             parts.append(f"and {','.join([str(v) for v in self.remaining_variables()])} as free variables")
         return f'{" ".join(parts)}.'
+    
+    def _latex_(self) -> str:
+        parts = [r"\texttt{Solution}",
+                 f"\\left[{','.join(str(latex(v)) for v in self.remaining_variables())}\\right]",
+                 f"\\left({latex(self.I)}\\right)",
+                 r"\left\{" + ",".join(f"{k}={latex(v)}" for (k,v) in self.__solution.items()) + r"\right\}"
+        ]
+
+        return "".join(parts)
+
 
     ######################################################################################################
     ### STATIC METHODS OF THE CLASS
@@ -367,7 +380,9 @@ class SolutionBranch:
 @loglevel(logger)
 def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: list = [], final_parent=None, groebner: bool = True, parallel: int = None) -> list[SolutionBranch]:
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
-
+    if I == ideal(I.ring()):
+        return (SolutionBranch.AllSolution(I.ring()),)
+    
     StartPool(parallel) # starting (if needed) the processes pool
 
     ## We process the "to_avoid" argument
@@ -385,9 +400,9 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: 
     while len(branches) > 0:
         logger.debug(f"[IDEAL] Analyzing one of the remaining branches...")
         branch = branches.pop()
-        branch_GB = branch.I.groebner_basis() # This should be efficient since the branches have passed through GB computations
+        branch_GB = branch.full_ideal() # This should be efficient since the branches have passed through GB computations
         logger.debug(f"[IDEAL] We compute the original equations in the resulting branch.")
-        equations = [ideal(branch_GB).reduce(equ(**branch._SolutionBranch__solution)) for equ in I]
+        equations = [branch_GB.reduce(equ) for equ in I]
         equations = [el for el in equations if el != 0] # cleaning zeros
         if len(equations) == 0:
             logger.debug(f"[IDEAL] All equations satisfied: we add this branch to final solution.")

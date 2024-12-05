@@ -649,10 +649,24 @@ class DPolynomial(Element):
         '''
         return sum(hash(m) for m in self.monomials())
 
-    def numerator(self) -> DPolynomial:
-        return self
+    # def numerator(self) -> DPolynomial:
+    #     return self
+    # def denominator(self) -> DPolynomial:
+    #     return self.parent().one()
+
     def denominator(self) -> DPolynomial:
-        return self.parent().one()
+        coefficients = self.coefficients()
+        if len(coefficients) == 0: 
+            return 0
+        else: 
+            return coefficients[0].lcm_denominators(*coefficients[1:])
+    
+    def numerator(self) -> DPolynomial:
+        return self*self.denominator()
+    
+    def lcm_denominators(self, *other: DPolynomial):
+        from sage.arith.functions import lcm
+        return lcm([self.denominator()] + [el.denominator() for el in other])
 
     ###################################################################################
     ### Operational operations

@@ -210,11 +210,22 @@ class DElliptic_Element(Element):
     def coeffs(self) -> tuple[Element]:
         return self.__coeffs
 
-    def numerator(self) -> DElliptic_Element:
-        return self
+    # def numerator(self) -> DElliptic_Element:
+    #     return self
+    
+    # def denominator(self) -> DElliptic_Element:
+    #     return self.parent().one()
     
     def denominator(self) -> DElliptic_Element:
-        return self.parent().one()
+        from sage.arith.functions import lcm
+        return lcm([coeff.denominator() for coeff in self.__coeffs]) 
+    
+    def numerator(self) -> DElliptic_Element:
+        return self*self.denominator()
+    
+    def lcm_denominators(self, *other: DElliptic_Element) -> DElliptic_Element:
+        from sage.arith.functions import lcm
+        return lcm([self.denominator()] + [el.denominator() for el in other])
 
     @cached_method
     def algebraic(self) -> Element:
