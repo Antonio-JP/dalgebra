@@ -158,12 +158,18 @@ def GetCentralizer(
             if extra_info is not None: ## Using the extra information if provided
                 logger.info(f"[GC] ++     Converting data...")
                 system = Matrix([[extra_info.eval(el) for el in row] for row in system])
+                system = Matrix([row for row in system if row != 0]) # we ensure the matrix has no zero rows
 
-            if system[:,:-1].rank() == system.rank(): # the linear system with the last column has solution
+            if all(row != 0 for row in system[:,:-1]) and system[:,:-1].rank() == system.rank(): # the linear system with the last column has solution
                 logger.info(f"[GC] ++     Found a solution!")
-                cs = system[:,:-1].solve_right(-system[:,-1])
-                cs = list(c[0] for c in cs) ## Changing from matrix to list format
-                element_centralizer = Ps[-1] + sum(c*P for (c,P) in zip(cs, Ps))
+                if system.nrows() == 0: ## Case with no left equations
+                    cs = (len(Ps)-1)*[0] + [1]
+                elif system[:,-1] == 0: ## Last column is all zeros
+                    cs = (len(Ps)-1)*[0] + [1]
+                else: # there is a system to be solved
+                    cs = system[:,:-1].solve_right(-system[:,-1])
+                    cs = list(c[0] for c in cs) ## Changing from matrix to list format
+                element_centralizer = Ps[-1] + sum(c*P for (c,P) in zip(cs, Ps[:-1]))
                 if extra_info is not None:
                     element_centralizer = extra_info.eval(element_centralizer)
                 Goodearl_Basis[r] = element_centralizer
@@ -246,18 +252,17 @@ def GetEquationsForLevel(n: int, level: int,
     '''
     L, P, conditions = GetEquationsForSolution(n, level, U, extract=extract)
 
-    n = L.order(L.parent().gen("z"))
-
     ## We filter for cases without solution
     filtered_conditions = list()
     for (sol_branch, lin_system, mons) in conditions:
-        try:
-            ## TODO: Think if we can change this to a comparison in rank
-            lin_system[:,:-1].solve_right(-lin_system[:,-1])
+        A = lin_system[:,:-1]
+        b = lin_system[:,-1]
+
+        if b == 0 or (all(row != 0 for row in A) and b != 0 and A.rank() == lin_system.rank()):
             filtered_conditions.append((sol_branch, lin_system, mons))
-        except ValueError:
-            ## no solution -- we skip this branch
+        else:
             pass
+            ## no solution -- we skip this branch
 
     ## We collect old solutions
     smaller_conditions = tuple()
@@ -335,22 +340,23 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None, *,
 
         total = binomial(m,n) # this is how many minors we need to compute
         total_10 = total//10
-        final_ideal = ideal(ring)
+        final_ideal = []
 
         C = [[i for i in range(Hs.nrows()) if Hs[i][j] != 0] for j in range(Hs.ncols())]
 
         logger.debug(f"[GEFS] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C))
+
         for i,c in enumerate(Combinations(range(m), n)):
             if total_10 == 0 or i == total-1 or i % total_10 == 0: 
-                logger.debug(f"[GEFS] ++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)")
+                logger.debug(f"[GEFS] ++ Computing minor {i+1}/{total}... (Ideal with {len(final_ideal)} generators)")
             
             A_ = Hs.matrix_from_rows(c)
-            red_det = final_ideal.reduce(A_.determinant())
+            det = A_.determinant()
 
-            if red_det != 0: # there is something to add
-                final_ideal = ideal(ideal(final_ideal.gens() + (red_det,)).groebner_basis())
-                if 1 in final_ideal:
-                    break
+            if det != 0: # there is something to add
+                final_ideal.append(det)
+
+        final_ideal = ideal(ideal(final_ideal).groebner_basis()) if len(final_ideal) > 0 else ideal(ring)
                 
         logger.debug(f"[GEFS] -- Finished elimination of linear variables")
         ###############################################################################
@@ -359,11 +365,15 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None, *,
         solutions = list()
         for primary in final_ideal.primary_decomposition():
             solutions.extend(analyze_ideal(primary.radical(), dict(),list()))
-
+        
         ## We now evaluate the equations to get the remaining linear equations
         output = list()
         for solution in solutions:
             system = Matrix([[solution.eval(el) for el in row] for row in Hs])
+            if system == 0:
+                system = system[0,:] ## The matrix was the zero, we keep just one row
+            else:
+                system = Matrix([row for row in system if row != 0])
             output.append((solution, system, mons))
         return L, Ps, tuple(output)
     else:
@@ -486,6 +496,7 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple, extrac
     ### for each section of the Hs
     ## We compute the lcm of the denominators of the elements by columns
     D = [Hs[0][i].lcm_denominators(*[Hs[j][i] for j in range(1,len(Hs))]) for i in range(n-1)]
+
     if len(U) > 0: ## Some information is given
         rows = list()
         mons = list()
