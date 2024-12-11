@@ -217,10 +217,78 @@ class DElliptic_Element(Element):
     #     return self.parent().one()
     
     def denominator(self) -> DElliptic_Element:
+        """
+            Compute the least common multiple (LCM) of the denominators of the coefficients 
+            of an D-elliptic element.
+
+            OUTPUT:
+                The LCM `D` of the denominators of the coefficients, so ``D*self`` will have no denominators.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ)
+                sage: R.<eta> = DElliptic(B, "eta_p^2 - eta - 1")
+                sage: eta_p = R.gen_p()
+                sage: f1 = (1 / (eta + 1)) * eta_p + (1 / (eta - 1))
+                sage: f1.denominator()
+                eta^2 - 1
+                sage: f2 = (1 / (eta + 1)) * eta_p^2 + (1 / 2) * eta_p + (1 / 3)
+                sage: f2.denominator()
+                1
+                sage: f3 = 2 * eta_p^2 + 3 * eta_p + 5
+                sage: f3.denominator()
+                1
+                sage: f4 = (1 / ((eta + 1) * (eta - 1))) * eta_p^2 + (1 / (eta + 1)) * eta_p + (1 / (eta^2 - 1))
+                sage: f4.denominator()
+                eta^2 - 1
+                sage: f5 = 0 * eta_p
+                sage: f5.denominator()
+                1
+                sage: f6 = 1 / (eta + 1)
+                sage: f6.denominator()
+                eta + 1
+        """
         from sage.arith.functions import lcm
         return lcm([coeff.denominator() for coeff in self.__coeffs]) 
     
     def numerator(self) -> DElliptic_Element:
+        r'''
+            Compute the result of multiplying this element by its denominator.
+
+            The _numerator_ of an element that is in the field `C(\eta)(\eta')` where `\eta'`
+            is algebraic over `C(\eta)` can be view as the element `n` in `C[\eta](\eta')` 
+            such that ``self*D = n``, where `D` is the denimonator of ``self`` (see method 
+            :func:`denominator`.)
+
+            OUTPUT:
+                The numerator of ``self``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ)
+                sage: R.<eta> = DElliptic(B, "eta_p^2 - eta - 1")
+                sage: eta_p = R.gen_p()
+                sage: f1 = (1 / (eta + 1)) * eta_p + (1 / (eta - 1))
+                sage: f1.numerator()
+                (eta - 1)*eta_p + eta + 1
+                sage: f2 = (1 / (eta + 1)) * eta_p^2 + (1 / 2) * eta_p + (1 / 3)
+                sage: f2.numerator()
+                1/2*eta_p + 4/3
+                sage: f3 = 2 * eta_p^2 + 3 * eta_p + 5
+                sage: f3.numerator()
+                3*eta_p + 2*eta + 7
+                sage: f4 = (1 / ((eta + 1) * (eta - 1))) * eta_p^2 + (1 / (eta + 1)) * eta_p + (1 / (eta^2 - 1))
+                sage: f4.numerator()
+                (eta - 1)*eta_p + eta + 2
+                sage: f5 = 0 * eta_p
+                sage: f5.numerator()
+                0
+                sage: f6 = 1 / (eta + 1)
+                sage: f6.numerator()
+                1
+        '''
         return self*self.denominator()
     
     def lcm_denominators(self, *other: DElliptic_Element) -> DElliptic_Element:
