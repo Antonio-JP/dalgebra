@@ -148,6 +148,7 @@ from sage.categories.morphism import IdentityMorphism, Morphism, SetMorphism
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.categories.quotient_fields import QuotientFields
 from sage.categories.rings import Rings
+from sage.matrix.constructor import matrix
 from sage.misc.abstract_method import abstract_method
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
@@ -478,6 +479,57 @@ class DRings(Category):
             return self.skews()[skew](element)
 
         ##########################################################
+        ### LINEAR ALGEBRA METHODS
+        ##########################################################
+        def system_for_linear_solutions(self, system):
+            r'''
+                Method that extends a linear system for computing constant solutions.
+
+                Given a linear system `(A|b)` over a field `F`, we can look for a set of 
+                constant solutions in `C \subset F`. This method provides (when possible)
+                an extended system `(\tilde{A}|\tilde{b})` such that every constant
+                solution of the original system is a solution for the new system and vice-versa.
+
+                INPUT:
+
+                * ``system``: a matrix containing the system `(A|b)`.
+
+                OUTPUT:
+
+                A new matrix with coefficients in `C` fulfilling the desired condition,
+                and a list of enumerated monomials indicating the origin of each new equation.
+            '''
+            system = [[self(element) for element in row] for row in system]
+            D = [self.lcm_denominators(row) for row in system]
+            mons = list()
+            final_system = list()
+
+            ## We extend each row using the condition over the rings
+            for (j,row) in enumerate(system):
+                new_eqs = dict()
+                for (i,element) in enumerate(row):
+                    for (mon, coeff) in element.conditions_to_zero():
+                        if not mon in new_eqs:
+                            new_eqs[mon] = system.ncols()*[0]
+                        new_eqs[mon][i] += coeff
+                mons.extend([(j,m) for m in new_eqs.keys()])
+                final_system.extend(new_eqs.values())
+            
+            return matrix(final_system), mons
+        
+        def lcm_denominators(self, *elements):
+            r'''
+                Method that computes the least common multiple of the denominators of a list of elements.
+
+                If not possible, the method will not be implemented.
+            '''
+            elements = [self(element) for element in elements]
+            return self._lcm_denominators(*elements)
+
+        def _lcm_denominators(self, *_):
+            raise NotImplementedError(f"Method _lcm_denominators not yet implemented for {self.__class__}")
+
+        ##########################################################
         ### OTHER METHODS
         ##########################################################
         @abstract_method
@@ -778,6 +830,10 @@ class DRings(Category):
         ##########################################################
         ### OTHER METHODS
         ##########################################################
+        def conditions_to_zero(self):
+            r'''Return a set of conditions so the element is zero when evaluating some parameters.'''
+            raise NotImplementedError(f"Method conditions_to_zero not yet implemented for {self.__class__}")
+        
         def to_sage(self):
             r'''
                 Transform ``self`` to a SageMath object (if possible) without any d-structure.
