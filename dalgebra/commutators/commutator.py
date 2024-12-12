@@ -158,7 +158,7 @@ def GetCentralizer(
                 system = Matrix([[extra_info.eval(el) for el in row] for row in system])
                 system = Matrix([row for row in system if row != 0]) # we ensure the matrix has no zero rows
 
-            if all(row != 0 for row in system[:,:-1]) and system[:,:-1].rank() == system.rank(): # the linear system with the last column has solution
+            if system[:,:-1].rank() == system.rank(): # the linear system with the last column has solution
                 logger.info(f"[GC] ++     Found a solution!")
                 if system.nrows() == 0: ## Case with no left equations
                     cs = (len(Ps)-1)*[0] + [1]
@@ -249,7 +249,7 @@ def GetEquationsForLevel(n: int, level: int,
         A = lin_system[:,:-1]
         b = lin_system[:,-1]
 
-        if b == 0 or (all(row != 0 for row in A) and b != 0 and A.rank() == lin_system.rank()):
+        if A.rank() == lin_system.rank():
             filtered_conditions.append((sol_branch, lin_system, mons))
         else:
             pass
@@ -465,8 +465,8 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple):
 
     logger.debug(f"[GHLE] -- Computed the basis of almost commuting and the hierarchies")
 
-    system_in_DRing = [[Hs[j][i] for j in range(n-1)] for i in range(len(c_list))]
-    extended_system = parent_us.system_for_linear_solutions(system_in_DRing)
+    system_in_DRing = [[Hs[j][i] for j in range(len(c_list))] for i in range(n-1)]
+    extended_system = parent_us.system_for_constant_solutions(system_in_DRing)
 
     return L, Ps, extended_system
     # ### Getting the linear system. We use the method extract on the Hs to get the monomials and the coefficients

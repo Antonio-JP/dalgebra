@@ -2831,7 +2831,9 @@ class DPolynomialSimpleMorphism (Morphism):
                     ) : c for (m,c) in p._content.items()
                 }
             )
-        elif(p.degree() == 0):
+        elif p == 0:
+            return self.codomain().zero()
+        elif p.degree() == 0:
             return self.codomain()(next(iter(p.coefficients())))
 
         return self.codomain()(str(p))

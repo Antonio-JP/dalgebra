@@ -481,7 +481,7 @@ class DRings(Category):
         ##########################################################
         ### LINEAR ALGEBRA METHODS
         ##########################################################
-        def system_for_linear_solutions(self, system):
+        def system_for_constant_solutions(self, system):
             r'''
                 Method that extends a linear system for computing constant solutions.
 
@@ -499,21 +499,32 @@ class DRings(Category):
                 A new matrix with coefficients in `C` fulfilling the desired condition,
                 and a list of enumerated monomials indicating the origin of each new equation.
             '''
+            logger.debug(f"[SFCS] Extending system for constant solutions:\n{system}")
             system = [[self(element) for element in row] for row in system]
-            D = [self.lcm_denominators(row) for row in system]
+            nrows = len(system)
+            ncols = -1 if nrows == 0 else len(system[0])
+
+            logger.debug(f"[SFCS] Computing LCM for denominators in each row...")
+            D = [self.lcm_denominators(*row) for row in system]
+            logger.debug(f"[SFCS] {D=}")
             mons = list()
             final_system = list()
 
             ## We extend each row using the condition over the rings
             for (j,row) in enumerate(system):
+                logger.debug(f"[SFCS] Checking row {j} of the system...")
                 new_eqs = dict()
                 for (i,element) in enumerate(row):
-                    for (mon, coeff) in element.conditions_to_zero():
+                    logger.debug(f"[SFCS] Checking element {i} of the row: {element}")
+                    for (mon, coeff) in (D[j]*element).conditions_to_zero():
                         if not mon in new_eqs:
-                            new_eqs[mon] = system.ncols()*[0]
+                            new_eqs[mon] = ncols*[0]
+                        logger.debug(f"[SFCS] Adding coefficient {coeff} for the monomial {mon}")
                         new_eqs[mon][i] += coeff
                 mons.extend([(j,m) for m in new_eqs.keys()])
                 final_system.extend(new_eqs.values())
+            
+            logger.debug(f"[SFCS] Final system obtained:\n{matrix(final_system)}\n--------------------------")
             
             return matrix(final_system), mons
         

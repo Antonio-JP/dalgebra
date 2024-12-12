@@ -152,7 +152,9 @@ class SolutionBranch:
 
         ## We now add the remaining variables as polynomial variables
         rem_vars = [v for v in self.remaining_variables() if v not in algebraic_variables]
-        B = PolynomialRing(B, rem_vars)
+        if len(rem_vars) > 0:
+            B = PolynomialRing(B, rem_vars)
+        
         return B
 
     @cached_method
