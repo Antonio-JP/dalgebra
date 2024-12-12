@@ -980,7 +980,7 @@ class DRingFactory(UniqueFactory):
         base, operators, types = key
 
         if isinstance(base, FractionField_generic):
-            return DRing(base.base(), operators, types=types).fraction_field()
+            return DRing(base.base(), *operators, types=types).fraction_field()
 
         return DRing_Wrapper(base, *operators, types=types)
 
@@ -1172,9 +1172,8 @@ class DRing_WrapperElement(Element):
             ## We look for the variables that are not constant
             no_constant_gens = [g.wrapped for g in self.parent().gens() if not g.d_constant()]
             if len(no_constant_gens) == 0:
-                raise NotImplementedError(f"Method conditions_to_zero not implemented when having all constants")
+                return [(1, self.wrapped)]
             
-            constant_gens = [g.wrapped for g in self.parent().gens() if all(g.d_constant(i) for i in range(self.parent().noperators()))]
             R = PolynomialRing(self.parent().wrapped.remove_var(*no_constant_gens), no_constant_gens)
             h = self.parent().wrapped.hom([R(str(g)) for g in self.parent().wrapped.gens()])
             element = h(self.wrapped)
@@ -1185,7 +1184,7 @@ class DRing_WrapperElement(Element):
             else:
                 return list(zip(reversed(element.monomials()), element.coefficients()))
         else:
-            return (1, self.wrapped)
+            return [(1, self.wrapped)]
 
     ## Other magic methods
     def __call__(self, *args, **kwds):
@@ -1355,6 +1354,9 @@ class DRing_Wrapper(Parent):
                 new_base = base.extend_variables(new_constants)
             else: # multivariate case
                 new_base = PolynomialRing(base.base(), base.variable_names() + new_constants)
+
+        if self.is_field():
+            new_base = new_base.fraction_field()
 
         ## We now extend all operations defined
         operations = list()

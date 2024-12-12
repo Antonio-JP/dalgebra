@@ -295,7 +295,7 @@ class DElliptic_Element(Element):
     def algebraic(self) -> Element:
         y = self.parent().variable_p()
 
-        return sum(coeff*y**i for (i,coeff) in enumerate(self.__coeffs) if coeff != 0)
+        return sum((coeff*y**i for (i,coeff) in enumerate(self.__coeffs) if coeff != 0), self.parent().algebraic().zero())
 
     @cached_method
     def partial(self) -> DElliptic_Element:

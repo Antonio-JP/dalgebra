@@ -351,10 +351,11 @@ class SolutionBranch:
         return f'{" ".join(parts)}.'
     
     def _latex_(self) -> str:
+        from sage.misc.latex import latex_variable_name
         parts = [r"\texttt{Solution}",
-                 f"\\left[{','.join(str(latex(v)) for v in self.remaining_variables())}\\right]",
+                 f"\\left[{','.join(latex_variable_name(str(latex(v))) for v in self.remaining_variables())}\\right]",
                  f"\\left({latex(self.I)}\\right)",
-                 r"\left\{" + ",".join(f"{k}={latex(v)}" for (k,v) in self.__solution.items()) + r"\right\}"
+                 r"\left\{" + ",".join(f"{latex_variable_name(k)}={latex(v)}" for (k,v) in self.__solution.items()) + r"\right\}"
         ]
 
         return "".join(parts)
