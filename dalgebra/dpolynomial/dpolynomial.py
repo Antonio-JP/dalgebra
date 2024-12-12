@@ -649,11 +649,7 @@ class DPolynomial(Element):
         '''
         return sum(hash(m) for m in self.monomials())
 
-    # def numerator(self) -> DPolynomial:
-    #     return self
-    # def denominator(self) -> DPolynomial:
-    #     return self.parent().one()
-
+    ## Other methods for DRings.ElementMethods
     def denominator(self) -> DPolynomial:
         coefficients = self.coefficients()
         if len(coefficients) == 0: 
@@ -664,9 +660,27 @@ class DPolynomial(Element):
     def numerator(self) -> DPolynomial:
         return self*self.denominator()
     
-    def lcm_denominators(self, *other: DPolynomial):
-        from sage.arith.functions import lcm
-        return lcm([self.denominator()] + [el.denominator() for el in other])
+    def conditions_to_zero(self) -> list[tuple[DPolynomial, Element]]:
+        r'''
+            Return the conditions to ``self`` to be zero.
+
+            The generators in a D-polynomial ring are considered to be d-algebraically independent.
+            This means that there is no polynomial combination of the generators and all their 
+            operational successors that vanishes.
+
+            In this sense, we can conclude that an element is zero if and only if all their coefficients
+            are also zero in the base ring we are considering.
+
+            As the elements in the coefficients are in a D-Ring, we can compute the zero conditions for those
+            elements as well.
+        '''
+        output = list()
+        for (mon, coeff) in zip(self.monomials(), self.coefficients()):
+            for (mon2, condition) in coeff.conditions_to_zero():
+                output.append((self.parent()(mon)*mon2, condition))
+
+        return output
+
 
     ###################################################################################
     ### Operational operations
@@ -2188,6 +2202,10 @@ class DPolynomialRing_Monoid(Parent):
                 element -= partial_integral.operation(operation)
                 logger.debug(f"[integral_decomposition] Remaining to integrate: {element}")
                 return self.__integral_decomposition(element, operation, integral, nintegral)
+
+    def _lcm_denominators(self, *elements: DPolynomial):
+        from sage.arith.functions import lcm
+        return lcm(element.denominator() for element in elements)
 
     @cached_method
     def to_sage(self):

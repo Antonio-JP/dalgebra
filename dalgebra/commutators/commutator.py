@@ -95,7 +95,6 @@ _DRings = DRings.__classcall__(DRings)
 def GetCentralizer(
         U: tuple[Element], global_bound: int, *, 
         starting_level:int = 1, ignore_bound: bool = False,
-        extract: Callable[[Polynomial], list[Polynomial]],
         extra_info: SolutionBranch = None
         ):
     r'''
@@ -151,8 +150,7 @@ def GetCentralizer(
             logger.info(f"[GC] ++ Looking with coefficients: {c_coeffs + [current]}")
             L, Ps, (system, _) = GetHierarchyLinearEquations(
                 n, current, U, 
-                c_coeffs + [current],
-                extract=extract
+                c_coeffs + [current]
             )
 
             if extra_info is not None: ## Using the extra information if provided
@@ -224,12 +222,6 @@ def __compute_bounds(n, *K, global_bound):
     
     return bounds
         
-
-    
-
-
-
-
 #################################################################################################
 ###
 ### METHODS TO OBTAIN EQUATIONS FROM TEMPLATES
@@ -237,8 +229,7 @@ def __compute_bounds(n, *K, global_bound):
 #################################################################################################
 @lru_cache
 def GetEquationsForLevel(n: int, level: int,
-        U: tuple | dict = None, *,
-        extract: Callable[[Polynomial], list[Polynomial]],
+        U: tuple | dict = None
     ):
     r'''
         Method to compute conditions for a template to be of fixed `level`.
@@ -250,7 +241,7 @@ def GetEquationsForLevel(n: int, level: int,
         We ensure that the output are the conditions and remaining equations determines solutions
         that have exactly level `m`.
     '''
-    L, P, conditions = GetEquationsForSolution(n, level, U, extract=extract)
+    L, P, conditions = GetEquationsForSolution(n, level, U)
 
     ## We filter for cases without solution
     filtered_conditions = list()
@@ -268,7 +259,7 @@ def GetEquationsForLevel(n: int, level: int,
     smaller_conditions = tuple()
     for m in range(1, level):
         if m%n != 0:
-            smaller_conditions += GetEquationsForLevel(n, m, U, extract=extract)[2]
+            smaller_conditions += GetEquationsForLevel(n, m, U)[2]
     
     ## We compare the solutions
     final_conditions = tuple(
@@ -280,8 +271,7 @@ def GetEquationsForLevel(n: int, level: int,
     return L, P, final_conditions
 
 @loglevel(logger)
-def GetEquationsForSolution(n: int, m : int, U: list | dict = None, *,
-        extract: Callable[[Polynomial], list[Polynomial]]) -> tuple[DPolynomial, DPolynomial, Ideal]:
+def GetEquationsForSolution(n: int, m : int, U: list | dict = None) -> tuple[DPolynomial, DPolynomial, Ideal]:
     r'''
         Method to get the equations for a specific type of solutions for non-trivial commutator.
 
@@ -301,11 +291,6 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None, *,
         up to a fixed order (given by `m`) and then compute all the algebraic equations that need to
         be satisfied for obtaining a non-trivial element of the centralizer of `L`.
 
-        Since the way the algebraic equations arises from the almost commuting basis and the operator
-        `L` depends on the differential field over which `L` is defined, we require a method
-        ``extract`` that can obtain, for a given element in the differential field, a list of
-        equations that guarantee the element to vanish.
-
         INPUT:
 
         * ``n``: provides the order of the operator `L` to be used.
@@ -313,9 +298,6 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None, *,
         * ``m``: order bound for the commutator to be found.
         * ``U``: list or dictionary with the shape for the functions `a_{n-2},\ldots,a_0`. If given as a
           list, it is read as ``[a_0,\ldots,a_{n-2}]``. If given as a map, then it maps `i \mapsto a_i`.
-        * ``extract``: a method to extract from the final set of values the equations for
-          the obtained operator to actually commute. These equations will include any variable
-          within the given functions ``U`` and the flag of constants created.
 
         OUTPUT:
 
@@ -324,7 +306,7 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None, *,
         conditions for `P` to commute with `L`.
     '''
     logger.debug(f"[GEFS] Getting the linear system associated for having a centralizer of order `m`")
-    L, Ps, (Hs,mons) = GetHierarchyLinearEquations(n,m,U,tuple(i for i in range(m+1) if i%n != 0),extract=extract)
+    L, Ps, (Hs,mons) = GetHierarchyLinearEquations(n,m,U,tuple(i for i in range(m+1) if i%n != 0))
 
     ## Hs is a matrix with the linear equations -- each row is an equation
     if len(U) > 0: ## some information is given, we can do something else
@@ -380,9 +362,7 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None, *,
         return L, Ps, Hs
 
 def GetHierarchyLinearEquations(n: int, m : int,
-        U: list | dict = None, c_list: list = None,
-        *,
-        extract: Callable):
+        U: list | dict = None, c_list: list = None):
     r'''
         Method to compute the linear system induced by the hierarchy of an operator.
 
@@ -404,9 +384,7 @@ def GetHierarchyLinearEquations(n: int, m : int,
 
             c_0 H_{0,j} + c_1 H_{1,j} + \ldots + c_m H_{m,j} = 0.
 
-        This is a linear system in `m+1` variables in the field of coefficients of `L`. In 
-        order to compute a solution with constants, we need some extra information on the structure
-        of these coefficients (see method ``extract`` in the input)
+        This is a linear system in `m+1` variables in the field of coefficients of `L`.
 
         This method computes the best possible linear system induced for an operator of
         order `n` when we look for an element in the centralizer of order at most `m`.
@@ -418,8 +396,6 @@ def GetHierarchyLinearEquations(n: int, m : int,
         * ``U``: list or dictionary of the coefficients of `L` such that `[\partial^i]L = U[i]`.
         * ``c_list`` (optional): list of constants to be considered in the sum for the linear system.
           If not provided, we consider all constants possible.
-        * ``extract``: method to get a real set of equations for an element of the field of 
-          coefficients for `L` to be equal to zero.
 
         OUTPUT:
 
@@ -442,10 +418,10 @@ def GetHierarchyLinearEquations(n: int, m : int,
     c_list = tuple(sorted(i for i in c_list if i >= 0 and i <= m)) ## remove bad elements - c_list is sorted now
 
     ## We return the cached result with these keys
-    return _GetHierarchyLinearEquations(n,m,U,c_list,extract)
+    return _GetHierarchyLinearEquations(n,m,U,c_list)
 
 @lru_cache
-def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple, extract: Callable):
+def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple):
     logger.debug(f"[GHLE] Calling method with {n=}, {m=}, {U=}, {c_list=}")
     ## Checking correctness of arguments
     if n not in ZZ or n < 2:
@@ -457,9 +433,6 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple, extrac
     U = dict(U)
     if any(el not in ZZ for el in U.keys()) or min(U.keys()) < 0 or max(U.keys()) > n-2:
         raise KeyError(f"[GHLE] The argument ``U`` as dictionary must have integers as keys between 0 and `n-2` ({n-2})")
-
-    if extract is not None and not callable(extract):
-        raise TypeError(f"[GHLE] The argument ``extract`` must be a callable or `None`")
     
     ## Analyzing the functions in ``U``
     logger.debug(f"[GHLE] Computing common parent for the ansatz functions")
@@ -492,28 +465,32 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple, extrac
 
     logger.debug(f"[GHLE] -- Computed the basis of almost commuting and the hierarchies")
 
-    ### Getting the linear system. We use the method extract on the Hs to get the monomials and the coefficients
-    ### for each section of the Hs
-    ## We compute the lcm of the denominators of the elements by columns
-    D = [Hs[0][i].lcm_denominators(*[Hs[j][i] for j in range(1,len(Hs))]) for i in range(n-1)]
+    system_in_DRing = [[Hs[j][i] for j in range(n-1)] for i in range(len(c_list))]
+    extended_system = parent_us.system_for_linear_solutions(system_in_DRing)
 
-    if len(U) > 0: ## Some information is given
-        rows = list()
-        mons = list()
-        for j in range(n-1):
-            equs = dict()
-            for i,c in enumerate(c_list):
-                for (mon, coeff) in extract(D[j]*Hs[i][j]):
-                    if not mon in equs:
-                        equs[mon] = dict()
+    return L, Ps, extended_system
+    # ### Getting the linear system. We use the method extract on the Hs to get the monomials and the coefficients
+    # ### for each section of the Hs
+    # ## We compute the lcm of the denominators of the elements by columns
+    # D = [Hs[0][i].lcm_denominators(*[Hs[j][i] for j in range(1,len(Hs))]) for i in range(n-1)]
+
+    # if len(U) > 0: ## Some information is given
+    #     rows = list()
+    #     mons = list()
+    #     for j in range(n-1):
+    #         equs = dict()
+    #         for i,c in enumerate(c_list):
+    #             for (mon, coeff) in extract(D[j]*Hs[i][j]):
+    #                 if not mon in equs:
+    #                     equs[mon] = dict()
                     
-                    equs[mon][c] = coeff
-            rows.extend([[equs[mon].get(c, 0) for c in c_list] for mon in equs])
-            mons.extend((j,mon) for mon in equs)
+    #                 equs[mon][c] = coeff
+    #         rows.extend([[equs[mon].get(c, 0) for c in c_list] for mon in equs])
+    #         mons.extend((j,mon) for mon in equs)
         
-        return L, Ps, (Matrix(rows), tuple(mons))
-    else: ## simple approach
-        return L, Ps, (Matrix(Hs), tuple([(i,1) for i in range(n-1)]))
+    #     return L, Ps, (Matrix(rows), tuple(mons))
+    # else: ## simple approach
+    #     return L, Ps, (Matrix(Hs), tuple([(i,1) for i in range(n-1)]))
 
 #################################################################################################
 ###
@@ -528,9 +505,9 @@ def PolynomialCommutator(n: int, m: int, d: int, force_level: bool = False) -> t
     logger.debug(f"[PolyComm] --- Generated the ansatz functions:\n\t{U=}")
     logger.debug(f"[PolyComm] --- Computing the equations necessary for the ansatz to commute with L_{n}...")
     if not force_level:
-        L, P, H = GetEquationsForSolution(n, m, U, extract=generate_polynomial_equations)
+        L, P, H = GetEquationsForSolution(n, m, U)
     else:
-        L, P, H = GetEquationsForLevel(n,m, U, extract=generate_polynomial_ansatz)
+        L, P, H = GetEquationsForLevel(n,m, U)
     return L,P,H
 
 #################################################################################################

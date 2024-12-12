@@ -517,7 +517,7 @@ class DRings(Category):
             
             return matrix(final_system), mons
         
-        def lcm_denominators(self, *elements):
+        def lcm_denominators(self, *elements: DRings.ElementMethods) -> DRings.ElementMethods:
             r'''
                 Method that computes the least common multiple of the denominators of a list of elements.
 
@@ -526,7 +526,7 @@ class DRings(Category):
             elements = [self(element) for element in elements]
             return self._lcm_denominators(*elements)
 
-        def _lcm_denominators(self, *_):
+        def _lcm_denominators(self, *_) -> DRings.ElementMethods:
             raise NotImplementedError(f"Method _lcm_denominators not yet implemented for {self.__class__}")
 
         ##########################################################
@@ -830,10 +830,13 @@ class DRings(Category):
         ##########################################################
         ### OTHER METHODS
         ##########################################################
-        def conditions_to_zero(self):
+        def conditions_to_zero(self) -> list[tuple[Element,Element]]:
             r'''Return a set of conditions so the element is zero when evaluating some parameters.'''
             raise NotImplementedError(f"Method conditions_to_zero not yet implemented for {self.__class__}")
         
+        def lcm_denominators(self, *other: DRings.ElementMethods) -> DRings.ElementMethods:
+            return self.parent().lcm_denominators(self, *other)
+
         def to_sage(self):
             r'''
                 Transform ``self`` to a SageMath object (if possible) without any d-structure.
@@ -1147,6 +1150,32 @@ class DRing_WrapperElement(Element):
                 return el
         raise AttributeError(f"{self.__class__} object has no attribute {attr}")
 
+    ## Methods from DRings.ElementMethods
+    def conditions_to_zero(self) -> list[tuple[Element,Element]]:
+        from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
+        from sage.rings.polynomial.polynomial_ring import is_PolynomialRing
+        from sage.rings.polynomial.multi_polynomial_ring import is_MPolynomialRing
+        if is_PolynomialRing(self.parent().wrapped):
+            return list(zip(reversed(self.monomials()), self.coefficients()))
+        elif is_MPolynomialRing(self.parent().wrapped):
+            ## We look for the variables that are not constant
+            no_constant_gens = [g.wrapped for g in self.parent().gens() if not g.d_constant()]
+            if len(no_constant_gens) == 0:
+                raise NotImplementedError(f"Method conditions_to_zero not implemented when having all constants")
+            
+            constant_gens = [g.wrapped for g in self.parent().gens() if all(g.d_constant(i) for i in range(self.parent().noperators()))]
+            R = PolynomialRing(self.parent().wrapped.remove_var(*no_constant_gens), no_constant_gens)
+            h = self.parent().wrapped.hom([R(str(g)) for g in self.parent().wrapped.gens()])
+            element = h(self.wrapped)
+
+            ## Now element is a polynomial with the appropriate hierarchy of variables
+            if len(no_constant_gens) > 1:
+                return list(zip(element.monomials(), element.coefficients()))
+            else:
+                return list(zip(reversed(element.monomials()), element.coefficients()))
+        else:
+            return (1, self.wrapped)
+
     ## Other magic methods
     def __call__(self, *args, **kwds):
         out = self.wrapped(*args, **kwds)
@@ -1333,6 +1362,9 @@ class DRing_Wrapper(Parent):
             else:
                 raise TypeError("Impossible to create constants when they are not defined.")
         return DRing(new_base, *operations, types=self.operator_types())
+
+    def _lcm_denominators(self, *_: DRing_WrapperElement) -> DRing_WrapperElement:
+        return self.one()
 
     def linear_operator_ring(self):
         r'''
@@ -1605,9 +1637,9 @@ class DFractionFieldElement(FractionFieldElement):
         except AttributeError:
             raise AttributeError("'DFractionFieldElement' object has no attribute 'variables'")
         
-    def lcm_denominators(self, *other: DFractionFieldElement):
-        from sage.arith.functions import lcm
-        return lcm([self.denominator()] + [el.denominator() for el in other])
+    ## Methods from DRings.ElementMethods
+    def conditions_to_zero(self) -> list[tuple[Element,Element]]:
+        return self.numerator().conditions_to_zero()
 
 class DFractionField(FractionField_generic):
     r'''
@@ -1666,6 +1698,10 @@ class DFractionField(FractionField_generic):
 
     def add_constants(self, *new_constants: str) -> DFractionField:
         return self.base().add_constants(*new_constants).fraction_field()
+    
+    def _lcm_denominators(self, *elements: DFractionFieldElement):
+        from sage.arith.functions import lcm
+        return lcm(element.denominator() for element in elements)
 
     def inverse_operation(self, element, operator: int = 0):
         return self.base().inverse_operation(element, operator)

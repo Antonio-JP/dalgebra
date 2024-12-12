@@ -290,10 +290,6 @@ class DElliptic_Element(Element):
                 1
         '''
         return self*self.denominator()
-    
-    def lcm_denominators(self, *other: DElliptic_Element) -> DElliptic_Element:
-        from sage.arith.functions import lcm
-        return lcm([self.denominator()] + [el.denominator() for el in other])
 
     @cached_method
     def algebraic(self) -> Element:
@@ -647,6 +643,10 @@ class DElliptic_Field(Parent):
 
     def inverse_operation(self, element: DElliptic_Element, operation: int = 0) -> DElliptic_Element:
         raise NotImplementedError(f"The integration in these fields is not yet implemented")
+    
+    def _lcm_denominators(self, *elements: DElliptic_Element) -> DElliptic_Element:
+        from sage.arith.functions import lcm
+        return lcm(element.denominator() for element in elements)
 
     def to_sage(self):
         return self.__algebraic
