@@ -116,7 +116,7 @@ r'''
       usual Wrapper differential ring.
     * This structure only works with 1 derivation. Shifts, skew-derivations and rings with multiple operations *do not work*.
     * Integration of these objects is not yet implemented.
-    * Te computation of all new constants is not yet implemented.
+    * The computation of all new constants is not yet implemented.
 '''
 
 from sage.categories.algebras import Algebras
