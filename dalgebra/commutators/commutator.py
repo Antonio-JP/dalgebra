@@ -317,10 +317,10 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None) -> tuple[DPo
         ###############################################################################
         ## COMPUTING THE IDEAL OF MINORS
         ###############################################################################
-        n = Hs.ncols()
-        m = Hs.nrows()
+        ncols = Hs.ncols()
+        nrows = Hs.nrows()
 
-        total = binomial(m,n) # this is how many minors we need to compute
+        total = binomial(nrows,ncols) # this is how many minors we need to compute
         total_10 = total//10
         final_ideal = []
 
@@ -328,7 +328,7 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None) -> tuple[DPo
 
         logger.debug(f"[GEFS] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C))
 
-        for i,c in enumerate(Combinations(range(m), n)):
+        for i,c in enumerate(Combinations(range(nrows), ncols)):
             if total_10 == 0 or i == total-1 or i % total_10 == 0: 
                 logger.debug(f"[GEFS] ++ Computing minor {i+1}/{total}... (Ideal with {len(final_ideal)} generators)")
             

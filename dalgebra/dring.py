@@ -156,6 +156,8 @@ from sage.rings.fraction_field import FractionField_generic
 from sage.rings.fraction_field_element import FractionFieldElement
 from sage.rings.integer_ring import ZZ
 from sage.rings.morphism import RingHomomorphism_im_gens
+from sage.rings.polynomial.polynomial_ring import PolynomialRing_generic
+from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_base
 from sage.rings.ring import Ring, CommutativeRing
 from sage.rings.derivation import RingDerivationModule
 from sage.structure.element import parent, Element
@@ -1164,11 +1166,9 @@ class DRing_WrapperElement(Element):
     ## Methods from DRings.ElementMethods
     def conditions_to_zero(self) -> list[tuple[Element,Element]]:
         from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
-        from sage.rings.polynomial.polynomial_ring import is_PolynomialRing
-        from sage.rings.polynomial.multi_polynomial_ring import is_MPolynomialRing
-        if is_PolynomialRing(self.parent().wrapped):
+        if isinstance(self.parent().wrapped, PolynomialRing_generic):
             return list(zip(reversed(self.monomials()), self.coefficients()))
-        elif is_MPolynomialRing(self.parent().wrapped):
+        elif isinstance(self.parent().wrapped, MPolynomialRing_base):
             ## We look for the variables that are not constant
             no_constant_gens = [g.wrapped for g in self.parent().gens() if not g.d_constant()]
             if len(no_constant_gens) == 0:
@@ -1338,10 +1338,8 @@ class DRing_Wrapper(Parent):
 
     def add_constants(self, *new_constants: str) -> DRing_Wrapper:
         from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
-        from sage.rings.polynomial.polynomial_ring import is_PolynomialRing
-        from sage.rings.polynomial.multi_polynomial_ring import is_MPolynomialRing
         ## We first try to see if the wrapped ring/field was a polynomial ring or not
-        if self.wrapped.is_field() and (is_PolynomialRing(self.wrapped.base()) or is_MPolynomialRing(self.wrapped.base())):
+        if self.wrapped.is_field() and (isinstance(self.wrapped.base(), (PolynomialRing_generic, MPolynomialRing_base))):
             base = self.wrapped.base()
         else:
             base = self.wrapped
@@ -1350,7 +1348,7 @@ class DRing_Wrapper(Parent):
         if base.is_field():
             new_base = PolynomialRing(base, new_constants)
         else: ## In this case, base is a polynomial ring. We need to add the variables here
-            if is_PolynomialRing(base): # univariate case
+            if isinstance(base, PolynomialRing_generic): # univariate case
                 new_base = base.extend_variables(new_constants)
             else: # multivariate case
                 new_base = PolynomialRing(base.base(), base.variable_names() + new_constants)
@@ -1463,6 +1461,8 @@ class DRing_Wrapper(Parent):
     def to_sage(self):
         ## No need to create the conversion morphism because they already exist
         return self.wrapped
+
+    def is_field(self) -> bool: return self.wrapped.is_field()
 
     def inverse_operation(self, element: DRing_WrapperElement, operator: int = None) -> DRing_WrapperElement:
         if self.operator_types()[operator] == "homomorphism":
