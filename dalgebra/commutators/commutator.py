@@ -328,6 +328,12 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None) -> tuple[DPo
 
         logger.debug(f"[GEFS] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C))
 
+        with open(f"matrix_{n}_{m}.txt", "w") as f:
+            _matrix = ",\n".join(str(list(r)) for r in Hs)
+            f.write(f"Matrix([\n{_matrix}\n])")
+        with open(f"rows_{n}_{m}.txt", "w") as f:
+            f.write(f"{mons}")
+
         for i,c in enumerate(Combinations(range(nrows), ncols)):
             if total_10 == 0 or i == total-1 or i % total_10 == 0: 
                 logger.debug(f"[GEFS] ++ Computing minor {i+1}/{total}... (Ideal with {len(final_ideal)} generators)")
