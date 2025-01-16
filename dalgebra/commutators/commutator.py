@@ -87,6 +87,35 @@ from .ideals import analyze_ideal, SolutionBranch
 
 _DRings = DRings.__classcall__(DRings)
 
+###############################################################################################
+## Trying to initialize Maple
+###############################################################################################
+try:
+    from sage.interfaces.maple import maple as Maple
+    if not Maple.is_running():
+        Maple._start()
+    _HAS_MAPLE = True
+except RuntimeError:
+    _HAS_MAPLE = False
+
+def _generate_maple_command(ideal: list[DPolynomial]) -> str:
+    return "\n".join(["seq_polys := " + ",".join(str(p) for p in ideal) + ":",
+                      r'print("Read file: ", nops({seq_polys}));',
+                      r"solve({seq_polys});"
+    ])
+
+def _parse_maple_output(output: str, ring) -> list[Ideal]:
+    ## We process the string: "{solution_1}, {solution_2}, ..., {solution_n}
+    solutions = output.split("{") ## we split through the opening of each solution
+    solutions = [solution.strip()[:solution.find("}")] for solution in solutions[1:]] # we remove the closing bracket in each string
+
+    ## Now we have the following in each solution: "var_1 = value_1, var_2 = value_2, ..., var_n = value_n"
+    solutions = [solution.replace("=","-").split(",") for solution in solutions]
+    solutions = [ideal([ring(poly) for poly in solution]) for solution in solutions]
+
+    ## Now each solution is an ideal (easy to analyze)
+    return solutions
+
 #################################################################################################
 ###
 ### METHODS TO OBTAIN CENTRALIZER UP TO A CERTAIN LEVEL
@@ -141,6 +170,7 @@ def GetCentralizer(
     logger.info(f"[GC] Starting level:  {starting_level}")
 
     c_coeffs = list(el for el in range(1,starting_level) if el % n != 0)
+    level_flag = None
 
     while current <= B:
         r = current % n
@@ -167,6 +197,7 @@ def GetCentralizer(
                 else: # there is a system to be solved
                     cs = system[:,:-1].solve_right(-system[:,-1])
                     cs = list(c[0] for c in cs) ## Changing from matrix to list format
+                if level_flag == None: level_flag = cs.copy() ## We save the fl
                 element_centralizer = Ps[-1] + sum(c*P for (c,P) in zip(cs, Ps[:-1]))
                 if extra_info is not None:
                     element_centralizer = extra_info.eval(element_centralizer)
@@ -193,6 +224,8 @@ def GetCentralizer(
                 elif bounds[i] <= remaining: # already found, may contribute
                     decomposition.append(remaining//bounds[i])
                     remaining %= bounds[i]
+                else:
+                    decomposition.append(0)
             logger.info(f"[GC] ++     Element {r} can be computed using {decomposition}")
             Goodearl_Basis[r] = decomposition
         logger.info(f"[GC] -- Concluded study at level {current}")
@@ -200,7 +233,7 @@ def GetCentralizer(
     
     ## We change the first element to be the actual "constant" operator
     Goodearl_Basis[0] = L.parent().gen("z")[0]
-    return L, Goodearl_Basis
+    return L, Goodearl_Basis, level_flag
 
 def __compute_bounds(n, *K, global_bound):
     import heapq
@@ -229,7 +262,8 @@ def __compute_bounds(n, *K, global_bound):
 #################################################################################################
 @lru_cache
 def GetEquationsForLevel(n: int, level: int,
-        U: tuple | dict = None
+        U: tuple | dict = None,
+        simple: bool = False, maple: bool = False
     ):
     r'''
         Method to compute conditions for a template to be of fixed `level`.
@@ -241,7 +275,7 @@ def GetEquationsForLevel(n: int, level: int,
         We ensure that the output are the conditions and remaining equations determines solutions
         that have exactly level `m`.
     '''
-    L, P, conditions = GetEquationsForSolution(n, level, U)
+    L, P, conditions = GetEquationsForSolution(n, level, U, simple=simple, maple=maple)
 
     ## We filter for cases without solution
     filtered_conditions = list()
@@ -259,7 +293,7 @@ def GetEquationsForLevel(n: int, level: int,
     smaller_conditions = tuple()
     for m in range(1, level):
         if m%n != 0:
-            smaller_conditions += GetEquationsForLevel(n, m, U)[2]
+            smaller_conditions += GetEquationsForLevel(n, m, U, maple=maple)[2]
     
     ## We compare the solutions
     final_conditions = tuple(
@@ -271,7 +305,7 @@ def GetEquationsForLevel(n: int, level: int,
     return L, P, final_conditions
 
 @loglevel(logger)
-def GetEquationsForSolution(n: int, m : int, U: list | dict = None) -> tuple[DPolynomial, DPolynomial, Ideal]:
+def GetEquationsForSolution(n: int, m : int, U: list | dict = None, simple: bool = False, maple: bool = False) -> tuple[DPolynomial, DPolynomial, Ideal]:
     r'''
         Method to get the equations for a specific type of solutions for non-trivial commutator.
 
@@ -334,26 +368,56 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None) -> tuple[DPo
         with open(f"rows_{n}_{m}.txt", "w") as f:
             f.write(f"{mons}")
 
-        for i,c in enumerate(Combinations(range(nrows), ncols)):
-            if total_10 == 0 or i == total-1 or i % total_10 == 0: 
-                logger.debug(f"[GEFS] ++ Computing minor {i+1}/{total}... (Ideal with {len(final_ideal)} generators)")
-            
-            A_ = Hs.matrix_from_rows(c)
-            det = A_.determinant()
-
-            if det != 0: # there is something to add
-                final_ideal.append(det)
-
-        final_ideal = ideal(ideal(final_ideal).groebner_basis()) if len(final_ideal) > 0 else ideal(ring)
+        ### COMPUTATION OPTION "simple"
+        ### If we are in the simple mode, we only look to the last column. This is a simplification
+        ### that may not give the complete set of equations. We use this to speed up the process
+        ### of obtaining solutions.
+        if not simple:
+            for i,c in enumerate(Combinations(range(nrows), ncols)):
+                if total_10 == 0 or i == total-1 or i % total_10 == 0: 
+                    logger.debug(f"[GEFS] ++ Computing minor {i+1}/{total}... (Ideal with {len(final_ideal)} generators)")
                 
+                A_ = Hs.matrix_from_rows(c)
+                det = A_.determinant()
+
+                if det != 0: # there is something to add
+                    final_ideal.append(det)
+        else:
+            logger.debug(f"[GEFS] Simple version: only looking to last columns")
+            logger.warning(f"[GEFS] Simple version: results may not be complete")
+            final_ideal = list(Hs[:,-1].column(0))
+
         logger.debug(f"[GEFS] -- Finished elimination of linear variables")
         ###############################################################################
         ## ANALYZING THE SOLUTION IDEAL
         ###############################################################################
         solutions = list()
-        for primary in final_ideal.primary_decomposition():
-            solutions.extend(analyze_ideal(primary.radical(), dict(),list()))
-        
+        ### COMPUTATION OPTION "maple"
+        ### If we are in the maple mode, we use the Maple software to compute the different
+        ### solutions for the ideal system. This essentially create the equations in Maple 
+        ### and then solve them using the "solve" command. If the ideal has dimension higher
+        ### than zero, it may not obtain full solutions but some points.
+        if maple and _HAS_MAPLE:
+            logger.debug(f"[GEFS] Using Maple to solve the system")
+            logger.warning(f"[GEFS] If the ideal has non-zero dimension, this may not provide full solutions")
+            command = _generate_maple_command(final_ideal)
+            if len(command) > 1000:
+                from tempfile import NamedTemporaryFile
+                with NamedTemporaryFile("w", delete=False) as tmp_file:
+                    tmp_file.write(command)
+                    tmp_file.close()
+                    command = f'read "{tmp_file.name}";' 
+                    output = Maple.eval(command)
+            else:
+                output = Maple.eval(command)
+            for solution_branch in _parse_maple_output(output, ring):
+                solutions.extend(analyze_ideal(solution_branch, dict(), list()))
+        else:
+            final_ideal = ideal(ideal(final_ideal).groebner_basis()) if len(final_ideal) > 0 else ideal(ring)
+
+            for primary in final_ideal.primary_decomposition():
+                solutions.extend(analyze_ideal(primary.radical(), dict(),list()))
+
         ## We now evaluate the equations to get the remaining linear equations
         output = list()
         for solution in solutions:
