@@ -195,10 +195,10 @@ def GetCentralizer(
                 elif system[:,-1] == 0: ## Last column is all zeros
                     cs = (len(Ps)-1)*[0] + [1]
                 else: # there is a system to be solved
-                    cs = system[:,:-1].solve_right(-system[:,-1])
+                    cs = system[:,:-1].solve_right(-system[:,-1]) + [1]
                     cs = list(c[0] for c in cs) ## Changing from matrix to list format
-                if level_flag == None: level_flag = cs.copy() ## We save the fl
-                element_centralizer = Ps[-1] + sum(c*P for (c,P) in zip(cs, Ps[:-1]))
+                if level_flag == None: level_flag = cs.copy() ## We save the flag
+                element_centralizer = sum(c*P for (c,P) in zip(cs, Ps))
                 if extra_info is not None:
                     element_centralizer = extra_info.eval(element_centralizer)
                 Goodearl_Basis[r] = element_centralizer
@@ -263,7 +263,7 @@ def __compute_bounds(n, *K, global_bound):
 @lru_cache
 def GetEquationsForLevel(n: int, level: int,
         U: tuple | dict = None,
-        simple: bool = False, maple: bool = False
+        simple: bool = False, maple: bool = False, name_file :str = ""
     ):
     r'''
         Method to compute conditions for a template to be of fixed `level`.
@@ -275,7 +275,7 @@ def GetEquationsForLevel(n: int, level: int,
         We ensure that the output are the conditions and remaining equations determines solutions
         that have exactly level `m`.
     '''
-    L, P, conditions = GetEquationsForSolution(n, level, U, simple=simple, maple=maple)
+    L, P, conditions = GetEquationsForSolution(n, level, U, simple=simple, maple=maple, name_file=name_file)
 
     ## We filter for cases without solution
     filtered_conditions = list()
@@ -305,7 +305,9 @@ def GetEquationsForLevel(n: int, level: int,
     return L, P, final_conditions
 
 @loglevel(logger)
-def GetEquationsForSolution(n: int, m : int, U: list | dict = None, simple: bool = False, maple: bool = False) -> tuple[DPolynomial, DPolynomial, Ideal]:
+def GetEquationsForSolution(n: int, m : int, U: list | dict = None, 
+                            simple: bool = False, maple: bool = False, name_file: str = ""
+) -> tuple[DPolynomial, DPolynomial, Ideal]:
     r'''
         Method to get the equations for a specific type of solutions for non-trivial commutator.
 
@@ -362,11 +364,12 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None, simple: bool
 
         logger.debug(f"[GEFS] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C))
 
-        with open(f"matrix_{n}_{m}.txt", "w") as f:
-            _matrix = ",\n".join(str(list(r)) for r in Hs)
-            f.write(f"Matrix([\n{_matrix}\n])")
-        with open(f"rows_{n}_{m}.txt", "w") as f:
-            f.write(f"{mons}")
+        if len(name_file) > 0:
+            with open(f"results/{name_file}_{n}_{m}_matrix.md", "w") as f:
+                _matrix = ",\n".join(str(list(r)) for r in Hs)
+                f.write(f"Matrix([\n{_matrix}\n])")
+            with open(f"results/{name_file}_{n}_{m}_rows.md", "w") as f:
+                f.write(f"{mons}")
 
         ### COMPUTATION OPTION "simple"
         ### If we are in the simple mode, we only look to the last column. This is a simplification
