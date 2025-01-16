@@ -26,7 +26,7 @@
 ### Starting case 0/1:
 * Branch: Solution Branch [a_3=-3,a_2=-3] and g_2,g_3 as free variables.
 * Operator: -(3*eta_p)*z_0 - (3*eta)*z_1 + z_3
-*Flag: [-1/3*g_2, 0, 0, 1]
+* Flag: [-1/3*g_2, 0, 0, 1]
 * Centralizer:
   - (0 -- 0) z_0
   - (1 -- 7) -(35/2*eta^3 + 21/2*g_2*eta + 10*g_3)*z_1 - (35*eta*eta_p)*z_2 - (35*eta^2 + 49/3*g_2)*z_3 - (21*eta_p)*z_4 - (7*eta)*z_5 + z_7
@@ -34,7 +34,7 @@
 ### Starting case 1/1:
 * Branch: Solution Branch [a_3=-3,a_2=-6] and g_2,g_3 as free variables.
 * Operator: -(3*eta_p)*z_0 - (6*eta)*z_1 + z_3
-*Flag: [-11/3*g_2, 0, 0, 1]
+* Flag: [-11/3*g_2, 0, 0, 1]
 * Centralizer:
   - (0 -- 0) z_0
   - (1 -- 20) [0, 0, 2]

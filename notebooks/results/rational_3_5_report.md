@@ -26,7 +26,7 @@
 ### Starting case 0/1:
 * Branch: Solution Branch [a_3=24,a_2=-12].
 * Operator: 24/x^3*z_0 + ((-12)/x^2)*z_1 + z_3
-*Flag: [0, 0, 0, 1]
+* Flag: [0, 0, 0, 1]
 * Centralizer:
   - (0 -- 0) z_0
   - (1 -- 7) ((-1120)/x^6)*z_1 + 1120/x^5*z_2 + ((-560)/x^4)*z_3 + 168/x^3*z_4 + ((-28)/x^2)*z_5 + z_7
@@ -34,7 +34,7 @@
 ### Starting case 1/1:
 * Branch: Solution Branch [a_3=24,a_2=-24].
 * Operator: 24/x^3*z_0 + ((-24)/x^2)*z_1 + z_3
-*Flag: [0, 0, 0, 1]
+* Flag: [0, 0, 0, 1]
 * Centralizer:
   - (0 -- 0) z_0
   - (1 -- 20) [0, 0, 2]
