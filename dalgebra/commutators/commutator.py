@@ -68,6 +68,7 @@ from functools import reduce, lru_cache
 from sage.calculus.functional import diff
 from sage.categories.pushout import pushout
 from sage.combinat.combination import Combinations
+from sage.combinat.composition import Compositions
 from sage.functions.other import binomial
 from sage.matrix.constructor import Matrix
 from sage.rings.ideal import Ideal_generic as Ideal, Ideal as ideal
@@ -195,8 +196,8 @@ def GetCentralizer(
                 elif system[:,-1] == 0: ## Last column is all zeros
                     cs = (len(Ps)-1)*[0] + [1]
                 else: # there is a system to be solved
-                    cs = system[:,:-1].solve_right(-system[:,-1]) + [1]
-                    cs = list(c[0] for c in cs) ## Changing from matrix to list format
+                    cs = system[:,:-1].solve_right(-system[:,-1]) 
+                    cs = list(c[0] for c in cs) + [1] ## Changing from matrix to list format
                 if level_flag == None: level_flag = cs.copy() ## We save the flag
                 element_centralizer = sum(c*P for (c,P) in zip(cs, Ps))
                 if extra_info is not None:
@@ -216,16 +217,14 @@ def GetCentralizer(
         elif Goodearl_Basis[r] is None and current == bounds[r]:
             logger.info(f"[GC] ++ Reached bound for congruence class {r} (mod {n}): {current}")
             logger.info(f"[GC] ++     Computing decomposition with other elements of the basis...")
-            decomposition = [0]
-            remaining = current
-            for i in range(1,len(bounds)):
-                if i == r:
-                    decomposition.append(0)
-                elif bounds[i] <= remaining: # already found, may contribute
-                    decomposition.append(remaining//bounds[i])
-                    remaining %= bounds[i]
-                else:
-                    decomposition.append(0)
+            decomposition = len(bounds)*[0]
+            values = {v : i+1 for (i,v) in enumerate(bounds[1:]) if v < current}
+            compositions = Compositions(current, min_part = min(values), max_part=max(values))
+            for comp in compositions:
+                if set(comp).issubset(values.keys()):
+                    for v in comp:
+                        decomposition[values[v]] += 1
+                    break
             logger.info(f"[GC] ++     Element {r} can be computed using {decomposition}")
             Goodearl_Basis[r] = decomposition
         logger.info(f"[GC] -- Concluded study at level {current}")
