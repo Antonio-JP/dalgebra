@@ -1167,7 +1167,7 @@ class DRing_WrapperElement(Element):
     def conditions_to_zero(self) -> list[tuple[Element,Element]]:
         from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
         if isinstance(self.parent().wrapped, PolynomialRing_generic):
-            return list(zip(reversed(self.monomials()), self.coefficients()))
+            return list(zip(reversed(self.wrapped.monomials()), self.wrapped.coefficients()))
         elif isinstance(self.parent().wrapped, MPolynomialRing_base):
             ## We look for the variables that are not constant
             no_constant_gens = [g.wrapped for g in self.parent().gens() if not g.d_constant()]

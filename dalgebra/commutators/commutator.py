@@ -226,7 +226,16 @@ def GetCentralizer(
                         decomposition[values[v]] += 1
                     break
             logger.info(f"[GC] ++     Element {r} can be computed using {decomposition}")
-            Goodearl_Basis[r] = decomposition
+            ## we simplify the decomposition, avoiding loops
+            final_decomposition = len(bounds)*[0]
+            for i,v in enumerate(decomposition):
+                if isinstance(Goodearl_Basis[i], (list, tuple)):
+                    for j in range(len(Goodearl_Basis[i])):
+                        final_decomposition[j] += v*Goodearl_Basis[i][j]
+                elif Goodearl_Basis[i] is not None:
+                    final_decomposition[i] += v
+            Goodearl_Basis[r] = final_decomposition
+
         logger.info(f"[GC] -- Concluded study at level {current}")
         current += 1
     

@@ -163,8 +163,12 @@ from .dpolynomial import * # ring of difference/differential polynomials
 from .dextension import * # extensions of d-rings
 
 def dalgebra_version():
-    from importlib.metadata import version
-    return version('dalgebra')
+    from importlib.metadata import version, PackageNotFoundError
+    try:
+        return version('dalgebra')
+    except PackageNotFoundError:
+        return "not_installed"
+
 
 def dalgebra_folder():
     import os
