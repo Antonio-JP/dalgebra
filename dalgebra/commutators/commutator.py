@@ -63,7 +63,10 @@ from __future__ import annotations
 import logging
 logger = logging.getLogger(__name__)
 
+from contextlib import nullcontext
 from functools import reduce, lru_cache
+
+from time import sleep
 
 from sage.calculus.functional import diff
 from sage.categories.pushout import pushout
@@ -71,6 +74,7 @@ from sage.combinat.combination import Combinations
 from sage.combinat.composition import Compositions
 from sage.functions.other import binomial
 from sage.matrix.constructor import Matrix
+from sage.misc.latex import latex as _latex
 from sage.rings.ideal import Ideal_generic as Ideal, Ideal as ideal
 from sage.rings.integer_ring import ZZ
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -78,10 +82,8 @@ from sage.rings.polynomial.polynomial_element_generic import Polynomial
 from sage.rings.rational_field import QQ
 from sage.structure.element import parent, Element
 
-from typing import Callable
-
 from ..dring import DRings, DifferentialRing, DFractionField
-from ..dpolynomial.dpolynomial import DPolynomial
+from ..dpolynomial.dpolynomial import DPolynomial, DPolynomialGen
 from ..logging.logging import loglevel
 from .almost_commuting import generic_normal, almost_commuting_wilson
 from .ideals import analyze_ideal, SolutionBranch
@@ -116,6 +118,10 @@ def _parse_maple_output(output: str, ring) -> list[Ideal]:
 
     ## Now each solution is an ideal (easy to analyze)
     return solutions
+
+def latex(*args, **kwds) -> str:
+    latex_str = str(_latex(*args, **kwds))
+    return latex_str.replace(r"\Bold", r"\mathbb")
 
 #################################################################################################
 ###
@@ -166,9 +172,9 @@ def GetCentralizer(
     B = max(bounds)
     current = starting_level
     L = None
-    logger.info(f"[GC] Computing the centralizer of an operator of order {n}")
-    logger.info(f"[GC] Starting bounds: {bounds}")
-    logger.info(f"[GC] Starting level:  {starting_level}")
+    logger.log(15, f"[GC] Computing the centralizer of an operator of order {n}")
+    logger.log(15, f"[GC] Starting bounds: {bounds}")
+    logger.log(15, f"[GC] Starting level:  {starting_level}")
 
     c_coeffs = list(el for el in range(1,starting_level) if el % n != 0)
     level_flag = None
@@ -176,21 +182,21 @@ def GetCentralizer(
     while current <= B:
         r = current % n
         if Goodearl_Basis[r] is None and (current == global_bound or current < bounds[r]):
-            logger.info(f"[GC] ++ Looking for solution at level {current} -- congruence class {r} (mod {n})...")
-            logger.info(f"[GC] ++ Current bounds: {bounds}")
-            logger.info(f"[GC] ++ Looking with coefficients: {c_coeffs + [current]}")
+            logger.log(15, f"[GC] ++ Looking for solution at level {current} -- congruence class {r} (mod {n})...")
+            logger.log(15, f"[GC] ++ Current bounds: {bounds}")
+            logger.log(15, f"[GC] ++ Looking with coefficients: {c_coeffs + [current]}")
             L, Ps, (system, _) = GetHierarchyLinearEquations(
                 n, current, U, 
                 c_coeffs + [current]
             )
 
             if extra_info is not None: ## Using the extra information if provided
-                logger.info(f"[GC] ++     Converting data...")
+                logger.log(15, f"[GC] ++     Converting data...")
                 system = Matrix([[extra_info.eval(el) for el in row] for row in system])
                 system = Matrix([row for row in system if row != 0]) # we ensure the matrix has no zero rows
 
             if system[:,:-1].rank() == system.rank(): # the linear system with the last column has solution
-                logger.info(f"[GC] ++     Found a solution!")
+                logger.log(15, f"[GC] ++     Found a solution!")
                 if system.nrows() == 0: ## Case with no left equations
                     cs = (len(Ps)-1)*[0] + [1]
                 elif system[:,-1] == 0: ## Last column is all zeros
@@ -205,7 +211,7 @@ def GetCentralizer(
                 Goodearl_Basis[r] = element_centralizer
                 bounds[r] = current
                 if ignore_bound: ## We update the bounds
-                    logger.info(f"[GC] ++     Updating bounds...")
+                    logger.log(15, f"[GC] ++     Updating bounds...")
                     bounds = __compute_bounds(
                         n, 
                         *[bounds[r] for r in range(1,n) if Goodearl_Basis[r] is not None], 
@@ -215,8 +221,8 @@ def GetCentralizer(
             else: ## No solution -- we keep this coefficient for future searches
                 c_coeffs.append(current)
         elif Goodearl_Basis[r] is None and current == bounds[r]:
-            logger.info(f"[GC] ++ Reached bound for congruence class {r} (mod {n}): {current}")
-            logger.info(f"[GC] ++     Computing decomposition with other elements of the basis...")
+            logger.log(15, f"[GC] ++ Reached bound for congruence class {r} (mod {n}): {current}")
+            logger.log(15, f"[GC] ++     Computing decomposition with other elements of the basis...")
             decomposition = len(bounds)*[0]
             values = {v : i+1 for (i,v) in enumerate(bounds[1:]) if v < current}
             compositions = Compositions(current, min_part = min(values), max_part=max(values))
@@ -225,7 +231,7 @@ def GetCentralizer(
                     for v in comp:
                         decomposition[values[v]] += 1
                     break
-            logger.info(f"[GC] ++     Element {r} can be computed using {decomposition}")
+            logger.log(15, f"[GC] ++     Element {r} can be computed using {decomposition}")
             ## we simplify the decomposition, avoiding loops
             final_decomposition = len(bounds)*[0]
             for i,v in enumerate(decomposition):
@@ -236,7 +242,7 @@ def GetCentralizer(
                     final_decomposition[i] += v
             Goodearl_Basis[r] = final_decomposition
 
-        logger.info(f"[GC] -- Concluded study at level {current}")
+        logger.log(15, f"[GC] -- Concluded study at level {current}")
         current += 1
     
     ## We change the first element to be the actual "constant" operator
@@ -271,7 +277,9 @@ def __compute_bounds(n, *K, global_bound):
 @lru_cache
 def GetEquationsForLevel(n: int, level: int,
         U: tuple | dict = None,
-        simple: bool = False, maple: bool = False, name_file :str = ""
+        simple: bool = False, maple: bool = False, 
+        filename: str = None,
+        path: str = "./results"
     ):
     r'''
         Method to compute conditions for a template to be of fixed `level`.
@@ -283,38 +291,45 @@ def GetEquationsForLevel(n: int, level: int,
         We ensure that the output are the conditions and remaining equations determines solutions
         that have exactly level `m`.
     '''
-    L, P, conditions = GetEquationsForSolution(n, level, U, simple=simple, maple=maple, name_file=name_file)
+    L, P, conditions = GetEquationsForSolution(n, level, U, simple=simple, maple=maple, filename=filename, path=path)
 
     ## We filter for cases without solution
-    filtered_conditions = list()
-    for (sol_branch, lin_system, mons) in conditions:
-        A = lin_system[:,:-1]
-        b = lin_system[:,-1]
+    filtered_conditions = conditions
+    # for (sol_branch, lin_system, mons) in conditions:
+    #     A = lin_system[:,:-1]
+    #     b = lin_system[:,-1]
 
-        if A.rank() == lin_system.rank():
-            filtered_conditions.append((sol_branch, lin_system, mons))
-        else:
-            pass
-            ## no solution -- we skip this branch
+    #     if A.rank() == lin_system.rank():
+    #         filtered_conditions.append((sol_branch, lin_system, mons))
+    #     else:
+    #         pass
+    #         ## no solution -- we skip this branch
 
     ## We collect old solutions
-    smaller_conditions = tuple()
+    smaller_conditions = dict()
     for m in range(1, level):
         if m%n != 0:
-            smaller_conditions += GetEquationsForLevel(n, m, U, maple=maple)[2]
+            smaller_conditions[m] = GetEquationsForLevel(n, m, U, maple=maple)[2]
     
     ## We compare the solutions
     final_conditions = tuple(
         condition for condition in filtered_conditions 
         if all(
-            not condition[0].is_subsolution(other[0]) for other in smaller_conditions
-    ))            
+            not condition[0].is_subsolution(other[0]) for other in sum((list(v) for v in smaller_conditions.values()), [])
+    ))      
+    for (i,condition) in enumerate(filtered_conditions):
+        if not condition in final_conditions:
+            found_it = {k : any(condition[0].is_subsolution(other[0]) for other in smaller_conditions[k]) for k in smaller_conditions}
+            logger.warning(f"[GEFL] Solution already found in lower levels ({list(found_it.keys())}) [{i}]: {condition[0]}")     
+            
 
     return L, P, final_conditions
 
 @loglevel(logger)
 def GetEquationsForSolution(n: int, m : int, U: list | dict = None, 
-                            simple: bool = False, maple: bool = False, name_file: str = ""
+                            simple: bool = False, maple: bool = False, 
+                            filename: str = None,
+                            path: str = "./results"
 ) -> tuple[DPolynomial, DPolynomial, Ideal]:
     r'''
         Method to get the equations for a specific type of solutions for non-trivial commutator.
@@ -372,11 +387,11 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None,
 
         logger.debug(f"[GEFS] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C))
 
-        if len(name_file) > 0:
-            with open(f"results/{name_file}_{n}_{m}_matrix.md", "w") as f:
+        if filename is not None:
+            with open(f"{path}/{filename}_{n}_{m}_matrix.md", "w") as f:
                 _matrix = ",\n".join(str(list(r)) for r in Hs)
                 f.write(f"Matrix([\n{_matrix}\n])")
-            with open(f"results/{name_file}_{n}_{m}_rows.md", "w") as f:
+            with open(f"{path}/{filename}_{n}_{m}_rows.md", "w") as f:
                 f.write(f"{mons}")
 
         ### COMPUTATION OPTION "simple"
@@ -645,9 +660,200 @@ def generate_polynomial_equations(H: DPolynomial, var_name: str = "x") -> list[P
     
     return output
 
+#################################################################################################
+###
+### METHODS TO ANALYZE CENTRALIZERS
+###
+#################################################################################################
+class GDH_Solution:
+    def __init__(self, gen: DPolynomialGen, L: DPolynomial, centr_GB: tuple[DPolynomial], flag: tuple[Element]):
+        from sage.arith.misc import GCD
+
+        self.__gen = gen
+        self.__L = L
+        self.__centralizer_basis = centr_GB
+        self.__flag = flag
+
+        ## Order of the operator L
+        self.__n = L.order(gen)
+
+        ## Orders of the elements in the centralizer
+        self.__orders = None
+        ## TeX code for the operators in the centralizer
+        self.__operators_tex = None
+        ## Goodearl's basis for the Centralizer as C[L]-module
+        self.__alg_gens = len([el for el in centr_GB if not isinstance(el, list)])
+        ## Rank of the centralizer (computed so far)
+        self.__rank = GCD([self.n] + [el for el in self.orders if el is not None])
+
+    @property
+    def gen(self) -> DPolynomialGen:
+        return self.__gen
+    @property
+    def L(self) -> DPolynomial:
+        return self.__L
+    @property
+    def n(self) -> int:
+        return self.__n
+    @property
+    def basis(self) -> tuple[DPolynomial]:
+        return self.__centralizer_basis
+    @property
+    def flag(self) -> tuple[Element]:
+        return self.__flag
+    @property
+    def orders(self) -> tuple[int]:
+        if self.__orders is None:
+            self.__orders = [
+                el.order(self.gen) if not isinstance(el, list) else 
+                sum(el[k]*self.basis[k].order(self.gen) for k in range(self.n) if el[k] != 0)
+            for el in self.basis]
+        return self.__orders
+    @property
+    def operators_tex(self) -> tuple[str]:
+        if self.__operators_tex is None:
+            self.__operators_tex = [
+                latex(el) if not isinstance(el, list) 
+                else ''.join(f'G_{k}^{el[k]}' for k in range(self.n) if el[k] != 0)
+            for el in self.basis]
+        return self.__operators_tex
+    @property
+    def algebraic_generators(self) -> int:
+        return self.__alg_gens
+    @property
+    def rank(self) -> int:
+        return self.__rank    
+
+def AnalyzeGDH(n: int, m: int, 
+               L: DPolynomial, 
+               H: tuple[tuple[SolutionBranch]], 
+               Hs: dict[int, tuple[tuple[SolutionBranch]]],
+               filename: str = None, 
+               path : str = "./results"
+) -> tuple[tuple[tuple[int,SolutionBranch]], tuple[GDH_Solution]]:
+    r'''
+        Method to analyze the centralizer of different branches of solutions.
+
+        This method analyzes a specific case where the G.D. hierarchies has been computed for a given set of values 
+        `n` and `m`. This method will compute all solution branches that provide non-trivial centralizers of 
+        true level `m` and then it computes the centralizer for each of these branches.
+
+        The results are stored in a text file where all the computations (getting the branches and computing centralizers)
+        will be summarized.
+
+        INPUT: 
+
+        * `n`: the order of the base operator `L` for which we are looking the centralizer.
+        * `m`: the true level we are looking for.
+        * `filename`: the name of the file where the results will be stored. This file will be stored in the path
+          given by the argument `path`.
+        * `L`: the actual operator we are working with. It may have some unknowns that will be solved as a first step
+          before the analysis of the centralizer.
+        * `H`: branches of the G.D. hierarchy of the operator `L` of order `m`.
+        * `Hs`: branches of the G.D. hierarchies of the operator `L` up to order `m`.
+        * `path`: (optional) the path where the result file will be stored.
+
+        OUTPUT: 
+
+        A tuple with the cases we found and the solution for each of the cases.
+    '''
+    with open(f"{path}/{filename}_{n}_{m}_report.md", "w") if filename else nullcontext() as file:
+        if filename: file.writelines([f"# ANALYZING CASE ${n=}$, ${m=}$ FOR THE {filename.upper()} COEFFICIENTS\n"])
+        logger.info("###############################################################################")
+        logger.info(f"# ANALYZING CASE {n=}, {m=} FOR THE {filename.upper()} COEFFICIENTS")
+        logger.info("###############################################################################")
+        cases = __general_analysis(H, {i: Hs[i] for i in range(m) if i%n != 0}, file=file) 
+        cases = sorted(cases, key=lambda case : sum((sum(abs(el) for el in p.coefficients()) if p not in QQ else abs(QQ(p))) for p in case[1][0]._SolutionBranch__solution.values()))
+    
+        if filename: file.writelines(["## CENTRALIZERS CASE BY CASE:\n"])
+        logger.info("###############################################################################")
+        logger.info("## CENTRALIZERS CASE BY CASE:")
+        logger.info("###############################################################################")
+        computed : list[GDH_Solution] = list() 
+        for i, case in enumerate(cases): 
+            if filename: file.writelines([f"### Starting case {i+1}/{len(cases)}:\n",f"* Branch: ${latex(case[1][0])}$\n"])
+            logger.info(f"@@ Starting case {i+1}/{len(cases)}: {case[1][0]}")
+            try:
+                computed.append(GDH_Solution(*__analyze_centralizer(case[1][0], L, m)))
+                logger.info(f"[{','.join(f'{computed[-1].orders[i] if not isinstance(computed[-1].basis[i], (tuple,list)) else computed[-1].basis[i]}' for i in range(len(computed[-1].basis)))}]")
+                
+                if filename: 
+                    file.writelines(
+                        [f"* Operator: ${latex(computed[-1].L)}$\n", 
+                        f"* Flag: ${latex(computed[-1].flag)}$\n",
+                        f"* Algebraic generators: {computed[-1].algebraic_generators}\n",
+                        f"* Found rank: {computed[-1].rank}\n",
+                        "* Centralizer:\n"] + 
+                        [f"  - (${j}$ -- ${computed[-1].orders[j]}$) $G_{j} = {computed[-1].operators_tex[j]}$\n" for j in range(len(computed[-1].basis))] + 
+                        [f"* Orders: ${latex(computed[-1].orders)}$\n"]
+                    )
+            except (KeyboardInterrupt, RecursionError) as error:
+                if isinstance(error, RecursionError):
+                    with open(f"{path}/{filename}_{n}_{m}_error.md", "w") as f:
+                        f.writelines([f"ERROR: {error}\n",f"{error.__traceback__}\n"])
+                logger.info(f"@@ Case stopped by {error}... Waiting {5} seconds before continuing")
+                if filename: file.writelines([f"* Case stopped by {error}\n"])
+                sleep(5)
+            if filename: file.flush()
+
+        return cases, computed
+    
+def __general_analysis(
+        branches: tuple[SolutionBranch], 
+        prev_branches: dict[int,tuple[SolutionBranch]], 
+        vars_not_all_zero: list[str] = [], 
+        file = None
+) -> list[tuple[int, tuple[SolutionBranch]]]:
+    if file: file.writelines([f"## CHECKING VALIDITY OF SOLUTIONS AT THIS LEVEL\n"])
+    valid = list()
+    vars_not_all_zero = [vars_not_all_zero] if not isinstance(vars_not_all_zero, (list,tuple)) else vars_not_all_zero
+    for (i,h) in enumerate(branches):
+        if file: file.writelines([f"* Checking case {i}: (${latex(h[0])}$) include any solution for a lower level\n"])
+        logger.info(f"Checking case {i}: ({h[0]}) include any solution for a lower level")
+        if len(vars_not_all_zero) > 0 and all(h[0][a_name] == 0 for a_name in vars_not_all_zero):
+            if file: file.writelines([f"  Invalid branch\n"])
+            logger.info(f"  + Invalid branch")
+        else:
+            is_valid = True
+            for (k,v) in prev_branches.items():
+                if file: file.writelines([f"  - Checking the cases for level {k}:\n"])
+                logger.info(f"  - Checking the cases for level {k}:")
+                for h2 in v:
+                    if len(vars_not_all_zero) == 0 or any(h2[0][a_name] != 0 for a_name in vars_not_all_zero):
+                        is_valid = is_valid and (not h2[0].is_subsolution(h[0]))
+                        if file: file.writelines(f"    [{f'{h2[0].is_subsolution(h[0])}'.ljust(len('False'),' ')}] - ${latex(h2[0])}$\n")
+                        logger.info(f"    [{f'{h2[0].is_subsolution(h[0])}'.ljust(len('False'),' ')}] - {h2[0]}")
+                    else:
+                        if file: file.writelines([f"    [Invalid] ${latex(h2[0])}$\n"])
+                        logger.info(f"    [Invalid] {h2[0]}")
+                logger.info(f"  -----------------------------------")
+            if is_valid:
+                if file: file.writelines([f"  Adding new branch to total valid branches\n"])
+                logger.info(f"  Adding new branch to total valid branches")
+                valid.append((i,h))
+        logger.info(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+    return valid
+
+def __analyze_centralizer(branch, L, M,B=None, **kwds):
+    B = M if B is None else B
+    
+    specific_solution = branch if len(kwds) == 0 else branch.subsolution(**kwds)
+    L = specific_solution.eval(L)
+    Z = L.parent().gen("z")
+    Us = tuple([0 if L.coefficient_full(Z[i]) == 0 else L.coefficient_full(Z[i]).coefficients()[0] for i in range(L.order(Z)-1)])
+
+    L, centr_GB, flag = GetCentralizer(
+        Us, B, 
+        starting_level=M, ignore_bound=True, 
+        extra_info=specific_solution
+    )
+
+    return Z, L, centr_GB, flag
+
 
 __all__ = [
     "GetCentralizer", "GetEquationsForLevel", "GetHierarchyLinearEquations", "PolynomialCommutator",
     "generate_polynomial_ansatz",
-    "generate_polynomial_equations"
+    "generate_polynomial_equations",
+    "AnalyzeGDH"
 ]

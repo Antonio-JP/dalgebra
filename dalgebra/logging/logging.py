@@ -86,9 +86,9 @@ def loglevel(logger : logging.Logger):
                         logger.addHandler(file_handler)
 
             try:
-                logger.info(f"[{func.__name__}] {''.rjust(50, '+')}\n{' Starting  execution '.ljust(15, '+').rjust(15,'+')}{print_args(20, *args, **kwds)}")
+                logger.log(15, f"[{func.__name__}] {''.rjust(50, '+')}\n{' Starting  execution '.ljust(15, '+').rjust(15,'+')}{print_args(20, *args, **kwds)}")
                 output = func(*args, **kwds)
-                logger.info(f"[{func.__name__}]{' Execution completed '.ljust(15, '-').rjust(15,'-')}{print_args(20, *args, **kwds)}\n{''.rjust(50,'-')}")
+                logger.log(15, f"[{func.__name__}]{' Execution completed '.ljust(15, '-').rjust(15,'-')}{print_args(20, *args, **kwds)}\n{''.rjust(50,'-')}")
                 return output
             finally: # This is done
                 if loglevel: # Removing the logger if was the original logged
