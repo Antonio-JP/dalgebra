@@ -320,7 +320,7 @@ def GetEquationsForLevel(n: int, level: int,
     for (i,condition) in enumerate(filtered_conditions):
         if not condition in final_conditions:
             found_it = {k : any(condition[0].is_subsolution(other[0]) for other in smaller_conditions[k]) for k in smaller_conditions}
-            logger.warning(f"[GEFL] Solution already found in lower levels ({list(found_it.keys())}) [{i}]: {condition[0]}")     
+            logger.log(15, f"[GEFL] Solution already found in lower levels ({list(found_it.keys())}) [{i}]: {condition[0]}")     
             
 
     return L, P, final_conditions
@@ -714,22 +714,40 @@ class GDH_Solution:
         if self.__operators_tex is None:
             self.__operators_tex = [
                 latex(el) if not isinstance(el, list) 
-                else ''.join(f'G_{k}^{el[k]}' for k in range(self.n) if el[k] != 0)
+                else ''.join(f'G_{k}^{"" if el[k] == 1 else el[k]}' for k in range(self.n) if el[k] != 0)
             for el in self.basis]
         return self.__operators_tex
+    
+    def relations(self) -> str:
+        relations = []
+        for i,el in enumerate(self.basis):
+            if isinstance(el, list):
+                relations.append(f"G_{i} - {self.operators_tex[i]}")
+        return ", ".join(relations)
+
     @property
     def algebraic_generators(self) -> int:
         return self.__alg_gens
     @property
     def rank(self) -> int:
         return self.__rank    
+    
+    def are_similar(self, other: GDH_Solution) -> bool:
+        r'''
+            Method to check if two solutions are similar.
+
+            We consider two solutions to be similar if they have the same orders in the generators
+            of the Goodearl's basis.
+        '''
+        return self.orders == other.orders
 
 def AnalyzeGDH(n: int, m: int, 
                L: DPolynomial, 
                H: tuple[tuple[SolutionBranch]], 
                Hs: dict[int, tuple[tuple[SolutionBranch]]],
                filename: str = None, 
-               path : str = "./results"
+               path : str = "./results",
+               table: bool = False
 ) -> tuple[tuple[tuple[int,SolutionBranch]], tuple[GDH_Solution]]:
     r'''
         Method to analyze the centralizer of different branches of solutions.
@@ -788,13 +806,19 @@ def AnalyzeGDH(n: int, m: int,
                         [f"* Orders: ${latex(computed[-1].orders)}$\n"]
                     )
             except (KeyboardInterrupt, RecursionError) as error:
-                if isinstance(error, RecursionError):
-                    with open(f"{path}/{filename}_{n}_{m}_error.md", "w") as f:
-                        f.writelines([f"ERROR: {error}\n",f"{error.__traceback__}\n"])
-                logger.info(f"@@ Case stopped by {error}... Waiting {5} seconds before continuing")
-                if filename: file.writelines([f"* Case stopped by {error}\n"])
-                sleep(5)
+                try:
+                    if isinstance(error, RecursionError):
+                        with open(f"{path}/{filename}_{n}_{m}_error.md", "w") as f:
+                            f.writelines([f"ERROR: {error}\n",f"{error.__traceback__}\n"])
+                    logger.info(f"@@ Case stopped by {error}... Waiting {5} seconds before continuing")
+                    if filename: file.writelines([f"* Case stopped by {error}\n"])
+                    sleep(5)
+                except KeyboardInterrupt:
+                    break
             if filename: file.flush()
+
+        if table:
+            __generate_table(cases, computed, f"{filename}_{n}_{m}_table.tex", path)
 
         return cases, computed
     
@@ -834,7 +858,7 @@ def __general_analysis(
         logger.info(f"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
     return valid
 
-def __analyze_centralizer(branch, L, M,B=None, **kwds):
+def __analyze_centralizer(branch: SolutionBranch, L: DPolynomial, M: int,B: int=None, **kwds):
     B = M if B is None else B
     
     specific_solution = branch if len(kwds) == 0 else branch.subsolution(**kwds)
@@ -850,6 +874,35 @@ def __analyze_centralizer(branch, L, M,B=None, **kwds):
 
     return Z, L, centr_GB, flag
 
+def __generate_table(cases: list[tuple[int, tuple[SolutionBranch]]], computed: list[GDH_Solution], filename: str, path: str):
+    ## We merge the cases that are similar
+    final_cases: list[tuple[GDH_Solution,int]] = []
+    for (case, comp) in zip(cases, computed):
+        for i,(final_case, n) in enumerate(final_cases):
+            if comp.are_similar(final_case):
+                final_cases[i] = (final_case, n+1)
+                break
+        else:
+            final_cases.append((comp,1))
+    
+    with open(f"{path}/{filename}", "w") as f:
+        f.writelines([
+            r"\begin{table}[h]" + "\n",
+            "\t" + r"\centering" + "\n",
+            "\t" + r"$\begin{array}{|c|c|c|c|c|}" + "\n",
+            "\t\t" + r"\hline" + "\n",
+            "\t\t" + r"\text{\# Cases} & \text{Orders} & \text{Rank} & \text{Algebraic Generators} & \text{Relations} \\" + "\n",
+            "\t\t" + r"\hline" + "\n",
+        ])
+        for (case, n) in final_cases:
+            f.writelines([
+                f"\t\t{n} & {tuple(case.orders[1:])} & {case.rank} & {case.algebraic_generators} & {case.relations()} \\\\" + "\n",
+            ])
+        f.writelines([
+            "\t\t" + r"\hline" + "\n",
+            "\t" + r"\end{array}$" + "\n",
+            r"\end{table}" + "\n",
+        ])
 
 __all__ = [
     "GetCentralizer", "GetEquationsForLevel", "GetHierarchyLinearEquations", "PolynomialCommutator",
