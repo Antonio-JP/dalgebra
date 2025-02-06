@@ -836,21 +836,21 @@ def __general_analysis(
         logger.info(f"Checking case {i}: ({h[0]}) include any solution for a lower level")
         if len(vars_not_all_zero) > 0 and all(h[0][a_name] == 0 for a_name in vars_not_all_zero):
             if file: file.writelines([f"  Invalid branch\n"])
-            logger.info(f"  + Invalid branch")
+            logger.log(15, f"  + Invalid branch")
         else:
             is_valid = True
             for (k,v) in prev_branches.items():
                 if file: file.writelines([f"  - Checking the cases for level {k}:\n"])
-                logger.info(f"  - Checking the cases for level {k}:")
+                logger.log(15, f"  - Checking the cases for level {k}:")
                 for h2 in v:
                     if len(vars_not_all_zero) == 0 or any(h2[0][a_name] != 0 for a_name in vars_not_all_zero):
                         is_valid = is_valid and (not h2[0].is_subsolution(h[0]))
                         if file: file.writelines(f"    [{f'{h2[0].is_subsolution(h[0])}'.ljust(len('False'),' ')}] - ${latex(h2[0])}$\n")
-                        logger.info(f"    [{f'{h2[0].is_subsolution(h[0])}'.ljust(len('False'),' ')}] - {h2[0]}")
+                        logger.log(15, f"    [{f'{h2[0].is_subsolution(h[0])}'.ljust(len('False'),' ')}] - {h2[0]}")
                     else:
                         if file: file.writelines([f"    [Invalid] ${latex(h2[0])}$\n"])
-                        logger.info(f"    [Invalid] {h2[0]}")
-                logger.info(f"  -----------------------------------")
+                        logger.log(15, f"    [Invalid] {h2[0]}")
+                logger.log(15, f"  -----------------------------------")
             if is_valid:
                 if file: file.writelines([f"  Adding new branch to total valid branches\n"])
                 logger.info(f"  Adding new branch to total valid branches")
