@@ -1,6 +1,6 @@
 # ANALYZING CASE $n=5$, $m=6$ FOR THE RATIONAL COEFFICIENTS
 ## CHECKING VALIDITY OF SOLUTIONS AT THIS LEVEL
-* Checking case 0: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-55,a_{3}=155,a_{4}=340,a_{5}=-1620\right\}$) include any solution for a lower level
+* Checking case 0: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-60,a_{3}=120,a_{4}=360,a_{5}=-1440\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -13,17 +13,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 1: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=0,a_{5}=-720\right\}$) include any solution for a lower level
+* Checking case 1: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-40,a_{3}=160,a_{4}=-320,a_{5}=320\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -36,17 +36,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 2: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-40,a_{3}=80,a_{4}=-80,a_{5}=0\right\}$) include any solution for a lower level
+* Checking case 2: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=35,a_{4}=0,a_{5}=0\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -59,17 +59,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 3: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-100,a_{3}=200,a_{4}=880,a_{5}=0\right\}$) include any solution for a lower level
+* Checking case 3: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-50,a_{3}=260,a_{4}=-420,a_{5}=0\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -82,17 +82,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 4: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-55,a_{3}=245,a_{4}=-245,a_{5}=0\right\}$) include any solution for a lower level
+* Checking case 4: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-55,a_{3}=155,a_{4}=340,a_{5}=-1620\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -105,17 +105,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 5: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-65,a_{3}=15,a_{4}=630,a_{5}=330\right\}$) include any solution for a lower level
+* Checking case 5: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-55,a_{3}=245,a_{4}=-245,a_{5}=0\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -128,17 +128,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 6: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-60,a_{3}=240,a_{4}=0,a_{5}=0\right\}$) include any solution for a lower level
+* Checking case 6: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-100,a_{3}=200,a_{4}=880,a_{5}=0\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -151,17 +151,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 7: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-55,a_{3}=175,a_{4}=280,a_{5}=-280\right\}$) include any solution for a lower level
+* Checking case 7: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=120,a_{4}=-360,a_{5}=480\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -174,17 +174,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 8: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-50,a_{3}=40,a_{4}=240,a_{5}=-240\right\}$) include any solution for a lower level
+* Checking case 8: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-125,a_{3}=575,a_{4}=1530,a_{5}=-7290\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -197,17 +197,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 9: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-95,a_{3}=125,a_{4}=1155,a_{5}=0\right\}$) include any solution for a lower level
+* Checking case 9: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-95,a_{3}=445,a_{4}=195,a_{5}=-3840\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -220,17 +220,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 10: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=120,a_{4}=-360,a_{5}=480\right\}$) include any solution for a lower level
+* Checking case 10: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-40,a_{3}=80,a_{4}=-80,a_{5}=0\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -243,17 +243,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 11: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-125,a_{3}=575,a_{4}=1530,a_{5}=-7290\right\}$) include any solution for a lower level
+* Checking case 11: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-85,a_{3}=255,a_{4}=130,a_{5}=-770\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -266,17 +266,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 12: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-125,a_{3}=175,a_{4}=2730,a_{5}=-2730\right\}$) include any solution for a lower level
+* Checking case 12: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=135,a_{4}=-270,a_{5}=270\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -289,17 +289,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 13: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-25,a_{3}=95,a_{4}=-50,a_{5}=-270\right\}$) include any solution for a lower level
+* Checking case 13: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-55,a_{3}=175,a_{4}=280,a_{5}=-280\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -312,17 +312,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 14: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-80,a_{3}=240,a_{4}=1200,a_{5}=-2880\right\}$) include any solution for a lower level
+* Checking case 14: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=180,a_{5}=0\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -335,17 +335,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 15: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-25,a_{3}=55,a_{4}=70,a_{5}=-70\right\}$) include any solution for a lower level
+* Checking case 15: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-125,a_{3}=175,a_{4}=2730,a_{5}=-2730\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -358,17 +358,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 16: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-175,a_{3}=525,a_{4}=3955,a_{5}=-8960\right\}$) include any solution for a lower level
+* Checking case 16: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-100,a_{3}=400,a_{4}=280,a_{5}=-3520\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -381,17 +381,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 17: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=175,a_{4}=-420,a_{5}=420\right\}$) include any solution for a lower level
+* Checking case 17: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=0,a_{4}=0,a_{5}=0\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -404,17 +404,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 18: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-100,a_{3}=400,a_{4}=280,a_{5}=-3520\right\}$) include any solution for a lower level
+* Checking case 18: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-65,a_{3}=15,a_{4}=630,a_{5}=330\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -427,17 +427,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 19: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=0,a_{4}=0,a_{5}=0\right\}$) include any solution for a lower level
+* Checking case 19: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-60,a_{3}=240,a_{4}=0,a_{5}=0\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -450,17 +450,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 20: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-55,a_{3}=85,a_{4}=235,a_{5}=-640\right\}$) include any solution for a lower level
+* Checking case 20: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-25,a_{3}=95,a_{4}=-50,a_{5}=-270\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -473,17 +473,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 21: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=180,a_{5}=0\right\}$) include any solution for a lower level
+* Checking case 21: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=0,a_{5}=-720\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -496,17 +496,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 22: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-60,a_{3}=120,a_{4}=360,a_{5}=-1440\right\}$) include any solution for a lower level
+* Checking case 22: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-55,a_{3}=85,a_{4}=235,a_{5}=-640\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -519,17 +519,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 23: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-65,a_{3}=375,a_{4}=-450,a_{5}=-1470\right\}$) include any solution for a lower level
+* Checking case 23: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-175,a_{3}=525,a_{4}=3955,a_{5}=-8960\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -542,17 +542,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 24: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-40,a_{3}=160,a_{4}=-320,a_{5}=320\right\}$) include any solution for a lower level
+* Checking case 24: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-80,a_{3}=240,a_{4}=1200,a_{5}=-2880\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -565,17 +565,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 25: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-95,a_{3}=445,a_{4}=195,a_{5}=-3840\right\}$) include any solution for a lower level
+* Checking case 25: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-65,a_{3}=375,a_{4}=-450,a_{5}=-1470\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -588,17 +588,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 26: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-85,a_{3}=255,a_{4}=130,a_{5}=-770\right\}$) include any solution for a lower level
+* Checking case 26: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-25,a_{3}=55,a_{4}=70,a_{5}=-70\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -611,17 +611,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 27: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=135,a_{4}=-270,a_{5}=270\right\}$) include any solution for a lower level
+* Checking case 27: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=175,a_{4}=-420,a_{5}=420\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -634,17 +634,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 28: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-50,a_{3}=260,a_{4}=-420,a_{5}=0\right\}$) include any solution for a lower level
+* Checking case 28: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-50,a_{3}=40,a_{4}=240,a_{5}=-240\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -657,17 +657,17 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
-* Checking case 29: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=35,a_{4}=0,a_{5}=0\right\}$) include any solution for a lower level
+* Checking case 29: ($\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-95,a_{3}=125,a_{4}=1155,a_{5}=0\right\}$) include any solution for a lower level
   - Checking the cases for level 1:
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=0,a_{2}=0\right\}$
   - Checking the cases for level 2:
@@ -680,15 +680,15 @@
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=40,a_{2}=-20\right\}$
     [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-20,a_{3}=20,a_{2}=-10\right\}$
   - Checking the cases for level 4:
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-630,a_{4}=-90,a_{3}=195,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-1440,a_{4}=495,a_{3}=225,a_{2}=-75\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=180,a_{4}=-180,a_{3}=75,a_{2}=-15\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-270,a_{4}=270,a_{3}=75,a_{2}=-45\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=-120,a_{4}=0,a_{3}=60,a_{2}=-20\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-180,a_{3}=120,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=-105,a_{3}=105,a_{2}=-35\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=60,a_{2}=-30\right\}$
-    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{5}=0,a_{4}=0,a_{3}=15,a_{2}=-15\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=75,a_{4}=270,a_{5}=-270\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-45,a_{3}=195,a_{4}=-90,a_{5}=-630\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-35,a_{3}=105,a_{4}=-105,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-20,a_{3}=60,a_{4}=0,a_{5}=-120\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-75,a_{3}=225,a_{4}=495,a_{5}=-1440\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=120,a_{4}=-180,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=75,a_{4}=-180,a_{5}=180\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-15,a_{3}=15,a_{4}=0,a_{5}=0\right\}$
+    [False] - $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-30,a_{3}=60,a_{4}=0,a_{5}=0\right\}$
   Adding new branch to total valid branches
 ## CENTRALIZERS CASE BY CASE:
 ### Starting case 1/30:
@@ -727,7 +727,7 @@
   - ($0$ -- $0$) $G_0 = {z}_{(0)}$
   - ($1$ -- $6$) $G_1 = \left(\frac{-144}{x^{4}}\right){z}_{(2)} + \left(\frac{144}{x^{3}}\right){z}_{(3)} + \left(\frac{-48}{x^{2}}\right){z}_{(4)} + {z}_{(6)}$
   - ($2$ -- $7$) $G_2 = \left(\frac{-336}{x^{4}}\right){z}_{(3)} + \left(\frac{224}{x^{3}}\right){z}_{(4)} + \left(\frac{-56}{x^{2}}\right){z}_{(5)} + {z}_{(7)}$
-  - ($3$ -- $13$) $G_3 = G_1^1G_2^1$
+  - ($3$ -- $13$) $G_3 = G_1^G_2^$
   - ($4$ -- $9$) $G_4 = \left(\frac{1728}{x^{5}}\right){z}_{(4)} + \left(\frac{-1296}{x^{4}}\right){z}_{(5)} + \left(\frac{432}{x^{3}}\right){z}_{(6)} + \left(\frac{-72}{x^{2}}\right){z}_{(7)} + {z}_{(9)}$
 * Orders: $\left[0, 6, 7, 13, 9\right]$
 ### Starting case 4/30:
@@ -766,7 +766,7 @@
   - ($0$ -- $0$) $G_0 = {z}_{(0)}$
   - ($1$ -- $6$) $G_1 = \left(\frac{1728}{x^{6}}\right){z}_{(0)} + \left(\frac{-1728}{x^{5}}\right){z}_{(1)} + \left(\frac{-144}{x^{4}}\right){z}_{(2)} + \left(\frac{360}{x^{3}}\right){z}_{(3)} + \left(\frac{-72}{x^{2}}\right){z}_{(4)} + {z}_{(6)}$
   - ($2$ -- $7$) $G_2 = \left(\frac{12096}{x^{6}}\right){z}_{(1)} + \left(\frac{-4032}{x^{5}}\right){z}_{(2)} + \left(\frac{-504}{x^{4}}\right){z}_{(3)} + \left(\frac{504}{x^{3}}\right){z}_{(4)} + \left(\frac{-84}{x^{2}}\right){z}_{(5)} + {z}_{(7)}$
-  - ($3$ -- $13$) $G_3 = G_1^1G_2^1$
+  - ($3$ -- $13$) $G_3 = G_1^G_2^$
   - ($4$ -- $14$) $G_4 = G_2^2$
 * Orders: $\left[0, 6, 7, 13, 14\right]$
 ### Starting case 7/30:
@@ -793,7 +793,7 @@
   - ($1$ -- $6$) $G_1 = \left(\frac{3024}{x^{6}}\right){z}_{(0)} + \left(\frac{-1008}{x^{5}}\right){z}_{(1)} + \left(\frac{-504}{x^{4}}\right){z}_{(2)} + \left(\frac{360}{x^{3}}\right){z}_{(3)} + \left(\frac{-66}{x^{2}}\right){z}_{(4)} + {z}_{(6)}$
   - ($2$ -- $12$) $G_2 = G_1^2$
   - ($3$ -- $8$) $G_3 = \left(\frac{-67200}{x^{7}}\right){z}_{(1)} + \left(\frac{30912}{x^{6}}\right){z}_{(2)} + \left(\frac{-2496}{x^{5}}\right){z}_{(3)} + \left(\frac{-1760}{x^{4}}\right){z}_{(4)} + \left(\frac{656}{x^{3}}\right){z}_{(5)} + \left(\frac{-88}{x^{2}}\right){z}_{(6)} + {z}_{(8)}$
-  - ($4$ -- $14$) $G_4 = G_1^1G_3^1$
+  - ($4$ -- $14$) $G_4 = G_1^G_3^$
 * Orders: $\left[0, 6, 12, 8, 14\right]$
 ### Starting case 9/30:
 * Branch: $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-50,a_{3}=40,a_{4}=240,a_{5}=-240\right\}$
@@ -819,7 +819,7 @@
   - ($1$ -- $6$) $G_1 = \left(\frac{432}{x^{5}}\right){z}_{(1)} + \left(\frac{-432}{x^{4}}\right){z}_{(2)} + \left(\frac{216}{x^{3}}\right){z}_{(3)} + \left(\frac{-54}{x^{2}}\right){z}_{(4)} + {z}_{(6)}$
   - ($2$ -- $7$) $G_2 = \left(\frac{756}{x^{5}}\right){z}_{(2)} + \left(\frac{-756}{x^{4}}\right){z}_{(3)} + \left(\frac{315}{x^{3}}\right){z}_{(4)} + \left(\frac{-63}{x^{2}}\right){z}_{(5)} + {z}_{(7)}$
   - ($3$ -- $8$) $G_3 = \left(\frac{1728}{x^{5}}\right){z}_{(3)} + \left(\frac{-1296}{x^{4}}\right){z}_{(4)} + \left(\frac{432}{x^{3}}\right){z}_{(5)} + \left(\frac{-72}{x^{2}}\right){z}_{(6)} + {z}_{(8)}$
-  - ($4$ -- $14$) $G_4 = G_1^1G_3^1$
+  - ($4$ -- $14$) $G_4 = G_1^G_3^$
 * Orders: $\left[0, 6, 7, 8, 14\right]$
 ### Starting case 11/30:
 * Branch: $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-50,a_{3}=260,a_{4}=-420,a_{5}=0\right\}$
@@ -857,7 +857,7 @@
   - ($0$ -- $0$) $G_0 = {z}_{(0)}$
   - ($1$ -- $6$) $G_1 = \left(\frac{576}{x^{5}}\right){z}_{(1)} + \left(\frac{-576}{x^{4}}\right){z}_{(2)} + \left(\frac{240}{x^{3}}\right){z}_{(3)} + \left(\frac{-48}{x^{2}}\right){z}_{(4)} + {z}_{(6)}$
   - ($2$ -- $7$) $G_2 = \left(\frac{1344}{x^{5}}\right){z}_{(2)} + \left(\frac{-1008}{x^{4}}\right){z}_{(3)} + \left(\frac{336}{x^{3}}\right){z}_{(4)} + \left(\frac{-56}{x^{2}}\right){z}_{(5)} + {z}_{(7)}$
-  - ($3$ -- $13$) $G_3 = G_1^1G_2^1$
+  - ($3$ -- $13$) $G_3 = G_1^G_2^$
   - ($4$ -- $9$) $G_4 = \left(\frac{-8640}{x^{6}}\right){z}_{(3)} + \left(\frac{6912}{x^{5}}\right){z}_{(4)} + \left(\frac{-2592}{x^{4}}\right){z}_{(5)} + \left(\frac{576}{x^{3}}\right){z}_{(6)} + \left(\frac{-72}{x^{2}}\right){z}_{(7)} + {z}_{(9)}$
 * Orders: $\left[0, 6, 7, 13, 9\right]$
 ### Starting case 14/30:
@@ -897,7 +897,7 @@
   - ($1$ -- $6$) $G_1 = \left(\frac{1584}{x^{6}}\right){z}_{(0)} + \left(\frac{-1584}{x^{5}}\right){z}_{(1)} + \left(\frac{360}{x^{4}}\right){z}_{(2)} + \left(\frac{168}{x^{3}}\right){z}_{(3)} + \left(\frac{-66}{x^{2}}\right){z}_{(4)} + {z}_{(6)}$
   - ($2$ -- $12$) $G_2 = G_1^2$
   - ($3$ -- $8$) $G_3 = \left(\frac{34944}{x^{8}}\right){z}_{(0)} + \left(\frac{-34944}{x^{7}}\right){z}_{(1)} + \left(\frac{17472}{x^{6}}\right){z}_{(2)} + \left(\frac{-5824}{x^{5}}\right){z}_{(3)} + \left(\frac{160}{x^{4}}\right){z}_{(4)} + \left(\frac{400}{x^{3}}\right){z}_{(5)} + \left(\frac{-88}{x^{2}}\right){z}_{(6)} + {z}_{(8)}$
-  - ($4$ -- $14$) $G_4 = G_1^1G_3^1$
+  - ($4$ -- $14$) $G_4 = G_1^G_3^$
 * Orders: $\left[0, 6, 12, 8, 14\right]$
 ### Starting case 17/30:
 * Branch: $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-65,a_{3}=15,a_{4}=630,a_{5}=330\right\}$
@@ -936,7 +936,7 @@
   - ($1$ -- $6$) $G_1 = \left(\frac{-4032}{x^{5}}\right){z}_{(1)} + \left(\frac{1656}{x^{4}}\right){z}_{(2)} + \left(\frac{360}{x^{3}}\right){z}_{(3)} + \left(\frac{-120}{x^{2}}\right){z}_{(4)} + {z}_{(6)}$
   - ($2$ -- $12$) $G_2 = G_1^2$
   - ($3$ -- $13$) $G_3 = \left(\frac{-2007742464}{x^{12}}\right){z}_{(1)} + \left(\frac{1396362240}{x^{11}}\right){z}_{(2)} + \left(\frac{-392491008}{x^{10}}\right){z}_{(3)} + \left(\frac{28933632}{x^{9}}\right){z}_{(4)} + \left(\frac{18240768}{x^{8}}\right){z}_{(5)} + \left(\frac{-7862400}{x^{7}}\right){z}_{(6)} + \left(\frac{1572480}{x^{6}}\right){z}_{(7)} + \left(\frac{-157248}{x^{5}}\right){z}_{(8)} + \left(\frac{-1872}{x^{4}}\right){z}_{(9)} + \left(\frac{2600}{x^{3}}\right){z}_{(10)} + \left(\frac{-260}{x^{2}}\right){z}_{(11)} + {z}_{(13)}$
-  - ($4$ -- $19$) $G_4 = G_1^1G_3^1$
+  - ($4$ -- $19$) $G_4 = G_1^G_3^$
 * Orders: $\left[0, 6, 12, 13, 19\right]$
 ### Starting case 20/30:
 * Branch: $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-85,a_{3}=255,a_{4}=130,a_{5}=-770\right\}$
@@ -974,7 +974,7 @@
   - ($0$ -- $0$) $G_0 = {z}_{(0)}$
   - ($1$ -- $6$) $G_1 = \left(\frac{3168}{x^{6}}\right){z}_{(0)} + \left(\frac{-3168}{x^{5}}\right){z}_{(1)} + \left(\frac{504}{x^{4}}\right){z}_{(2)} + \left(\frac{216}{x^{3}}\right){z}_{(3)} + \left(\frac{-72}{x^{2}}\right){z}_{(4)} + {z}_{(6)}$
   - ($2$ -- $7$) $G_2 = \left(\frac{-12096}{x^{7}}\right){z}_{(0)} + \left(\frac{12096}{x^{6}}\right){z}_{(1)} + \left(\frac{-6048}{x^{5}}\right){z}_{(2)} + \left(\frac{504}{x^{4}}\right){z}_{(3)} + \left(\frac{336}{x^{3}}\right){z}_{(4)} + \left(\frac{-84}{x^{2}}\right){z}_{(5)} + {z}_{(7)}$
-  - ($3$ -- $13$) $G_3 = G_1^1G_2^1$
+  - ($3$ -- $13$) $G_3 = G_1^G_2^$
   - ($4$ -- $14$) $G_4 = G_2^2$
 * Orders: $\left[0, 6, 7, 13, 14\right]$
 ### Starting case 23/30:
@@ -1014,7 +1014,7 @@
   - ($1$ -- $6$) $G_1 = \left(\frac{20160}{x^{6}}\right){z}_{(0)} + \left(\frac{-10656}{x^{5}}\right){z}_{(1)} + \left(\frac{576}{x^{4}}\right){z}_{(2)} + \left(\frac{600}{x^{3}}\right){z}_{(3)} + \left(\frac{-120}{x^{2}}\right){z}_{(4)} + {z}_{(6)}$
   - ($2$ -- $12$) $G_2 = G_1^2$
   - ($3$ -- $13$) $G_3 = \left(\frac{24092909568}{x^{13}}\right){z}_{(0)} + \left(\frac{-17367727104}{x^{12}}\right){z}_{(1)} + \left(\frac{5321272320}{x^{11}}\right){z}_{(2)} + \left(\frac{-652893696}{x^{10}}\right){z}_{(3)} + \left(\frac{-116992512}{x^{9}}\right){z}_{(4)} + \left(\frac{73277568}{x^{8}}\right){z}_{(5)} + \left(\frac{-17297280}{x^{7}}\right){z}_{(6)} + \left(\frac{2358720}{x^{6}}\right){z}_{(7)} + \left(\frac{-149760}{x^{5}}\right){z}_{(8)} + \left(\frac{-9672}{x^{4}}\right){z}_{(9)} + \left(\frac{3120}{x^{3}}\right){z}_{(10)} + \left(\frac{-260}{x^{2}}\right){z}_{(11)} + {z}_{(13)}$
-  - ($4$ -- $19$) $G_4 = G_1^1G_3^1$
+  - ($4$ -- $19$) $G_4 = G_1^G_3^$
 * Orders: $\left[0, 6, 12, 13, 19\right]$
 ### Starting case 26/30:
 * Branch: $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-80,a_{3}=240,a_{4}=1200,a_{5}=-2880\right\}$
@@ -1044,4 +1044,10 @@
 * Orders: $\left[0, 6, 12, 18, 14\right]$
 ### Starting case 28/30:
 * Branch: $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-125,a_{3}=175,a_{4}=2730,a_{5}=-2730\right\}$
-* Case stopped by 
+* Case stopped by maximum recursion depth exceeded during compilation
+### Starting case 29/30:
+* Branch: $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-125,a_{3}=575,a_{4}=1530,a_{5}=-7290\right\}$
+* Case stopped by maximum recursion depth exceeded during compilation
+### Starting case 30/30:
+* Branch: $\texttt{Solution}\left[\right]\left(\left(0\right)\mathbb{Q}[a_{2}, a_{3}, a_{4}, a_{5}]\right)\left\{a_{2}=-175,a_{3}=525,a_{4}=3955,a_{5}=-8960\right\}$
+* Case stopped by maximum recursion depth exceeded during compilation
