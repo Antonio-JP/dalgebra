@@ -106,20 +106,18 @@ def main(n: int, M: int, family: str, maple: bool = False, simple: bool = False)
     Us = create_Us(generators, constants, family)
 
     L, P, H = dict(), dict(), dict()
+    cases, computed = dict(), dict()
 
     for m in range(1, M+1):
         if m%n != 0:
             print(f"+ Computing Equations for level {m}...")
-            L[m],P[m],H[m] = GetEquationsForLevel(n, m, Us, filename=family)
+            L[m],P[m],H[m] = GetEquationsForLevel(n, m, Us, filename=family, maple=maple, simple=simple)
             print(f"- Computed Equations for level {m}...")
+            if m > n:
+                print(f"+ Analyzing GDH for level {m}...")
+                cases[m], computed[m] = AnalyzeGDH(n,m,L[m],H[m], H, filename=family, table=True)
+                print(f"- Analyzed GDH for level {m}...")
 
-    cases, computed = dict(), dict()
-    for m in range(n+1, M+1):
-        if m%n != 0:
-            print(f"+ Analyzing GDH for level {m}...")
-            cases[m], computed[m] = AnalyzeGDH(n,m,L[m],H[m], H, filename=family, table=True)
-            print(f"- Analyzed GDH for level {m}...")
-    
     return cases, computed
 
 if __name__ == "__main__":
