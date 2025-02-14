@@ -915,9 +915,10 @@ def __analyze_centralizer(branch: SolutionBranch, L: DPolynomial, M: int,B: int=
     specific_solution = branch if len(kwds) == 0 else branch.subsolution(**kwds)
     L = specific_solution.eval(L)
     Z = L.parent().gen("z")
-    Us = tuple([0 if L.coefficient_full(Z[i]) == 0 else L.coefficient_full(Z[i]).coefficients()[0] for i in range(L.order(Z)-1)])
+    # Us = tuple([0 if L.coefficient_full(Z[i]) == 0 else L.coefficient_full(Z[i]).coefficients()[0] for i in range(L.order(Z)-1)])
+    Us = tuple([L.coefficient_full(Z[i]).coefficients()[0] for i in range(L.order(Z)-1)])
 
-    logger.log(15, f"[Analyze] Analyzing the centralizer for the operator {L} with solution {specific_solution}\n\t-{L.parent()}\n\t-{Us}\n\t-{Us[0].parent()}")
+    logger.log(15, f"[Analyze] Analyzing the centralizer for the operator {L} with solution {specific_solution}\n\t-{L.parent()}\n\t-{Us}")
     L, centr_GB, flag = GetCentralizer(
         Us, B, 
         starting_level=M, update_bound=True, ignore_bound=True, 
