@@ -27,7 +27,7 @@ from functools import lru_cache
 import pickle
 import argparse
 
-logging.getLogger("dalgebra").setLevel(15)
+logging.getLogger("dalgebra").setLevel(int(15))
 
 @lru_cache
 def create_base(family: str):
