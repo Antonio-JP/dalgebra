@@ -1465,6 +1465,7 @@ class DPolynomialRing_Monoid(Parent):
         self.__cache_ranking : dict[tuple[tuple[DPolynomial], str], RankingFunction] = dict()
         self.__fraction_field : DFractionField = None
         self.__CACHED_EVALUATION_MORPHISM = dict()
+        self.__CACHED_EVALUATIONS = dict()
 
         # registering conversion to simpler structures
         current = self.base()
@@ -1601,6 +1602,9 @@ class DPolynomialRing_Monoid(Parent):
         elif x in self.base():
             return self.element_class(self, {self.monoids().one(): x}) # casting elements in self.base()
         elif isinstance(x, DPolynomial):
+            if x.parent() is self:
+                return x
+            # logger.log(15, f"!3 Using element constructor from polynomial")
             return self.element_class(self, x) # this casts the coefficients
         else:
             ## Converting the input into a Symbolic Expression
@@ -1887,6 +1891,29 @@ class DPolynomialRing_Monoid(Parent):
             self.__CACHED_EVALUATION_MORPHISM[key] = EvaluationMorphism_DPolynomial(self, codomain, images, domain_to_codomain=morphism)
         return self.__CACHED_EVALUATION_MORPHISM[key]
 
+    def eval(self, element: DPolynomial, dic : dict[str, Element]) -> Element:
+        key = (element, tuple(sorted(dic.items())))
+        if not key in self.__CACHED_EVALUATIONS:
+            ###########################################################
+            ## Evaluating coefficients first
+            ###########################################################
+            inner_kwds = dict()
+            out_kwds = dict()
+            for entry, value in dic.items():
+                if entry not in self.variable_names():
+                    inner_kwds[entry] = value
+                else:
+                    out_kwds[entry] = value
+            dic = out_kwds
+
+            if len(inner_kwds) > 0: # Evaluating coefficients -> this forces everything to remain in the same base ring
+                return element.eval_coefficients(**inner_kwds)(**dic)
+
+            ev_morph = self.get_evaluation_morphism(dic)
+            self.__CACHED_EVALUATION_MORPHISM[key] = ev_morph(self)
+        
+        return self.__CACHED_EVALUATION_MORPHISM[key]
+    
     #################################################
     ### Magic python methods
     #################################################
@@ -2925,17 +2952,21 @@ class EvaluationMorphism_DPolynomial(Morphism):
         ## Storing (if ne)
         self.__domain_to_codomain = domain_to_codomain
 
+    @cached_method
+    def _imgs_order(self, element: int, order: tuple[int]) -> Element:
+        value = self.__images[element]
+        P = value.parent()
+        return P.apply_operations(value, order)
+
     def _call_(self, element: DPolynomial) -> Element:
         result = self.codomain().zero()
         for (m, c) in element._content.items():
             ## Evaluating the monomial
             ev_mon = self.codomain().base().one() # ev_mon will be in final_base or output_ring
-            rem_mon = dict() # rem_mon will be in output_ring using ``self_to_output``
+            rem_mon = dict() # rem_mon will be in output_ring using ``self.__domain_to_codomain``
             for (v,o),e in m._variables.items():
                 if v in self.__images:
-                    el = self.__images[v]
-                    P = el.parent()
-                    ev_mon *= P.apply_operations(el, o)**e
+                    ev_mon *= self._imgs_order(v, o)**e
                 else:
                     rem_mon[(v,o)] = m._variables[(v,o)]
             rem_mon = self.domain()(self.domain().monoids().element_class(self.domain().monoids(), rem_mon)) if len(rem_mon) > 0 else self.domain().one()

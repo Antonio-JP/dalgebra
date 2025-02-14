@@ -130,7 +130,7 @@ def latex(*args, **kwds) -> str:
 #################################################################################################
 def GetCentralizer(
         U: tuple[Element], global_bound: int, *, 
-        starting_level:int = 1, ignore_bound: bool = False,
+        starting_level:int = 1, update_bound: bool = True, ignore_bound: bool = False,
         extra_info: SolutionBranch = None
         ):
     r'''
@@ -168,7 +168,7 @@ def GetCentralizer(
     n = len(U) + 1 ## order of the operator
 
     Goodearl_Basis = [1] + (n-1)*[None]
-    bounds = __compute_bounds(n, global_bound=global_bound)
+    bounds = __compute_bounds(n, global_bound=global_bound, ignore_bound=ignore_bound)
     B = max(bounds)
     current = starting_level
     L = None
@@ -210,17 +210,40 @@ def GetCentralizer(
                     element_centralizer = extra_info.eval(element_centralizer)
                 Goodearl_Basis[r] = element_centralizer
                 bounds[r] = current
-                if ignore_bound: ## We update the bounds
+                if update_bound: ## We update the bounds
                     logger.log(15, f"[GC] ++     Updating bounds...")
                     bounds = __compute_bounds(
                         n, 
                         *[bounds[r] for r in range(1,n) if Goodearl_Basis[r] is not None], 
-                        global_bound=global_bound
+                        global_bound=global_bound, ignore_bound=ignore_bound
                     )
                     B = max(bounds)
             else: ## No solution -- we keep this coefficient for future searches
                 c_coeffs.append(current)
-        elif Goodearl_Basis[r] is None and current == bounds[r]:
+                ## We check if there is something more in this congruence class
+                if current + n == bounds[r]: # next iteration will reach the bound -> it is a decomposition
+                    logger.log(15, f"[GC] +! Preventing bound for congruence class {r} (mod {n}): {(current + n)}")
+                    logger.log(15, f"[GC] +!     Computing decomposition with other elements of the basis...")
+                    decomposition = len(bounds)*[0]
+                    values = {v : i+1 for (i,v) in enumerate(bounds[1:]) if v < (current + n)}
+                    compositions = Compositions((current + n), min_part = min(values), max_part=max(values))
+                    for comp in compositions:
+                        if set(comp).issubset(values.keys()):
+                            for v in comp:
+                                decomposition[values[v]] += 1
+                            break
+                    logger.log(15, f"[GC] +!     Element {r} can be computed using {decomposition}")
+                    ## we simplify the decomposition, avoiding loops
+                    final_decomposition = len(bounds)*[0]
+                    for i,v in enumerate(decomposition):
+                        if isinstance(Goodearl_Basis[i], (list, tuple)):
+                            for j in range(len(Goodearl_Basis[i])):
+                                final_decomposition[j] += v*Goodearl_Basis[i][j]
+                        elif Goodearl_Basis[i] is not None:
+                            final_decomposition[i] += v
+                    logger.log(15, f"[GC] +!     Element {r} is computed using {final_decomposition}")
+                    Goodearl_Basis[r] = final_decomposition
+        elif Goodearl_Basis[r] is None and current == bounds[r]: ## This should never be reached
             logger.log(15, f"[GC] ++ Reached bound for congruence class {r} (mod {n}): {current}")
             logger.log(15, f"[GC] ++     Computing decomposition with other elements of the basis...")
             decomposition = len(bounds)*[0]
@@ -241,6 +264,8 @@ def GetCentralizer(
                 elif Goodearl_Basis[i] is not None:
                     final_decomposition[i] += v
             Goodearl_Basis[r] = final_decomposition
+        else:
+            logger.log(15, f"[GC] ++ Skipping level {current} (congruence class {r}): ({Goodearl_Basis[r] is None} -- {current} -- {bounds[r]} -- {global_bound})")
 
         logger.log(15, f"[GC] -- Concluded study at level {current}")
         current += 1
@@ -249,7 +274,7 @@ def GetCentralizer(
     Goodearl_Basis[0] = L.parent().gen("z")[0]
     return L, Goodearl_Basis, level_flag
 
-def __compute_bounds(n, *K, global_bound):
+def __compute_bounds(n, *K, global_bound, ignore_bound=False):
     import heapq
     bounds = [0] + (n-1)*[None]
     queue = list(K)
@@ -265,6 +290,8 @@ def __compute_bounds(n, *K, global_bound):
     ## Putting "global_bound" in those places where no bound was found
     for i in range(len(bounds)):
         if bounds[i] is None:
+            bounds[i] = global_bound
+        elif (not ignore_bound) and bounds[i] > global_bound:
             bounds[i] = global_bound
     
     return bounds
@@ -868,7 +895,7 @@ def __analyze_centralizer(branch: SolutionBranch, L: DPolynomial, M: int,B: int=
 
     L, centr_GB, flag = GetCentralizer(
         Us, B, 
-        starting_level=M, ignore_bound=True, 
+        starting_level=M, update_bound=True, ignore_bound=True, 
         extra_info=specific_solution
     )
 
