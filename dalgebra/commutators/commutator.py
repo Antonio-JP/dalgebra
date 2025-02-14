@@ -61,6 +61,7 @@ r'''
 from __future__ import annotations
 
 import logging
+from typing import TextIO
 logger = logging.getLogger(__name__)
 
 from contextlib import nullcontext
@@ -693,13 +694,14 @@ def generate_polynomial_equations(H: DPolynomial, var_name: str = "x") -> list[P
 ###
 #################################################################################################
 class GDH_Solution:
-    def __init__(self, gen: DPolynomialGen, L: DPolynomial, centr_GB: tuple[DPolynomial], flag: tuple[Element]):
+    def __init__(self, case: SolutionBranch, gen: DPolynomialGen, L: DPolynomial, centr_GB: tuple[DPolynomial], flag: tuple[Element]):
         from sage.arith.misc import GCD
 
         self.__gen = gen
         self.__L = L
         self.__centralizer_basis = centr_GB
         self.__flag = flag
+        self.__case = case
 
         ## Order of the operator L
         self.__n = L.order(gen)
@@ -712,6 +714,13 @@ class GDH_Solution:
         self.__alg_gens = len([el for el in centr_GB if not isinstance(el, list)])
         ## Rank of the centralizer (computed so far)
         self.__rank = GCD([self.n] + [el for el in self.orders if el is not None])
+
+    @staticmethod
+    def Error(case: SolutionBranch, L:DPolynomial) -> GDH_Solution:
+        gen = L.parent().gen("z")
+        centr = L.order(gen)*[None]
+        flag = L.order(gen)*[0]
+        return GDH_Solution(case, gen, L, centr, flag)
 
     @property
     def gen(self) -> DPolynomialGen:
@@ -731,17 +740,20 @@ class GDH_Solution:
     @property
     def orders(self) -> tuple[int]:
         if self.__orders is None:
-            self.__orders = [
-                el.order(self.gen) if not isinstance(el, list) else 
-                sum(el[k]*self.basis[k].order(self.gen) for k in range(self.n) if el[k] != 0)
-            for el in self.basis]
+            if self.is_error():
+                return tuple(self.n*[-1])
+            else:
+                self.__orders = [
+                    el.order(self.gen) if not isinstance(el, list) else 
+                    sum(el[k]*self.basis[k].order(self.gen) for k in range(self.n) if el[k] != 0)
+                for el in self.basis]
         return self.__orders
     @property
     def operators_tex(self) -> tuple[str]:
         if self.__operators_tex is None:
             self.__operators_tex = [
                 latex(el) if not isinstance(el, list) 
-                else ''.join(f'G_{k}^{"" if el[k] == 1 else el[k]}' for k in range(self.n) if el[k] != 0)
+                else ''.join(f'A_{k}^{"" if el[k] == 1 else el[k]}' for k in range(self.n) if el[k] != 0)
             for el in self.basis]
         return self.__operators_tex
     
@@ -749,7 +761,7 @@ class GDH_Solution:
         relations = []
         for i,el in enumerate(self.basis):
             if isinstance(el, list):
-                relations.append(f"G_{i} - {self.operators_tex[i]}")
+                relations.append(f"A_{i} - {self.operators_tex[i]}")
         return ", ".join(relations)
 
     @property
@@ -767,6 +779,16 @@ class GDH_Solution:
             of the Goodearl's basis.
         '''
         return self.orders == other.orders
+        
+    def is_error(self) -> bool:
+        return all(el is None for el in self.__centralizer_basis)
+    
+    def point_case(self) -> tuple[Element]:
+        
+        if len(self.__case.remaining_variables()) == 0:
+            return tuple(v for (_,v) in sorted(self.__case._SolutionBranch__solution.items()))
+        
+        return ("Unknown",)
 
 def AnalyzeGDH(n: int, m: int, 
                L: DPolynomial, 
@@ -819,7 +841,7 @@ def AnalyzeGDH(n: int, m: int,
             if filename: file.writelines([f"### Starting case {i+1}/{len(cases)}:\n",f"* Branch: ${latex(case[1][0])}$\n"])
             logger.info(f"@@ Starting case {i+1}/{len(cases)}: {case[1][0]}")
             try:
-                computed.append(GDH_Solution(*__analyze_centralizer(case[1][0], L, m)))
+                computed.append(GDH_Solution(case[1][0], *__analyze_centralizer(case[1][0], L, m)))
                 logger.info(f"[{','.join(f'{computed[-1].orders[i] if not isinstance(computed[-1].basis[i], (tuple,list)) else computed[-1].basis[i]}' for i in range(len(computed[-1].basis)))}]")
                 
                 if filename: 
@@ -837,6 +859,7 @@ def AnalyzeGDH(n: int, m: int,
                     if isinstance(error, RecursionError):
                         with open(f"{path}/{filename}_{n}_{m}_error.md", "w") as f:
                             f.writelines([f"ERROR: {error}\n",f"{error.__traceback__}\n"])
+                        computed.append(GDH_Solution.Error(case[1][0], L))
                     logger.info(f"@@ Case stopped by {error}... Waiting {5} seconds before continuing")
                     if filename: file.writelines([f"* Case stopped by {error}\n"])
                     sleep(5)
@@ -845,7 +868,7 @@ def AnalyzeGDH(n: int, m: int,
             if filename: file.flush()
 
         if table:
-            __generate_table(cases, computed, f"{filename}_{n}_{m}_table.tex", path)
+            __generate_table(cases, computed, f"{filename}_{n}_{m}_table.tex", path, file)
 
         return cases, computed
     
@@ -901,34 +924,50 @@ def __analyze_centralizer(branch: SolutionBranch, L: DPolynomial, M: int,B: int=
 
     return Z, L, centr_GB, flag
 
-def __generate_table(cases: list[tuple[int, tuple[SolutionBranch]]], computed: list[GDH_Solution], filename: str, path: str):
+def __generate_table(
+        cases: list[tuple[int, tuple[SolutionBranch]]], 
+        computed: list[GDH_Solution], 
+        filename: str, 
+        path: str,
+        file: TextIO):
     ## We merge the cases that are similar
-    final_cases: list[tuple[GDH_Solution,int]] = []
+    final_cases: list[tuple[GDH_Solution,list[GDH_Solution]]] = []
     for (case, comp) in zip(cases, computed):
-        for i,(final_case, n) in enumerate(final_cases):
+        for i,(final_case, related) in enumerate(final_cases):
             if comp.are_similar(final_case):
-                final_cases[i] = (final_case, n+1)
+                final_cases[i] = (final_case, related + [comp])
                 break
         else:
-            final_cases.append((comp,1))
+            final_cases.append((comp,[comp]))
     
+    ## Creating the TeX table
     with open(f"{path}/{filename}", "w") as f:
         f.writelines([
             r"\begin{table}[h]" + "\n",
             "\t" + r"\centering" + "\n",
-            "\t" + r"$\begin{array}{|c|c|c|c|c|}" + "\n",
+            "\t" + r"$\begin{array}{|c|c|c|c|}" + "\n",
             "\t\t" + r"\hline" + "\n",
-            "\t\t" + r"\text{\# Cases} & \text{Orders} & \text{Rank} & \text{Algebraic Generators} & \text{Relations} \\" + "\n",
+            "\t\t" + r"\text{Family} & \text{\# Cases} & \text{Orders} & \text{Found Relations} \\" + "\n",
             "\t\t" + r"\hline" + "\n",
         ])
-        for (case, n) in final_cases:
+        for i,(case, related) in enumerate(final_cases):
             f.writelines([
-                f"\t\t{n} & {tuple(case.orders[1:])} & {case.rank} & {case.algebraic_generators} & {case.relations()} \\\\" + "\n",
+                f"\t\t{i+1} & {len(related)} & {tuple(case.orders[1:])} & {case.relations()} \\\\" + "\n",
             ])
         f.writelines([
             "\t\t" + r"\hline" + "\n",
             "\t" + r"\end{array}$" + "\n",
             r"\end{table}" + "\n",
+        ])
+    
+    ## Updating the report file with the summary
+    file.writelines(["## SUMMARY OF THE CASES (by FAMILIES):\n"])
+    for (i, (_, related)) in enumerate(final_cases):
+        file.writelines([f"### Family {i+1}:\n",
+                         f"* Number of cases: {len(related)}\n",
+                         f"* Orders: {tuple(related[0].orders[1:])}\n",
+                         f"* Relations: {related[0].relations()}\n",
+                         f"* Points: " + r"$\left\{" +  ", ".join(f"{p.point_case()}" for p in related) + r"\right\}$" + "\n"
         ])
 
 __all__ = [
