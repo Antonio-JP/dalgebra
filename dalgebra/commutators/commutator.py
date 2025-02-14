@@ -566,7 +566,7 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple):
     
     ### Computing the generic `L` operator
     logger.debug(f"[GHLE] Computing the generic L_{n} operator...")
-    L = generic_normal(n, output_base=parent_us)
+    L = generic_normal(n)#, output_base=parent_us)
     z = L.parent().gen("z")
     parent_L_with_us = L.parent()
     logger.debug(f"[GHLE] {L=}")
@@ -579,8 +579,8 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple):
     Ps, Hs = list(), list() # [z[0](dic=U)], [(n-1)*[L.parent().zero()]] # the case with m = 0
     for i in c_list:
         nP, nH = almost_commuting_wilson(n, i)
-        nP = parent_L_with_us(nP) # casting to have the ring of the Us
-        nH = tuple(parent_L_with_us(h) for h in nH) # casting to have the ring of the Us
+        #nP = parent_L_with_us(nP) # casting to have the ring of the Us
+        #nH = tuple(parent_L_with_us(h) for h in nH) # casting to have the ring of the Us
         
         Ps.append(nP(dic=U))
         Hs.append([h(dic=U) for h in nH])
@@ -591,6 +591,7 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple):
 
     system_in_DRing = [[Hs[j][i] for j in range(len(c_list))] for i in range(n-1)]
     extended_system = parent_us.system_for_constant_solutions(system_in_DRing)
+    logger.debug(f"[GHLE] -- Computed extended system")
 
     return L, Ps, extended_system
     # ### Getting the linear system. We use the method extract on the Hs to get the monomials and the coefficients
