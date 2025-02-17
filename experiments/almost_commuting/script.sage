@@ -46,7 +46,7 @@ if __name__ == "__main__":
     m = 1 if not args.m else args.m
     go_on = True
 
-    while go_on:
+    while go_on and m <= M:
         if m%n != 0:
-            go_on = run_case(n, m) and m < M
+            go_on = run_case(n, m)
         m += 1
