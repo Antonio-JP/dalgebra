@@ -33,7 +33,7 @@ RESULTS_FOLDER = os.path.join(dalgebra_folder(), 'results', 'almost_commuting')
 def send_results(folder: str):
     print(f"### SENDING RESULTS TO REPOSITORY ###")
     ## Creating the path to the results and destination folders
-    destination_folder = os.path.join(folder, 'data', 'sage')
+    destination_folder = os.path.join(folder, 'data')
     if not os.path.exists(destination_folder):
         raise ValueError(f" !! Folder {destination_folder} does not exist.")
     
