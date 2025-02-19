@@ -7,7 +7,7 @@ from codecs import open # To open the README file with proper encoding
 def readfile(filename):
     with open(filename,  encoding='utf-8') as f:
         return f.read()
-    
+
 setup(
     name = "dalgebra",
     version = readfile("VERSION").strip(), # the VERSION file is shared with the documentation
@@ -37,6 +37,6 @@ setup(
     setup_requires   = [],
     install_requires = readfile("requirements.txt").split("\n"),
     include_package_data=True,
-    package_data={'': ['dalgebra/results/almost_commuting/*.out']}
+    package_data={'dalgebra': ['results/almost_commuting/*.out']}
 )
     
