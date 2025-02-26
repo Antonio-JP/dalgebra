@@ -26,7 +26,7 @@ r'''
 
         d(p(x)) = \kappa_d(p(x)) + \partial_x(p(x)) d_x,
 
-    where `\kappa_d(p(x))` is the polynomial `p(x)` where all the coefficients are derivated, while
+    where `\kappa_d(p(x))` is the polynomial `p(x)` where all the coefficients are differentiated, while
     `\partial_x(p(x))` is the derivative of `p(x)` with respect to `x`.
 
     Hence, knowing the value of `d_x` is enough to compute the derivative of any polynomial.
@@ -265,6 +265,12 @@ class DExtension_Element(Element):
     def __init__(self, parent: DExtension_Field, value: Element):
         pass
 
+    def kappa(self, operator: int) -> DExtension_Element:
+        pass
+
+    def partial(self, operator: int, variable: DExtension_Element) -> DExtension_Element:
+        pass
+
 class DExtension_Field(Parent):
     Element = DExtension_Element
     
@@ -282,9 +288,182 @@ class DExtension_Field(Parent):
         super().__init__(base, category=tuple(self._set_categories(base, category)))
 
         ## We create the inner sage structures
-        self.__algebraic_base = base.to_sage()
-        ## TODO: Go on here
+        self.__algebraic_base = base.to_sage() # field F without d-operations -- used to communicate with sage
+        self.__algebraic_ring = PolynomialRing(self.__algebraic_base, names=names) # polynomial ring over F with the variables of ``self``
+        self.__algebraic_self = self.__algebraic_ring.fraction_field() # fraction field of the polynomial ring -- equivalent to ``self`` but in SageMath
+
+        ## We add our own coercions with the new structure
+        self.register_coercions_conversions()
+        
+        ## We store the values for the operations of generators
+        self.__operations_gens = tuple(tuple(self(self.__algebraic_ring(p)) for p in poly) for poly in polynomial) # self.__operations_gens[i][j] is the image of the j-th operation on the i-th generator
+        self.__operators = [self.extend_operator(i, base.operator_types()[i], [self.__operations_gens[j][i] for j in range(len(names))]) for i in range(base.noperators())] 
+
+    #############################################################
+    ### Getter methods for a DExtension_Field
+    #############################################################
+    def varnames(self) -> tuple[str]:
+        r'''
+            Returns the names of the variables of the extension.
+        '''
+        return tuple(str(g) for g in self.gens())
+    
+    def gens(self) -> tuple[DExtension_Element]:
+        r'''
+            Returns the generators of the extension.
+        '''
+        return tuple(self(self.__algebraic_self.gens()))
+    
+    def gen(self, name:str) -> DExtension_Element:
+        r'''
+            Returns the generator with the given name.
+        '''
+        return self.gens()[self.varnames().index(name)]
+    
+    def algebraic_self(self) -> Parent:
+        r'''
+            Returns the algebraic field without the operations.
+        '''
+        return self.__algebraic_self
+    
+    def algebraic_poly(self) -> Parent:
+        r'''
+            Returns the polynomial ring over the algebraic field.
+        '''
+        return self.__algebraic_ring
+    
+    def algebraic_base(self) -> Parent:
+        r'''
+            Returns the base field without the operations.
+        '''
+        return self.__algebraic_base
+
+    def one(self) -> DExtension_Element:
+        r'''
+            Returns the multiplicative identity of the extension.
+        '''
+        return self.element_class(self, self.__algebraic_self.one())
+    
+    def zero(self) -> DExtension_Element:
+        r'''
+            Returns the multiplicative identity of the extension.
+        '''
+        return self.element_class(self, self.__algebraic_self.zero())
+
+    #############################################################
+    ### Coercion methods
+    #############################################################
+    def register_coercions_conversions(self):
+        r'''
+            This method (called only once) registers the coercions and conversions between the the extension and all 
+            related SageMath structures generated in the process.
+        '''
+        self.__algebraic_self.register_coercion(MapDExtensionToField(self, self.__algebraic_self)) # coercion from ``self`` to `F(gens)`
+        self.register_coercion(MapFieldToDExtension(self.__algebraic_self, self)) # coercion from `F(self)` to ``self``
+        # conversion from ``self`` to `F[gens]`
+        # conversion from ``self`` to `F`
+        
+        ## TODO: Check if this is enough. In theory, if we have a coercion between ``self`` and `F(gens)`, then a conversion from ``self``
+        ## to `F[gens]` can be induced from the known conversion from `F(gens)` to `F[gens]`. The same for the conversion from ``self`` to `F`.
+
+    def _coerce_map_from_base_ring(self):
+        return CoerceFromBase_DExtension(self.base(), self)
+
+    def construction(self) -> tuple[DExtensionFunctor, Parent]:
+        r'''
+            Return the associated functor and input to create ``self``.
+
+            The method construction returns a :class:`~sage.categories.pushout.ConstructionFunctor` and
+            a valid input for it that would create ``self`` again. This is a necessary method to
+            implement all the coercion system properly.
+        '''
+        return DExtensionFunctor([[str(el) for el in imgs] for imgs in self.__operations_gens], self.varnames()), self.base()
+
+    def fraction_field(self):
+        return self ## self is already a field
+
+    def change_base(self, R) -> DExtension_Field:
+        new_ring = DExtension(R, self.__operations_gens, names=self.varnames())
+        ## Creating the coercion map if possible
+        try:
+            M = CoerceBetweenBases_DExtension(self, new_ring, R.coerce_map_from(self.base()))
+            new_ring.register_coercion(M)
+        except AssertionError: # This ring was already created
+            pass
+
+        return new_ring
+
+    def extend_operator(self, operator: int, otype: str, images: Collection[Element]) -> AdditiveMap:
+        r'''
+            Given an operator and the images of the generators, this method returns the operator extended to the new field.
+
+            There are two main cases: when the operator is a derivation (i.e., `otype = "derivation"`) and when the operator is a difference
+            (i.e., `otype = "difference"`). In the first case, the operator is extended by the Leibniz rule, while in the second case, the operator
+            is extended by the homomorphism property.
+        '''
+        if otype == "derivation":
+            def __derivation_poly(element: DExtension_Element) -> DExtension_Element:
+                kappa = element.kappa(operator)
+                partials = tuple(element.partial(operator,g) for g in self.gens())
+                return sum((partials[i] * images[i] for i in range(len(self.gens()))), kappa)
+            def __derivation(element: DExtension_Element) -> DExtension_Element:
+                n, d = element.numerator(), element.denominator()
+                dn, dd = __derivation_poly(n), __derivation_poly(d)
+
+                return (dn*d - n*dd)/(d^2)
+            return AdditiveMap(self, __derivation)
+
+        elif otype == "homomorphism":
+            ## We create the homomorphism in the algebraic field
+            self_to_aself = self.__algebraic_self.coerce_map_from(self)
+            aself_to_self = self.coerce_map_from(self.__algebraic_self)
+            base_morphism = aself_to_self*self.operators()[operator]*self_to_aself
+            homomorphism = self.__algebraic_self.hom([el.algebraic() for el in images], base_map=base_morphism)
+            return AdditiveMap(self, lambda x : self(homomorphism(x.algebraic())))
+        else:
+            raise NotImplementedError("The operator type must be either 'derivation' or 'homomorphism'")
+
+    #############################################################
+    ### Representation methods for Python
+    #############################################################
+    def __repr__(self):
+        return f"D-Extension of {self.base()} with elements {self.gens()} whose images are \n\t[" + ",\n\t".join([
+            f"{self.gens()[i]} --> [" + ", ".join([str(el) for el in imgs]) + "]" for i,imgs in enumerate(self.__operations_gens)
+        ])
+
+    def _latex_(self):
+        ## TODO write latex method
         pass
+
+    ##################################################
+    #### Method from DRing category
+    ##################################################
+    def operators(self) -> Collection[AdditiveMap]:
+        return self.__operators
+
+    def operator_types(self) -> tuple[str]:
+        return self.base().operator_types()
+
+    def add_constants(self, *new_constants: str) -> DExtension_Field:
+        return self.change_base(self.base().add_constants(*new_constants))
+
+    def linear_operator_ring(self) -> DExtension_Field:
+        r'''
+            Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
+
+            This method builds the ring of linear operators on the base ring. It only works when the
+            ring of operator polynomials only have one variable.
+        '''
+        raise NotImplementedError(f"Ring of linear operators not yet implemented for D-Extensions")
+
+    def inverse_operation(self, element: DExtension_Element, operation: int = 0) -> DExtension_Element:
+        raise NotImplementedError(f"The integration in these fields is not yet implemented")
+    
+    def _lcm_denominators(self, *elements: DExtension_Element) -> DExtension_Element:
+        raise NotImplementedError(f"The integration in these fields is not yet implemented")
+
+    def to_sage(self):
+        return self.__algebraic_self
 
 #########################################################################
 ### CONSTRUCTIONS FUNCTOR FOR EXTENSIONS
