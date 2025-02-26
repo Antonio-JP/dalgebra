@@ -36,9 +36,15 @@ def create_base(family: str):
         R = DifferentialRing(B, [1]).fraction_field()
         (x,) = R.gens()
         return R, (x,)
+    if family == "trigonometric":
+        BD = DifferentialRing(QQ)
+        E = DElliptic(BD, "cos^2 + cos_p^2 - 1", names=("cos",))
+        cosh = E.gen()
+        sinh = cosh.derivative()
+        return E, (cosh, sinh)
     if family == "hyperbolic":
         BD = DifferentialRing(QQ)
-        E = DElliptic(BD, "cosh^2 + cosh_p^2 - 1", names=("cosh",))
+        E = DElliptic(BD, "cosh^2 - cosh_p^2 - 1", names=("cosh",))
         cosh = E.gen()
         sinh = cosh.derivative()
         return E, (cosh, sinh)
@@ -55,6 +61,9 @@ def get_templates(generators: tuple, family: str, n:int) -> dict:
     if family == "rational":
         (x,) = generators
         f = 1/x^2
+    elif family == "trigonometric":
+        cos = generators[0]
+        f = 1/cos^2
     elif family == "hyperbolic":
         cosh = generators[0]
         f = 1/cosh^2
@@ -124,7 +133,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyze centralizers for different families of coefficients.")
     parser.add_argument("-n", type=int, required=True, help="The size of the operator L to be analyzed.")
     parser.add_argument("-m", type=int, required=True, help="The order of the first non-trivial element in the centralizer.")
-    parser.add_argument("-family", type=str, required=True, choices=["rational", "hyperbolic", "elliptic"], help="The family of coefficients.")
+    parser.add_argument("-family", type=str, required=True, choices=["rational", "trigonometric", "hyperbolic", "elliptic"], help="The family of coefficients.")
     parser.add_argument("-simple", action="store_true", help="Consider as systems the ideal of the last column.")
     parser.add_argument("-maple", action="store_true", help="Use Maple to solve algebraic systems.")
 
