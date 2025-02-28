@@ -191,6 +191,8 @@ from sage.graphs.digraph import DiGraph
 from sage.misc.latex import latex_variable_name
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
+from sage.misc.lazy_attribute import lazy_attribute
+from sage.rings.polynomial.multi_polynomial_element import MPolynomial_polydict as PolyDict
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.structure.element import Element
 from sage.structure.factory import UniqueFactory
@@ -198,7 +200,7 @@ from sage.structure.parent import Parent
 
 from typing import Collection
 
-from ..dring import AdditiveMap, DRings
+from ..dring import AdditiveMap, DRings, DFractionField
 
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
@@ -256,13 +258,74 @@ class DExtensionFactory(UniqueFactory):
     def create_object(self, _, key) -> DExtension_Field:
         base, names, polynomial, category = key
 
+        return DExtension_PolyRing(base, polynomial, names=names, category=category)
+    
+class DExtensionFieldFactory(DExtensionFactory):
+    def create_object(self, _, key) -> DExtension_Field:
+        base, names, polynomial, category = key
+
         return DExtension_Field(base, polynomial, names=names, category=category)
 
-DExtension = DExtensionFactory("dalgebra.dextension.dextension.DExtension")
+
+DExtensionRing = DExtensionFactory("dalgebra.dextension.dextension.DExtensionRing")
+DExtension = DExtensionFieldFactory("dalgebra.dextension.dextension.DExtension")
 
 #########################################################################
 ### ELEMENT AND PARENT CLASSES FOR EXTENSIONS
 #########################################################################
+class DExtension_PolyDict(PolyDict):
+    def __init__(self, parent: DExtension_Field, data: dict[tuple[int],Element]):
+        super().__init__(parent, data)
+
+        self.__algebraic = None # cached value for the algebraic equivalent
+
+        self._exponents = sorted(self.element().dict(), reverse=True) if self.parent().ngens() == 1 else sorted(self.element().dict(), key=self.parent().term_order().sortkey, reverse=True)
+
+    def kappa(self, operation:int = 0) -> DExtension_PolyDict:
+        result = {m.degrees() : c.operation(operation) for (m,c) in zip(self.monomials(), self.coefficients())}
+        return self.parent().element_class(self.parent(), {k:v for (k,v) in result.items() if v != 0})
+    
+    def partial(self, variable: DExtension_PolyDict) -> DExtension_PolyDict:
+        ## Index of the variable to compute the partial
+        variable = self.parent().gens().index(variable)
+
+        result = dict()
+        for (m,c) in zip(self.monomials(), self.coefficients()):
+            m = m.degrees()
+            for i,e in enumerate(m):
+                if e > 0:
+                    monomial = tuple(m[j] if j != i else e-1 for j in range(len(m)))
+                    result[monomial] = result.get(monomial, self.parent().base().zero()) + c*e
+        return self.parent().element_class(self.parent(), result)
+    
+    def algebraic(self) -> Element:
+        if self.is_monomial():
+            exponents = self.degrees()
+            vars = self.parent().to_sage().gens()
+            result = self.parent().to_sage().one()
+            for (e,v) in zip(exponents, vars):
+                if e > 0:
+                    result *= v**e
+            return result
+        return sum(c.to_sage()*m.algebraic() for (m,c) in zip(self.monomials(), self.coefficients()))
+    
+    
+    @lazy_attribute
+    def _exponents(self):
+        """
+        Return the exponents of the monomials appearing in ``self`` for
+        internal use only.
+
+        EXAMPLES::
+
+            sage: R.<a,b,c> = PolynomialRing(QQbar, 3)                                  # needs sage.rings.number_field
+            sage: f = a^3 + b + 2*b^2                                                   # needs sage.rings.number_field
+            sage: f._exponents                                                          # needs sage.rings.number_field
+            [(3, 0, 0), (0, 2, 0), (0, 1, 0)]
+        """
+        if self.parent().ngens() == 1:
+            return 
+
 class DExtension_Element(Element):
     def __init__(self, parent: DExtension_Field, value: Element):
         super().__init__(parent)
@@ -356,12 +419,228 @@ class DExtension_Element(Element):
     
     def __ne__(self, other) -> bool:
         return not self == other
+
+class DExtension_PolyRing(Parent):
+    Element = DExtension_PolyDict
     
+    def _set_categories(self, base : Parent, category=None) -> list[Category]: 
+        return [_DRings, Algebras(base)] + ([category] if category is not None else [])
+
+    def __init__(self, 
+                 base : Parent, polynomial: tuple[tuple[str | Element]], varname:str = None, 
+                 names:tuple[str] = None, category=None):
+        ## Checking that varname is not set
+        if varname is not None:
+            raise ValueError("The varname argument is not allowed for this class")
+        
+        ## Calling the super __init__ to stablish the categories and the main attributes
+        super().__init__(base, category=tuple(self._set_categories(base, category)))
+
+        self.__gens = None
+        self._names = tuple(names)
+
+        ## We create the inner sage structures
+        self.__algebraic_base = base.to_sage() # field F without d-operations -- used to communicate with sage
+        self.__algebraic_ring = PolynomialRing(self.__algebraic_base, names=names) # polynomial ring over F with the variables of ``self``
+        
+        ## We add our own coercions with the new structure
+        self.register_coercions_conversions()
+        
+        ## We store the values for the operations of generators
+        self.__operations_gens = tuple(tuple(self(self.__algebraic_ring(p)) for p in poly) for poly in polynomial) # self.__operations_gens[i][j] is the image of the j-th operation on the i-th generator
+        self.__operators = [self.extend_operator(i, base.operator_types()[i], [self.__operations_gens[j][i] for j in range(len(names))]) for i in range(base.noperators())] 
+
+        ## We build the graph of dependencies
+        dgraphs = [{g : tuple(v for v in g.operation(i).variables() if v != g) for g in self.gens()} for i in range(self.noperators())]
+        self.__dependency_graphs = [DiGraph(dgraph, format='dict_of_lists') for dgraph in dgraphs]
+
+    #############################################################
+    ### Getter methods for a DExtension_Field
+    #############################################################
+    def varnames(self) -> tuple[str]:
+        r'''
+            Returns the names of the variables of the extension.
+        '''
+        return self._names
+    
+    def ngens(self) -> int:
+        return len(self._names)
+    
+    def gens(self) -> tuple[DExtension_PolyDict]:
+        r'''
+            Returns the generators of the extension.
+        '''
+        if self.__gens is None:
+            self.__gens = tuple(
+                self.element_class(self, {
+                    tuple(0 if i != j else 1 for j in range(self.ngens())) : self.base().one()
+                }) for i in range(self.ngens())
+            )
+
+        return self.__gens
+    
+    def gen(self, index:str) -> DExtension_PolyDict:
+        r'''
+            Returns the generator with the given name.
+        '''
+        if isinstance(index, str):
+            return self.gen(self.varnames().index(index))
+        return self.__gens[index]
+    
+    def algebraic(self) -> Parent:
+        r'''
+            Returns the algebraic field without the operations.
+        '''
+        return self.__algebraic_ring
+    
+    def algebraic_base(self) -> Parent:
+        r'''
+            Returns the base field without the operations.
+        '''
+        return self.__algebraic_base
+
+    def one(self) -> DExtension_PolyDict:
+        r'''
+            Returns the multiplicative identity of the extension.
+        '''
+        return self.element_class(self, {tuple(0 for _ in range(self.ngens())): 1})
+    
+    def zero(self) -> DExtension_PolyDict:
+        r'''
+            Returns the multiplicative identity of the extension.
+        '''
+        return self.element_class(self, dict())
+
+    #############################################################
+    ### DExtension methods
+    #############################################################
+    def dependency_graph(self, operation: int = 0) -> DiGraph:
+        return self.__dependency_graphs[operation]
+
+    def is_tower_of_monomials(self, operation: int = 0) -> bool:
+        return self.dependency_graph(operation).is_directed_acyclic()
+    
+    def tower_of_monomials(self, operation: int = 0) -> tuple[DExtension_PolyDict]:
+        P = FinitePoset(self.dependency_graph(operation))
+        
+        from itertools import product
+        inclusion_order = []
+        while len(P) > 0:
+            # we pick the maximal element with minimal amount of children
+            intervals = [el for el in (P.interval(m,M) for (m,M) in product(P.minimal_elements(), P.maximal_elements())) if el != []]
+            inclusion_order.append(min(P.maximal_elements(), key=lambda v : sum(len(el) for el in intervals if el[-1] == v)))
+            P = P.subposet([v for v in P._elements if v != inclusion_order[-1]])
+        return inclusion_order
+    
+    #############################################################
+    ### Coercion methods
+    #############################################################
+    def register_coercions_conversions(self):
+        r'''
+            This method (called only once) registers the coercions and conversions between the the extension and all 
+            related SageMath structures generated in the process.
+        '''
+        self.__algebraic_ring.register_coercion(MapDExtensionToRing(self)) # coercion from ``self`` to `F[gens]`
+        self.register_coercion(MapRingToDExtension(self)) # coercion from `F[self]` to ``self``
+    
+    def _coerce_map_from_base_ring(self):
+        return CoerceFromBase_DExtension_PolyRing(self)
+
+    def construction(self) -> tuple[DExtension_PolyRingFunctor, Parent]:
+        r'''
+            Return the associated functor and input to create ``self``.
+
+            The method construction returns a :class:`~sage.categories.pushout.ConstructionFunctor` and
+            a valid input for it that would create ``self`` again. This is a necessary method to
+            implement all the coercion system properly.
+        '''
+        return DExtension_PolyRingFunctor([[str(el) for el in imgs] for imgs in self.__operations_gens], self.varnames()), self.base()
+
+    def fraction_field(self):
+        return DFractionField(self)
+
+    def change_base(self, R) -> DExtension_Field:
+        new_ring = DExtension(R, self.__operations_gens, names=self.varnames())
+        ## Creating the coercion map if possible
+        try:
+            M = CoerceBetweenBases_DExtensionPolyRing(self, new_ring, R.coerce_map_from(self.base()))
+            new_ring.register_coercion(M)
+        except AssertionError: # This ring was already created
+            pass
+
+        return new_ring
+
+    def extend_operator(self, operator: int, otype: str, images: Collection[Element]) -> AdditiveMap:
+        r'''
+            Given an operator and the images of the generators, this method returns the operator extended to the new field.
+
+            There are two main cases: when the operator is a derivation (i.e., `otype = "derivation"`) and when the operator is a difference
+            (i.e., `otype = "difference"`). In the first case, the operator is extended by the Leibniz rule, while in the second case, the operator
+            is extended by the homomorphism property.
+        '''
+        if otype == "derivation":
+            def __derivation(element: DExtension_PolyDict) -> DExtension_PolyDict:
+                kappa = element.kappa(operator)
+                partials = tuple(element.partial(g) for g in self.gens())
+                return sum((partials[i] * images[i] for i in range(len(self.gens()))), kappa)
+
+            return AdditiveMap(self, __derivation)
+
+        elif otype == "homomorphism":
+            ## We create the homomorphism in the algebraic field
+            def __homomorphism(element: DExtension_PolyDict) -> DExtension_PolyDict:
+                return element.kappa(operator)(
+                    **{vname : self.__operations_gens[i][operator] for (i,vname) in enumerate(self.varnames())}
+                ) ## It is the evaluation (as polynomial) of the kappa of the operator.
+            return AdditiveMap(self, __homomorphism)
+        else:
+            raise NotImplementedError("The operator type must be either 'derivation' or 'homomorphism'")
+
+    #############################################################
+    ### Representation methods for Python
+    #############################################################
+    def __repr__(self):
+        return f"D-Extension of {self.base()} with elements {self.gens()} whose images are \n\t" + ",\n\t".join([
+            f"{self.gens()[i]} --> [" + ", ".join([str(el) for el in imgs]) + "]" for i,imgs in enumerate(self.__operations_gens)
+        ])
+
+    def _latex_(self):
+        ## TODO write latex method
+        pass
+
+    ##################################################
+    #### Method from DRing category
+    ##################################################
+    def operators(self) -> Collection[AdditiveMap]:
+        return self.__operators
+
+    def operator_types(self) -> tuple[str]:
+        return self.base().operator_types()
+
+    def add_constants(self, *new_constants: str) -> DExtension_Field:
+        return self.change_base(self.base().add_constants(*new_constants))
+
+    def linear_operator_ring(self) -> DExtension_Field:
+        r'''
+            Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
+        '''
+        raise NotImplementedError(f"Ring of linear operators not yet implemented for D-Extensions")
+
+    def inverse_operation(self, element: DExtension_Element, operation: int = 0) -> DExtension_Element:
+        ## If the operation is a derivation, this would be the place to include symbolic integration methods
+        raise NotImplementedError(f"The integration in these fields is not yet implemented")
+    
+    def _lcm_denominators(self, *elements: DExtension_Element) -> DExtension_Element:
+        raise NotImplementedError(f"The integration in these fields is not yet implemented")
+
+    def to_sage(self):
+        return self.__algebraic_ring
+
 class DExtension_Field(Parent):
     Element = DExtension_Element
     
     def _set_categories(self, base : Parent, category=None) -> list[Category]: 
-        return [_DRings, Algebras(base), _Fields] + ([category] if category is not None else [])
+        return [_DRings, Algebras(base), _DRings, _Fields] + ([category] if category is not None else [])
 
     def __init__(self, 
                  base : Parent, polynomial: tuple[tuple[str | Element]], varname:str = None, 
@@ -608,6 +887,25 @@ class DExtensionFunctor(ConstructionFunctor):
             return False
         return self.__polynomials == other.__polynomials and self.__names == other.__names
 
+class DExtension_PolyRingFunctor(ConstructionFunctor):
+    def __init__(self, polynomial: tuple[tuple[str]], names: tuple[str]):
+        if len(polynomial) != len(names):
+            raise ValueError(f"The images and the variables must be of the same length")
+
+        self.__polynomials = polynomial
+        self.__names = names
+
+    def _apply_functor(self, x):
+        return DExtensionRing(x, self.__polynomials, names=self.__names)
+
+    def _repr_(self):
+        return f"Construction functor for DExtensions with names {self.__names} and {len(self.__polynomials[0])} operations"
+
+    def __eq__(self, other: DExtension_PolyRingFunctor):
+        if not isinstance(other, DExtension_PolyRingFunctor):
+            return False
+        return self.__polynomials == other.__polynomials and self.__names == other.__names
+
 #########################################################################
 ### COERCIONS AND CONVERSION MORPHISMS FOR EXTENSIONS
 #########################################################################
@@ -624,6 +922,32 @@ class MapFieldToDExtension(Morphism):
 
     def _call_(self, element: Element) -> DExtension_Element:
         return self.codomain().element_class(self.codomain(), element)
+    
+class MapDExtensionToRing(Morphism):
+    def __init__(self, domain: DExtension_PolyRing):
+        super().__init__(domain, domain.to_sage())
+
+    def _call_(self, element: DExtension_PolyDict) -> Element:
+        return element.algebraic()
+
+class MapRingToDExtension(Morphism):
+    def __init__(self, codomain: DExtension_PolyRing):
+        super().__init__(codomain.to_sage(), codomain)
+
+    def _call_(self, element: Element) -> DExtension_PolyDict:
+        if self.codomain().ngens() == 1: # polynomial case
+            if element == 0:
+                return self.codomain().zero()
+            else:
+                return self.codomain().element_class(
+                    self.codomain(), {
+                        (i,) : c for i,c in enumerate(element.coefficients(sparse=False)) if c != 0
+                        })
+        else: # multivariate polynomial case - we can use degrees
+            return self.codomain().element_class(
+                self.codomain(), {
+                    m.degrees() : c for (c,m) in zip(element.coefficients(), element.monomials())
+                    })
 
 class CoerceFromBase_DExtension(Morphism):
     def __init__(self, codomain: DExtension_Field):
@@ -634,6 +958,23 @@ class CoerceFromBase_DExtension(Morphism):
 
 class ConversionToBase_DExtension(Morphism):
     def __init__(self, domain: DExtension_Field):
+        super().__init__(domain, domain.base())
+
+    def _call_(self, element: DExtension_PolyDict) -> Element:
+        return element.constant_coefficient()
+    
+class CoerceFromBase_DExtension_PolyRing(Morphism):
+    def __init__(self, codomain: DExtension_PolyRing):
+        super().__init__(codomain.base(), codomain)
+
+    def _call_(self, element: Element) -> DExtension_Element:
+        return self.codomain().element_class(
+            self.codomain(), 
+            {tuple(0 for _ in range(self.codomain().ngens())) : element}
+        )
+    
+class ConversionToBase_DExtension_PolyRing(Morphism):
+    def __init__(self, domain: DExtension_PolyRing):
         super().__init__(domain, domain.base())
 
     def _call_(self, element: DExtension_Element) -> Element:
@@ -665,6 +1006,24 @@ class CoerceBetweenBases_DExtension(Morphism):
         else:
             return self(element.numerator())/self(element.denominator())
 
+class CoerceBetweenBases_DExtensionPolyRing(Morphism):
+    def __init__(self, domain: DExtension_PolyRing, codomain: DExtension_PolyRing, coerce_map: Morphism):
+        super().__init__(domain,codomain)
+        if not (coerce_map.domain() is domain.base() and coerce_map.codomain() is codomain.base()):
+            raise TypeError(f"Given coercion between bases is not valid")
+        self.__coerce_map = coerce_map
+
+    def _call_(self, element: DExtension_Element) -> DExtension_Element:
+        result = self.codomain().zero()
+        
+        for (c,m) in zip(element.coefficients(), element.monomials()):
+            new_mon = self.codomain().one()
+            for v in m.variables():
+                new_mon *= self.codomain().gen(str(v))**m.degree(v)
+            result += self.__coerce_map(c)*new_mon
+        
+        return result
+
 #########################################################################
 ### EXCEPTIONS FOR THIS MODULE
 #########################################################################
@@ -672,4 +1031,4 @@ class NotPolynomialError(TypeError):
     def __init__(self, element: DExtension_Element):
         super().__init__(f"Element {element} is not a polynomial.")
 
-__all__ = ["DExtension"]
+__all__ = ["DExtension", "DExtensionRing"]
