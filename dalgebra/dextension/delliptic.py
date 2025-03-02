@@ -258,7 +258,7 @@ class DElliptic_Element(Element):
 
             The _numerator_ of an element that is in the field `C(\eta)(\eta')` where `\eta'`
             is algebraic over `C(\eta)` can be view as the element `n` in `C[\eta](\eta')` 
-            such that ``self*D = n``, where `D` is the denimonator of ``self`` (see method 
+            such that ``self*D = n``, where `D` is the denominator of ``self`` (see method 
             :func:`denominator`.)
 
             OUTPUT:
