@@ -35,7 +35,7 @@ from sage.structure.parent import Parent
 
 from typing import Collection, Iterator
 
-from ..dring import AdditiveMap, DRings, DFractionField
+from ..dring import AdditiveMap, DRings, DFractionField, DFractionFieldElement
 
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
@@ -60,7 +60,64 @@ _Fields = Fields.__classcall__(Fields)
 ### FACTORY CLASS
 #####################################
 class DMonomialFactory (UniqueFactory):
-  pass
+  r'''
+    Factory to create a D-Extension.
+
+    An extension requires a base field and a tuple of tuples such that for each variable we can get the 
+    corresponding operation. The way these tuple of tuples can be provided may change depending on how many
+    variables we want to add and how many operations there are.
+  '''
+  def create_key(self, base, polynomial: str | Element, varname: str = None, *, names: tuple[str] = None, category = None):
+    if names is None and varname is None:
+      raise ValueError("The names of the variables must be provided")
+    elif names is None:
+      names = (varname,)
+    
+    if base not in _DRings or base not in _Fields:
+      raise ValueError("The base must be a field that is also a d-ring")
+    
+    ## We process the argument polynomial
+    if not isinstance(polynomial, (list,tuple)) and (len(names) != 1 or base.noperators() != 1):
+      raise TypeError("The polynomial argument must be a list if there are more than one variable or more than one operator")
+    elif not isinstance(polynomial, (list,tuple)): # case with 1 variable and 1 operator and 1 element
+      polynomial = ((polynomial,),)
+
+    ## Here polynomial is a list or tuple
+    if any(not isinstance(p, (list,tuple)) for p in polynomial) and (len(names) != 1 and base.noperators() != 1):
+      raise TypeError("The polynomial argument must be a list of lists if there are more than one variable and more than one operator")
+    elif any(not isinstance(p, (list,tuple)) for p in polynomial):
+      if len(names) == 1: # case with multiple operations and 1 variable
+        polynomial = (polynomial,)
+      else: # case with 1 operation and multiple variables
+        polynomial = tuple((p,) for p in polynomial)
+
+    ## Now we know that polynomial is a tuple of tuples
+    polynomial = tuple(tuple(str(p) for p in poly) for poly in polynomial) # we make sure everything is a tuple of tuples of strings
+    if len(polynomial) != len(names):
+      raise ValueError("The number of variables and the number of polynomials must match")
+    elif any(len(p) != base.noperators() for p in polynomial):
+      raise ValueError("The number of operators must match the number of polynomials")
+    
+    ## We fix the arguments if the base was already a DExtension (iterative construction)
+    if isinstance(base.base(), DMonomial_Parent):
+        names = tuple(str(g) for g in base.base().tower_gens()) + names
+        polynomial = tuple(tuple(str(el) for el in imgs) for imgs in base.base().tower_operations_for_gens()) + polynomial
+        base = base.base().tower_base()
+
+    ## We homogenize the images
+    R = PolynomialRing(base.to_sage(), names=names).fraction_field()
+    polynomial = tuple(tuple(str(R(el)) for el in imgs) for imgs in polynomial)
+
+    return (base, names, polynomial, category)
+
+  def create_object(self, _, key) -> DMonomial_Parent:
+    base, names, polynomial, category = key
+
+    if len(names) == 1: # one variable -- nothing to check
+      return DMonomial_Parent(base, names[0], polynomial[0], category=category)
+    else: # several variables -- we make a recursive build-up preserving the order
+      base = DMonomial(base, polynomial[:-1], names=names[:-1], category=category)
+      return DMonomial_Parent(base.fraction_field(), names[-1], polynomial[-1], category=category)
 
 DMonomial = DMonomialFactory("dalgebra.dextension.dmonomial.DMonomial")
 
@@ -239,6 +296,13 @@ class DMonomial_Element (Element):
       a,A = (self**(power//2 + power % 2), self**(power//2))
       return a*A
 
+  def __invert__(self) -> DFractionFieldElement:
+    return self.parent().fraction_field()._element_class(
+      self.parent().fraction_field(),
+      self.parent().one(),
+      self
+    )
+
   def __eq__(self, other) -> bool:
     if not isinstance(other, self.__class__) or other.parent() != self.parent():
       try:
@@ -269,14 +333,10 @@ class DMonomial_Element (Element):
         output = (f"{'' if c == '1' else f'({c})' if len(c) > 1 else f'{c}'}" + 
                 f"{'' if c == '1' else '*'}{t}{f'^{d}' if d > 1 else ''}")
       
-      for d,c in coeffs[1:]:
-        if c.startswith("-"):
-          output += " - "
-          c = c[1:] # we remove the minus sign
-        else:
-          output += (" + " + 
-                f"{'' if c == '1' else f'({c})' if len(c) > 1 else f'{c}'}" + 
-                f"{'' if c == '1' else '*'}{t}{f'^{d}' if d > 1 else ''}")
+      for d,c in coeffs[1:]:        
+        output += (" + " + 
+              f"{'' if c == '1' else f'({c})' if len(c) > 1 else f'{c}'}" + 
+              f"{'' if c == '1' else '*'}{t}{f'^{d}' if d > 1 else ''}")
       return output
   
   def _latex_(self) -> str:
@@ -328,6 +388,7 @@ class DMonomial_Parent (Parent):
   def _initialize_data(self, images: tuple[str]):
     self.__images = tuple(self(self.to_sage()(img)) for img in images)
 
+  ## Attributes methods
   def varname(self) -> str:
     return self.__varname
   
@@ -347,7 +408,63 @@ class DMonomial_Parent (Parent):
   
   def zero(self) -> DMonomial_Element:
     return self.element_class(self, [self.base().zero()])
+
+  def _first_ngens(self, amount: int) -> tuple[DMonomial_Element]:
+    return self.tower_gens()[-amount:]
+
+  @cached_method
+  def tower_gens(self) -> tuple[DMonomial_Element]:
+    r'''
+      Method to get the d-Monomial extension generators
+      
+      A tower of monomials is a chain of D-Monomial extensions. This method return a list of generators from bottom to top
+      of the generators of the tower as element of ``self``.
+    '''
+    result = (self.gen(),)
+    current = self.base().base() # the first jump it the fraction field, then we go to the ring
+    while isinstance(current, DMonomial_Parent):
+      result = (self(current.gen()),)+result
+      current = current.base().base()
+
+    return result
   
+  @cached_method
+  def tower_gens_operation(self, operation: int) -> tuple[DMonomial_Element]:
+    r'''
+      Return the images of the tower generators for a given operation.
+
+      A tower of monomials is a chain of D-Monomial extensions. This method return a list of images via an operation of generators from bottom to top
+      of the generators of the tower as element of ``self``.
+    '''
+    return tuple(g.operation(operation) for g in self.tower_gens())
+  
+  @cached_method
+  def tower_operations_for_gens(self) -> tuple[tuple[DMonomial_Element]]:
+    return tuple(tuple(v.operation(i) for i in range(self.noperators())) for v in self.tower_gens())
+  
+  @cached_method
+  def tower_base(self) -> Parent:
+    r'''
+      Return the base of the tower of monomials
+    '''
+    mid = self.base()
+    current = mid.base()
+    while isinstance(current, DMonomial_Parent):
+      mid = current.base()
+      current = mid.base().base()
+    
+    return mid
+      
+  def tower_depth(self) -> int:
+    return len(self.tower_gens())
+  
+  ## Other SageMath attribute methods for rings
+  def is_field(self, _: bool = True) -> bool:
+    return False
+
+  def is_integral_domain(self, _: bool = True) -> bool:
+    return True 
+
   ## Derivation methods
   def extend_derivation(self, operation: int) -> AdditiveMap:
     def __derivation(element: DMonomial_Element) -> DMonomial_Element:
@@ -409,6 +526,25 @@ class DMonomial_Parent (Parent):
       except AssertionError:
         pass # the ring was already created
   
+  def tower_change_order(self, *new_variable_order: DMonomial_Element) -> DMonomial_Parent:
+    tower_gens = self.tower_gens()
+    if any(el not in tower_gens for el in new_variable_order) or len(tower_gens) != len(new_variable_order):
+      raise ValueError(f"Impossible to reshape the tower of Monomials: bad data provided")
+    
+    images = tuple(tuple(str(v.operation(i)) for i in range(self.noperators())) for v in new_variable_order)
+    try:
+      output = DMonomial(self.tower_base(), images, names=tuple(str(v) for v in new_variable_order))
+    except TypeError:
+      raise ValueError(f"Impossible to reshape the tower of Monomials: the order is not valid")
+    
+    try:
+      self.register_coercion(DMM_BetweenTowersReorder(output, self))
+      output.register_coercion(DMM_BetweenTowersReorder(self, output))
+    except AssertionError: # the coercion already existed
+      pass
+
+    return output
+
   ## Representation methods
   def __repr__(self) -> str:
     return f"D-Monomial extension of {self.base()} with variable {self.varname()} extending operations by {self.__images}"
@@ -528,9 +664,20 @@ class DMM_BetweenBases (Morphism):
     if not (map_bases.domain() == domain.base() and map_bases.codomain() == codomain.base()):
       raise TypeError(f"Incompatible map given for coercion between bases")
     super().__init__(domain, codomain)
+
+class DMM_BetweenTowersReorder (Morphism):
+  def __init__(self,
+             domain: DMonomial_Parent,
+             codomain: DMonomial_Parent):
+    if set(str(v) for v in domain.tower_gens()) != set(str(v) for v in codomain.tower_gens()):
+      raise ValueError(f"The two tower of monomials do not have the same variables")
+    
+    super().__init__(domain, codomain)
+
+    ## We check if the operations are the same
+    for v in domain.tower_gens():
+      if any(self(v).operation(i) != self(v.operation(i)) for i in range(domain.noperators())):
+        raise ValueError(f"The operation of variable {v} do not match")
   
   def _call_(self, element: DMonomial_Element) -> DMonomial_Element:
-    return self.codomain().element_class(
-      self.codomain(),
-      [self.__map(c) for c in element.coefficients(sparse=False)]
-    )
+    return self.codomain()(self.codomain().to_sage()(str(element)))
