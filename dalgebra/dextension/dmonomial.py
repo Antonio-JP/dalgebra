@@ -18,6 +18,7 @@ r'''
         this construction building a "tower of monomials".    
 '''
 
+from sage.arith.misc import GCD as gcd
 from sage.categories.algebras import Algebras
 from sage.categories.category import Category
 from sage.categories.fields import Fields
@@ -25,11 +26,13 @@ from sage.categories.morphism import Morphism
 from sage.categories.pushout import ConstructionFunctor
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex, latex_variable_name
+from sage.misc.misc_c import prod
 from sage.rings.infinity import Infinity as oo
 from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_base
 from sage.rings.polynomial.polynomial_ring import PolynomialRing_generic
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.structure.element import Element
+from sage.structure.factorization import Factorization
 from sage.structure.factory import UniqueFactory
 from sage.structure.parent import Parent
 
@@ -240,6 +243,23 @@ class DMonomial_Element (Element):
     ## Other operational methods
     def conditions_to_zero(self) -> tuple[tuple[DMonomial_Element,Element]]:
         return tuple((m,c) for (m,c) in self.mons_cons_iter())
+
+    def factor(self) -> Factorization:
+        f = self.algebraic().factor()
+        return Factorization([(self.parent()(p), e) for (p,e) in f], self.parent().base()(f.unit()))
+
+    def content(self) -> Element:
+        if self.is_zero():
+            return self.parent().base().zero()
+        return gcd(self.coefficients(sparse=True))
+
+    def primitive(self) -> DMonomial_Element:
+        if self.is_zero():
+            return self.parent().zero()
+        return self / self.content()
+    
+    def is_primitive(self) -> bool:
+        return (not self.is_zero()) and self == self.primitive()
 
     ## Arithmetic methods
     def _add_(self, other: DMonomial_Element) -> DMonomial_Element:
@@ -594,9 +614,126 @@ class DMonomial_Element (Element):
     def partial_fraction(self, *denominators: DMonomial_Element) -> tuple[DMonomial_Element]:
         r'''
             Computes the Partial Fraction Decomposition of ``self / prod(denominators)``.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<x> = DMonomial(DifferentialRing(QQ), [1])
+                sage: a = x^2 + 3*x
+                sage: ds = [x+1, x^2 - 2*x +1]
+                sage: r = a.partial_fraction(*ds)
+                sage: r[0]
+                0
+                sage: r[1]
+                -1/2
+                sage: r[2]
+                1/2 + (3/2)*x
         '''
-        pass
+        if not denominators:
+            return (self,) # the denominator is 1
+        
+        a_0, r = self.quo_rem(prod(denominators))
+        
+        if len(denominators) == 1:
+            return (a_0,r)
+        
+        a_1, t = prod(denominators[1:]).diophantine(denominators[0], r)
+        recursion = t.partial_fraction(*denominators[1:])
+        
+        return (recursion[0] + a_0, a_1, *recursion[1:]) 
+
+    def partial_fraction_extended(self, denominators: tuple[DMonomial_Element], exponents: tuple[int]) -> tuple[DMonomial_Element]:
+        r'''
+            Computes full partial fraction decomposition with exponents.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<x> = DMonomial(DifferentialRing(QQ), [1])
+                sage: a = x^2 + 3*x
+                sage: d = x^3 - x^2 - x + 1
+                sage: r = a.partial_fraction_extended(*list(zip(*d.factor())))
+                sage: r[0]
+                0
+                sage: r[1]
+                -1/2
+                sage: r[2]
+                3/2
+                sage: r[3]
+                2
+        '''
+        if not isinstance(denominators, (list,tuple)) or not isinstance(exponents, (list,tuple)):
+            raise TypeError(f"The arguments 'denominators' and 'exponents' must be list or tuples")
+        elif len(denominators) != len(exponents):
+            raise ValueError(f"The arguments 'denominators' and 'exponents' must be of same length")
+        
+        partial_fraction = self.partial_fraction(*(d**e for (d,e) in zip(denominators, exponents)))
+        result = list()
+        a_0 = partial_fraction[0]
+        for i,a in enumerate(partial_fraction[1:]):
+            to_add = list()
+            d, e = denominators[i], exponents[i]
+            for _ in range(e, 0, -1):
+                a, r = a.quo_rem(d)
+                to_add = [r] + to_add
+            result.extend(to_add)
+            a_0 += a
+        
+        return [a_0] + result
+
         # TODO: Go on here
+
+    def subresultant_sequence(self, other: DMonomial_Element) -> tuple[DMonomial_Element, tuple[DMonomial_Element]]:
+        R = [self, other]
+        gamma = [None, -1]
+        delta = [None, self.degree() - other.degree()]
+        beta = [None, (-1)**(delta[1]+1)]
+        r = [None]
+        while R[-1] != 0:
+            r.append(R[-1].lc())
+            _, _R = R[-2].pseudo_quo_rem(R[-1])
+            R.append(_R//beta[-1])
+            gamma.append((-r[-1])**delta[-1]*gamma[-1]**(1-delta[-1]))
+            delta.append(R[-2].degree() - R[-1].degree() if R[-1] != 0 else R[-2].degree())
+            delta.append(R[-2].degree() - R[-1].degree() if R[-1] != 0 else R[-2].degree())
+            beta.append(-r[-1]*gamma[-1]**delta[-1])
+        k = len(R) - 2
+        PRS = tuple(R[:k+2])
+        if R[k].degree() > 0:
+            return (self.parent().zero(), PRS)
+        elif R[k-1].degree() == 1:
+            return (R[k], PRS)
+        
+        s, c = 1,1
+        for j in range(1, k):
+            if R[j-1].degree() % 2 and R[j].degree() % 2:
+                s = -s
+            c *= (beta[j]//r[j]**(1+delta[j]))**R[j].degree() * r[j]**(R[j-1].degree()-R[j+1].degree())
+
+        return (s*c*R[k]**(R[k-1].degree()), PRS)
+    
+    def resultant(self, other: DMonomial_Element) -> DMonomial_Element:
+        r'''
+            Compute the resultant of two polynomials
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<t,x> = DMonomial(DifferentialRing(QQ), ["t", 1])
+                sage: A = 3*t*x^2 - t^3 - 4
+                sage: B = x^2 + t^3*x - 9
+                sage: A.resultant(B)
+                (-16 + (216)*t + (-729)*t^2 + (-8)*t^3 + (54)*t^4 + (-1)*t^6 + (12)*t^7 + 3*t^10)/(-1)
+        '''
+        return self.subresultant_sequence(other)[0]
+
+    # TODO: Go on here
+    def squarefree_base(self) -> tuple[DMonomial_Element]:
+        pass
+
+    def squarefree(self) -> tuple[DMonomial_Element]:
+        pass
+
 #####################################
 ### PARENT CLASS
 #####################################
