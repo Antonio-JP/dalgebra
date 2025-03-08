@@ -148,17 +148,14 @@ class DMonomial_Element (Element):
 
         if isinstance(data, dict): # special case of dictionary
             degree = max(data)+1 if len(data) > 0 else 0
-            data = tuple(data.get(i,self.parent().zero()) for i in range(degree+1))
+            data = tuple(data.get(i,self.parent().base().zero()) for i in range(degree+1))
         
         ## We clean the data if the coefficients are zero
         i = len(data)
         while i > 0 and data[i-1] == 0:
             i -= 1
-        self.__coefficients = data[:i]
+        self.__coefficients = list(self.parent().base()(d) for d in data[:i])
         
-        ## Other cached values
-        self.__algebraic = None
-
     ## Getter and attribute methods
     def degree(self) -> int:
         if not self.__coefficients:
@@ -346,24 +343,25 @@ class DMonomial_Element (Element):
 
     ## Other functions
     def __repr__(self) -> str:
-        if self.is_zero():
-            return "0"
-        else:
-            t = self.parent().varname()
-            coeffs = tuple((m.degree(),str(c)) for (m,c) in self.mons_cons_iter())
+        return repr(self.algebraic())
+        # if self.is_zero():
+        #     return "0"
+        # else:
+        #     t = self.parent().varname()
+        #     coeffs = tuple((m.degree(),str(c)) for (m,c) in self.mons_cons_iter())
 
-            if coeffs[0][0] == 0:
-                output = coeffs[0][1]
-            else:
-                d,c = coeffs[0]
-                output = (f"{'' if c == '1' else f'({c})' if len(c) > 1 else f'{c}'}" + 
-                                f"{'' if c == '1' else '*'}{t}{f'^{d}' if d > 1 else ''}")
+        #     if coeffs[0][0] == 0:
+        #         output = coeffs[0][1]
+        #     else:
+        #         d,c = coeffs[0]
+        #         output = (f"{'' if c == '1' else f'({c})' if len(c) > 1 else f'{c}'}" + 
+        #                         f"{'' if c == '1' else '*'}{t}{f'^{d}' if d > 1 else ''}")
             
-            for d,c in coeffs[1:]:                
-                output += (" + " + 
-                            f"{'' if c == '1' else f'({c})' if len(c) > 1 else f'{c}'}" + 
-                            f"{'' if c == '1' else '*'}{t}{f'^{d}' if d > 1 else ''}")
-            return output
+        #     for d,c in coeffs[1:]:                
+        #         output += (" + " + 
+        #                     f"{'' if c == '1' else f'({c})' if len(c) > 1 else f'{c}'}" + 
+        #                     f"{'' if c == '1' else '*'}{t}{f'^{d}' if d > 1 else ''}")
+        #     return output
     
     def _latex_(self) -> str:
         return latex(self.algebraic())
@@ -771,7 +769,15 @@ class DMonomial_Parent (Parent):
     ## Initialization methods
     def _initialize_algebraic(self):
         ## We create the algebraic base structure
-        self.__algebraic = PolynomialRing(self.base().to_sage(), self.varname())
+        # self.__algebraic = PolynomialRing(self.base().to_sage(), self.varname())
+        if self.tower_depth() > 1:
+            base_field = PolynomialRing(
+                self.tower_base().to_sage(), 
+                self.tower_names()[:-1]).fraction_field()
+        else:
+            base_field = self.tower_base().to_sage()
+
+        self.__algebraic = PolynomialRing(base_field, self.__varname)
         
         ## Adding coercion and conversion morphisms
         self.__algebraic.register_coercion(DMM_ParentToAlgebraic(self))
@@ -803,6 +809,20 @@ class DMonomial_Parent (Parent):
 
     def _first_ngens(self, amount: int) -> tuple[DMonomial_Element]:
         return self.tower_gens()[-amount:]
+
+    @cached_method
+    def tower_names(self) -> tuple[str]:
+        r'''
+            Returns the list of names of the generators of the tower of monomials
+            in ascending order (as :func:`tower_gens`)
+        '''
+        result = (self.varname(),)
+        current = self.base().base() # the first jump it the fraction field, then we go to the ring
+        while isinstance(current, DMonomial_Parent):
+            result = (current.varname(),)+result
+            current = current.base().base()
+
+        return result
 
     @cached_method
     def tower_gens(self) -> tuple[DMonomial_Element]:
@@ -843,12 +863,12 @@ class DMonomial_Parent (Parent):
         current = mid.base()
         while isinstance(current, DMonomial_Parent):
             mid = current.base()
-            current = mid.base().base()
+            current = mid.base()
         
         return mid
             
     def tower_depth(self) -> int:
-        return len(self.tower_gens())
+        return len(self.tower_names())
     
     ## Other SageMath attribute methods for rings
     def is_field(self, _: bool = True) -> bool:
@@ -939,7 +959,12 @@ class DMonomial_Parent (Parent):
 
     ## Representation methods
     def __repr__(self) -> str:
-        return f"D-Monomial extension of {self.base()} with variable {self.varname()} extending operations by {self.__images}"
+        if self.tower_depth() == 1:
+            return f"D-Monomial extension of {self.base()} with variable {self.varname()} where:\n\t* {self.varname()} -> {self.__images}"
+        else:
+            return f"Tower of D-Monomials over {self.tower_base()} with following monomials:\n\t* " + "\n\t* ".join(
+                f"{v} -> {imgs}" for (v,imgs) in zip(self.tower_gens(), self.tower_operations_for_gens())
+            )
 
     def _latex_(self) -> str:
         return (latex(self.base()) + 
@@ -1028,7 +1053,7 @@ class DMM_ParentToAlgebraic (Morphism):
 
     def _call_(self, element: DMonomial_Element) -> Element:
         v = self.codomain()(self.domain().varname())
-        return sum(self.codomain()(c.to_sage())*v**m.degree() for (m,c) in element.mons_cons_iter())
+        return sum(self.codomain().base()(c.to_sage())*v**m.degree() for (m,c) in element.mons_cons_iter())
 
 class DMM_AlgebraicToParent (Morphism):
     def __init__(self, codomain: DMonomial_Parent):

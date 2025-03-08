@@ -1719,8 +1719,13 @@ class DFractionField(FractionField_generic):
     def inverse_operation(self, element, operator: int = 0):
         return self.base().inverse_operation(element, operator)
 
+    @cached_method
     def to_sage(self):
-        return self.base().to_sage().fraction_field()
+        def __flatten_fraction_field(field) -> tuple[Parent, bool]:
+            pass
+        output = self.base().to_sage().fraction_field()
+        output, _ = __flatten_fraction_field(output)
+        return output
 
 ####################################################################################################
 ###
