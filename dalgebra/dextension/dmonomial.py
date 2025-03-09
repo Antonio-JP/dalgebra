@@ -1,21 +1,21 @@
 from __future__ import annotations
 r'''
-        Module for monomial extensions on D-Algebra.
+    Module for monomial extensions on D-Algebra.
 
-        Let `(K, (d_1,\ldots,d_n))` be a D-field (a field with several operations - both 
-        derivations and shifts). We say that `t` is a monomial over this D-field if it 
-        is a transcendental element over `K` and, for all `i =1,\ldots n`, `d_i(t) \in K[t]`.
+    Let `(K, (d_1,\ldots,d_n))` be a D-field (a field with several operations - both 
+    derivations and shifts). We say that `t` is a monomial over this D-field if it 
+    is a transcendental element over `K` and, for all `i =1,\ldots n`, `d_i(t) \in K[t]`.
 
-        In this cases, we know that `d_i` are closed in `K[t]`: let `p(t) \in K[t]`, then
+    In this cases, we know that `d_i` are closed in `K[t]`: let `p(t) \in K[t]`, then
 
-        * If `d` is a derivation, then `d(p(t)) = \partial_t(p(t)) + \kappa_d(p(t))`, where 
-            `\partial_t` is the partial derivative, and `\kappa_d` is the derivation where
-            all coefficients are differentiated using `d` over `K`, but `t` remains intact.
-        * If `d` is a shift, then `d(p(t)) = \kappa_d(p(t))(d(t))`.
+    * If `d` is a derivation, then `d(p(t)) = \partial_t(p(t)) + \kappa_d(p(t))`, where 
+        `\partial_t` is the partial derivative, and `\kappa_d` is the derivation where
+        all coefficients are differentiated using `d` over `K`, but `t` remains intact.
+    * If `d` is a shift, then `d(p(t)) = \kappa_d(p(t))(d(t))`.
 
-        This module aims to provide a full implementation as univariate polynomials and their
-        fraction fields of monomial extensions. It is of crucial importance that we can iterate 
-        this construction building a "tower of monomials".    
+    This module aims to provide a full implementation as univariate polynomials and their
+    fraction fields of monomial extensions. It is of crucial importance that we can iterate 
+    this construction building a "tower of monomials".    
 '''
 
 from sage.arith.misc import GCD as gcd
@@ -344,24 +344,6 @@ class DMonomial_Element (Element):
     ## Other functions
     def __repr__(self) -> str:
         return repr(self.algebraic())
-        # if self.is_zero():
-        #     return "0"
-        # else:
-        #     t = self.parent().varname()
-        #     coeffs = tuple((m.degree(),str(c)) for (m,c) in self.mons_cons_iter())
-
-        #     if coeffs[0][0] == 0:
-        #         output = coeffs[0][1]
-        #     else:
-        #         d,c = coeffs[0]
-        #         output = (f"{'' if c == '1' else f'({c})' if len(c) > 1 else f'{c}'}" + 
-        #                         f"{'' if c == '1' else '*'}{t}{f'^{d}' if d > 1 else ''}")
-            
-        #     for d,c in coeffs[1:]:                
-        #         output += (" + " + 
-        #                     f"{'' if c == '1' else f'({c})' if len(c) > 1 else f'{c}'}" + 
-        #                     f"{'' if c == '1' else '*'}{t}{f'^{d}' if d > 1 else ''}")
-        #     return output
     
     def _latex_(self) -> str:
         return latex(self.algebraic())

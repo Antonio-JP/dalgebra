@@ -156,6 +156,7 @@ from sage.rings.fraction_field import FractionField_generic
 from sage.rings.fraction_field_element import FractionFieldElement
 from sage.rings.integer_ring import ZZ
 from sage.rings.morphism import RingHomomorphism_im_gens
+from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.polynomial_ring import PolynomialRing_generic
 from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_base
 from sage.rings.ring import Ring, CommutativeRing
@@ -1719,12 +1720,24 @@ class DFractionField(FractionField_generic):
     def inverse_operation(self, element, operator: int = 0):
         return self.base().inverse_operation(element, operator)
 
+    @staticmethod
+    def flatten_fraction_field(field) -> tuple[Parent, bool]:
+        if isinstance(field, FractionField_generic): # self is Fr(R)
+            if isinstance(field.base(), (PolynomialRing_generic, MPolynomialRing_base)): # R is a polynomial ring
+                recursion, frac_over_poly = DFractionField.flatten_fraction_field(field.base().base())
+                if not frac_over_poly: # the result can not be flatten
+                    return field, True
+                else:
+                    base = recursion.base().base() # this is a field 
+                    return PolynomialRing(base, recursion.gens() + field.gens()).fraction_field(), True
+        
+        ## This field is not a fraction field over a polynomial ring
+        return field, False
+
     @cached_method
     def to_sage(self):
-        def __flatten_fraction_field(field) -> tuple[Parent, bool]:
-            pass
         output = self.base().to_sage().fraction_field()
-        output, _ = __flatten_fraction_field(output)
+        output, _ = DFractionField.flatten_fraction_field(output)
         return output
 
 ####################################################################################################
