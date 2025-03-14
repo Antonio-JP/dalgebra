@@ -91,6 +91,7 @@ from sage.categories.category import Category
 from sage.categories.fields import Fields
 from sage.categories.morphism import Morphism
 from sage.categories.pushout import ConstructionFunctor
+from sage.matrix.constructor import matrix
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex, latex_variable_name
 from sage.misc.misc_c import prod
@@ -98,7 +99,7 @@ from sage.rings.infinity import Infinity as oo
 from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_base
 from sage.rings.polynomial.polynomial_ring import PolynomialRing_generic
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
-from sage.structure.element import Element
+from sage.structure.element import Element, Matrix
 from sage.structure.factorization import Factorization
 from sage.structure.factory import UniqueFactory
 from sage.structure.parent import Parent
@@ -236,6 +237,9 @@ class DMonomial_Element (Element):
     
     lc = leading_coefficient
 
+    def monic(self) -> DMonomial_Element:
+        return self / self.lc()
+
     def constant_coefficient(self) -> Element:
         return self.__coefficients[0]
     
@@ -275,12 +279,18 @@ class DMonomial_Element (Element):
     def is_one(self) -> bool:
         return len(self.__coefficients) == 1 and self[0] == 1
     
+    def is_unit(self) -> bool:
+        return self in self.parent().base()
+    
     def is_constant(self) -> bool:
         return len(self.__coefficients) <= 1
     
     def is_monomial(self) -> bool:
         coeffs = self.coefficients()
         return len(coeffs) == 1 and coeffs[0] == self.parent().base().one()
+    
+    def is_monic(self) -> bool:
+        return self.lc() == 1
     
     @cached_method
     def algebraic(self) -> Element:
@@ -326,6 +336,16 @@ class DMonomial_Element (Element):
     
     def is_primitive(self) -> bool:
         return (not self.is_zero()) and self == self.primitive()
+
+    def is_squarefree(self) -> bool:
+        F = self.squarefree()
+        return len(F) <= 1 and all(exp == 1 for (_,exp) in F)
+    
+    def wronskian(self, operation:int = 0, *other: DMonomial_Element) -> DMonomial_Element:
+        r'''
+            Compute the Wronskian of self with a set of polynomials for a given operation.
+        '''
+        return self.parent().wronskian(operation, self, *other)
 
     ## Arithmetic methods
     def _add_(self, other: DMonomial_Element) -> DMonomial_Element:
@@ -421,7 +441,11 @@ class DMonomial_Element (Element):
     ### Methods from Bronstein book
     ########################################
     ### CHAPTER 1: BASIC POLYNOMIAL METHODS
-    def quo_rem(self, other: DMonomial_Element) -> tuple[DMonomial_Element,DMonomial_Element]:
+    def quo_rem(self, other: DMonomial_Element) -> tuple[DMonomial_Element, DMonomial_Element]:
+        q,r = self.algebraic().quo_rem(other.algebraic())
+        return self.parent()(q), self.parent()(r)
+
+    def quo_rem_base(self, other: DMonomial_Element) -> tuple[DMonomial_Element,DMonomial_Element]:
         r'''
             Finds `Q` and `R` such that ``self = Q*other + R`` and ``deg(R) < deg(other)``.
 
@@ -431,7 +455,7 @@ class DMonomial_Element (Element):
                 sage: R.<x> = DMonomial(DifferentialRing(QQ), [1])
                 sage: A = 3*x^3 + x^2 + x + 5
                 sage: B = 5*x^2 - 3*x + 1
-                sage: Q, R = A.quo_rem(B)
+                sage: Q, R = A.quo_rem_base(B)
                 sage: A == B*Q + R
                 True
                 sage: Q
@@ -452,6 +476,10 @@ class DMonomial_Element (Element):
         return (Q,R)
 
     def pseudo_quo_rem(self, other: DMonomial_Element) -> tuple[DMonomial_Element, DMonomial_Element]:
+        q,r = self.algebraic().pseudo_quo_rem(other.algebraic())
+        return self.parent()(q), self.parent()(r)
+
+    def pseudo_quo_rem_base(self, other: DMonomial_Element) -> tuple[DMonomial_Element, DMonomial_Element]:
         r'''
             Computes the pseudo-division of ``self`` and ``other``.
 
@@ -463,7 +491,7 @@ class DMonomial_Element (Element):
                 sage: R.<x> = DMonomial(DifferentialRing(QQ), [1])
                 sage: A = 3*x^3 + x^2 + x + 5
                 sage: B = 5*x^2 - 3*x + 1
-                sage: Q,R = A.pseudo_quo_rem(B)
+                sage: Q,R = A.pseudo_quo_rem_base(B)
                 sage: 25*A == B*Q + R
                 True
                 sage: Q
@@ -485,6 +513,9 @@ class DMonomial_Element (Element):
             delta = R.degree() - other.degree()
         return b**N*Q, b**N*R
     
+    def gcd(self, other: DMonomial_Element) -> DMonomial_Element:
+        return self.parent()(self.algebraic().gcd(other.algebraic()))
+
     def gcd_euclidean(self, other: DMonomial_Element) -> DMonomial_Element:
         r'''
             Computes the GCD of two polynomials using the Euclidean algorithm
@@ -776,13 +807,150 @@ class DMonomial_Element (Element):
         '''
         return self.subresultant_sequence(other)[0]
 
-    # TODO: Go on here
-    def squarefree_base(self) -> tuple[DMonomial_Element]:
-        pass
+    @cached_method
+    def squarefree(self) -> Factorization:
+        F = self.algebraic().squarefree_decomposition()
+        return Factorization(
+            ((self.parent()(el), i) for (el,i) in F),
+            unit=self.parent().base()(F.unit())
+            )
 
-    def squarefree(self) -> tuple[DMonomial_Element]:
-        pass
+    @cached_method
+    def squarefree_musser(self) -> Factorization:
+        r'''
+            Musser's squarefree factorization as in Bronstein's book (page 29)
 
+            EXAMPLES::
+
+            sage: from dalgebra import *
+            sage: Q.<x> = DMonomial(DifferentialRing(QQ), [1])
+            sage: A = x^8 + 6*x^6 + 12*x^4+8*x^2
+            sage: F = A.squarefree_musser(); F
+            1 * x^2 * (x^2 + 2)^3
+        '''
+        c = self.content()
+        S = self.primitive() ## this remains as a DMonomial_Element
+        S_ = S.gcd(S.partial()).primitive()
+        S__ = S // S_
+
+        A = list()
+
+        while S_.degree() > 0:
+            Y = S__.gcd(S_).primitive()
+            A.append(S__ // Y)
+            S__, S_ = Y, S_ // Y
+        A.append(S__)
+
+        return Factorization(((el, i+1) for i,el in enumerate(A) if el != 1), unit=c*S_.cc())
+
+    @cached_method
+    def squarefree_yun(self) -> Factorization:
+        r'''
+            Yun's squarefree factorization as in Bronstein's book (page 32)
+
+            EXAMPLES::
+
+            sage: from dalgebra import *
+            sage: Q.<x> = DMonomial(DifferentialRing(QQ), [1])
+            sage: A = x^8 + 6*x^6 + 12*x^4+8*x^2
+            sage: F = A.squarefree_yun(); F
+            1 * x^2 * (x^2 + 2)^3
+        '''
+        c = self.content()
+        S = self.primitive()
+
+        S_p = S.partial()
+        S_ = S.gcd(S_p).primitive()
+        S_star = S // S_
+        Y = S_p // S_
+
+        A = list()
+
+        Z = Y - S_star.partial()
+        while Z != 0:
+            A.append(S_star.gcd(Z).primitive())
+            S_star, Y = S_star // A[-1], Z // A[-1]
+                        
+            Z = Y - S_star.partial()
+        A.append(S_star)
+
+        return Factorization(((el, i+1) for i,el in enumerate(A) if el != 1), unit=c)
+
+    ### CHAPTER 3: MONOMIAL EXTENSION
+    @cached_method
+    def is_normal(self, operation: int = 0) -> bool:
+        if self.parent().operator_types()[operation] != "derivation":
+            raise TypeError("The operation must be a derivation")
+        return self.gcd(self.operation(operation)) in self.parent().base()
+    
+    @cached_method
+    def is_special(self, operation: int = 0) -> bool:
+        if self.parent().operator_types()[operation] != "derivation":
+            raise TypeError("The operation must be a derivation")
+        
+        if self.parent().is_primitive(operation): # special case with D(t) in self.base()
+            return self.monic().operation(operation) == 0
+        elif self.parent().is_hyperexponential(operation): # special case with D(t)/t in self.base()
+            p = self.monic()
+            x = self.parent().gen()
+            d = p.degree()
+            return p.operation(operation)*x**d == d*x**(d-1)*p
+        return self.operation(operation) % self == 0
+    
+    @cached_method
+    def splitting_factorization(self, operation: int = 0) -> tuple[DMonomial_Element, DMonomial_Element]:
+        r'''
+            Method to compute a splitting factorization of ``self``.
+
+            A splitting factorization is a pair `(q_n, q_s)`, where all squarefree factors of `q_n` are normal and `q_s` 
+            is special (see methods :func:`squarefree`, :func:`is_normal` and :func:`is_special`), and such that 
+            `q_nq_s = self`.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<x,t> = DMonomial(DifferentialRing(QQ), [1, "-t^2 - 3/(2*x)*t + 1/(2*x)"])
+                sage: # Bronstein Example 3.5.1
+                sage: p = 4*x^4*t^5-4*x^3*(x+1)*t^4+x^2*(2*x-3)*t^3+x*(2*x^2+7*x+2)*t^2-(4*x^2+4*x-1)*t +2*x-1
+                sage: q_n, q_s = p.splitting_factorization()
+                sage: q_n
+                4*x^4*t^3 + (-4*x^4 - 8*x^3)*t^2 + (8*x^3 + 4*x^2)*t - 4*x^2
+                sage: q_s
+                t^2 + 1/x*t + (-1/2*x + 1/4)/x^2
+                
+        '''
+        if self.parent().operator_types()[operation] != "derivation":
+            raise TypeError("The operation must be a derivation")
+        
+        S = self.gcd(self.operation(operation)).monic() // self.gcd(self.partial()).monic()
+        if S.degree() == 0:
+            return self, self.parent().one()
+        q_n, q_s = (self // S).splitting_factorization(operation)
+        return q_n, S*q_s
+    
+    @cached_method
+    def splitting_factorization_squarefree(self, operation: int = 0) -> tuple[Factorization, Factorization]:
+        r'''
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<x,t> = DMonomial(DifferentialRing(QQ), [1, "-t^2 - 3/(2*x)*t + 1/(2*x)"])
+                sage: # Bronstein Example 3.5.2
+                sage: p = 4*x^4*t^5-4*x^3*(x+1)*t^4+x^2*(2*x-3)*t^3+x*(2*x^2+7*x+2)*t^2-(4*x^2+4*x-1)*t +2*x-1
+                sage: p.splitting_factorization_squarefree()
+        '''
+        if self.parent().operator_types()[operation] != "derivation":
+            raise TypeError("The operation must be a derivation")
+        
+        F = self.squarefree()
+        normal, special = list(), list()
+        for (f, exp) in F:
+            S = f.gcd(f.operation(operation)).monic() 
+            normal.append((f // S, exp))
+            special.append((S, exp))
+        return (Factorization((factor for factor in normal if factor[0] != 1), unit=F.unit()), 
+                Factorization((factor for factor in special if factor[0] != 1)))
+    
 #####################################
 ### PARENT CLASS
 #####################################
@@ -948,6 +1116,94 @@ class DMonomial_Parent (Parent):
             )
         
         return AdditiveMap(self, __homomorphism)
+    
+    def wronskian_matrix(self, operation: int = 0, *elements: DMonomial_Element) -> Matrix:
+        if operation < 0 or operation >= self.noperators():
+            raise ValueError(f"Invalid operation provided")
+        elif self.operator_types()[operation] != "derivation":
+            raise ValueError(f"The operation provided is not a derivation")
+        
+        return matrix([[el.operation(operation, times=i) for el in elements] for i in range(len(elements))])
+
+    def wronskian(self, operation: int = 0, *elements: DMonomial_Element) -> DMonomial_Element:
+        if operation < 0 or operation >= self.noperators():
+            raise ValueError(f"Invalid operation provided")
+        elif self.operator_types()[operation] != "derivation":
+            raise ValueError(f"The operation provided is not a derivation")
+        
+        M = self.wronskian_matrix(operation, *elements)
+        return M.determinant()
+
+    def d_degree(self, operation: int = 0) -> int:
+        return self.gen().operation(operation).degree()
+    
+    def d_leading_coefficient(self, operation: int = 0) -> Element:
+        return self.gen().operation(operation).lc()
+    
+    d_lc = d_leading_coefficient
+
+    def is_primitive(self, operation: int = 0) -> bool:
+        if self.operator_types()[operation] == "derivation":
+            return self.gen().operation(operation) in self.base()
+        elif self.operator_types()[operation] == "homomorphism":
+            raise NotImplementedError(f"Primitive test not yet implemented for homomorphisms")
+        else:
+            raise ValueError(f"Invalid operation provided")
+        
+    def is_hyper(self, operation: int = 0) -> bool:
+        if self.operator_types()[operation] in ("derivation", "homomorphism"):
+            Dt = self.gen().operation(operation)
+            q,r = Dt.quo_rem(self.gen())
+            return r == 0 and q in self.base()
+        else:
+            raise ValueError(f"Invalid operation provided")
+        
+    def is_hyperexponential(self, operation) -> bool:
+        if self.operator_types()[operation] != "derivation":
+            raise ValueError(f"Invalid operation provided")
+        return self.is_hyper(operation)
+    
+    def is_hypergeometric(self, operation) -> bool:
+        if self.operator_types()[operation] != "homomorphism":
+            raise ValueError(f"Invalid operation provided")
+        return self.is_hyper(operation)
+    
+    def canonical_representation(self, 
+                                 element: DMonomial_Element | DFractionFieldElement,
+                                 operation: int = 0
+    ) -> tuple[DMonomial_Element, DFractionFieldElement, DFractionFieldElement]:
+        r'''
+            Computes the canonical representation of an element in the field of fractions.
+
+            This is algorithm CanonicalRepresentation described in Bronstein's book (page 101).
+
+            Given an element on the field of fractions, this method returns a triple `(q, b, c)` such that
+            ``self == q + b + c`` where
+            * Denominator of `b` is a special polynomial.
+            * Squarefree factors of the denominator of `c` are normal polynomials.
+
+
+        '''
+        if self.operator_types()[operation] != "derivation":
+            raise ValueError(f"Invalid operation provided")
+        if isinstance(element, DFractionFieldElement):
+            num, den = element.numerator(), element.denominator()
+        elif isinstance(element, DMonomial_Element):
+            num, den = element, self.one()
+        else:
+            raise TypeError(f"Invalid type for the element provided")
+
+        num : DMonomial_Element = self(num)
+        den : DMonomial_Element = self(den)
+
+        if not den.is_monic(): # We guarantee `den` is monic
+            num, den = num/den.lc(), den.monic()
+
+        q,r = num.quo_rem(den)
+        d_n, d_s = den.splitting_factorization(operation)
+        b,c = d_n.diophantine(d_s, r) # deg(b) < deg(d_s)
+
+        return (q, b/d_s, c/d_n)
 
     ## Coercion methods
     def _coerce_map_from_base_ring(self) -> Morphism:
