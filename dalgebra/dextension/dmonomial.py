@@ -125,7 +125,6 @@ logger = logging.getLogger(__name__)
 #    - Matrices -> matrices ring over these ring and fields
 #    - DElliptic -> how these DMonomial interact with DElliptic?
 
-
 #####################################
 ### FACTORY CLASS
 #####################################
@@ -790,7 +789,11 @@ class DMonomial_Element (Element):
 class DMonomial_Parent (Parent):
     Element = DMonomial_Element
 
-    def _set_categories(self, base : Parent, category=None) -> list[Category]: return [_DRings, Algebras(base)] + ([category] if category is not None else [])
+    def _set_categories(self, base : Parent, category=None) -> list[Category]: 
+        if base.is_commutative():
+            return [_DRings, Algebras(base).Commutative()] + ([category] if category is not None else [])
+        else:
+            return [_DRings, Algebras(base)] + ([category] if category is not None else [])
 
     def __init__(self, base : Parent, varname:str, gen_images: tuple[str], category=None):
         if not base in _Fields or not base in _DRings:
@@ -928,7 +931,7 @@ class DMonomial_Parent (Parent):
 
     def is_integral_domain(self, _: bool = True) -> bool:
         return True 
-
+    
     ## Derivation methods
     def extend_derivation(self, operation: int) -> AdditiveMap:
         def __derivation(element: DMonomial_Element) -> DMonomial_Element:
