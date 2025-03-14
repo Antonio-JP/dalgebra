@@ -1690,9 +1690,9 @@ class DFractionField(FractionField_generic):
         self.__operators = []
         for operator, ttype in zip(R.operators(), R.operator_types()):
             if ttype == "homomorphism":
-                func = AdditiveMap(self, lambda p : operator(p.numerator()) / operator(p.denominator()))
+                func = DFractionField_Homomorphism(self, operator)
             elif ttype == "derivation":
-                func = AdditiveMap(self, lambda p : (operator(p.numerator())*p.denominator() - p.numerator()*operator(p.denominator())) / (p.denominator()**2))
+                func = DFractionField_Derivation(self, operator)
             elif ttype == "skew":
                 twist = operator.twist # this is necessary to know
                 func = AdditiveMap(self, lambda p : (operator(p.numerator())*p.denominator() - p.numerator()*operator(p.denominator())) / (p.denominator() * twist(p.denominator())))
@@ -1961,6 +1961,47 @@ class WrappedMap(AdditiveMap):
             return r"\text{id}"
         return super()._latex_()
 
+### SPECIAL MORPHISM FOR DFractionField
+class DFractionField_Derivation(AdditiveMap):
+    def __init__(self, domain: DFractionField, operator: AdditiveMap):
+        if not isinstance(domain, DFractionField):
+            raise TypeError("A DFractionFieldMap can only be created for a 'DFractionField'")
+        
+        if operator.domain() != domain.base():  # we check the domain of the operator
+            raise ValueError(f"The map to be wrapped must have appropriate domain: ({domain.base()}) instead of ({operator.domain()})")
+        
+        def __extended_method(element):
+            num, den = element.numerator(), element.denominator()
+            assert all(el.parent() is domain.base() for el in (num, den)), "The elements must be in the base ring"
+            dnum, dden = operator(num), operator(den)
+            return (dnum*den - num*dden) / den**2
+        
+        super().__init__(domain, __extended_method)
+        self.__operator = operator
+
+    def __str__(self) -> str:
+        return f"Der. Extension to DFractionField for {self.__operator}"
+    
+
+class DFractionField_Homomorphism(AdditiveMap):
+    def __init__(self, domain: DFractionField, operator: AdditiveMap):
+        if not isinstance(domain, DFractionField):
+            raise TypeError("A DFractionFieldMap can only be created for a 'DFractionField'")
+        
+        if operator.domain() != domain.base():  # we check the domain of the operator
+            raise ValueError(f"The map to be wrapped must have appropriate domain: ({domain.base()}) instead of ({operator.domain()})")
+        
+        def __extended_method(element):
+            num, den = element.numerator(), element.denominator()
+            assert all(el.parent() is domain.base() for el in (num, den)), "The elements must be in the base ring"
+            dnum, dden = operator(num), operator(den)
+            return dnum / dden
+        
+        super().__init__(domain, __extended_method)
+        self.__operator = operator
+
+    def __str__(self) -> str:
+        return f"Hom. Extension to DFractionField for {self.__operator}"
 
 __all__ = [
     "DRings", "DRing", "DFractionField", "DifferentialRing", "DifferenceRing", "is_WrappedDRing", # names imported

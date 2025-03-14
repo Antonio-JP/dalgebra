@@ -16,7 +16,74 @@ r'''
     This module aims to provide a full implementation as univariate polynomials and their
     fraction fields of monomial extensions. It is of crucial importance that we can iterate 
     this construction building a "tower of monomials".    
+
+    EXAMPLES:: 
+
+    sage: from dalgebra.dmonomial import DMonomial
+    sage: # Test (Q[x], dx)
+    sage: R.<x> = DMonomial(DifferentialRing(QQ), [1])
+    sage: x.derivative()
+    1
+    sage: # Test (Q[x], x -> x+1)
+    sage: S.<x> = DMonomial(DifferenceRing(QQ), [x + 1])
+    sage: x.difference()
+    x + 1
+    sage: # Tests (e^x, ln(x), tan(x))
+    sage: T.<e> = DMonomial(DifferentialRing(QQ), ["e"])
+    sage: e.derivative()
+    e
+    sage: U.<x,ln> = DMonomial(DifferentialRing(QQ), [1, "1/x"])
+    sage: x.derivative()
+    1
+    sage: ln.derivative()
+    1/x
+    sage: V.<tn> = DMonomial(DifferentialRing(QQ), ["1 + tn"])
+    sage: tn.derivative()
+    1 + tn^2
+    sage: # Test (x, ln(x), e^x, tan(x))
+    sage: W.<x, ln, e, tn> = DMonomial(DifferentialRing(QQ), [1, 1/x, e, 1 + tn^2])
+    sage: x.derivative()
+    1
+    sage: ln.derivative()
+    1/x
+    sage: e.derivative()
+    e
+    sage: tn.derivative()
+    1 + tn^2
+    sage: # Test (x!, factorial)
+    sage: X.<x, f> = DMonomial(DifferenceRing(QQ), [x + 1, (x + 1) * f])
+    sage: x.difference()
+    x+1
+    sage: f.difference()
+    (x + 1)*f
+
+    This module will also allow the mis of several operations. Let us consider the partial derivatives or a 
+    difference-differential ring::
+
+    sage: # Partial case (Q[x,t], dx, dt)
+    sage: Y.<x,t> = DMonomial(DifferentialRing(QQ, 0, 0), [[1,0], [0,1]])
+    sage: x.derivative(0), x.derivative(1)
+    (1, 0)
+    sage: t.derivative(0), t.derivative(1)
+    (0, 1)
+    sage: (x^3*t + 2*x^2*t^2).derivative(0)
+    3*x^2*t + 4*x*t^2
+    sage: (x^3*t + 2*x^2*t^2).derivative(1)
+    x^3 + 4*x^2*t
+    sage: # Differential-Difference case (Q[x,t], x, x -> x+1)
+    sage: Z.<x> = DMonomial(DifferenceRing(DifferentialRing(QQ)), [1, x + 1])
+    sage: x.derivative()
+    1
+    sage: x.difference()
+    x + 1
+    sage: A.<x,e_x> = DMonomial(DifferenceRing(DifferentialRing(QQ['e'])).fraction_field(), [[1, x+1], [e_x, 'e*e_x']])
+    sage: e_x.derivative()
+    e_x
+    sage: e_x.difference()
+    e*e_x
 '''
+
+import logging
 
 from sage.arith.misc import GCD as gcd
 from sage.categories.algebras import Algebras
@@ -42,6 +109,8 @@ from ..dring import AdditiveMap, DRings, DFractionField, DFractionFieldElement
 
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
+
+logger = logging.getLogger(__name__)
 
 ## Notes for module:
 #    - DMonomial_Element -> implementation of a univariate polynomial.
@@ -109,6 +178,7 @@ class DMonomialFactory (UniqueFactory):
         R = PolynomialRing(base.to_sage(), names=names).fraction_field()
         polynomial = tuple(tuple(str(R(el)) for el in imgs) for imgs in polynomial)
 
+        logger.debug(f"key: ({base}, {names}, {polynomial}, {category})")
         return (base, names, polynomial, category)
 
     def create_object(self, _, key) -> DMonomial_Parent:
@@ -869,8 +939,9 @@ class DMonomial_Parent (Parent):
     def extend_homomorphism(self, operation: int) -> AdditiveMap:
         def __homomorphism(element: DMonomial_Element) -> DMonomial_Element:
             return sum(
-                c.operation(operation)*self.__images[operation]**i 
-                for (i,c) in enumerate(element.coefficients(sparse=False))
+                (c.operation(operation)*self.__images[operation]**i 
+                for (i,c) in enumerate(element.coefficients(sparse=False))),
+                start = self.zero()
             )
         
         return AdditiveMap(self, __homomorphism)
@@ -1035,7 +1106,10 @@ class DMM_ParentToAlgebraic (Morphism):
 
     def _call_(self, element: DMonomial_Element) -> Element:
         v = self.codomain()(self.domain().varname())
-        return sum(self.codomain().base()(c.to_sage())*v**m.degree() for (m,c) in element.mons_cons_iter())
+        return sum(
+            (self.codomain().base()(c.to_sage())*v**m.degree() for (m,c) in element.mons_cons_iter()), 
+            start=self.codomain().zero()
+        )
 
 class DMM_AlgebraicToParent (Morphism):
     def __init__(self, codomain: DMonomial_Parent):
