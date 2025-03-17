@@ -95,7 +95,8 @@ from sage.matrix.constructor import matrix
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex, latex_variable_name
 from sage.misc.misc_c import prod
-from sage.rings.infinity import Infinity as oo
+from sage.rings.infinity import Infinity as oo, UnsignedInfinityRing
+from sage.rings.integer_ring import ZZ
 from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_base
 from sage.rings.polynomial.polynomial_ring import PolynomialRing_generic
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -110,6 +111,7 @@ from ..dring import AdditiveMap, DRings, DFractionField, DFractionFieldElement
 
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
+uoo = UnsignedInfinityRing.an_element()
 
 logger = logging.getLogger(__name__)
 
@@ -951,6 +953,14 @@ class DMonomial_Element (Element):
         return (Factorization((factor for factor in normal if factor[0] != 1), unit=F.unit()), 
                 Factorization((factor for factor in special if factor[0] != 1)))
     
+    ### CHAPTER 4: ORDER FUNCTION
+    @cached_method
+    def order_function(self) -> DMM_OrderFunction:
+        return self.parent().order_function(self)
+
+    def order(self, element: DMonomial_Element) -> int:
+        return element.order_function()(self)
+    
 #####################################
 ### PARENT CLASS
 #####################################
@@ -1205,6 +1215,13 @@ class DMonomial_Parent (Parent):
 
         return (q, b/d_s, c/d_n)
 
+    @cached_method
+    def order_function(self, element: DMonomial_Element) -> DMM_OrderFunction:
+        return DMM_OrderFunction(self, element)
+    
+    def order(self, base_element: DMonomial_Element, element: Element) -> int:
+        return self.order_function(base_element)(element)
+
     ## Coercion methods
     def _coerce_map_from_base_ring(self) -> Morphism:
         return DMM_BaseToParent(self)
@@ -1343,6 +1360,7 @@ class DMonomialFunctor (ConstructionFunctor):
 #####################################
 ### MORPHISM CLASSES
 #####################################
+### COERCIONS / CONVERSIONS MORPHISMS
 class DMM_ParentToBase (Morphism):
     def __init__(self, parent):
         super().__init__(parent, parent.base())
@@ -1413,5 +1431,37 @@ class DMM_BetweenTowersReorder (Morphism):
     
     def _call_(self, element: DMonomial_Element) -> DMonomial_Element:
         return self.codomain()(self.codomain().to_sage()(str(element)))
+    
+### ORDER MORPHISMS
+class DMM_OrderFunction (Morphism):
+    def __init__(self, parent: DMonomial_Parent, element: DMonomial_Element):
+        from sage.categories.sets_cat import cartesian_product
+        super().__init__(parent.fraction_field(), cartesian_product([ZZ,UnsignedInfinityRing]))
+        self.__a = oo if element is oo else parent(element)
+
+    def _call_(self, element: DFractionFieldElement) -> int:
+        no,ns = self.order(element.numerator()) # ns may be infinite
+        do,_ = self.order(element.denominator()) # ds can not be infinite
+        return self.codomain()((no-do, UnsignedInfinityRing(ns+no-do)))
+
+    @cached_method
+    def order(self, element: DMonomial_Element) -> int:
+        if self.__a is oo: # case of order at infinity
+            output = -element.degree()
+        elif self.__a.is_unit():
+            output = oo
+        else: # case of order at a fixed element `a`
+            if element == 0:
+                output = oo # order of zero is infinity
+            else:
+                q, r = element.quo_rem(self.__a)
+                order = 0                
+
+                while r == 0:
+                    order += 1
+                    q,r = q.quo_rem(self.__a)
+
+                output = ZZ(order)
+        return self.codomain()((ZZ(output) if output is not oo else ZZ(0), UnsignedInfinityRing(output)))
     
 __all__ = ["DMonomial"]
