@@ -295,6 +295,19 @@ class DRings(Category):
             return result
 
         def inverse_operation(self, element: Element, operator: int = None) -> Element:
+            r'''
+                Method to compute an in-field inverse operation over an element once.
+
+                This method computes (if possible) the inverse of an operation over an element. 
+                This means that if ``output`` is the result of ``self.inverse_operation(element, operator)``,
+                then ``output.operation(operator) == element`` AND ``output`` is an element in ``self``.
+
+                When this method returns an IntegrationError, it means that the inverse operation is not
+                possible to compute. Any other error means there was a problem on the actual implementation, 
+                hinting for a bug or lack of implementation.
+
+                *NOTE*: the method allows both elements of ``self`` and elements in ``self.fraction_field()``.
+            '''
             raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
 
         @abstract_method
@@ -369,6 +382,9 @@ class DRings(Category):
             return self.derivations()[derivation](element)
 
         def integral(self, element: Element, derivation: int = None) -> Element:
+            r'''
+                Computes the in-field integration
+            '''
             if self.nderivations() == 0:
                 raise TypeError("Derivations not defined for this ring.")
             elif derivation is None and self.nderivations() == 1:
@@ -1471,6 +1487,11 @@ class DRing_Wrapper(Parent):
                 return self.element_class(self, self.operators()[operator].function.inverse()(element.wrapped))
             except Exception as e:
                 raise NotImplementedError(f"[inverse_operation] Inverses not implemented in general. Moreover: {e}")
+        elif self.operator_types()[operator] == "derivation":
+            if self.operators()[operator].function.function == 0: # all are constants
+                if element == 0:
+                    return element
+                raise IntegrationError(f"Non-constant element in constant ring can not be integrated")
 
         raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
 
@@ -1982,7 +2003,6 @@ class DFractionField_Derivation(AdditiveMap):
     def __str__(self) -> str:
         return f"Der. Extension to DFractionField for {self.__operator}"
     
-
 class DFractionField_Homomorphism(AdditiveMap):
     def __init__(self, domain: DFractionField, operator: AdditiveMap):
         if not isinstance(domain, DFractionField):
@@ -2002,6 +2022,10 @@ class DFractionField_Homomorphism(AdditiveMap):
 
     def __str__(self) -> str:
         return f"Hom. Extension to DFractionField for {self.__operator}"
+
+### SPECIAL ERRORS FOR THIS MODULE
+class IntegrationError(Exception):
+    pass
 
 __all__ = [
     "DRings", "DRing", "DFractionField", "DifferentialRing", "DifferenceRing", "is_WrappedDRing", # names imported
