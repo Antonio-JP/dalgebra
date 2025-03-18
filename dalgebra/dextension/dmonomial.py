@@ -95,6 +95,7 @@ from sage.matrix.constructor import matrix
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex, latex_variable_name
 from sage.misc.misc_c import prod
+from sage.rings.ideal import Ideal_generic as Ideal, Ideal as ideal
 from sage.rings.infinity import Infinity as oo, UnsignedInfinityRing
 from sage.rings.integer_ring import ZZ
 from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_base
@@ -107,7 +108,7 @@ from sage.structure.parent import Parent
 
 from typing import Collection, Iterator
 
-from ..dring import AdditiveMap, DRings, DFractionField, DFractionFieldElement
+from ..dring import AdditiveMap, DRings, DFractionField, DFractionFieldElement, IntegrationError
 
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
@@ -900,6 +901,14 @@ class DMonomial_Element (Element):
         return self.operation(operation) % self == 0
     
     @cached_method
+    def is_simple(self) -> bool:
+        return True # a polynomial has always a normal denominator (i.e., 1)
+
+    @cached_method
+    def is_reduced(self) -> bool:
+        return True # a polynomial has always a special denominator (i.e., 1)
+
+    @cached_method
     def splitting_factorization(self, operation: int = 0) -> tuple[DMonomial_Element, DMonomial_Element]:
         r'''
             Method to compute a splitting factorization of ``self``.
@@ -958,8 +967,50 @@ class DMonomial_Element (Element):
     def order_function(self) -> DMM_OrderFunction:
         return self.parent().order_function(self)
 
-    def order(self, element: DMonomial_Element) -> int:
+    def order(self, element: DMonomial_Element | DFractionFieldElement) -> int:
+        return self.order_function()(element)
+
+    def order_at(self, element: DMonomial_Element) -> int:
         return element.order_function()(self)
+    
+    @cached_method
+    def value_function(self) -> DMM_ValueFunction:
+        return self.parent().value_function(self)
+    
+    def value(self, element: DMonomial_Element | DFractionFieldElement) -> Element:
+        return self.value_function()(element)
+    
+    def value_at(self, element: DMonomial_Element) -> Element:
+        return self.parent().value_function(element)(self)
+    
+    def remainder(self, element: DMonomial_Element | DFractionFieldElement) -> DMonomial_Element:
+        r'''
+            Return the local remainder at ``self`` of ``element``.
+        '''
+        return self.parent()(self.value(element).lift())
+        # From Bronstein page 113
+        # c,_ = element.denominator().gcd_half_extended_euclidean(self)
+        # return (element.numerator() * c) % self
+
+    def remainder_at(self, element: DMonomial_Element) -> DMonomial_Element:
+        r'''
+            Return the local remainder at ``element`` of ``self``.
+        '''
+        value = self.value_at(element)
+        if element is oo: # value at infinity returns element in self.parent().base()
+            return self.parent()(value)
+        else: # returns something in a quotient ring
+            return self.parent()(value.lift())
+    
+    @cached_method
+    def residue_function(self, operation: int = 0) -> DMM_ResidueFunction:
+        return self.parent().residue_function(self, operation)
+    
+    def residue(self, element: DMonomial_Element | DFractionFieldElement, operation: int = 0)  -> Element:
+        return self.residue_function(operation)(element)
+    
+    def residue_at(self, element: DMonomial_Element, operation: int = 0) -> Element:
+        return self.parent().residue_function(element, operation)(self)
     
 #####################################
 ### PARENT CLASS
@@ -999,6 +1050,8 @@ class DMonomial_Parent (Parent):
             for (i, ttype) in enumerate(self.base().operator_types())
         ]
 
+        self.__constants = self._compute_constants()
+
     ## Initialization methods
     def _initialize_algebraic(self):
         ## We create the algebraic base structure
@@ -1013,11 +1066,40 @@ class DMonomial_Parent (Parent):
         self.__algebraic = PolynomialRing(base_field, self.__varname)
         
         ## Adding coercion and conversion morphisms
+        self.base().register_conversion(DMM_ParentToBase(self))
+        self.register_coercion(DMM_BaseToParent(self))
         self.__algebraic.register_coercion(DMM_ParentToAlgebraic(self))
         self.register_coercion(DMM_AlgebraicToParent(self))
 
     def _initialize_data(self, images: tuple[str]):
         self.__images = tuple(self(self.to_sage()(img)) for img in images)
+
+    def _compute_constants(self) -> tuple[Parent]:
+        r'''
+            Computes (if possible) the ring of constants (as algebraic structure) for each operation.
+
+            If the computation can not be performed, ``None`` is stored.
+        '''
+        result = []
+        for operation, otype in enumerate(self.operator_types()):
+            if otype == "homomorphism":
+                result.append(None)
+            elif otype == "derivation":
+                t = self.gen()
+                if self.is_primitive(operation): 
+                    ## See Theorem 5.1.1 of Bronstein's book
+                    try:
+                        self.base()(t.operation(operation)).integrate(operation)
+                        result.append(None) # We do not know the constants otherwise --> TODO: think about this
+                    except IntegrationError:
+                        # Dt is not the derivative of an element in self.base()
+                        result.append(self.base().constant_ring(operation))
+                elif self.is_hyperexponential(operation):
+                    ## See Theorem 5.1.2 of Bronstein's book
+                    result.append(None) # Not implemented yet
+                else:
+                    result.append(None)
+        return tuple(result)
 
     ## Attributes methods
     def varname(self) -> str:
@@ -1042,6 +1124,12 @@ class DMonomial_Parent (Parent):
 
     def _first_ngens(self, amount: int) -> tuple[DMonomial_Element]:
         return self.tower_gens()[-amount:]
+    
+    def constant_ring(self, operation: int = 0) -> Parent:
+        output = self.__constants[operation]
+        if output is None:
+            raise NotImplementedError(f"Constant ring for operation {operation} not yet implemented")
+        return output
 
     @cached_method
     def tower_names(self) -> tuple[str]:
@@ -1178,6 +1266,36 @@ class DMonomial_Parent (Parent):
             raise ValueError(f"Invalid operation provided")
         return self.is_hyper(operation)
     
+    def is_liuvillian(self, operation:int = 0) -> bool:
+        r'''
+            Checks whether the tower extension is Liouvillian.
+
+            A tower of monomials is liuvillian if all the monomials are either primitive or hyperexponential (see :func:`is_primitive` and :func:`is_hyperexponential`)
+            at their respective levels
+        '''
+        if self.operator_types()[operation] != "derivation":
+            raise NotImplementedError(f"Liouvillian test not yet implemented for homomorphisms")
+        t = self.gen()
+        return ((self.is_primitive(t) or self.is_hyperexponential(t)) and 
+                self.constant_ring(operation) == self.base().constant_ring() and
+                isinstance(self.base().base(), DMonomial_Parent) and self.base().base().is_liuvillian(operation))
+
+    def is_simple_element(self, element: DMonomial_Element | DFractionFieldElement, operation: int = 0) -> bool:
+        if element in self:
+            return True
+        elif element in self.fraction_field():
+            return element.denominator().is_normal(operation) 
+        else:
+            raise ValueError(f"Invalid element provided {element} for the parent {self}")
+        
+    def is_reduced_element(self, element: DMonomial_Element | DFractionFieldElement, operation: int = 0) -> bool:
+        if element in self:
+            return True
+        elif element in self.fraction_field():
+            return element.denominator().is_special(operation)
+        else:
+            raise ValueError(f"Invalid element provided {element} for the parent {self}")
+
     def canonical_representation(self, 
                                  element: DMonomial_Element | DFractionFieldElement,
                                  operation: int = 0
@@ -1191,8 +1309,6 @@ class DMonomial_Parent (Parent):
             ``self == q + b + c`` where
             * Denominator of `b` is a special polynomial.
             * Squarefree factors of the denominator of `c` are normal polynomials.
-
-
         '''
         if self.operator_types()[operation] != "derivation":
             raise ValueError(f"Invalid operation provided")
@@ -1219,8 +1335,48 @@ class DMonomial_Parent (Parent):
     def order_function(self, element: DMonomial_Element) -> DMM_OrderFunction:
         return DMM_OrderFunction(self, element)
     
-    def order(self, base_element: DMonomial_Element, element: Element) -> int:
+    def order(self, base_element: DMonomial_Element, element: DMonomial_Element | DFractionFieldElement) -> int:
         return self.order_function(base_element)(element)
+    
+    @cached_method
+    def value_function(self, element: DMonomial_Element) -> DMM_ValueFunction:
+        return DMM_ValueFunction(self, element)
+    
+    def value(self, base_element: DMonomial_Element, element: DMonomial_Element | DFractionFieldElement) -> Element:
+        return self.value_function(base_element)(element)
+    
+    @cached_method
+    def residue_function(self, element: DMonomial_Element, operation: int = 0) -> DMM_ResidueFunction:
+        return DMM_ResidueFunction(self, element, operation)
+    
+    def residue(self, base_element: DMonomial_Element, element: DMonomial_Element | DFractionFieldElement, operation: int = 0) -> Element:
+        return self.residue_function(base_element, operation)(element)
+
+    def rothstein_trager(self, element: DMonomial_Element | DFractionFieldElement, operation: int = 0, *, var_name: str) -> Element:
+        r'''
+            Computes the Rothstein-Trager resultant of an element in ``self.fraction_field()`` with respect to the operation provided.
+
+            We uses the definition from Bronstein's book (page 122):
+
+            .. MATH::
+
+                \text{RT}(f) = \text{resultant}_t(a - z*D(d), d)
+
+            where `f = p + a/d` is the element in the field of fractions, `D` is the derivation given by ``operation`` and `z` is a new variable (given with ``var_name``).
+        '''
+        if self.operator_types()[operation] != "derivation":
+            raise ValueError(f"Invalid operation provided: {operation} is {self.operator_types()[operation]}")
+        elif not self.is_simple_element(element, operation):
+            raise ValueError(f"Rothstein-Trager resultant defined only for simple elements.")
+
+        _, _, fr = self.canonical_representation(element, operation) # first not relevant, second is zero since it is the special part
+        a, d = fr.numerator(), fr.denominator()
+
+        output_parent = PolynomialRing(self.to_sage().base(), [self.varname(), var_name])
+        z = output_parent(var_name)
+        first = output_parent(a.algebraic() - z*d.operation(operation).algebraic())
+        second = output_parent(d.algebraic())
+        return first.resultant(second)
 
     ## Coercion methods
     def _coerce_map_from_base_ring(self) -> Morphism:
@@ -1464,4 +1620,48 @@ class DMM_OrderFunction (Morphism):
                 output = ZZ(order)
         return self.codomain()((ZZ(output) if output is not oo else ZZ(0), UnsignedInfinityRing(output)))
     
-__all__ = ["DMonomial"]
+class DMM_ValueFunction (Morphism):
+    def __init__(self, parent: DMonomial_Parent, element: DMonomial_Element):
+        if element is oo:
+            self.__I = None
+            self.__a = oo
+            self.__parent = parent
+            super().__init__(parent.fraction_field(), parent.base().fraction_field())
+        else:
+            self.__I : Ideal = ideal(element.algebraic())
+            self.__a = parent(element)
+            self.__parent = parent
+            super().__init__(parent.fraction_field(), parent.to_sage().quotient(self.__I))
+
+    def _call_(self, element: DFractionFieldElement) -> Element:
+        order_element = self.__parent.order_function(self.__a)(element)
+        if order_element[1] != uoo and order_element[0] < 0:
+            raise ValueError(f"Value function only valid for elements with positive order at {self.__a}")
+        if self.__a is oo:
+            if order_element[0] > 0:
+                return self.codomain().zero()
+            else:
+                return element.numerator().lc() / element.denominator().lc()
+        else:
+            b = element.numerator()
+            d,_ = element.denominator().gcd_half_extended_euclidean(self.__a)
+            return self.codomain()((b*d).algebraic())
+    
+class DMM_ResidueFunction (Morphism):
+    def __init__(self, parent: DMonomial_Parent, element: DMonomial_Element, operation: int = 0):
+        if parent.operator_types()[operation] != "derivation":
+            raise TypeError(f"The operation must be a derivation (given {operation}: {parent.operator_types()[operation]})")
+        if element is oo:
+            raise NotImplementedError(f"Residue function not yet implemented for infinity")
+        else:
+            if not element.is_normal():
+                raise ValueError(f"Residue function only valid for normal elements")
+            self.__a = parent(element)
+            self.__operation = operation
+            self.__value_function = parent.value_function(element)
+            super().__init__(parent.fraction_field(), self.__value_function.codomain())
+
+    def _call_(self, element: DFractionFieldElement) -> Element:
+        return self.__value_function(element * self.__a / self.__a.operation(self.__operation))
+
+__all__ = ["DMonomial", "DMM_ValueFunction"]
