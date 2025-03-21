@@ -129,6 +129,26 @@ logger = logging.getLogger(__name__)
 #    - Matrices -> matrices ring over these ring and fields
 #    - DElliptic -> how these DMonomial interact with DElliptic?
 
+class RequestName():
+    r'''
+        Class to request name uniquely during a full session of execution.
+    '''
+    names_given = set()
+    base = "_t"
+    gen = 0
+
+    @staticmethod
+    def get(*older_names: str) -> str:
+        import re
+        m = RequestName.gen
+        for name in older_names:
+            M = re.match(f"{RequestName.base}_(\d+)", name)
+            if M != None:
+                m = max(m, M.groups()[0]+1)
+        output = f"{RequestName.base}_{m}"
+        RequestName.gen = m+1
+        return output
+
 #####################################
 ### FACTORY CLASS
 #####################################
@@ -1094,8 +1114,18 @@ class DMonomial_Parent (Parent):
                     except IntegrationError:
                         # Dt is not the derivative of an element in self.base()
                         result.append(self.base().constant_ring(operation))
+                    except NotImplementedError:
+                        result.append(None)
                 elif self.is_hyperexponential(operation):
                     ## See Theorem 5.1.2 of Bronstein's book
+                    dt_t = self.base()(t.operation(operation)//t)
+                    try:
+                        if self.base().log_derivative_rad(dt_t, operation):
+                            result.append(None) # we do not know
+                        else:
+                            result.append(self.base().constant_ring(operation))
+                    except NotImplementedError:
+                        result.append(None)
                     result.append(None) # Not implemented yet
                 else:
                     result.append(None)
@@ -1161,6 +1191,13 @@ class DMonomial_Parent (Parent):
 
         return result
     
+    def tower_gen(self, name: str) -> DMonomial_Element:
+        gens = self.tower_gens()
+        for g in gens:
+            if str(g) == name:
+                return g
+        raise IndexError(f"Generator {name} not found")
+    
     @cached_method
     def tower_gens_operation(self, operation: int) -> tuple[DMonomial_Element]:
         r'''
@@ -1191,6 +1228,20 @@ class DMonomial_Parent (Parent):
     def tower_depth(self) -> int:
         return len(self.tower_names())
     
+    def tower_gen_lc(self, element: DMonomial_Element, gen: str) -> DFractionFieldElement:
+        g = self.tower_gen(gen)
+        shifted_gens = [G for G in self.tower_gens() if G != g] + [g]
+
+        R = self.tower_change_order(*shifted_gens)
+        return R(element).lc()
+    
+    def tower_gen_degree(self, element: DMonomial_Element, gen: str) -> DFractionFieldElement:
+        g = self.tower_gen(gen)
+        shifted_gens = [G for G in self.tower_gens() if G != g] + [g]
+
+        R = self.tower_change_order(*shifted_gens)
+        return R(element).degree()
+
     ## Other SageMath attribute methods for rings
     def is_field(self, _: bool = True) -> bool:
         return False
@@ -1256,29 +1307,93 @@ class DMonomial_Parent (Parent):
         else:
             raise ValueError(f"Invalid operation provided")
         
-    def is_hyperexponential(self, operation) -> bool:
+    def is_hyperexponential(self, operation: int = 0) -> bool:
         if self.operator_types()[operation] != "derivation":
             raise ValueError(f"Invalid operation provided")
         return self.is_hyper(operation)
     
-    def is_hypergeometric(self, operation) -> bool:
+    def is_hypergeometric(self, operation: int = 0) -> bool:
         if self.operator_types()[operation] != "homomorphism":
             raise ValueError(f"Invalid operation provided")
         return self.is_hyper(operation)
     
-    def is_liuvillian(self, operation:int = 0) -> bool:
-        r'''
-            Checks whether the tower extension is Liouvillian.
+    def is_hypertangent(self, operation: int = 0) -> bool:
+        if self.operator_types()[operation] != "derivation":
+            raise ValueError(f"Invalid operation provided")
+        if self.d_degree(operation) == 2: 
+            t = self.gen()
+            Dt = t.operation(operation)
+            return Dt/(t^2 + 1) in self.base()
+        return False
+    
+    def is_tangent(self, operation: int = 0) -> bool:
+        if self.is_hypertangent(self, operation):
+            t = self.gen()
+            Dt = t.operation(operation)
+            quot = self.base()(Dt/(t^2 + 1))
 
-            A tower of monomials is liuvillian if all the monomials are either primitive or hyperexponential (see :func:`is_primitive` and :func:`is_hyperexponential`)
-            at their respective levels
+            try:
+                quot.integrate()
+                return True
+            except (NotImplementedError, IntegrationError):
+                return False
+    
+    def is_logarithm(self, operation: int = 0) -> bool:
+        r'''
+            `D(t)` is the logarithmic derivative on an element in ``self.base()``.
+        '''
+        if self.operator_types()[operation] != "derivation":
+            raise NotImplementedError(f"Logarithm test not yet implemented for homomorphisms")
+        t = self.gen()
+        if self.is_primitive():
+            try:
+                return bool(self.base().log_derivative(self.base()(t.operation(operation))))
+            except NotImplementedError:
+                return False
+        return False
+    
+    def is_exponential(self, operation: int = 0) -> bool:
+        if self.operator_types()[operation] != "derivation":
+            raise NotImplementedError(f"Exponential test not yet implemented for homomorphisms")
+        t = self.gen()
+        if self.is_hyperexponential():
+            try:
+                self.base()(t.derivative(operation)).integrate(operation)
+                return True
+            except (IntegrationError, NotImplementedError):
+                return False
+        return False
+    
+    def is_liouvillian(self, operation:int = 0) -> bool:
+        r'''
+            Checks whether the monomial is Liouvillian.
+
+            A monomial is called Liouvillian if it is primitive or hyperexponential (see :func:`is_primitive` and :func:`is_hyperexponential`)
+            and it preserve the constants of the base ring.
         '''
         if self.operator_types()[operation] != "derivation":
             raise NotImplementedError(f"Liouvillian test not yet implemented for homomorphisms")
         t = self.gen()
         return ((self.is_primitive(t) or self.is_hyperexponential(t)) and 
-                self.constant_ring(operation) == self.base().constant_ring() and
-                isinstance(self.base().base(), DMonomial_Parent) and self.base().base().is_liuvillian(operation))
+                self.constant_ring(operation) == self.base().constant_ring())
+    
+    @cached_method
+    def tower_is_liouvillian(self, operation: int = 0) -> bool:
+        r'''
+            Checks if the tower of monomial is all liouvillian.
+        '''
+        if self.is_liouvillian(operation):
+            base = self.base().base()
+            return (not isinstance(base, DMonomial_Parent)) or base.tower_is_liouvillian(operation)
+
+    def is_elementary(self, operation: int = 0) -> bool:
+        return self.is_liouvillian(operation) and (self.is_logarithm(operation) or self.is_exponential(operation))
+    
+    @cached_method
+    def tower_is_elementary(self, operation: int = 0) -> bool:
+        if self.is_elementary(operation):
+            base = self.base().base()
+            return (not isinstance(base, DMonomial_Parent)) or base.tower_is_elementary(operation)
 
     def is_simple_element(self, element: DMonomial_Element | DFractionFieldElement, operation: int = 0) -> bool:
         if element in self:
@@ -1478,12 +1593,350 @@ class DMonomial_Parent (Parent):
 
     def inverse_operation(self, element: DMonomial_Element, operation: int = 0) -> DMonomial_Element:
         raise NotImplementedError(f"The integration in these fields is not yet implemented")
-        
+    
     def _lcm_denominators(self, *_: DMonomial_Element) -> DMonomial_Element:
         return self.parent().one() # no denominators in this ring
 
     def to_sage(self):
         return self.__algebraic
+    
+    ########################################
+    ### Methods from Bronstein book
+    ########################################
+    ### CHAPTER 5: INTEGRATION OF TRANSCENDENTAL FUNCTIONS
+    def symbolic_integration(self, element: DFractionFieldElement, operation: int = 0) -> DMonomial_Element:
+        partial, valid = self._symbolic_integration(element, operation)
+        remainder = element - partial.operation(operation)
+        if not valid:
+            raise IntegrationError(f"Could not reduce to the base field\n\t-Start: {element}\n\t-Part.: {partial}\n\t-Remd.: {remainder}")
+        remainder = self.base()(remainder)
+        integral = self.base().symbolic_integration(remainder, operation)
+        return integral + partial
+    
+    def _symbolic_integration(self, element: DFractionFieldElement, operation: int = 0) -> tuple[DMonomial_Element, tuple]:
+        if self.operator_types()[operation] != "derivation":
+            raise ValueError(f"Symbolic integration only defined for derivations")
+        
+        f = self.fraction_field()(element) # must be a rational function
+
+        g_1, h, r = self.hermite_reduce(f, operation) # reduces partial_integral, simple and reduced parts
+        g_2, valid = self.residue_reduce(h, operation) # computes partial integral with `h - D(g_2)` polynomial
+        if not valid:
+            return (g_1 + g_2, valid)
+        q, valid = self.polynomial_integration(h - g_2.operation(operation) + r, operation)
+        return (g_1 + g_2 + q, valid)
+    
+    def hermite_reduce(self, 
+                       f: DFractionFieldElement, 
+                       D: int = 0
+    ) -> tuple[DFractionFieldElement,DFractionFieldElement,DFractionFieldElement]:
+        r'''
+            Computes the Hermite reduction of an element in ``self.fraction_field()``.
+
+            Given a derivation and an ``f=element`` in ``self.fraction_field()``, this method computes
+            three values `g, h, r` in the same field such that 
+
+            .. MATH::
+
+                f = D(g) + h + r
+
+            and `h` is simple and `r` is reduced.
+        '''
+        p, s, n = self.canonical_representation(f, D)
+        a, d = n.numerator(), n.denominator() 
+        ## We check `d` is monic
+        if not d.is_monic():
+            a, d = a/d.lc(), d.monic()
+        
+        F = d.squarefree()
+        g = self.zero()
+
+        for (d_i, i) in F:
+            v = d_i
+            u = d // d_i**i # this is an exact division since `d_i^i` is a factor of `d`
+            for j in range(i-1, 0, -1):
+                b,c = (u*v.derivative(D)).diophantine(v, -a/j)
+                g += b/v**j
+                a -= (j*c + u*b.derivative(D))
+            d = u*v
+        q,r = a.quo_rem(u*v)
+
+        return (g, r/(u*v), q+p+s)
+
+    def residue_reduce_base(self, 
+                       f: DFractionFieldElement, 
+                       D: int = 0
+    ) -> tuple[DMonomial_Element, bool]:
+        r'''
+            Method that applies the Rothstein-Trager resultant reduction (page 147 of Bronstein's book)
+
+            This method takes a simple element ``f = element`` in ``self.fraction_field()``, together with a 
+            derivation and returns a tuple `g, \beta` where `g` is an elementary function over ``self`` (includes 
+            some logarithms) and a boolean `\beta` such that
+
+            * `\beta` is True if `f - D(g)` is an element of ``self``.
+            * `\beta` is False if for any special element `h` in ``self.fraction_field()``, `f + h - D(g)` do not 
+              have an elementary integral.
+        '''
+        vname = f"__{self.gen()}"
+        d = f.denominator()
+        _,_,A = self.canonical_representation(f, D)
+        a = A.numerator()
+
+        r = self.rothstein_trager(f, D, vname) # algebraic polynomial in __t
+        ## We create the differential structure to manipulate r
+        E = DMonomial(self.base(), vname, [0 for _ in range(self.noperators())]) # this is the \kappa_D
+        r = E(r)
+        r_n, r_s = r.splitting_factorization(D)
+        F = r_s.factor() # factorization into irreducibles of `r_s`
+        monomials = [] # list of pairs (name, derivative, root) to be added
+        for s_i,_ in F:
+            for (alpha,_) in s_i.roots():
+                nvar = RequestName.get(*[str(g) for g in self.tower_gens()])
+                g = d.gcd(a - alpha*d.derivative(D))
+                monomials.append((nvar, g.derivative(D)/g,alpha))
+        
+        E = DMonomial(self, 
+                      [m[0] for m in monomials],
+                      [[0 if i != D else m[1] for i in range(self.noperators())] for m in monomials])
+        result = sum(m[2]*E.tower_gen(m[0]) for m in monomials)
+
+        return result, r_n in self.base()
+
+    def residue_reduce(self, 
+                       f: DFractionFieldElement, 
+                       D: int = 0
+    ) -> tuple[DMonomial_Element, bool]:
+        r'''
+            Method that applies the Lazard-Rioboo-Rothstein-Trager resultant reduction (page 149 of Bronstein's book)
+
+            This method takes a simple element ``f = element`` in ``self.fraction_field()``, together with a 
+            derivation and returns a tuple `g, \beta` where `g` is an elementary function over ``self`` (includes 
+            some logarithms) and a boolean `\beta` such that
+
+            * `\beta` is True if `f - D(g)` is an element of ``self``.
+            * `\beta` is False if for any special element `h` in ``self.fraction_field()``, `f + h - D(g)` do not 
+              have an elementary integral.
+        '''
+        t = self.gen()
+        d = self(f.denominator())
+        p,a = self(f.numerator()).quo_rem(d) # f = p + a/d and `a` is normal
+
+        AR = DMonomial(self, "__z", [0 for _ in range(self.noperators())]) # we add new variable with \kappa_D
+        z = AR.gen()
+        if d.derivative(D).degree() <= d.degree():
+            r, R = AR(d).subresultant_sequence(a-z*d.derivative(D))
+        else:
+            r, R = (a - z*d.derivative(D)).subresultant_sequence(d)
+
+        r : DMonomial_Element
+        Fn,Fs = r.splitting_factorization_squarefree(D)
+        n = Fn.expand()
+
+        S = dict()
+        monomials = []
+        for s,e in Fs: # for each factor on Fs
+            if e == d.degree():
+                for m in range(1,len(R)-1):
+                    if self.tower_gen_degree(R[m], t) == e:
+                        S[e] = R[m]
+                A = self.tower_gen_lc(S[e], t).numerator().squarefree()
+                for (a,e2) in A:
+                    S[e] = S[e]//a.gcd(s)**e2
+            for (alpha,_) in s.roots():
+                b = self(S[e].algebraic()(**{"__z": alpha}))
+                monomials.append((RequestName.get(*[str(g) for g in self.tower_gens()]), b.derivative(D)/b, alpha))
+
+        E = DMonomial(self, 
+                      [m[0] for m in monomials],
+                      [[0 if i != D else m[1] for i in range(self.noperators())] for m in monomials])
+        result = sum(m[2]*E.tower_gen(m[0]) for m in monomials)
+
+        return result, n in self.base()
+
+    def polynomial_integration(self, element: DMonomial_Element, operation: int = 0) -> tuple[DMonomial_Element,bool]:
+        if self.is_primitive():
+            return self._primitive_polynomial_integration(element, operation)
+        elif self.is_hyperexponential():
+            return self._hyperexponential_polynomial_integration(element, operation)
+        elif self.is_hypertangent():
+            return self._hypertangent_polynomial_integration(element, operation)
+        elif self.d_degree(operation) > 1:
+            logger.warning(f"[polynomial-integration] Case of non-linear monomial: we assume no special polynomials exists")
+            return self._nonlinear_nospecial_polynomial_integration(element, operation)
+        raise ValueError(f"Impossible error reached")
+    
+    def _primitive_polynomial_integration(self, p: DMonomial_Element, D: int = 0) -> tuple[DMonomial_Element,bool]:
+        if p.degree() == 0:
+            return self.zero(), True
+        t = self.gen()
+        a = p.lc()
+        sol = self.base().base().limited_integrate(a, t.derivative(D), D=D) 
+        if sol is None:
+            return self.zero(), False
+        b,(c,) = sol # a = D(b) + cD(t) --> c is constant
+        m = p.degree()
+        q_0 = c*t**(m+1)/(m+1) + b*t**m
+        q,valid = self._primitive_polynomial_integration(p - q_0.derivative(D), D)
+
+        return q+q_0, valid
+    
+    def _hyperexponential_polynomial_integration(self, p: DMonomial_Element, D: int = 0) -> tuple[DMonomial_Element,bool]:
+        q = 0
+        valid = True
+        t = self.gen()
+        k = self.base()(t.derivative(D)/t)
+
+        for i in range(t.order(p), -self.order_function(uoo)(p)+1):
+            if i != 0:
+                a = p.coefficient(i)
+                ## Risch Differential Equation
+                v = self.base().base().risch_de(i*k, a, D)
+                if v is None:
+                    valid = False
+                else:
+                    q += v*t**i
+        return q, valid
+
+    def _hypertangent_polynomial_integration(self, p: DMonomial_Element, D: int = 0) -> tuple[DMonomial_Element,bool]:
+        q_1, valid = self._hypertangent_reduced_integration(p, D)
+        if not valid:
+            return q_1, valid
+        q_2, c = self._hypertangent_polynomial_integration_pure(p - q_1.derivative(D), D)
+        if c.derivative(D) == 0:
+            t = self.gen()
+            k = self.base()(t.derivative(D) / (t**2-1))
+            new_var = RequestName.get(*[str(g) for g in self.tower_gens()])
+            E = DMonomial(self, new_var, ["0" if i == D else f"2*{t}*{k}" for i in range(self.noperators())])
+            log_t2_1 = E.gen()
+            return q_1+q_2+c*log_t2_1, True
+        else:
+            return q_1+q_2, False
+
+    def _hypertangent_polynomial_integration_pure(self, 
+                                                  p: DMonomial_Element,
+                                                  D: int = 0
+    ) -> tuple[DMonomial_Element,DFractionFieldElement]:
+        r'''
+            Method to integrate a pure polynomial for hypertangent monomials.
+
+            Given a polynomial `p(t) \in k[t]` (`k[t]` is ``self``), this method computes 
+            a polynomial `q(t) \in k[t]` and an element `c \in k` such that 
+
+            .. MATH::
+
+                p - D(q) - c \frac{D(t^2 + 1)}{t^2 + 1} \in k
+
+            and `p - D(q)` has an elementary integral over `k(t)` if and only if `D(c) = 0`.
+        '''
+        q,r = self.polynomial_reduce(p, D)
+        t = self.gen()
+        k = self.base()(t.derivative(D) / (t**2 + 1))
+        c = r.coefficient(1)/2*k
+        return q, c
+    
+    def _hypertangent_reduced_integration(self, p: DMonomial_Element, D: int = 0) -> tuple[DMonomial_Element,bool]:
+        t = self.gen()
+        td = t**2 + 1
+        m = td.order(t)
+        if m <= 0: 
+            return 0, True
+        
+        h = self(td**m * p) # h is now a polynomial in `t`
+        r = h % td # deg(r) <= 1
+        a = r.coefficient(1) # a = coeff(r, t)
+        b = r.cc() # b = coeff(r, 1) = r - a*t
+        k = self.base()(t.derivative(D) / td)
+        
+        sol = self.base().coupled_de_system(0, 2*m*k, a, b, D)
+        if sol is None: # no solution to coupled system
+            return self.zero(), False
+        c,d = sol # D(c) - 2m D(t)/(t^2+1) d = a,   D(d) + 2m D(t)/(t^2+1)c = b
+
+        q_0 = (c*t + d)/(t^2+1)**m
+        q, valid = self._hypertangent_reduced_integration(p - q_0.derivative(D), D)
+        return (q+q_0, valid)
+
+    def _nonlinear_nospecial_polynomial_integration(self, p: DMonomial_Element, D: int = 0) -> tuple[DMonomial_Element,bool]:
+        q_1, q_2 = self.polynomial_reduce(p, D)
+
+        return q_1, q_2 in self.base()
+
+    def polynomial_reduce(self, 
+                       p: DMonomial_Element, 
+                       D: int = 0
+    ) -> tuple[DMonomial_Element,DMonomial_Element]:
+        r'''
+            Computes a polynomial reduction.
+
+            Given a polynomial `p(t) \in k[t]` (where `k[t]` is ``self``) where `t` is a nonlinear monomial,
+            this method computes two polynomials `q(t), r(t) \in k[t]` such that `p = D(q) + r` and 
+            `deg(r) < deg(D(t))`.
+
+            This method looks like an Euclidean division but using now the derivative of the monomial.
+        '''
+        p = self(p)
+        if p.degree() < self.d_degree(D):
+            return self.zero(), p
+        
+        m = p.degree() - self.d_degree(D) + 1
+        q_0 = (p.lc() / (m*self.d_lc(D)))* self.gen()**m
+        q, r = self.polynomial_reduce(p - q_0.derivative(D), D)
+
+        return q_0 + q, r
+        
+    ### CHAPTER 6: Risch Differential Equation
+    def risch_de(self, f: DFractionFieldElement, g: DFractionFieldElement, D:int = 0) -> DFractionFieldElement:
+        r'''
+            Solves Risch Differential Equation.
+
+            Given two elements `f,g` in ``self.fraction_field()``, this method computes (when possible) an
+            element `v` in ``self.fraction_field()`` such that 
+
+            .. MATH::
+
+                D(v) + fv = g.
+
+            When this solution does not exist, this method returns ``None``.
+        '''
+        raise NotImplementedError(f"Method for Risch DE not implemented.")
+
+    ### CHAPTER 7: Parametric Problems
+    def limited_integrate(self, f, *w, D: int = 0) -> tuple[DMonomial_Element, tuple[DMonomial_Element]]:
+        raise NotImplementedError(f"Method of limited integration not yet implemented")
+    
+    ### CHAPTER 8: The Coupled Differential System
+    def coupled_de_system(self, f1, f2, g1, g2, D: int = 0) -> tuple[DMonomial_Element, DMonomial_Element]:
+        r'''
+            Find a polynomial solution (c,d) in ``self.fraction_field()`` to the coupled differential system
+
+            .. MATH::
+            
+                \left\{\begin{array}{rl}c' + f_1 c - f_2 d &{}= g_1\\d' + f_2 c + f_1 d &{}= g_2\end{array}\right.`
+
+            If not possible to find such a solution, this method returns None.
+        '''
+        return self.coupled_de_system_generic(self, -1, f1, f2, g1, g2, D)
+    
+    def coupled_de_system_generic(self, 
+                                  a: DFractionFieldElement, # must be constant
+                                  b1: DFractionFieldElement, b2: DFractionFieldElement, # coefficients of the system
+                                  c1: DFractionFieldElement, c2: DFractionFieldElement, # inhomogeneous part
+                                  D: int = 0, # derivative we are integrating
+                                  n: int = uoo # bound for degree of solutions
+    ) -> tuple[DMonomial_Element, DMonomial_Element]:
+        r'''
+            Method that solves the following coupled differential system:
+
+            .. MATH::
+
+                \begin{pmatrix}q_1'\\q_2'\end{pmatrix} + \begin{pmatrix}b_1 & ab_2\\b_2 & b_1\end{pmatrix} \begin{pmatrix}q_1\\q_2\end{pmatrix} = \begin{pmatrix}c_1\\c_2\end{pmatrix}
+
+            with polynomial solutions in ``self`` with degree bounded by the argument `n`.
+            
+            If no such solution exists, then this method returns ``None``.
+        '''
+        raise NotImplementedError(f"Generic coupled DE System not yet implemented.")
     
 #####################################
 ### FUNCTOR CLASS

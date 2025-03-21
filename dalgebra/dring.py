@@ -309,6 +309,21 @@ class DRings(Category):
                 *NOTE*: the method allows both elements of ``self`` and elements in ``self.fraction_field()``.
             '''
             raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
+        
+        def symbolic_inverse_operation(self, element: Element, operator: int = None) -> Element:
+            if self.noperators() == 0:
+                raise TypeError("Operators not defined for this ring.")
+            elif operator is None and self.noperators() == 1:
+                operator = 0
+            elif operator is None:
+                raise IndexError("An index for the operator must be provided when having several operators")
+            
+            if self.operator_types()[operator] == "homomorphism":
+                return self.symbolic_summation(self, element, operator)
+            elif self.operator_types()[operator] == "derivation":
+                return self.symbolic_integral(self, element, operator)
+            else:
+                raise ValueError(f"Invalid type of operator.")
 
         @abstract_method
         def operator_types(self) -> tuple[str]:
@@ -392,7 +407,56 @@ class DRings(Category):
             elif derivation is None:
                 raise IndexError("An index for the derivation must be provided when having several derivations")
             return self.inverse_operation(element, self.operators().index(self.derivations()[derivation]))
+        
+        def symbolic_integral(self, element: Element, derivation: int = None) -> Element:
+            r'''
+                Compute an symbolic antiderivative of ``element``
 
+                This method contrast with :func:`integral` in the sense that :func:`integral` compute
+                the integral *in-field* meaning that it either computes and antiderivative on ``self`` 
+                for ``element`` or it raises an :class:`IntegrationError`.
+
+                This method, on the other hand, can change the ring where it is working in order to find an antiderivative.
+                Of course, we could simply add an element and define its derivative as ``element``. However,
+                this new differential ring is not something we control (in the sense of the type of elements
+                that belong there or the ring of constants).
+
+                Each type of D-ring must implement their way of extending the ring preserving this type of 
+                properties. If not possible, they must raise a :class:`IntegrationError`. If the method will
+                be implemented (or has not been considered), the method will raise a :class:`NotImplementedError`.
+            '''
+            raise NotImplementedError(f"Symbolic Integration method not implemented.")
+        
+        def log_derivative(self, element: Element, derivation: int = 0) -> Element:
+            r'''
+                Method that checks whether ``element`` is a logarithmic derivative of an element of ``self``.
+
+                The logarithmic derivative of an element `u` is the quotient `u'/u`. This method checks if 
+                the input ``element`` is the logarithmic derivative of an element of ``self`` and, if possible,
+                computes the corresponding element `u`.
+
+                It is important to remark that the element `u` is not uniquely defined. In fact, if `u` is the
+                has ``self`` as logarithmic derivative, then `v = \alpha u` for any constant `\alpha` has the 
+                same logarithmic derivative.
+
+                This method can return `True`, `False` if it can check whether the element is a logarithmic 
+                derivative but it can not compute the element `u`. Otherwise it return the element `u`.
+            '''
+            raise NotImplementedError(f"Logarithmic derivative method not yet implemented.")
+        
+        def log_derivative_rad(self, element: Element, derivation: int = 0) -> Element:
+            r'''
+                Method that checks whether ``element`` is a logarithmic derivative of a radical element of ``self``.
+
+                We say that ``element`` is the logarithmic derivative of a radical of ``self`` if there is 
+                an integer `n \in \mathbb{Z}\setminus\{0\}` and an element `u` in ``self`` such that
+                ``n*element == u'/u``.
+
+                This method can return `True`, `False` if it can check whether the element is a logarithmic 
+                derivative but it can not compute the element `u`. Otherwise it return the element `u`.
+            '''
+            raise NotImplementedError(f"Logarithmic derivative method not yet implemented.")
+        
         ### 'difference'
         @cached_method
         def differences(self) -> Sequence[Morphism]:
@@ -442,11 +506,54 @@ class DRings(Category):
                 raise IndexError("An index for the difference must be provided when having several differences")
             return self.differences()[difference](element)
 
+        def shifts(self) -> Sequence[Morphism]:
+            r'''
+                Alias for :func:`~DRings.ParentMethods.differences`.
+            '''
+            return self.differences()
+        
+        def nshifts(self) -> Sequence[Morphism]:
+            r'''
+                Alias for :func:`~DRings.ParentMethods.ndifferences`.
+            '''
+            return self.ndifferences()
+        
         def shift(self, element: Element, shift: int = None) -> Element:
             r'''
                 Alias for :func:`~DRings.ParentMethods.difference`.
             '''
             return self.difference(element, shift)
+        
+        def summation(self, element: Element, shift: int = None) -> Element:
+            r'''
+                Computes the in-field summation
+            '''
+            if self.nshifts() == 0:
+                raise TypeError("Differences not defined for this ring.")
+            elif shift is None and self.nshifts() == 1:
+                shift = 0
+            elif shift is None:
+                raise IndexError("An index for the shift must be provided when having several shifts")
+            return self.inverse_operation(element, self.operators().index(self.shifts()[shift]))
+        
+        def symbolic_summation(self, element: Element, shift: int = None) -> Element:
+            r'''
+                Compute an symbolic summation of ``element``
+
+                This method contrast with :func:`integral` in the sense that :func:`integral` compute
+                the integral *in-field* meaning that it either computes and summation on ``self`` 
+                for ``element`` or it raises an :class:`IntegrationError`.
+
+                This method, on the other hand, can change the ring where it is working in order to find an summation.
+                Of course, we could simply add an element and define its sum as ``element``. However,
+                this new differential ring is not something we control (in the sense of the type of elements
+                that belong there or the ring of constants).
+
+                Each type of D-ring must implement their way of extending the ring preserving this type of 
+                properties. If not possible, they must raise a :class:`IntegrationError`. If the method will
+                be implemented (or has not been considered), the method will raise a :class:`NotImplementedError`.
+            '''
+            raise NotImplementedError
 
         ### 'skews'
         @cached_method
@@ -1501,12 +1608,6 @@ class DRing_Wrapper(Parent):
             return self._coerce_map_from_(S.wrapped) ## TODO: WARNING: THIS DOES NOT CHECK FOR CORRECTNESS IN OPERATIONS
         return self.wrapped == S or self.wrapped._coerce_map_from_(S) is not None
 
-    # def __call__(self, x, *args, **kwds):
-    #     result = self.wrapped(x, *args, **kwds)
-    #     if result in self.wrapped:
-    #         return self._element_constructor_(result)
-    #     return result
-
     def _element_constructor_(self, x) -> DRing_WrapperElement:
         r'''
             Extended definition of :func:`_element_constructor_`.
@@ -1568,6 +1669,7 @@ class DRing_Wrapper(Parent):
         if self.__fraction_field is None:
             self.__fraction_field = DFractionField(self)
         return self.__fraction_field
+    
     def characteristic(self) -> int:
         return self.wrapped.characteristic()
 
@@ -1644,6 +1746,7 @@ class DRing_Wrapper(Parent):
 
 def is_WrappedDRing(parent: Parent) -> bool:
     return isinstance(parent, DRing_Wrapper)
+
 ####################################################################################################
 ###
 ### DEFINING A GENERIC FIELD OF FRACTIONS FOR D-RINGS
