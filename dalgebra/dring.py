@@ -321,7 +321,7 @@ class DRings(Category):
                 raise IndexError("An index for the operator must be provided when having several operators")
             
             if self.operator_types()[operator] == "homomorphism":
-                return self.symbolic_summation(self, element, operator)
+                return self.symbolic_sym(self, element, operator)
             elif self.operator_types()[operator] == "derivation":
                 return self.symbolic_integral(self, element, operator)
             else:
@@ -585,9 +585,9 @@ class DRings(Category):
             '''
             return self.difference(element, shift)
         
-        def summation(self, element: Element, shift: int = None) -> Element:
+        def sum(self, element: Element, shift: int = None) -> Element:
             r'''
-                Computes the in-field summation
+                Computes the in-field sum
             '''
             if self.nshifts() == 0:
                 raise TypeError("Differences not defined for this ring.")
@@ -597,15 +597,15 @@ class DRings(Category):
                 raise IndexError("An index for the shift must be provided when having several shifts")
             return self.inverse_operation(element, self.operators().index(self.shifts()[shift]))
         
-        def symbolic_summation(self, element: Element, shift: int = None) -> Element:
+        def symbolic_sym(self, element: Element, shift: int = None) -> Element:
             r'''
-                Compute an symbolic summation of ``element``
+                Compute an symbolic sum of ``element``
 
                 This method contrast with :func:`integral` in the sense that :func:`integral` compute
-                the integral *in-field* meaning that it either computes and summation on ``self`` 
+                the integral *in-field* meaning that it either computes and sum on ``self`` 
                 for ``element`` or it raises an :class:`IntegrationError`.
 
-                This method, on the other hand, can change the ring where it is working in order to find an summation.
+                This method, on the other hand, can change the ring where it is working in order to find an sum.
                 Of course, we could simply add an element and define its sum as ``element``. However,
                 this new differential ring is not something we control (in the sense of the type of elements
                 that belong there or the ring of constants).

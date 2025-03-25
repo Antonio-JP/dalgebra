@@ -1323,14 +1323,14 @@ class DMonomial_Parent (Parent):
         if self.d_degree(operation) == 2: 
             t = self.gen()
             Dt = t.operation(operation)
-            return Dt/(t^2 + 1) in self.base()
+            return Dt/(t**2 + 1) in self.base()
         return False
     
     def is_tangent(self, operation: int = 0) -> bool:
         if self.is_hypertangent(self, operation):
             t = self.gen()
             Dt = t.operation(operation)
-            quot = self.base()(Dt/(t^2 + 1))
+            quot = self.base()(Dt/(t**2 + 1))
 
             try:
                 quot.integrate()
@@ -1592,6 +1592,11 @@ class DMonomial_Parent (Parent):
         raise NotImplementedError(f"Ring of linear operators not yet implemented for D-Extensions")
 
     def inverse_operation(self, element: DMonomial_Element, operation: int = 0) -> DMonomial_Element:
+        if self.operator_types()[operation] == "derivation":
+            result = self.risch_de(self.zero(), element)
+            if result is None:
+                raise IntegrationError(f"The element {element} do not have an integral in-field.")
+            return result
         raise NotImplementedError(f"The integration in these fields is not yet implemented")
     
     def _lcm_denominators(self, *_: DMonomial_Element) -> DMonomial_Element:
@@ -1688,7 +1693,7 @@ class DMonomial_Parent (Parent):
         E = DMonomial(self.base(), vname, [0 for _ in range(self.noperators())]) # this is the \kappa_D
         r = E(r)
         r_n, r_s = r.splitting_factorization(D)
-        F = r_s.factor() # factorization into irreducibles of `r_s`
+        F = r_s.factor() # factorization into irreducible factors of `r_s`
         monomials = [] # list of pairs (name, derivative, root) to be added
         for s_i,_ in F:
             for (alpha,_) in s_i.roots():
@@ -1853,7 +1858,7 @@ class DMonomial_Parent (Parent):
             return self.zero(), False
         c,d = sol # D(c) - 2m D(t)/(t^2+1) d = a,   D(d) + 2m D(t)/(t^2+1)c = b
 
-        q_0 = (c*t + d)/(t^2+1)**m
+        q_0 = (c*t + d)/(t**2+1)**m
         q, valid = self._hypertangent_reduced_integration(p - q_0.derivative(D), D)
         return (q+q_0, valid)
 
@@ -1887,7 +1892,229 @@ class DMonomial_Parent (Parent):
         
     ### CHAPTER 6: Risch Differential Equation
     def risch_de(self, f: DFractionFieldElement, g: DFractionFieldElement, D:int = 0) -> DFractionFieldElement:
-        raise NotImplementedError(f"Method for Risch DE not implemented.")
+        ## Checking the input of the algorithm
+        f = self.fraction_field()(f)
+        g = self.fraction_field()(g)
+
+        if self.operator_types()[D] != "derivation":
+            raise ValueError(f"The given operator is not a derivation")
+        
+        ## We first weakly normalize the element `f`
+        q = self._weak_normalizer(f, D)
+        f = f - q.derivative(D)/q
+        g = g*q
+        ## We now solve the equation D(z) + (f-D(q)/q) z = qg and the solution y is z/q
+        ## We compute the normal part of the denominator
+        normal = self._rde_normal_denominator(f,g,D)
+        if normal is None:
+            return None
+        
+        a,b,c,dn = normal
+        ## We now solve the equation aD(w) + b w = c for reduced solutions and the solution z is w/dn
+        ## We compute the special part of the denominator
+        special = self._rde_special_denominator(a,b,c,D)
+        if special is None:
+            return None
+        a,b,c,ds = special
+        ## We now solve the equation aD(v) + b v = c for polynomial solutions and the solution w is v/ds
+        ## We compute now the degree bound for a polynomial solution
+        deg_bound = self._rde_degree_bound(a,b,c,D)
+
+        ## We now reduce back to a Risch Differential Equation with polynomials
+        spde = self._rde_spde(a,b,c,deg_bound,D)
+        if spde is None:
+            return None
+        b,c,m,alpha,beta = spde
+        ## We now solve the equation D(u) + bu = c for polynomial solutions and the solution v is alpha*u + beta
+        ## with bounded degree m
+        u = self._rde_polynomial(b,c,m,D)
+        if u is None:
+            return None
+
+        ## Now we reconstruct all the way back
+        v = alpha*u + beta
+        w = v/ds
+        z = w/dn
+        y = z/q
+
+        return y
+    
+    def _weak_normalizer(self, f: DFractionField, D: int = 0) -> DMonomial_Element:
+        r'''
+            Given a derivation `D` and a rational function `f(t) \in K(t)` (where ``self`` is `K[t]`), this method computes
+            a polynomial `q(t) \in K[t]` such that `f(t) - D(q(t))/q(t)` is weakly normalized.
+
+            Definition: a rational function `f(t) \in K(t)` is weakly normalized if its residue is not a positive integer for 
+            any normal irreducible `p(t) \in K[t]` such that `f(t)` has order at least `-1`.
+
+            Note: let `f(t) = n(t)/d(t)` with `(n(t), d(t)) = 1`. Let `p(t)` be a normal polynomial (i.e., `(p,D(p)) = 1`) 
+            that we consider for this definition (i.e., the order of `f(t)` is at least -1). Then we have two cases:
+            * `f(t) \in \mathcal{O}_p`, i.e., the order is at least 0. Then the residue is exactly 0 (no problem).
+            * `p(t)` divides exactly once to `d(t)`. Then, we can write `d(t) = q(t)p(t)` with `q(t)` coprime with `p(t)`.
+              In this case, the residue is the class of `n(t)/(D(p(t))q(t))`.
+            
+            So the only normal polynomials that we need to consider are those that divides the denominator of self exactly once,
+            or said differently, those normal factors of the degree 1 factor from the squarefree factorization of ``d(t)``. 
+            This fact allows to focus on these factors to compute a weakly normalized element from ``f(t)`` by subtracting
+            a logarithmic derivative of a polynomial.
+        '''
+        dn,_ = f.denominator().splitting_factorization(D)
+        g = dn.gcd(dn.partial()) # gcd(d_n, d(d_n)/dt)
+        d_ = dn//g # exact division
+        d_1 = d_//d_.gcd(g)
+
+        a = (f.denominator()//d_1).diophantine_half_euclidean(d_1, f.numerator())
+
+        E = DMonomial(self, "__z", [0 for _ in range(self.noperators())]) # added new variable with the `kappa_D` derivation
+        t = self.gen()
+        z = E.gen()
+        gs = E.tower_gens()[:-2]
+        Et = E.tower_change_order(*gs, z, t)
+        p = Et(a - z*d_1.derivative(D))
+        r = p.resultant(Et(d_1))
+        ## Taking positive integer roots
+        roots = r.to_sage().roots()
+        roots = [r for r,_ in roots if (r in ZZ and r > 0)]
+
+        return prod(d_1.gcd(a-r*d_1.derivative(D))**r for r in roots)
+    
+    def _rde_normal_denominator(self, 
+                                f: DFractionFieldElement, 
+                                g: DFractionFieldElement, 
+                                D: int = 0
+    ) -> None | tuple[DMonomial_Element, DFractionFieldElement, DFractionFieldElement, DMonomial_Element]:
+        r'''
+            Method to compute the normal part of the denominator for a solution to a Risch Differential Equation.
+
+            Let us consider the Risch Differential Equation `D(y) + fy = g` for given `f(t), g(t) \in K(t)` (note
+            that ``self`` is `K[t]`) where `f(t)` is weakly normalized (see :func:`_weak_normalizer`).
+
+            This method returns either ``None`` if there is no solution to this Risch Differential Equation or 
+            a tuple of elements `a(t), b(t), c(t), h(t)` where:
+            * `a(t), h(t)` are elements of ``self`` (i.e., `K[t]`),
+            * `b(t), c(t)` are reduced rational functions (i.e., their denominators are special polynomials),
+            such that for any rational solution `y(t)` to the Risch Differential Equation defined by `f(t)` and 
+            `g(t)`, then `q(t) = y(t)h(t)` is a reduced rational function solution to `aD(q) + bq = c`.
+
+            EXAMPLE::
+
+            sage: from dalgebra import *
+            sage: R.<t> = DMonomial(DifferentialRing(QQ), [1]) # D = d/dt
+            sage: R._rde_normal_denominator(1, 1/t) is None
+            True
+            sage: R.<x,t> = DMonomial(DifferentialRing(QQ), [1, "1+t^2"]) # D(x) = 1, D(t) = 1 + t^2
+            sage: R._rde_normal_denominator(t^2 + 1, 1/t^2)
+            (t, t^3 - t^2 + t - 1, 1, t)
+        '''
+        dn,_ = f.denominator().splitting_factorization(D)
+        en,_ = g.denominator().splitting_factorization(D)
+        p = dn.gcd(en)
+        h = en.gcd(en.partial())/p.gcd(p.partial())
+
+        if (dn*h**2) % en != 0:
+            return None
+        return (dn*h, dn*h*f - dn*h.derivative(D), dn*h**2*g, h)
+        
+    def _rde_special_denominator(self,
+                                 a: DMonomial_Element, # leading coefficient of the diff. equation
+                                 b: DFractionFieldElement, # reduced coefficient multiplying the function
+                                 c: DFractionFieldElement, # reduced inhomogeneous term
+                                 D: int = 0 # derivation
+    ) -> None | tuple[DMonomial_Element,DMonomial_Element,DMonomial_Element,DMonomial_Element]:
+        r'''
+            Computes the special part of the denominator of a solution.
+
+            Given elements `a(t) \in K[t]` and `b(t),c(t) \in K(t)` (both reduced rational functions), this method
+            computes new elements `\tilde{a}(t), \tilde{b}(t), \tilde{c}(t), h(t) \in K[t]` such that for any reduced solution
+            `y(t)` to the equation
+
+            .. MATH::
+
+                a(t)D(y(t)) + b(t)y(t) = c(t),
+
+            the function `q(t) = y(t)h(t)` is a polynomial solution to the differential equation
+
+            .. MATH::
+
+                \tilde{a}(t)D(q(t)) \tilde{b}(t)q(t) = \tilde{c}(t).
+
+            If no such solution exists, the method returns ``None``.
+        '''
+        if self.is_primitive():
+            ## This case there are no special polynomials --> we are already in the polynomial case
+            return (self(a), self(b), self(c), self.one())
+        elif self.is_hyperexponential(): # hyperexponential case
+            raise NotImplementedError(f"[Special Part RDE] Hyperexponential case not yet implemented")
+        elif self.is_hypertangent(): # hypertangent case
+            raise NotImplementedError(f"[Special Part RDE] Hypertangent case not yet implemented")
+        else:
+            raise NotImplementedError(f"[Special Part RDE] The case of a monomial {self.gen()} -> {self.gen().derivative()} is not implemented")
+
+    def _rde_degree_bound(self, 
+                          a: DMonomial_Element,
+                          b: DMonomial_Element,
+                          c: DMonomial_Element,
+                          D: int = 0
+    ) -> int:
+        r'''
+            Computes degree bound for polynomial solution of the reduced Risch Differential Equation.
+
+            Given polynomials `a(t), b(t), c(t) \in K[t]` this method computes a degree bound `m`
+            such that all polynomial solution `y(t)` to the equation `a(t)D(y(t)) + b(t)y(t) = c(t)`
+            has a degree bounded by `m`.
+        '''
+        raise NotImplementedError(f"Method for degree bound not yet implemented")
+    
+    def _rde_spde(self,
+                  a: DMonomial_Element,
+                  b: DMonomial_Element,
+                  c: DMonomial_Element,
+                  n: int,
+                  D: int = 0
+    ) -> None | tuple[DMonomial_Element, DMonomial_Element, int, DMonomial_Element, DMonomial_Element]:
+        r'''
+            Reduces the SPDE problem to a polynomial Risch Differential Equation.
+
+            Given polynomials `a(t), b(t), c(t) \in K[t]` and a degree bound `n`, this method computes new 
+            elements `\tilde{b}(t), \tilde{c}(t) \in K[t]`, a new bound `m \in \mathbb{N}` and elements
+            `\alpha(t),\beta(t) \in K[t]` such that any polynomial solution `y(t)` to 
+
+            .. MATH::
+
+                a(t) D(y(t)) + b(t)y(t) = c(t)
+
+            of degree bounded by `n`, can be written as `y(t) = \alpha(t) q(t) + \beta(t)`, where `q(t)` is
+            a solution to a polynomial Risch Differential Equation
+
+            .. MATH::
+
+                D(q(t)) + \tilde{b}(t)q(t) = \tilde{c}(t)
+
+            with degree bounded by `m`.
+
+            This method returns ``None`` if there is no such type of solutions.
+        '''
+        raise NotImplementedError(f"SPDE method not yet implemented")
+
+    def _rde_polynomial(self,
+                        b: DMonomial_Element,
+                        c: DMonomial_Element,
+                        n: int,
+                        D: int = 0
+    ) -> None | DMonomial_Element:
+        r'''
+            Method that solves the polynomial Risch Differential Equation for given degree bound.
+
+            Let `b(t), c(t)\in K[t]` be two polynomials and `n` a non-negative integer. This method computes
+            a solution (or ``None`` if it does not exits) to the Risch Differential Equation
+
+            .. MATH::
+
+                D(y(t)) + b(t) y(t) = c(t),
+
+            for `y(t) \in K[t]` of degree bounded by `n`.
+        '''
+        raise NotImplementedError(f"Polynomial Risch DE method not yet implemented")
 
     ### CHAPTER 7: Parametric Problems
     def limited_integrate(self, f, *w, D: int = 0) -> tuple[DMonomial_Element, tuple[DMonomial_Element]]:
