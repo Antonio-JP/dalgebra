@@ -154,6 +154,7 @@ from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
 from sage.rings.fraction_field import FractionField_generic
 from sage.rings.fraction_field_element import FractionFieldElement
+from sage.rings.infinity import UnsignedInfinityRing
 from sage.rings.integer_ring import ZZ
 from sage.rings.morphism import RingHomomorphism_im_gens
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -173,6 +174,7 @@ _Rings = Rings.__classcall__(Rings)
 _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
 _CommutativeAdditiveGroups = CommutativeAdditiveGroups.__classcall__(CommutativeAdditiveGroups)
 _QuotientFields = QuotientFields.__classcall__(QuotientFields)
+uoo = UnsignedInfinityRing.an_element()
 
 ####################################################################################################
 ###
@@ -456,6 +458,65 @@ class DRings(Category):
                 derivative but it can not compute the element `u`. Otherwise it return the element `u`.
             '''
             raise NotImplementedError(f"Logarithmic derivative method not yet implemented.")
+        
+        def risch_de(self, f: DFractionFieldElement, g: DFractionFieldElement, D:int = 0) -> DFractionFieldElement:
+            r'''
+                Solves Risch Differential Equation.
+
+                Given two elements `f,g` in ``self.fraction_field()``, this method computes (when possible) an
+                element `v` in ``self.fraction_field()`` such that 
+
+                .. MATH::
+
+                    D(v) + fv = g.
+
+                When this solution does not exist, this method returns ``None``.
+            '''
+            raise NotImplementedError(f"Method for Risch DE not implemented.")
+
+        def limited_integrate(self, f: DFractionFieldElement , *w: DFractionFieldElement, D: int = 0) -> tuple[DRings.ElementMethods, tuple[DRings.ElementMethods]]:
+            r'''
+                Method to solve the Limited Integration Problem (see Bronstein's page 241)
+
+                Given `f,w_1,\ldots,w_n \in \mathbb{K}`, this method decides whether there are constants `c_1,\ldots,c_n` such that
+                we can split `f` into a linear combination of `w_1,\ldots,w_n` and a total derivative for an element `v \in \mathbb{K}`.
+
+                This method return the element `v` and the constants `c_1,\ldots,c_n` if they exist or ``None`` if there is no such solution.
+            '''
+            raise NotImplementedError(f"Method of limited integration not yet implemented")
+        
+        ### CHAPTER 8: The Coupled Differential System
+        def coupled_de_system(self, f1, f2, g1, g2, D: int = 0) -> tuple[DRings.ElementMethods, DRings.ElementMethods]:
+            r'''
+                Find a polynomial solution (c,d) in ``self.fraction_field()`` to the coupled differential system
+
+                .. MATH::
+                
+                    \left\{\begin{array}{rl}c' + f_1 c - f_2 d &{}= g_1\\d' + f_2 c + f_1 d &{}= g_2\end{array}\right.`
+
+                If not possible to find such a solution, this method returns ``None``.
+            '''
+            return self.coupled_de_system_generic(self, -1, f1, f2, g1, g2, D)
+        
+        def coupled_de_system_generic(self, 
+                                    a: DFractionFieldElement, # must be constant
+                                    b1: DFractionFieldElement, b2: DFractionFieldElement, # coefficients of the system
+                                    c1: DFractionFieldElement, c2: DFractionFieldElement, # inhomogeneous part
+                                    D: int = 0, # derivative we are integrating
+                                    n: int = uoo # bound for degree of solutions
+        ) -> tuple[DRings.ElementMethods, DRings.ElementMethods]:
+            r'''
+                Method that solves the following coupled differential system:
+
+                .. MATH::
+
+                    \begin{pmatrix}q_1'\\q_2'\end{pmatrix} + \begin{pmatrix}b_1 & ab_2\\b_2 & b_1\end{pmatrix} \begin{pmatrix}q_1\\q_2\end{pmatrix} = \begin{pmatrix}c_1\\c_2\end{pmatrix}
+
+                with polynomial solutions in ``self`` with degree bounded by the argument `n`.
+                
+                If no such solution exists, then this method returns ``None``.
+            '''
+            raise NotImplementedError(f"Generic coupled DE System not yet implemented.")
         
         ### 'difference'
         @cached_method
@@ -1588,6 +1649,7 @@ class DRing_Wrapper(Parent):
 
     def is_field(self) -> bool: return self.wrapped.is_field()
 
+    ### Methods for integration from DRings
     def inverse_operation(self, element: DRing_WrapperElement, operator: int = None) -> DRing_WrapperElement:
         if self.operator_types()[operator] == "homomorphism":
             try:
@@ -1601,7 +1663,49 @@ class DRing_Wrapper(Parent):
                 raise IntegrationError(f"Non-constant element in constant ring can not be integrated")
 
         raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
+    
+    def risch_de(self, f: DFractionFieldElement, g: DFractionFieldElement, D:int = 0) -> DFractionFieldElement:
+        ## Solving the Risch Differential Equation for all constant elements
+        if self.operator_types()[D] == "derivation":
+            if self.operators()[D].function.function == 0: # all are constants
+                ## Looking for y such that D(y) + fy = g
+                ## If all elements are constants, this equation goes to fy = g, i.e., y=g/f
+                return g/f
+            raise NotImplementedError(f"Risch Differential Equation solved only for constants.")
+        raise TypeError(f"Risch Differential Equation only defined for the differential case.")
 
+    def limited_integrate(self, f: DFractionFieldElement , *w: DFractionFieldElement, D: int = 0) -> tuple[DRings.ElementMethods, tuple[DRings.ElementMethods]]:
+        ## Solving the Limited Integration Problem for all constant elements
+        if self.operator_types()[D] == "derivation":
+            if self.operators()[D].function.function == 0: # all are constants
+                ## Looking for v, c_1,...,c_n with f = D(v) + c_1w_1 + ... + c_nw_n
+                ## If all are constants, any `v` will work and there are plenty of solutions
+                ## We take (0, (1,0,..,0)) as a default solution
+                return self.zero(), (self.one(), *[self.zero() for _ in range(len(w)-1)])
+            raise NotImplementedError(f"Limited Integration Problem solved only for constants.")
+        raise TypeError(f"Limited Integration Problem only defined for the differential case.")
+    
+    ### CHAPTER 8: The Coupled Differential System
+    def coupled_de_system_generic(self, 
+                                a: DFractionFieldElement, # must be constant
+                                b1: DFractionFieldElement, b2: DFractionFieldElement, # coefficients of the system
+                                c1: DFractionFieldElement, c2: DFractionFieldElement, # inhomogeneous part
+                                D: int = 0, # derivative we are integrating
+                                n: int = uoo # bound for degree of solutions
+    ) -> tuple[DRings.ElementMethods, DRings.ElementMethods]:
+        ## Solving the Coupled D.E. System for all constant elements
+        if self.operator_types()[D] == "derivation":
+            if self.operators()[D].function.function == 0: # all are constants
+                Ab = matrix([[b1.to_sage(), (a*b2).to_sage(), c1.to_sage()], [b2.to_sage(), b1.to_sage(), c2.to_sage()]])
+                A = A[:,:-1] # matrix of the system
+                b = A[:,-1].column(0) # vector of the system
+                if Ab.rank() != A.rank():
+                    return None
+                solution = A.solve_right(b)
+                return tuple(self.fraction_field()(v) for v in solution)
+            raise NotImplementedError(f"Coupled D.E. System solved only for constants.")
+        raise TypeError(f"Coupled D.E. System only defined for the differential case.")
+        
     ## Coercion methods
     def _coerce_map_from_(self, S):
         if isinstance(S, DRing_Wrapper):

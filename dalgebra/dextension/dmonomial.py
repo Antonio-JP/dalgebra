@@ -1604,16 +1604,16 @@ class DMonomial_Parent (Parent):
     ### Methods from Bronstein book
     ########################################
     ### CHAPTER 5: INTEGRATION OF TRANSCENDENTAL FUNCTIONS
-    def symbolic_integration(self, element: DFractionFieldElement, operation: int = 0) -> DMonomial_Element:
-        partial, valid = self._symbolic_integration(element, operation)
+    def symbolic_integral(self, element: DFractionFieldElement, operation: int = 0) -> DMonomial_Element:
+        partial, valid = self._symbolic_integral(element, operation)
         remainder = element - partial.operation(operation)
         if not valid:
             raise IntegrationError(f"Could not reduce to the base field\n\t-Start: {element}\n\t-Part.: {partial}\n\t-Remd.: {remainder}")
         remainder = self.base()(remainder)
-        integral = self.base().symbolic_integration(remainder, operation)
+        integral = self.base().symbolic_integral(remainder, operation)
         return integral + partial
     
-    def _symbolic_integration(self, element: DFractionFieldElement, operation: int = 0) -> tuple[DMonomial_Element, tuple]:
+    def _symbolic_integral(self, element: DFractionFieldElement, operation: int = 0) -> tuple[DMonomial_Element, tuple]:
         if self.operator_types()[operation] != "derivation":
             raise ValueError(f"Symbolic integration only defined for derivations")
         
@@ -1887,37 +1887,13 @@ class DMonomial_Parent (Parent):
         
     ### CHAPTER 6: Risch Differential Equation
     def risch_de(self, f: DFractionFieldElement, g: DFractionFieldElement, D:int = 0) -> DFractionFieldElement:
-        r'''
-            Solves Risch Differential Equation.
-
-            Given two elements `f,g` in ``self.fraction_field()``, this method computes (when possible) an
-            element `v` in ``self.fraction_field()`` such that 
-
-            .. MATH::
-
-                D(v) + fv = g.
-
-            When this solution does not exist, this method returns ``None``.
-        '''
         raise NotImplementedError(f"Method for Risch DE not implemented.")
 
     ### CHAPTER 7: Parametric Problems
     def limited_integrate(self, f, *w, D: int = 0) -> tuple[DMonomial_Element, tuple[DMonomial_Element]]:
         raise NotImplementedError(f"Method of limited integration not yet implemented")
     
-    ### CHAPTER 8: The Coupled Differential System
-    def coupled_de_system(self, f1, f2, g1, g2, D: int = 0) -> tuple[DMonomial_Element, DMonomial_Element]:
-        r'''
-            Find a polynomial solution (c,d) in ``self.fraction_field()`` to the coupled differential system
-
-            .. MATH::
-            
-                \left\{\begin{array}{rl}c' + f_1 c - f_2 d &{}= g_1\\d' + f_2 c + f_1 d &{}= g_2\end{array}\right.`
-
-            If not possible to find such a solution, this method returns None.
-        '''
-        return self.coupled_de_system_generic(self, -1, f1, f2, g1, g2, D)
-    
+    ### CHAPTER 8: The Coupled Differential System    
     def coupled_de_system_generic(self, 
                                   a: DFractionFieldElement, # must be constant
                                   b1: DFractionFieldElement, b2: DFractionFieldElement, # coefficients of the system
@@ -1925,17 +1901,6 @@ class DMonomial_Parent (Parent):
                                   D: int = 0, # derivative we are integrating
                                   n: int = uoo # bound for degree of solutions
     ) -> tuple[DMonomial_Element, DMonomial_Element]:
-        r'''
-            Method that solves the following coupled differential system:
-
-            .. MATH::
-
-                \begin{pmatrix}q_1'\\q_2'\end{pmatrix} + \begin{pmatrix}b_1 & ab_2\\b_2 & b_1\end{pmatrix} \begin{pmatrix}q_1\\q_2\end{pmatrix} = \begin{pmatrix}c_1\\c_2\end{pmatrix}
-
-            with polynomial solutions in ``self`` with degree bounded by the argument `n`.
-            
-            If no such solution exists, then this method returns ``None``.
-        '''
         raise NotImplementedError(f"Generic coupled DE System not yet implemented.")
     
 #####################################
