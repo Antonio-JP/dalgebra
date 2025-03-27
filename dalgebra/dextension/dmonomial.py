@@ -2040,13 +2040,28 @@ class DMonomial_Parent (Parent):
 
             If no such solution exists, the method returns ``None``.
         '''
-        if self.is_primitive():
+        if self.is_primitive(D):
             ## This case there are no special polynomials --> we are already in the polynomial case
             return (self(a), self(b), self(c), self.one())
-        elif self.is_hyperexponential(): # hyperexponential case
-            raise NotImplementedError(f"[Special Part RDE] Hyperexponential case not yet implemented")
-        elif self.is_hypertangent(): # hypertangent case
-            raise NotImplementedError(f"[Special Part RDE] Hypertangent case not yet implemented")
+        elif self.is_hyperexponential(D): # hyperexponential case
+            ## See page 186 of Bronstein's book
+            t = self.gen()
+            Dt_t = self.base()(t.derivative(D)/t)
+            nu_t = t.order_function()
+            n_b, n_c = nu_t(b), nu_t(c)
+            n = min(0, n_c - min(0,n-b))
+
+            if n_b == 0: # possible cancellation case
+                alpha = t.remainder(-b/a) # alpha in self.base()
+                ## We check if \alpha = m Dt/t + Dz/z for some z in self.base()
+                ## That is a parametric logarithmic derivative problem
+                par_log_der = self.base().log_derivative_param(alpha, t)
+                if par_log_der != None and par_log_der[1] == 1:
+                    n = min(n, par_log_der[2])
+            N = max(0, -n_b, n - n_c)
+            return (a*t**N, (b+n*a*Dt_t)*t**N, c*t**(N-n), t**(-n))
+        elif self.is_hypertangent(D): # hypertangent case
+            raise NotImplementedError(f"[Special Part RDE] Hypertangent case not yet implemented. Look into page 188 of Bronstein's book")
         else:
             raise NotImplementedError(f"[Special Part RDE] The case of a monomial {self.gen()} -> {self.gen().derivative()} is not implemented")
 
@@ -2063,7 +2078,45 @@ class DMonomial_Parent (Parent):
             such that all polynomial solution `y(t)` to the equation `a(t)D(y(t)) + b(t)y(t) = c(t)`
             has a degree bounded by `m`.
         '''
-        raise NotImplementedError(f"Method for degree bound not yet implemented")
+        t = self.gen()
+        d_a, d_b, d_c = a.degree(), b.degree(), c.degree()
+        if self.is_primitive(D):
+            if t.derivative(D) == 1 and self.constant_ring(D) == self.base(): # special case where derivation is just standard derivation w.r.t. t
+                n = max(0, d_c - max(d_b, d_a - 1))
+                if d_b == d_a -1: ## possible cancellation
+                    m = -b.lc()/a.lc()
+                    if m in ZZ:
+                        n = max(0, m, d_c - d_b)
+            else: # generic primitive case
+                n = max(0, d_c-d_b) if d_b > d_a else max(0, d_c - d_a + 1)
+                if d_b == d_a - 1: ## possible cancellation
+                    alpha = -b.lc()/a.lc()
+                    Dt = t.derivative(D)
+                    lim_int = self.base().limited_integration(alpha, Dt)
+                    if lim_int != None and lim_int[1][0] in ZZ:
+                        n = max(n,lim_int[1][0])
+                elif d_b == d_a:
+                    alpha = -b.lc()/a.lc()
+                    z = self.base().log_derivative(alpha)
+                    if z != None:
+                        beta = -(a*z.derivative(D) + b*z).lc() / (z*a.lc())
+                        lim_int = self.base().limited_integration(beta, Dt)
+                        if lim_int != None and lim_int[1][0] in ZZ:
+                            n = max(n,lim_int[1][0])
+        elif self.is_hyperexponential(D): # hyperexponential case
+            n = max(0, d_c - max(d_b, d_a))
+            if d_a == d_b: ## possible cancellation
+                alpha = -b.lc() / a.lc()
+                par_log_der = self.base().log_derivative_param(alpha, t)
+                if par_log_der != None and par_log_der[1] == 1:
+                    n = max(par_log_der[2], n)
+        else:
+            n = max(0, d_c - max(d_a+self.d_degree()-1, d_b))
+            if d_b == d_a + self.d_degree() -1: # possible cancellation
+                m = -b.lc()/(self.d_lc()*a.lc())
+                if m in ZZ:
+                    n = max(0, ZZ(m), d_c - d_b)
+        return n
     
     def _rde_spde(self,
                   a: DMonomial_Element,
@@ -2094,7 +2147,28 @@ class DMonomial_Parent (Parent):
 
             This method returns ``None`` if there is no such type of solutions.
         '''
-        raise NotImplementedError(f"SPDE method not yet implemented")
+        if n < 0:
+            if c == 0:
+                return (self.zero(), self.zero(), 0, self.zero(), self.zero())
+            else:
+                return None
+        
+        g = a.gcd(b)
+        if c % g != 0:
+            return None
+        
+        a, b, c = a//g, b//g, c//g
+
+        if a.degree() == 0: 
+            return (b/a.lc(), c/a.lc(), n, self.one(), self.zero())
+        
+        r, z = b.diophantine(a, c)
+        u = self._rde_spde(a, b+a.derivative(D), z - r.derivative(D), n-a.degree(), D)
+        if u is None:
+            return None
+        
+        B,C,M,alpha,beta = u
+        return (B, C, M, a*alpha, a*beta + r)
 
     def _rde_polynomial(self,
                         b: DMonomial_Element,

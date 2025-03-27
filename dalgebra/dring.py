@@ -149,6 +149,7 @@ from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.categories.quotient_fields import QuotientFields
 from sage.categories.rings import Rings
 from sage.matrix.constructor import matrix
+from sage.matrix.matrix0 import Matrix
 from sage.misc.abstract_method import abstract_method
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
@@ -156,6 +157,7 @@ from sage.rings.fraction_field import FractionField_generic
 from sage.rings.fraction_field_element import FractionFieldElement
 from sage.rings.infinity import UnsignedInfinityRing
 from sage.rings.integer_ring import ZZ
+from sage.rings.rational_field import QQ
 from sage.rings.morphism import RingHomomorphism_im_gens
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.polynomial_ring import PolynomialRing_generic
@@ -398,6 +400,8 @@ class DRings(Category):
                 raise IndexError("An index for the derivation must be provided when having several derivations")
             return self.derivations()[derivation](element)
 
+        #######################################################################################
+        ### GENERIC METHODS FOR DIFFERENTIAL FIELDS INSPIRED FROM BRONSTEIN'S BOOK
         def integral(self, element: Element, derivation: int = None) -> Element:
             r'''
                 Computes the in-field integration
@@ -429,6 +433,7 @@ class DRings(Category):
             '''
             raise NotImplementedError(f"Symbolic Integration method not implemented.")
         
+        ### CHAPTER 3: Deciding method for differential properties
         def log_derivative(self, element: Element, derivation: int = 0) -> Element:
             r'''
                 Method that checks whether ``element`` is a logarithmic derivative of an element of ``self``.
@@ -459,6 +464,7 @@ class DRings(Category):
             '''
             raise NotImplementedError(f"Logarithmic derivative method not yet implemented.")
         
+        ### CHAPTER 6: Risch Differential Equation
         def risch_de(self, f: DFractionFieldElement, g: DFractionFieldElement, D:int = 0) -> DFractionFieldElement:
             r'''
                 Solves Risch Differential Equation.
@@ -474,6 +480,25 @@ class DRings(Category):
             '''
             raise NotImplementedError(f"Method for Risch DE not implemented.")
 
+        ### CHAPTER 7: parametric problems
+        def risch_de_param(self, f: DFractionField, *g: DFractionFieldElement, D:int = 0) -> tuple[tuple[DFractionFieldElement], Matrix]:
+            r'''
+                Method to solve the Parametric Risch Differential Equation
+
+                Given an element `f` in the field of ``self`` and a list of elements `g_i` in the same field with `i=1,\ldots,n`,
+                this method computes a tuple of functions `(h_1,\ldots,h_r)` in the same field and a matrix of constants 
+                with `n+r` columns such that:
+                
+                An element `y` is the solution to the parametric Risch Differential Equation 
+
+                .. MATH::
+
+                    D(y) + f * y = \sum_{i=1}^n c_i g_i
+
+                **if and only if** `y = \sum_{j=1}^r d_j` and `A \cdot (c_1,\ldots,c_n,d_1,\ldots,d_j)^T = 0`
+            '''
+            raise NotImplementedError(f"The Parametric Risch D.E. is not implemented")
+
         def limited_integrate(self, f: DFractionFieldElement , *w: DFractionFieldElement, D: int = 0) -> tuple[DRings.ElementMethods, tuple[DRings.ElementMethods]]:
             r'''
                 Method to solve the Limited Integration Problem (see Bronstein's page 241)
@@ -484,6 +509,21 @@ class DRings(Category):
                 This method return the element `v` and the constants `c_1,\ldots,c_n` if they exist or ``None`` if there is no such solution.
             '''
             raise NotImplementedError(f"Method of limited integration not yet implemented")
+        
+        def log_derivative_rad_param(self, f: DFractionFieldElement, l: DFractionFieldElement, D: int = 0) -> tuple[DFractionFieldElement, int, int]:
+            r'''
+                Method to solve the Parametric logarithmic derivative of a radical problem.
+
+                Given an element `f` in the field of ``self`` and a hyperexponential element over that field `l`, this method computes
+                an element `v` in the same field and two integers `n,m` such that
+
+                .. MATH::
+
+                    n f = \frac{D(v)}{v} + m\frac{D(l)}{l}.
+
+                If no such solution exist this method returns ``None``.
+            '''
+            raise NotImplementedError(f"Method for parametric logarithmic derivative problem not implemented")
         
         ### CHAPTER 8: The Coupled Differential System
         def coupled_de_system(self, f1, f2, g1, g2, D: int = 0) -> tuple[DRings.ElementMethods, DRings.ElementMethods]:
@@ -1648,8 +1688,9 @@ class DRing_Wrapper(Parent):
         return self.wrapped
 
     def is_field(self) -> bool: return self.wrapped.is_field()
-
-    ### Methods for integration from DRings
+ 
+    #######################################################################################
+    ### GENERIC METHODS FOR DIFFERENTIAL FIELDS INSPIRED FROM BRONSTEIN'S BOOK
     def inverse_operation(self, element: DRing_WrapperElement, operator: int = None) -> DRing_WrapperElement:
         if self.operator_types()[operator] == "homomorphism":
             try:
@@ -1664,6 +1705,7 @@ class DRing_Wrapper(Parent):
 
         raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
     
+    ### CHAPTER 6: Risch Differential Equation
     def risch_de(self, f: DFractionFieldElement, g: DFractionFieldElement, D:int = 0) -> DFractionFieldElement:
         ## Solving the Risch Differential Equation for all constant elements
         if self.operator_types()[D] == "derivation":
@@ -1674,6 +1716,22 @@ class DRing_Wrapper(Parent):
             raise NotImplementedError(f"Risch Differential Equation solved only for constants.")
         raise TypeError(f"Risch Differential Equation only defined for the differential case.")
 
+    ### CHAPTER 7: Parametric Problems
+    def risch_de_param(self, f: DFractionField, *g: DFractionFieldElement, D:int = 0) -> tuple[tuple[DFractionFieldElement], Matrix]:## Solving the Limited Integration Problem for all constant elements
+        if self.operator_types()[D] == "derivation":
+            if self.operators()[D].function.function == 0: # all are constants
+                ### When all elements are constants the differential equation gets reduced to a normal linear equation
+                ### f*y = \sum_i c_i g_i       where (y, c_1,...c_n) are all constants. Equivalently
+                ### f*y + \sum_i c_i g_i = 0   where (y, c_1,...c_n) are all constants. 
+                ### Let phi: K^{n+1} --> K defined by phi(c_1,...,c_n,y) = \sum_i c_i g_i + f*y. This is a linear map and its 
+                ### kernel is a subspace spanned by vectors `v_1,\ldots, v_m`. Hence building the matrix A whose rows are `v_j`
+                ### then we have that solutions are vectors C=(c_1,...,c_n,y) such that A*C = 0.
+                ### Then the output of this method is (1,), A
+                A = matrix([[*[el.to_sage() for el in g], f.to_sage()]]).right_kernel_matrix()
+                return (self.one(), A)
+            raise NotImplementedError(f"Limited Integration Problem solved only for constants.")
+        raise TypeError(f"Limited Integration Problem only defined for the differential case.")
+    
     def limited_integrate(self, f: DFractionFieldElement , *w: DFractionFieldElement, D: int = 0) -> tuple[DRings.ElementMethods, tuple[DRings.ElementMethods]]:
         ## Solving the Limited Integration Problem for all constant elements
         if self.operator_types()[D] == "derivation":
@@ -1682,9 +1740,19 @@ class DRing_Wrapper(Parent):
                 ## If all are constants, any `v` will work and there are plenty of solutions
                 ## We take (0, (1,0,..,0)) as a default solution
                 return self.zero(), (self.one(), *[self.zero() for _ in range(len(w)-1)])
-            raise NotImplementedError(f"Limited Integration Problem solved only for constants.")
+            return None
         raise TypeError(f"Limited Integration Problem only defined for the differential case.")
     
+    def log_derivative_rad_param(self, f: DFractionFieldElement, l: DFractionFieldElement, D: int = 0) -> tuple[DFractionFieldElement, int, int]:
+        Dl_l = self(l.derivative(D)/l)
+        if f == 0: # 1*0 = D(1)/1 + 0*D(l)/l
+            return (self.one(), self.one(), self.zero()) 
+        elif (Dl_l / f) in QQ:
+            r = QQ(Dl_l / f)
+            return (self.one(), self(r.numerator()), self(r.denominator()))
+    
+        raise NotImplementedError(f"Method for parametric logarithmic derivative problem not implemented")
+            
     ### CHAPTER 8: The Coupled Differential System
     def coupled_de_system_generic(self, 
                                 a: DFractionFieldElement, # must be constant
