@@ -1293,7 +1293,7 @@ class DMonomial_Parent (Parent):
 
     def is_primitive(self, operation: int = 0) -> bool:
         if self.operator_types()[operation] == "derivation":
-            return self.gen().operation(operation) in self.base()
+            return self.d_degree(operation) == 0
         elif self.operator_types()[operation] == "homomorphism":
             raise NotImplementedError(f"Primitive test not yet implemented for homomorphisms")
         else:
@@ -1345,7 +1345,7 @@ class DMonomial_Parent (Parent):
         if self.operator_types()[operation] != "derivation":
             raise NotImplementedError(f"Logarithm test not yet implemented for homomorphisms")
         t = self.gen()
-        if self.is_primitive():
+        if self.is_primitive(operation):
             try:
                 return bool(self.base().log_derivative(self.base()(t.operation(operation))))
             except NotImplementedError:
@@ -1356,7 +1356,7 @@ class DMonomial_Parent (Parent):
         if self.operator_types()[operation] != "derivation":
             raise NotImplementedError(f"Exponential test not yet implemented for homomorphisms")
         t = self.gen()
-        if self.is_hyperexponential():
+        if self.is_hyperexponential(operation):
             try:
                 self.base()(t.derivative(operation)).integrate(operation)
                 return True
@@ -1760,11 +1760,11 @@ class DMonomial_Parent (Parent):
         return result, n in self.base()
 
     def polynomial_integration(self, element: DMonomial_Element, operation: int = 0) -> tuple[DMonomial_Element,bool]:
-        if self.is_primitive():
+        if self.is_primitive(operation):
             return self._primitive_polynomial_integration(element, operation)
-        elif self.is_hyperexponential():
+        elif self.is_hyperexponential(operation):
             return self._hyperexponential_polynomial_integration(element, operation)
-        elif self.is_hypertangent():
+        elif self.is_hypertangent(operation):
             return self._hypertangent_polynomial_integration(element, operation)
         elif self.d_degree(operation) > 1:
             logger.warning(f"[polynomial-integration] Case of non-linear monomial: we assume no special polynomials exists")
@@ -2111,8 +2111,8 @@ class DMonomial_Parent (Parent):
                 if par_log_der != None and par_log_der[1] == 1:
                     n = max(par_log_der[2], n)
         else:
-            n = max(0, d_c - max(d_a+self.d_degree()-1, d_b))
-            if d_b == d_a + self.d_degree() -1: # possible cancellation
+            n = max(0, d_c - max(d_a+self.d_degree(D)-1, d_b))
+            if d_b == d_a + self.d_degree(D) -1: # possible cancellation
                 m = -b.lc()/(self.d_lc()*a.lc())
                 if m in ZZ:
                     n = max(0, ZZ(m), d_c - d_b)
@@ -2188,8 +2188,139 @@ class DMonomial_Parent (Parent):
 
             for `y(t) \in K[t]` of degree bounded by `n`.
         '''
-        raise NotImplementedError(f"Polynomial Risch DE method not yet implemented")
+        ## We check if this is a cancellation case
+        ## The cancellation may happen when deg(D(y(t))) = deg(b) + deg(y)
+        ## Since D(y(t)) = kappa_D(y(t)) + D(t)*partial_t(y), then
+        ## deg(D(y(t))) <= max(deg(y(t)), deg(y(t)+deg(D(t))-1)) (with equality for non-linear monomials)
+        ## Going back to our equation, we can not have cancellation if 
+        ## the degree of b(t) is too big (> max(0, deg(D(t))-1)),
+        ## or if it is too small (in the non-linear case, < max(0, deg(D(t))-1))
+        if self.d_degree(D) >= 2 or b.degree() > max(0, self.d_degree(D) - 1):
+            return self._rde_polynomial_no_cancellation(b,c,n,D)
+        else:
+            return self._rde_polynomial_cancellation(b,c,n,D)
+    
+    def _rde_polynomial_no_cancellation(self,
+                                        b: DMonomial_Element,
+                                        c: DMonomial_Element,
+                                        n: int = uoo,
+                                        D: int = 0
+    ) -> None | DMonomial_Element:
+        t = self.gen()
+        q = self.zero()
+        if b.degree() > max(0, self.d_degree(D) - 1): ## deg(b) is too big
+            while c != 0:
+                m = c.degree() - b.degree()
+                if n < 0 or m < 0 or m > n:
+                    return None
+                p = (c.lc()/b.lc())*t**m
+                q += p
+                n = m-1
+                c -= (p.derivative(D) + b*p)
+        elif b.degree() < self.d_degree(D) - 1: ## we know deg(D(t)) > 1, and now deg(b) is too small
+            while c != 0:
+                m = 0 if n == 0 else c.degree() - self.d_degree(D) +1
+                if n < 0 or m < 0 or m > n:
+                    return None
+                if m > 0:
+                    p = (c.lc()/(m*self.d_lc()))*t**m
+                else: # m == 0
+                    if b.degree() != c.degree():
+                        return None
+                    elif b.degree() == 0:
+                        ## Solution on base field here
+                        y = self.base().risch_de(self.base()(b),self.base()(c))
+                        return y + q
+                    p = c.lc()/b.lc()
+                q += p
+                n = m - 1
+                c -= (p.derivative(D) + b*p)
+        else: # case with non-linear and deg(b) == deg(D(t))
+            N = -b.lc()/self.d_lc()
+            M = N if N in ZZ and ZZ(N) >= 0 else -1
 
+            while c != 0:
+                m = max(M, c.degree() - self.d_degree(D) + 1)
+                if n < 0 or m < 0 or m > n:
+                    return None
+                u = m*self.d_lc() + b.lc()
+                if u == 0:
+                    ## Recursion of the Risch D.E.
+                    return self._rde_polynomial(b, c, m, D)
+                if m > 0:
+                    p = (c.lc()/u)*t**m
+                else:
+                    if c.degree() != self.d_degree(D) - 1:
+                        return None
+                    p = c.lc()/b.lc()
+                q += p
+                n = m - 1
+                c -= (p.derivative(D) + b*p)
+        return q
+    
+    def _rde_polynomial_cancellation(self,
+                                        b: DMonomial_Element,
+                                        c: DMonomial_Element,
+                                        n: int = uoo,
+                                        D: int = 0
+    ) -> None | DMonomial_Element:
+        t = self.gen()
+        q = self.zero()
+        if self.is_primitive(D):
+            ## in this case we know that `b` is in self.base()
+            z = self.base().log_derivative(self.base()(b))
+            if z != None:
+                p = self._rde_polynomial(self.zero(), z*c, n, D)
+                if p != None:
+                    return p/z
+                return None
+            if c == 0:
+                return self.zero()
+            if n < c.degree():
+                return None
+            
+            while c != 0:
+                m = c.degree()
+                if n < m: 
+                    return None
+                s = self.base().risch_de(self.base()(b), c.lc(), D)
+                if s is None:
+                    return None
+                q += s*t**m
+                n = m - 1
+                c -= (b*s*t**m + (s*t**m).derivative(D))
+        elif self.is_hyperexponential(D):
+            log_der_param = self.log_derivative_rad_param(self.base()(b), self.base()(t.derivative(D)/t), D)
+            if log_der_param is not None:
+                z, N, m = log_der_param
+                if N == 1 and m in ZZ:
+                    p = self.risch_de(self.zero(), c*z*t**m, D)
+                    if p != None and self.is_reduced_element(p, D):
+                        try:
+                            q = self(p/z*t**m)
+                            if q.degree() <= n:
+                                return q
+                        except:
+                            pass
+                    else:
+                        return None
+            if c == 0:
+                return self.zero()
+            if n < c.degree():
+                return None
+            while c != 0:
+                m = c.degree()
+                if n < m:
+                    return None
+                s = self.base().risch_de(self.base()(b + m*t.derivative(D)/t), c.lc())
+                if s is None:
+                    return None
+                q += s*t**m
+                n = m - 1
+                c -= (b*s*t**m + (s*t**m).derivative(D))
+        else:
+            raise NotImplementedError(f"[Poly R.D.E. Cancellation] Non-linear case not yet implemented")
+        return q
     ### CHAPTER 7: Parametric Problems
     def limited_integrate(self, f, *w, D: int = 0) -> tuple[DMonomial_Element, tuple[DMonomial_Element]]:
         raise NotImplementedError(f"Method of limited integration not yet implemented")
