@@ -731,17 +731,7 @@ class DPolynomial(Element):
         if other not in self.parent():
             raise ValueError(f"The two objects must be DPolynomials")
         other = self.parent()(other)
-
-        if isinstance(gen, DMonomialGen):
-            name_gen = self.parent().variable_names()[gen._index]
-        elif gen in ZZ:
-            name_gen = self.parent().variable_names()[gen]
-        elif isinstance(gen, str):
-            name_gen = gen
-        else:
-            raise TypeError("Incorrect generator for Lie bracket")
-
-        return self(**{name_gen: other}) - other(**{name_gen: self})
+        return self.dot(other,gen) - other.dot(self,gen)
 
     @cached_method
     def sym_power(self, power: int, gen: DMonomialGen = None) -> DPolynomial:
@@ -777,6 +767,22 @@ class DPolynomial(Element):
 
             ngen = gen.variable_name()
             return H1(**{ngen: H2})
+
+    def dot(self, other: DPolynomial, gen: DMonomialGen = None) -> DPolynomial:
+        if other not in self.parent():
+            raise ValueError(f"The two objects must be DPolynomials")
+        other = self.parent()(other)
+        
+        if isinstance(gen, DMonomialGen):
+            name_gen = self.parent().variable_names()[gen._index]
+        elif gen in ZZ:
+            name_gen = self.parent().variable_names()[gen]
+        elif isinstance(gen, str):
+            name_gen = gen
+        else:
+            raise TypeError("Incorrect generator for Lie bracket")
+        
+        return self(**{name_gen: other})
 
     def reduce_algebraic(self, polynomials) -> DPolynomial:
         r'''
@@ -2066,6 +2072,9 @@ class DPolynomialRing_Monoid(Parent):
 
     def add_constants(self, *new_constants: str) -> DPolynomialRing_Monoid:
         return DPolynomialRing(self.base().add_constants(*new_constants), *self.variable_names())
+    
+    def constant_ring(self):
+        return self.base().constant_ring()
 
     def linear_operator_ring(self) -> Ring:
         r'''
