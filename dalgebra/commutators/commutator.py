@@ -124,6 +124,11 @@ def latex(*args, **kwds) -> str:
     latex_str = str(_latex(*args, **kwds))
     return latex_str.replace(r"\Bold", r"\mathbb")
 
+@lru_cache
+def Jset(bound: int, congruence:int, *to_remove: int):
+    to_remove = [i%congruence for i in to_remove]
+    return [j for j in range(bound+1) if all(j%congruence != k for k in to_remove)]
+
 #################################################################################################
 ###
 ### METHODS TO OBTAIN CENTRALIZER UP TO A CERTAIN LEVEL
@@ -554,24 +559,30 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple):
         raise ValueError(f"[GHLE] The value for `m` must be an integer")
     if U is None:
         logger.warning(f"[GHLE] No values for `U` provided. Impossible to get algebraic equations.")
+
     U = dict(U)
-    if any(el not in ZZ for el in U.keys()) or min(U.keys()) < 0 or max(U.keys()) > n-2:
+    if any(el not in ZZ for el in U.keys()) or (len(U) > 0 and (min(U.keys()) < 0 or max(U.keys()) > n-2)):
         raise KeyError(f"[GHLE] The argument ``U`` as dictionary must have integers as keys between 0 and `n-2` ({n-2})")
     
+    Us_given = len(U) != 0
+    
     ## Analyzing the functions in ``U``
-    logger.debug(f"[GHLE] Computing common parent for the ansatz functions")
-    parent_us = reduce(lambda p, q: pushout(p,q), (parent(v) for v in U.values()), QQ)
-    if parent_us not in _DRings:
-        raise TypeError(f"[GHLE] We need the coefficient of `L` to be in a differential ring/field")
+    if Us_given:
+        logger.debug(f"[GHLE] Computing common parent for the ansatz functions")
+        parent_us = reduce(lambda p, q: pushout(p,q), (parent(v) for v in U.values()), QQ)
+        if parent_us not in _DRings:
+            raise TypeError(f"[GHLE] We need the coefficient of `L` to be in a differential ring/field")
     
     ### Computing the generic `L` operator
     logger.debug(f"[GHLE] Computing the generic L_{n} operator...")
     L = generic_normal(n)#, output_base=parent_us)
     z = L.parent().gen("z")
-    parent_L_with_us = L.parent()
     logger.debug(f"[GHLE] {L=}")
 
-    U = {L.coefficient_full(z[i]).infinite_variables()[0]: parent_us(U.get(i,0)) for i in U} # Dictionary to evaluate generic polynomials
+    if Us_given:
+        U = {L.coefficient_full(z[i]).infinite_variables()[0]: parent_us(U.get(i,0)) for i in U} # Dictionary to evaluate generic polynomials
+    else:
+        U = {L.coefficient_full(z[i]).infinite_variables()[0]: L.coefficient_full(z[i]).infinite_variables()[0][0] for i in range(L.order(z)-1)}
     L = L(dic=U) # parent now without any u variable
 
     ### Computing the almost commuting basis up to order `m` and the hierarchy up to this point
@@ -590,32 +601,13 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple):
     logger.debug(f"[GHLE] -- Computed the basis of almost commuting and the hierarchies")
 
     system_in_DRing = [[Hs[j][i] for j in range(len(c_list))] for i in range(n-1)]
-    extended_system = parent_us.system_for_constant_solutions(system_in_DRing)
+    if Us_given:
+        extended_system = parent_us.system_for_constant_solutions(system_in_DRing)
+    else:
+        extended_system = Matrix(system_in_DRing), ((i,1) for i in range(n-1))
+           
     logger.debug(f"[GHLE] -- Computed extended system")
-
     return L, Ps, extended_system
-    # ### Getting the linear system. We use the method extract on the Hs to get the monomials and the coefficients
-    # ### for each section of the Hs
-    # ## We compute the lcm of the denominators of the elements by columns
-    # D = [Hs[0][i].lcm_denominators(*[Hs[j][i] for j in range(1,len(Hs))]) for i in range(n-1)]
-
-    # if len(U) > 0: ## Some information is given
-    #     rows = list()
-    #     mons = list()
-    #     for j in range(n-1):
-    #         equs = dict()
-    #         for i,c in enumerate(c_list):
-    #             for (mon, coeff) in extract(D[j]*Hs[i][j]):
-    #                 if not mon in equs:
-    #                     equs[mon] = dict()
-                    
-    #                 equs[mon][c] = coeff
-    #         rows.extend([[equs[mon].get(c, 0) for c in c_list] for mon in equs])
-    #         mons.extend((j,mon) for mon in equs)
-        
-    #     return L, Ps, (Matrix(rows), tuple(mons))
-    # else: ## simple approach
-    #     return L, Ps, (Matrix(Hs), tuple([(i,1) for i in range(n-1)]))
 
 #################################################################################################
 ###
@@ -688,6 +680,127 @@ def generate_polynomial_equations(H: DPolynomial, var_name: str = "x") -> list[P
     output = tuple(zip(reversed(H.monomials()), H.coefficients()))
     
     return output
+
+#################################################################################################
+###
+### METHOD TO REDUCE ON THE CENTRALIZER
+###
+#################################################################################################
+@lru_cache
+def reduce_as_module(P: DPolynomial, L: DPolynomial, basis: tuple[DPolynomial], gen: DPolynomialGen) -> tuple[tuple[Element]]:
+    r'''
+        Compute the `C[L]`-module representation of a polynomial `P` in the centralizer of `L`.
+
+        Given a monic linear differential operator `L` in normal form for whom we have computed a `C[L]`-basis of 
+        the centralizer of `L` (given with ``basis``), we can compute for any differential operator `P` the 
+        `C[L]`-module representation of `P` with respect to the basis.
+
+        INPUT:
+
+        * ``P``: the polynomial to be reduced.
+        * ``L``: the operator from where `P` is in the centralizer.
+        * `` basis``: the list (sorted by congruence with `\ord(L)`) of the basis of the centralizer of `L` as a `C[L]`-module.
+        * ``gen``: the differential generator that we are considering as differential operator.
+
+        OUTPUT:
+
+        A tuple of tuples in such a way that
+
+        .. MATH::
+
+            P = \sum_{i=0}^{n-1} \left(\sum_{j=0}^{m_i-1} O[i][j] L^j\right) B[i],
+
+        where `B[i]` is the `i`-th element of the basis and `O[i]` is the `i`-th tuple in the output. 
+    '''
+    assert P.lie_bracket(L, gen) == 0, f"The operator {P} is not in the centralizer of {L}"
+    orders_cong = [el.order()%L.order(gen) for el in basis]
+    ## We know the centralizer is a `C[L]`-module with basis given by ``basis``. 
+    ## Using the fact that the elements in `basis` are sorted by congruence of `L`, we 
+    ## can reduce the polynomial `P` easily by multiplying `L^{q}*basis[i]` by the leading
+    ## coefficient of `P` where ord(P) = q*ord(L) + i.
+    output = {el.order()%L.order(gen): dict() for el in basis}
+    while P != 0:
+        logger.debug(f"[RAM] Remaining polynomial: {P}")
+        p = P.order(gen)
+        i = p%L.order(gen) # we see which element in the Goodearl basis we use
+
+        if i not in orders_cong or p < basis[orders_cong.index(i)].order(gen):
+            raise ValueError(f"The polynomial {P} is not in the centralizer of {L}")
+        
+        logger.debug(f"[RAM] Next coefficient induced by the element with order congruent {i} mod {L.order(gen)} ({basis[orders_cong.index(i)]})")        
+        q = (p - basis[orders_cong.index(i)].order(gen))//L.order(gen) ## This is the power of L necessary to generate the corresponding order
+        
+        output[i][q] = P.coefficient_full(gen[p])
+        logger.debug(f"[RAM] Removing the polynomial {output[i][q]}*L^{q}*B_{i}")
+        P -= output[i][q]*(L.sym_power(q, gen).dot(basis[i], gen))
+    logger.debug(f"[RAM] Finished the distribution -> {output}")
+    return tuple(tuple(output[el.order()%L.order(gen)].get(j, L.parent().constant_ring().zero()) for j in range(max(output[i])+1)) for el in basis)
+
+def BC_ideal(L: DPolynomial, basis: tuple[DPolynomial], gen: DPolynomialGen, *, var_L: str = "lambda_", var_B: str = "mu") -> Ideal:
+    r'''
+        Computes the Burnall-Chaundy ideal for the centralizer of `L` for the given basis.
+
+        Let `L` be a monic linear differential operator in normal form and `B = \{G_0,\ldots,G_m\}` a 
+        basis of the centralizer of `L` as a `C[L]`-module. Then we define the Bournall-Chaundy ideal 
+        of `L` as the ideal of relations of `L, G_0,\ldots,G_m` in the ring of linear differential operators.
+
+        Since all the elements `B_i` commute with `L`, then the polynomial ring centralizer of `L` as a 
+        `C`-algebra is isomorphic to a quotient `C[\lambda,\mu_1,\ldots,\mu_m]/I` for some 
+        ideal `I`. This ideal is the Burnall-Chaundy ideal of `L`.
+
+        Since the centralizer is also a `C[L]`-module, then we can write any product `B_iB_j` as a linear combination
+        of the elements in `B` with coefficients in `C[L]`. This will lead to an ideal that is maximal and 
+        is the Groebner basis of all possible relations under the ordering \lambda < (\mu_1,\ldots,\mu_m), and then 
+        the variables `\mu_i` are ordered by degree and lexicographic ordering.
+    '''
+    ## CHANGING THE METHOD:
+    ## 1. From basis, compute the elements of the basis as operators
+    ## 2. Recover the basic relations from the original basis
+    ## 3. Generate all cross products of the basis and reduce module C[L]
+    ## 4. Add these cross-product relations to the relations
+    ## 5. Compute the Gröbner basis of the ideal
+    ## 6. Check the ideal is prime
+    ## 7. Return the ideal
+
+    def power_from_basis(*exponents):
+        output = gen[0]
+        for i, exp in enumerate(exponents):
+            if exp > 0:
+                output = output.dot(basis[i].sym_power(exp, gen),gen)
+        return output
+    from sage.misc.misc_c import prod
+    
+    # Convert the basis into actual polynomials 
+    known_relations = {i : basis[i] for i in range(len(basis)) if isinstance(basis[i], list)}
+    basis = tuple(el if not isinstance(el, list) else power_from_basis(*el) for el in basis)
+
+    # We now work as usual
+    ## We assume basis is indexed by the congruence class of order 
+    from sage.rings.polynomial.term_order import TermOrder
+    final_ring = PolynomialRing(
+        L.parent().constant_ring().to_sage(), 
+        [f"{var_B}_{i}" for i in range(1,len(basis))] + [var_L], 
+        order=TermOrder("wdegrevlex", tuple(el.order(gen) for el in basis[1:])) + TermOrder("deglex", 1)
+    )
+    l = final_ring.gens()[-1]
+    mu = (None,) + final_ring.gens()[:-1]
+
+    output = [prod(mu[i]**relation[i] - mu[k] for i in range(1,len(relation))) for k, relation in known_relations.items()]
+    print(f"Starting with {len(output)} known relations: {output}")
+    for i in range(1, len(basis)):
+        for j in range(i, len(basis)):
+            red_ij = reduce_as_module(basis[i].dot(basis[j], gen), L, basis, gen)
+            logger.debug(f"[BCI] Reducing {i+1}*{j+1} -> {red_ij}")
+            poly = mu[i]*mu[j] - sum(final_ring.base()(red_ij[0][j].to_sage())*l**j for j in range(len(red_ij[0]))) - sum(
+                (sum(final_ring.base()(red_ij[k][j].to_sage())*l**j for j in range(len(red_ij[k])))* mu[k] for k in range(1,len(red_ij)))
+            ) 
+            logger.debug(f"[BCI] Polynomial in the new variables: {poly}")
+            output.append(poly)
+    
+    assert set(output) == set(ideal(output).groebner_basis()), f"The ideal is not a Groebner basis"
+
+    return ideal(output)
+        
 
 #################################################################################################
 ###
@@ -973,6 +1086,7 @@ def __generate_table(
         ])
 
 __all__ = [
+    "Jset", 
     "GetCentralizer", "GetEquationsForLevel", "GetHierarchyLinearEquations", "PolynomialCommutator",
     "generate_polynomial_ansatz",
     "generate_polynomial_equations",

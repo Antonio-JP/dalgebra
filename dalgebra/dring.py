@@ -1317,6 +1317,7 @@ class DRing_Wrapper(Parent):
         ### CREATING CACHED VARIABLES
         self.__linear_operator_ring = None
         self.__fraction_field : DFractionField = None
+        self.__constant = None
 
     @property
     def wrapped(self) -> CommutativeRing: return self.__wrapped
@@ -1373,6 +1374,15 @@ class DRing_Wrapper(Parent):
             else:
                 raise TypeError("Impossible to create constants when they are not defined.")
         return DRing(new_base, *operations, types=self.operator_types())
+
+    def constant_ring(self, operation: int = 0) -> Parent:
+        if self.__constant is None:
+            super().constant_ring(operation)
+        else:
+            return self.__constant
+        
+    def set_constant(self, ring: Parent, operation: int = 0):
+        self.__constant = ring
 
     def _lcm_denominators(self, *_: DRing_WrapperElement) -> DRing_WrapperElement:
         return self.one()
