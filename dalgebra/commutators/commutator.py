@@ -126,8 +126,11 @@ def latex(*args, **kwds) -> str:
 
 @lru_cache
 def Jset(bound: int, congruence:int, *to_remove: int):
-    to_remove = [i%congruence for i in to_remove]
-    return [j for j in range(bound+1) if all(j%congruence != k for k in to_remove)]
+    result = []
+    for el in range(bound+1):
+        if all(el < i or el % congruence != i % congruence for i in to_remove):
+            result.append(el)
+    return result
 
 #################################################################################################
 ###
@@ -738,68 +741,63 @@ def reduce_as_module(P: DPolynomial, L: DPolynomial, basis: tuple[DPolynomial], 
 
 def BC_ideal(L: DPolynomial, basis: tuple[DPolynomial], gen: DPolynomialGen, *, var_L: str = "lambda_", var_B: str = "mu") -> Ideal:
     r'''
-        Computes the Burnall-Chaundy ideal for the centralizer of `L` for the given basis.
+        Computes the Burchnall-Chaundy ideal for the centralizer of `L` for the given basis.
 
         Let `L` be a monic linear differential operator in normal form and `B = \{G_0,\ldots,G_m\}` a 
-        basis of the centralizer of `L` as a `C[L]`-module. Then we define the Bournall-Chaundy ideal 
+        basis of the centralizer of `L` as a `C[L]`-module. Then we define the Burchnall-Chaundy ideal 
         of `L` as the ideal of relations of `L, G_0,\ldots,G_m` in the ring of linear differential operators.
 
         Since all the elements `B_i` commute with `L`, then the polynomial ring centralizer of `L` as a 
         `C`-algebra is isomorphic to a quotient `C[\lambda,\mu_1,\ldots,\mu_m]/I` for some 
-        ideal `I`. This ideal is the Burnall-Chaundy ideal of `L`.
+        ideal `I`. This ideal is the Burchnall-Chaundy ideal of `L`.
 
         Since the centralizer is also a `C[L]`-module, then we can write any product `B_iB_j` as a linear combination
         of the elements in `B` with coefficients in `C[L]`. This will lead to an ideal that is maximal and 
         is the Groebner basis of all possible relations under the ordering \lambda < (\mu_1,\ldots,\mu_m), and then 
         the variables `\mu_i` are ordered by degree and lexicographic ordering.
     '''
-    ## CHANGING THE METHOD:
+    from sage.rings.polynomial.term_order import TermOrder
+    from sage.misc.misc_c import prod
     ## 1. From basis, compute the elements of the basis as operators
-    ## 2. Recover the basic relations from the original basis
-    ## 3. Generate all cross products of the basis and reduce module C[L]
-    ## 4. Add these cross-product relations to the relations
-    ## 5. Compute the Gröbner basis of the ideal
-    ## 6. Check the ideal is prime
-    ## 7. Return the ideal
-
     def power_from_basis(*exponents):
         output = gen[0]
         for i, exp in enumerate(exponents):
             if exp > 0:
                 output = output.dot(basis[i].sym_power(exp, gen),gen)
         return output
-    from sage.misc.misc_c import prod
-    
-    # Convert the basis into actual polynomials 
-    known_relations = {i : basis[i] for i in range(len(basis)) if isinstance(basis[i], list)}
-    basis = tuple(el if not isinstance(el, list) else power_from_basis(*el) for el in basis)
+    basis_operators = tuple(el if not isinstance(el, list) else power_from_basis(*el) for el in basis)
 
-    # We now work as usual
-    ## We assume basis is indexed by the congruence class of order 
-    from sage.rings.polynomial.term_order import TermOrder
+    ## 2. Recover the basic relations from the original basis
+    known_relations = {i : basis[i] for i in range(len(basis)) if isinstance(basis[i], list)}
+    ## Creating the final polynomial ring with as many elements as those that do not appear in known_relations
+    
+    names_mu, weights = zip(*[(f"{var_B}_{i}", basis[i].order(gen)) for i in range(1,len(basis)) if i not in known_relations])
     final_ring = PolynomialRing(
         L.parent().constant_ring().to_sage(), 
-        [f"{var_B}_{i}" for i in range(1,len(basis))] + [var_L], 
-        order=TermOrder("wdegrevlex", tuple(el.order(gen) for el in basis[1:])) + TermOrder("deglex", 1)
+        names_mu + (var_L,), 
+        order=TermOrder("wdegrevlex", weights) + TermOrder("deglex", 1)
     )
     l = final_ring.gens()[-1]
-    mu = (None,) + final_ring.gens()[:-1]
-
-    output = [prod(mu[i]**relation[i] - mu[k] for i in range(1,len(relation))) for k, relation in known_relations.items()]
-    print(f"Starting with {len(output)} known relations: {output}")
-    for i in range(1, len(basis)):
-        for j in range(i, len(basis)):
-            red_ij = reduce_as_module(basis[i].dot(basis[j], gen), L, basis, gen)
+    mu = [final_ring.one(),] + list(final_ring(f"{var_B}_{i}") if i not in known_relations else None for i in range(1, len(basis)))
+    for i,relation in known_relations.items():
+        mu[i] = prod(mu[k]**relation[k] for k in range(1,len(relation)) if (i != k and relation[k] != 0))
+    ## 3. Generate all cross products of the basis and reduce module C[L]
+    ## 4. Add these cross-product relations to the relations
+    output = list()
+    for i in range(1, len(basis_operators)):
+        for j in range(1, len(basis_operators)):
+            red_ij = reduce_as_module(basis_operators[i].dot(basis_operators[j], gen), L, basis_operators, gen)
             logger.debug(f"[BCI] Reducing {i+1}*{j+1} -> {red_ij}")
-            poly = mu[i]*mu[j] - sum(final_ring.base()(red_ij[0][j].to_sage())*l**j for j in range(len(red_ij[0]))) - sum(
-                (sum(final_ring.base()(red_ij[k][j].to_sage())*l**j for j in range(len(red_ij[k])))* mu[k] for k in range(1,len(red_ij)))
-            ) 
-            logger.debug(f"[BCI] Polynomial in the new variables: {poly}")
+            poly = mu[i]*mu[j] - sum(sum(final_ring.base()(red_ij[k][j].to_sage())*l**j for j in range(len(red_ij[k])))*mu[k] for k in range(len(red_ij)))
+            logger.debug(f"[BCI] Polynomial in the ideal: {poly}")
             output.append(poly)
-    
-    assert set(output) == set(ideal(output).groebner_basis()), f"The ideal is not a Groebner basis"
+    logger.debug(f"[BCI] Computing Gröbner basis of the resulting relations. (It should be fast due to the ordering)")
+    output = ideal(ideal(output).groebner_basis())
 
-    return ideal(output)
+    assert output.is_prime(), f"The ideal is not prime"
+
+    return output
+
         
 
 #################################################################################################
