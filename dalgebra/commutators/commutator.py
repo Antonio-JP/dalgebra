@@ -786,19 +786,13 @@ def BC_ideal(L: DPolynomial, basis: tuple[DPolynomial], gen: DPolynomialGen, *, 
     from sage.rings.polynomial.term_order import TermOrder
     from sage.misc.misc_c import prod
     ## 1. From basis, compute the elements of the basis as operators
-    def power_from_basis(*exponents):
-        output = gen[0]
-        for i, exp in enumerate(exponents):
-            if exp > 0:
-                output = output.dot(basis[i].sym_power(exp, gen),gen)
-        return output
-    basis_operators = tuple(el if not isinstance(el, (tuple,list)) else power_from_basis(*el) for el in basis)
+    basis_operators = tuple(el if not isinstance(el, (tuple,list)) else el[1] for el in basis)
 
     ## 2. Recover the basic relations from the original basis
-    known_relations = {i : basis[i] for i in range(len(basis)) if isinstance(basis[i], (tuple,list))}
+    known_relations = {i : basis[i][0] for i in range(len(basis)) if isinstance(basis[i], (tuple,list))}
+
     ## Creating the final polynomial ring with as many elements as those that do not appear in known_relations
-    
-    names_mu, weights = zip(*[(f"{var_B}_{i}", basis[i].order(gen)) for i in range(1,len(basis)) if i not in known_relations])
+    names_mu, weights = zip(*[(f"{var_B}_{i}", basis_operators[i].order(gen)) for i in range(1,len(basis)) if i not in known_relations])
     final_ring = PolynomialRing(
         L.parent().constant_ring().to_sage(), 
         names_mu + (var_L,), 
@@ -808,6 +802,7 @@ def BC_ideal(L: DPolynomial, basis: tuple[DPolynomial], gen: DPolynomialGen, *, 
     mu = [final_ring.one(),] + list(final_ring(f"{var_B}_{i}") if i not in known_relations else None for i in range(1, len(basis)))
     for i,relation in known_relations.items():
         mu[i] = prod(mu[k]**relation[k] for k in range(1,len(relation)) if (i != k and relation[k] != 0))
+
     ## 3. Generate all cross products of the basis and reduce module C[L]
     ## 4. Add these cross-product relations to the relations
     output = list()
