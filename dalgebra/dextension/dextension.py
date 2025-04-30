@@ -2,11 +2,11 @@ from __future__ import annotations
 r'''
     Module to create D-extensions for D-fields.
 
-    Let `(K, (d_1,\ldots,d_n))` be a d-Field with multiple difference-differential operators. 
-    It is very common to add an element `x` and impose some conditions on the derivative in 
+    Let `(K, (d_1,\ldots,d_n))` be a d-Field with multiple difference-differential operators.
+    It is very common to add an element `x` and impose some conditions on the derivative in
     order to extend the field.
 
-    In this case we will consider the most trivial case where the new element is always a 
+    In this case we will consider the most trivial case where the new element is always a
     transcendental element. Moreover, the operations of the new element is a rational function
     on the new field.
 
@@ -18,7 +18,7 @@ r'''
 
     ## The case of derivations
 
-    A derivation is an operation that satisfies the Leibniz rule. In particular, if we have one of 
+    A derivation is an operation that satisfies the Leibniz rule. In particular, if we have one of
     these d-Extensions, let `d_x` be the derivative of the new added variable `x`. Then we can write
     the derivative of any polynomial `p(x)` as:
 
@@ -33,7 +33,7 @@ r'''
 
     ## The case of differences
 
-    A difference operator is an operation that is an homomorphism, i.e., `\sigma(pq)=\sigma(p)\sigma(q)`. 
+    A difference operator is an operation that is an homomorphism, i.e., `\sigma(pq)=\sigma(p)\sigma(q)`.
     In particular, if we have one of these d-Extensions, let `s_x` be the difference of the new added
     variable `x`. Then we can write the difference of any polynomial `p(x)` as:
 
@@ -49,17 +49,17 @@ r'''
     D-Extensions can be built incrementally, meaning we add one variable at a time. This is the most common
     setting, but it is not the only one. For example, when adding the sine and cosine functions, we need
     two variables at the same time, `s` and `c`, that satisfy the conditions `d(s) = c` and `d(c) = -s`.
-    We can not achieve this by adding one variable at a time. This is why we will provide a general 
+    We can not achieve this by adding one variable at a time. This is why we will provide a general
     implementation that allow this additional case.
 
     ## Monomial extension and tower of monomials.
 
-    Following the content of Bronstein's book, Symbolic Integration I: Transcendental Functions, we can 
+    Following the content of Bronstein's book, Symbolic Integration I: Transcendental Functions, we can
     define a monomial `t` over a differential field `(K,\partial)` as a transcendental element that satisfies
-    that `\partial(t) = p(t)` for some polynomial `p \in K[t]`. 
+    that `\partial(t) = p(t)` for some polynomial `p \in K[t]`.
 
-    When managing d-Extensions, the variables will be sorted in a poset, where we see the dependencies 
-    as field extensions between different variables. Looking into this poset, we can define equivalent 
+    When managing d-Extensions, the variables will be sorted in a poset, where we see the dependencies
+    as field extensions between different variables. Looking into this poset, we can define equivalent
     d-Extensions that are built in a different order. Moreover, if this construction never uses two variables
     at once, we say we are managing a tower of monomials.
 
@@ -76,10 +76,10 @@ r'''
     * The sine and cosine functions: we start from the basic field of constants `\mathbb{Q}` and add two new elements
       `s` and `c` that satisfy `d(s) = c` and `d(c) = -s`. It involves a derivation and it can not be seen as a tower
       of monomials.
-    * A diff-diff case: we can also create the field of rational functions with both the derivative and the 
+    * A diff-diff case: we can also create the field of rational functions with both the derivative and the
       shift operator. This is a more complex case that involves both a derivation and a difference.
     * Non-trivial tower of monomials: let us consider the mix case using the exponential function, the logarithm
-      and the variable `x`. It has 3 different ways to be built, because the exponential can be added at any 
+      and the variable `x`. It has 3 different ways to be built, because the exponential can be added at any
       possible step. We must check that all the constructions are equivalent.
 
     EXAMPLES:
@@ -198,8 +198,10 @@ from typing import Collection
 
 from ..dring import AdditiveMap, DRings
 
+
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
+
 
 #########################################################################
 ### UNIQUE FACTORY TO CREATE EXTENSIONS
@@ -208,19 +210,19 @@ class DExtensionFactory(UniqueFactory):
     r'''
         Factory to create a D-Extension.
 
-        An extension requires a base field and a tuple of tuples such that for each variable we can get the 
+        An extension requires a base field and a tuple of tuples such that for each variable we can get the
         corresponding operation. The way these tuple of tuples can be provided may change depending on how many
         variables we want to add and how many operations there are.
     '''
-    def create_key(self, base, polynomial: str | Element, varname: str = None, *, names: tuple[str] = None, category = None):
+    def create_key(self, base, polynomial: str | Element, varname: str = None, *, names: tuple[str] = None, category=None):
         if names is None and varname is None:
             raise ValueError("The names of the variables must be provided")
         elif names is None:
             names = (varname,)
-        
+
         if base not in _DRings or base not in _Fields:
             raise ValueError("The base must be a field that is also a d-ring")
-        
+
         ## We process the argument polynomial
         if not isinstance(polynomial, (list,tuple)) and (len(names) != 1 or base.noperators() != 1):
             raise TypeError("The polynomial argument must be a list if there are more than one variable or more than one operator")
@@ -242,7 +244,7 @@ class DExtensionFactory(UniqueFactory):
             raise ValueError("The number of variables and the number of polynomials must match")
         elif any(len(p) != base.noperators() for p in polynomial):
             raise ValueError("The number of operators must match the number of polynomials")
-        
+
         ## We fix the arguments if the base was already a DExtension (iterative construction)
         if isinstance(base, DExtension_Field):
             names = (str(g) for g in base.gens()) + names
@@ -256,7 +258,9 @@ class DExtensionFactory(UniqueFactory):
 
         return DExtension_Field(base, polynomial, names=names, category=category)
 
+
 DExtension = DExtensionFactory("dalgebra.dextension.dextension.DExtension")
+
 
 #########################################################################
 ### ELEMENT AND PARENT CLASSES FOR EXTENSIONS
@@ -265,19 +269,20 @@ class DExtension_Element(Element):
     def __init__(self, parent: DExtension_Field, value: Element):
         pass
 
+
 class DExtension_Field(Parent):
     Element = DExtension_Element
-    
-    def _set_categories(self, base : Parent, category=None) -> list[Category]: 
+
+    def _set_categories(self, base : Parent, category=None) -> list[Category]:
         return [_DRings, Algebras(base), _Fields] + ([category] if category is not None else [])
 
-    def __init__(self, 
-                 base : Parent, polynomial: tuple[tuple[str | Element]], varname:str = None, 
+    def __init__(self,
+                 base : Parent, polynomial: tuple[tuple[str | Element]], varname:str = None,
                  names:tuple[str] = None, category=None):
         ## Checking that varname is not set
         if varname is not None:
             raise ValueError("The varname argument is not allowed for this class")
-        
+
         ## Calling the super __init__ to stablish the categories and the main attributes
         super().__init__(base, category=tuple(self._set_categories(base, category)))
 
@@ -285,6 +290,7 @@ class DExtension_Field(Parent):
         self.__algebraic_base = base.to_sage()
         ## TODO: Go on here
         pass
+
 
 #########################################################################
 ### CONSTRUCTIONS FUNCTOR FOR EXTENSIONS
@@ -302,6 +308,7 @@ class DExtensionFunctor(ConstructionFunctor):
     def __eq__(self, other):
         pass
 
+
 #########################################################################
 ### COERCIONS AND CONVERSION MORPHISMS FOR EXTENSIONS
 #########################################################################
@@ -312,12 +319,14 @@ class MapDExtensionToField(Morphism):
     def _call_(self, element: DExtension_Element):
         pass
 
+
 class MapFieldToDExtension(Morphism):
     def __init__(self, domain, codomain):
         pass
 
     def _call_(self, element):
         pass
+
 
 class MapDExtensionToPoly(Morphism):
     def __init__(self, domain, codomain):
@@ -326,12 +335,14 @@ class MapDExtensionToPoly(Morphism):
     def _call_(self, element: DExtension_Element):
         pass
 
+
 class MapPolyToDExtension(Morphism):
     def __init__(self, domain, codomain):
         pass
 
     def _call_(self, element):
         pass
+
 
 class MapDExtensionToAlgebraic(Morphism):
     def __init__(self, domain, codomain):
@@ -340,12 +351,14 @@ class MapDExtensionToAlgebraic(Morphism):
     def _call_(self, element: DExtension_Element):
         pass
 
+
 class MapAlgebraicToDExtension(Morphism):
     def __init__(self, domain, codomain):
         pass
 
     def _call_(self, element):
         pass
+
 
 class CoerceFromBase_DExtension(Morphism):
     def __init__(self, domain, codomain):
@@ -354,6 +367,7 @@ class CoerceFromBase_DExtension(Morphism):
     def _call_(self, element):
         pass
 
+
 class ConversionToBase_DExtension(Morphism):
     def __init__(self, domain, codomain):
         pass
@@ -361,11 +375,13 @@ class ConversionToBase_DExtension(Morphism):
     def _call_(self, element: DExtension_Element):
         pass
 
+
 class CoerceBetweenBases_DExtension(Morphism):
     def __init__(self, domain, codomain, coerce_map):
         pass
 
     def _call_(self, element: DExtension_Element) -> DExtension_Element:
         pass
+
 
 __all__ = ["DExtension"]

@@ -45,7 +45,9 @@ from ..dring import DifferentialRing, DRings
 from ..dpolynomial.dpolynomial import DPolynomial, DPolynomialRing, is_DPolynomialRing
 from ..logging.logging import count_calls, cut_string, loglevel
 
+
 _DRings = DRings.__classcall__(DRings)
+
 
 #################################################################################################
 ###
@@ -53,6 +55,8 @@ _DRings = DRings.__classcall__(DRings)
 ###
 #################################################################################################
 __ProcessesPool = None
+
+
 def LoopInParallel(func, iterable, chunksize=1):
     r'''
         Method that tries to loop a function application in parallel. If no Pool is created, then we simply loop in the usual way.
@@ -63,10 +67,12 @@ def LoopInParallel(func, iterable, chunksize=1):
     else:
         return (func(*el) for el in iterable)
 
+
 def StartPool(ncpus: int = None):
     global __ProcessesPool
     if __ProcessesPool is None and ncpus not in (None, 1):
         __ProcessesPool = Pool(ncpus)
+
 
 #################################################################################################
 ###
@@ -154,7 +160,7 @@ class SolutionBranch:
         rem_vars = [v for v in self.remaining_variables() if v not in algebraic_variables]
         if len(rem_vars) > 0:
             B = PolynomialRing(B, rem_vars)
-        
+
         return B
 
     @cached_method
@@ -349,7 +355,7 @@ class SolutionBranch:
         if len(self.remaining_variables()) > 0:
             parts.append(f"and {','.join([str(v) for v in self.remaining_variables()])} as free variables")
         return f'{" ".join(parts)}.'
-    
+
     def _latex_(self) -> str:
         from sage.misc.latex import latex_variable_name
         parts = [r"\texttt{Solution}",
@@ -360,7 +366,6 @@ class SolutionBranch:
 
         return "".join(parts)
 
-
     ######################################################################################################
     ### STATIC METHODS OF THE CLASS
     ######################################################################################################
@@ -369,11 +374,12 @@ class SolutionBranch:
         solution = {k: parent(v) for k,v in solution.items()}
         old_solution = None
 
-        while(solution != old_solution):
+        while solution != old_solution:
             old_solution = solution
             solution = {k: ideal.reduce(v(**old_solution)) for (k,v) in solution.items()}
 
         return solution
+
 
 #################################################################################################
 ###
@@ -385,7 +391,7 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: 
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
     if I == ideal(I.ring()):
         return (SolutionBranch.AllSolution(I.ring()),)
-    
+
     StartPool(parallel) # starting (if needed) the processes pool
 
     ## We process the "to_avoid" argument
@@ -606,6 +612,7 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
     logger.debug(f"[ideal] !!! Reached ending point for analyzing an ideal. Returning this path")
     return [SolutionBranch(I, partial_solution, decisions, final_parent)]
 
+
 def _check_avoid(partial_solution: dict, to_avoid: list):
     r'''
         Method to check whether a partial solution has an undesired configuration.
@@ -618,6 +625,7 @@ def _check_avoid(partial_solution: dict, to_avoid: list):
     '''
     return any(all(partial_solution.get(v, None) == avoiding[v] for v in avoiding) for avoiding in to_avoid)
 
+
 #################################################################################################
 ###
 ### PARTIAL ANALYSIS METHOD
@@ -626,17 +634,17 @@ def _check_avoid(partial_solution: dict, to_avoid: list):
 @loglevel(logger)
 def eliminate_linear_variables(I: Ideal, variables):
     r'''
-        Method to eliminate the linear variables that are not relevant for the ideal. 
+        Method to eliminate the linear variables that are not relevant for the ideal.
 
-        Assume that `I \subset R[x_1,\ldots,x_n,y_1,\ldots,y_n]`, that we are interested in the 
-        elimination ideal `I \cap R[x_1,\ldots, x_n]` and that the variables `y_1,\ldots,y_n` 
-        appear linearly in the generators of `I`. 
+        Assume that `I \subset R[x_1,\ldots,x_n,y_1,\ldots,y_n]`, that we are interested in the
+        elimination ideal `I \cap R[x_1,\ldots, x_n]` and that the variables `y_1,\ldots,y_n`
+        appear linearly in the generators of `I`.
 
-        This method computes the elimination ideal by considering the induced linear system 
-        by the generators of `I` and using the rank condition on this linear system to 
+        This method computes the elimination ideal by considering the induced linear system
+        by the generators of `I` and using the rank condition on this linear system to
         obtain non-linear conditions on `x_1,\ldots,x_n`.
 
-        Need to be done: 
+        Need to be done:
         * Check this is exactly the elimination ideal
         * Perform a fast computation
         * Compute GB while computing equations or not?
@@ -650,12 +658,12 @@ def eliminate_linear_variables(I: Ideal, variables):
         raise ValueError(f"[ELV] We can only remove linear variables if variables are provided (given {variables})")
     if not all(all(g.degree(v) <= 1 for v in variables) for g in generators):
         raise ValueError(f"[ELV] We can only remove linear variables if the generators are linear in these variables.")
-    
+
     logger.debug(f"[ELV] Checking and filtering the input...")
     ring = ring.remove_var(*variables)
     variables = [v for v in variables if any(g.degree(v) > 0 for g in generators)] # removing unnecessary variables
     generators = [g for g in generators if g != 0] # removing zero generators
-    
+
     logger.debug(f"[ELV] Building the matrix with n={len(generators)} rows and m={len(variables)} columns")
     A = Matrix([[ring(g.coefficient(v)) for v in variables] for g in generators]) # matrix of linear system
     logger.debug(f"[ELV] Computing the inhomogeneous vector...")
@@ -675,10 +683,10 @@ def eliminate_linear_variables(I: Ideal, variables):
     logger.debug(f"[ELV] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C))
     print(f"[ELV] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C), flush=True)
     for i,c in enumerate(Combinations(range(m), n)):
-        if total_10 == 0 or i == total-1 or i % total_10 == 0: 
+        if total_10 == 0 or i == total-1 or i % total_10 == 0:
             logger.debug(f"[ELV] ++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)")
             print(f"[ELV] ++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)", end="\r", flush=True)
-        
+
         A_ = A.matrix_from_rows(c)
         red_det = final_ideal.reduce(A_.determinant())
 
@@ -687,9 +695,10 @@ def eliminate_linear_variables(I: Ideal, variables):
             if 1 in final_ideal:
                 break
     print("\n[ELV] -- Finished the computation of minors")
-            
+
     logger.debug(f"[ELV] -- Finished elimination of linear variables")
     return final_ideal
+
 
 def find_nonzero_minor(A, size):
     from itertools import product
@@ -698,5 +707,6 @@ def find_nonzero_minor(A, size):
             mrows = [rows[i] for i in cols]
             if A.matrix_from_rows_and_columns(mrows, cols).determinant() != 0:
                 return (mrows, cols)
-            
+
+
 __all__ = ["analyze_ideal", "eliminate_linear_variables"]

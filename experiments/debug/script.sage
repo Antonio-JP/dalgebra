@@ -42,7 +42,7 @@ with (Profile() if __profile__ else nullcontext()) as pr:
         ## the centralizer of L
         print("### Computing centralizer")
         L_2, centr_GB, flag = GetCentralizer(
-            Us, 18, 
+            Us, 18,
             starting_level=6, update_bound=True, ignore_bound=True
         )
     except KeyboardInterrupt:

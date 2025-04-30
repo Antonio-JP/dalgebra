@@ -173,6 +173,7 @@ _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
 _CommutativeAdditiveGroups = CommutativeAdditiveGroups.__classcall__(CommutativeAdditiveGroups)
 _QuotientFields = QuotientFields.__classcall__(QuotientFields)
 
+
 ####################################################################################################
 ###
 ### DEFINING THE CATEGORY FOR RINGS WITH OPERATORS
@@ -487,7 +488,7 @@ class DRings(Category):
             r'''
                 Method that extends a linear system for computing constant solutions.
 
-                Given a linear system `(A|b)` over a field `F`, we can look for a set of 
+                Given a linear system `(A|b)` over a field `F`, we can look for a set of
                 constant solutions in `C \subset F`. This method provides (when possible)
                 an extended system `(\tilde{A}|\tilde{b})` such that every constant
                 solution of the original system is a solution for the new system and vice-versa.
@@ -519,17 +520,17 @@ class DRings(Category):
                 for (i,element) in enumerate(row):
                     logger.debug(f"[SFCS] Checking element {i} of the row: {element}")
                     for (mon, coeff) in (D[j]*element).conditions_to_zero():
-                        if not mon in new_eqs:
+                        if mon not in new_eqs:
                             new_eqs[mon] = ncols*[0]
                         logger.debug(f"[SFCS] Adding coefficient {coeff} for the monomial {mon}")
                         new_eqs[mon][i] += coeff
                 mons.extend([(j,m) for m in new_eqs.keys()])
                 final_system.extend(new_eqs.values())
-            
+
             logger.debug(f"[SFCS] Final system obtained:\n{matrix(final_system)}\n--------------------------")
-            
+
             return matrix(final_system), mons
-        
+
         def lcm_denominators(self, *elements: DRings.ElementMethods) -> DRings.ElementMethods:
             r'''
                 Method that computes the least common multiple of the denominators of a list of elements.
@@ -688,12 +689,12 @@ class DRings(Category):
                 This method applies repeatedly an operation defined in the parent of ``self``.
                 See :func:`~DRings.ParentMethods.operation` for further information.
             '''
-            if(times not in ZZ or times < 0):
+            if (times not in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
 
-            if(times == 0):
+            if (times == 0):
                 return self
-            elif(times == 1):
+            elif (times == 1):
                 return self.parent().operation(self, operation)
             else:
                 return self.parent().operation(self.operation(operation=operation, times=times-1), operation)
@@ -708,12 +709,12 @@ class DRings(Category):
                 This method applies repeatedly the inverse operation defined in the parent of ``self``.
                 See :func:`~DRings.ParentMethods.inverse_operation` for further information.
             '''
-            if(times not in ZZ or times < 0):
+            if (times not in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
 
-            if(times == 0):
+            if (times == 0):
                 return self
-            elif(times == 1):
+            elif (times == 1):
                 return self.parent().inverse_operation(self, operation)
             else:
                 return self.parent().inverse_operation(self.inverse_operation(operation=operation, times=times-1), operation)
@@ -725,23 +726,23 @@ class DRings(Category):
                 This method applies repeatedly a derivation defined in the parent of ``self``.
                 See :func:`~DRings.ParentMethods.derivative` for further information.
             '''
-            if(times not in ZZ or times < 0):
+            if (times not in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
 
-            if(times == 0):
+            if (times == 0):
                 return self
-            elif(times == 1):
+            elif (times == 1):
                 return self.parent().derivative(self, derivation)
             else:
                 return self.parent().derivative(self.derivative(derivation=derivation, times=times-1), derivation)
 
         def integrate(self, derivation: int = None, times: int = 1) -> Element:
-            if(times not in ZZ or times < 0):
+            if (times not in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
 
-            if(times == 0):
+            if (times == 0):
                 return self
-            elif(times == 1):
+            elif (times == 1):
                 return self.parent().integral(self, derivation)
             else:
                 return self.parent().integral(self.integrate(derivation=derivation, times=times-1), derivation)
@@ -753,12 +754,12 @@ class DRings(Category):
                 This method applies repeatedly a difference defined in the parent of ``self``.
                 See :func:`~DRings.ParentMethods.difference` for further information.
             '''
-            if(times not in ZZ or times < 0):
+            if (times not in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
 
-            if(times == 0):
+            if (times == 0):
                 return self
-            elif(times == 1):
+            elif (times == 1):
                 return self.parent().difference(self, difference)
             else:
                 return self.parent().difference(self.difference(difference=difference, times=times-1), difference)
@@ -776,12 +777,12 @@ class DRings(Category):
                 This method applies repeatedly a difference defined in the parent of ``self``.
                 See :func:`~DRings.ParentMethods.skew` for further information.
             '''
-            if(times not in ZZ or times < 0):
+            if (times not in ZZ or times < 0):
                 raise ValueError("The argument ``times`` must be a non-negative integer")
 
-            if(times == 0):
+            if (times == 0):
                 return self
-            elif(times == 1):
+            elif (times == 1):
                 return self.parent().skew(self, skew)
             else:
                 return self.parent().skew(self.skew(skew=skew, times=times-1), skew)
@@ -846,7 +847,7 @@ class DRings(Category):
         def conditions_to_zero(self) -> list[tuple[Element,Element]]:
             r'''Return a set of conditions so the element is zero when evaluating some parameters.'''
             raise NotImplementedError(f"Method conditions_to_zero not yet implemented for {self.__class__}")
-        
+
         def lcm_denominators(self, *other: DRings.ElementMethods) -> DRings.ElementMethods:
             return self.parent().lcm_denominators(self, *other)
 
@@ -866,6 +867,8 @@ class DRings(Category):
 
 RingsWithOperators = DRings #: alias for DRings (used for backward-compatibility)
 _DRings = DRings.__classcall__(DRings)
+
+
 ####################################################################################################
 ###
 ### DEFINING THE FACTORY FOR THE CREATION OF WRAPPED RINGS
@@ -990,6 +993,7 @@ class DRingFactory(UniqueFactory):
 DRing = DRingFactory("dalgebra.dring.DRing")
 RingWithOperators = DRing #: alias fod DRing (used for backward-compatibility)
 
+
 def DifferentialRing(base : CommutativeRing, *operators : Callable):
     r'''
         Method that calls the :class:`DRingFactory` with types always as "derivation".
@@ -1004,6 +1008,7 @@ def DifferentialRing(base : CommutativeRing, *operators : Callable):
     #     operators = operators[0]
 
     return DRing(base, *operators, types=len(operators)*["derivation"])
+
 
 def DifferenceRing(base: CommutativeRing, *operators : Callable):
     r'''
@@ -1020,6 +1025,7 @@ def DifferenceRing(base: CommutativeRing, *operators : Callable):
 
     return DRing(base, *operators, types=len(operators)*["homomorphism"])
 
+
 ####################################################################################################
 ###
 ### DEFINING THE ELEMENT AND PARENT FOR WRAPPED RINGS
@@ -1027,9 +1033,9 @@ def DifferenceRing(base: CommutativeRing, *operators : Callable):
 ####################################################################################################
 class DRing_WrapperElement(Element):
     def __init__(self, parent, element):
-        if(not isinstance(parent, DRing_Wrapper)):
+        if (not isinstance(parent, DRing_Wrapper)):
             raise TypeError("An element created from a non-wrapper parent")
-        elif(element not in parent.wrapped):
+        elif (element not in parent.wrapped):
             raise TypeError(f"An element outside the parent [{parent}] is requested")
 
         Element.__init__(self, parent=parent)
@@ -1173,7 +1179,7 @@ class DRing_WrapperElement(Element):
             no_constant_gens = [g.wrapped for g in self.parent().gens() if not g.d_constant()]
             if len(no_constant_gens) == 0:
                 return [(1, self.wrapped)]
-            
+
             R = PolynomialRing(self.parent().wrapped.remove_var(*no_constant_gens), no_constant_gens)
             h = self.parent().wrapped.hom([R(str(g)) for g in self.parent().wrapped.gens()])
             element = h(self.wrapped)
@@ -1202,6 +1208,7 @@ class DRing_WrapperElement(Element):
         return repr(self.wrapped)
     def _latex_(self) -> str:
         return latex(self.wrapped)
+
 
 class DRing_Wrapper(Parent):
     r'''
@@ -1282,9 +1289,9 @@ class DRing_Wrapper(Parent):
         #########################################################################################################
         # CREATING CATEGORIES
         categories = [_DRings, base.category()]
-        if(isinstance(category, (list, tuple))):
+        if (isinstance(category, (list, tuple))):
             categories += list(category)
-        elif(category is not None):
+        elif (category is not None):
             categories.append(category)
 
         #########################################################################################################
@@ -1296,7 +1303,7 @@ class DRing_Wrapper(Parent):
         current = self.__wrapped
         morph = DRing_Wrapper_SimpleMorphism(self, current)
         current.register_conversion(morph)
-        while(not(current.base() == current)):
+        while current.base() != current:
             current = current.base()
             morph = DRing_Wrapper_SimpleMorphism(self, current)
             current.register_conversion(morph)
@@ -1380,7 +1387,7 @@ class DRing_Wrapper(Parent):
             super().constant_ring(operation)
         else:
             return self.__constant
-        
+
     def set_constant(self, ring: Parent, operation: int = 0):
         self.__constant = ring
 
@@ -1406,8 +1413,6 @@ class DRing_Wrapper(Parent):
                 sage: from dalgebra import *
                 sage: R = DifferentialRing(QQ[x], diff)
                 sage: R.linear_operator_ring()
-                doctest:warning
-                ...
                 Univariate Ore algebra in D over Univariate Polynomial Ring in x over Rational Field
 
             This also works when having several operators::
@@ -1630,8 +1635,11 @@ class DRing_Wrapper(Parent):
         p = self.wrapped.random_element(*args,**kwds)
         return self.element_class(self, p)
 
+
 def is_WrappedDRing(parent: Parent) -> bool:
     return isinstance(parent, DRing_Wrapper)
+
+
 ####################################################################################################
 ###
 ### DEFINING A GENERIC FIELD OF FRACTIONS FOR D-RINGS
@@ -1659,10 +1667,11 @@ class DFractionFieldElement(FractionFieldElement):
             return tuple(set(self.numerator().variables()).union(set(self.denominator().variables())))
         except AttributeError:
             raise AttributeError("'DFractionFieldElement' object has no attribute 'variables'")
-        
+
     ## Methods from DRings.ElementMethods
     def conditions_to_zero(self) -> list[tuple[Element,Element]]:
         return self.numerator().conditions_to_zero()
+
 
 class DFractionField(FractionField_generic):
     r'''
@@ -1721,7 +1730,7 @@ class DFractionField(FractionField_generic):
 
     def add_constants(self, *new_constants: str) -> DFractionField:
         return self.base().add_constants(*new_constants).fraction_field()
-    
+
     def _lcm_denominators(self, *elements: DFractionFieldElement):
         from sage.arith.functions import lcm
         return lcm(element.denominator() for element in elements)
@@ -1731,6 +1740,7 @@ class DFractionField(FractionField_generic):
 
     def to_sage(self):
         return self.base().to_sage().fraction_field()
+
 
 ####################################################################################################
 ###
@@ -1860,6 +1870,7 @@ class DRingFunctor(ConstructionFunctor):
     @property
     def types(self): return self.__types
 
+
 class DRing_Wrapper_SimpleMorphism(Morphism):
     r'''
         Class representing maps to simpler rings.
@@ -1872,6 +1883,7 @@ class DRing_Wrapper_SimpleMorphism(Morphism):
 
     def _call_(self, p):
         return self.codomain()(p.wrapped)
+
 
 ####################################################################################################
 ###
@@ -1901,6 +1913,7 @@ class AdditiveMap(SetMorphism):
     def __hash__(self) -> int:
         return self.function.__hash__()
 
+
 class SkewMap(AdditiveMap):
     def __init__(self, domain : Parent, twist : Morphism, function : Callable):
         # we check the input
@@ -1915,12 +1928,14 @@ class SkewMap(AdditiveMap):
     def __str__(self) -> str:
         return f"Skew Derivation [{repr(self)}] over (({self.domain()}))"
 
+
 class DerivationMap(SkewMap):
     def __init__(self, domain, function : Callable):
         super().__init__(domain, domain.Hom(domain).one(), function)
 
     def __str__(self) -> str:
         return f"Derivation [{repr(self)}] over (({self.domain()}))"
+
 
 class WrappedMap(AdditiveMap):
     def __init__(self, domain : DRing_Wrapper, function : Morphism):

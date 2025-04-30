@@ -28,10 +28,11 @@ from sage.structure.factory import UniqueFactory
 from sage.structure.parent import Parent
 
 from typing import Collection, Mapping
-
 from ..dring import AdditiveMap, DRings
 
+
 _DRings = DRings.__classcall__(DRings)
+
 
 class PseudoDOperatorRingFactory(UniqueFactory):
     r'''
@@ -60,6 +61,7 @@ class PseudoDOperatorRingFactory(UniqueFactory):
 
 
 PseudoDOperatorRing = PseudoDOperatorRingFactory("dalgebra.dpolynomial.pseudo_doperator.PseudoDOperator")
+
 
 class PseudoDOperator(Element):
     def __init__(self, parent: PseudoDOperator_Ring, positive: Collection[Element] | Mapping[int, Element], negative: Mapping[tuple[int,Element], Element]):
@@ -340,6 +342,7 @@ class PseudoDOperator(Element):
 
         return " + ".join(term_str(o, el) for (o,el) in sorted(list(self.__positive.items()) + list(self.__negative.items()), key=sorting_key, reverse=True))
 
+
 class PseudoDOperator_Ring(Parent):
     r'''
         Class for a ring of pseudo-differential operators over a :class:`~dalgebra.dring.DRing`.
@@ -506,6 +509,7 @@ class PseudoDOperator_Ring(Parent):
         except Exception:
             raise NotImplementedError(f"The multiplication of {self.__gens[0]}^(-1) * {element} can not be computed.")
 
+
 class PseudoDOperatorFunctor(ConstructionFunctor):
     r'''
         Class representing Functor for creating :class:`DPolynomialRing_Monoid`.
@@ -533,8 +537,9 @@ class PseudoDOperatorFunctor(ConstructionFunctor):
         return f"PseudoDOperators(*,{self.__operator_name})"
 
     def __eq__(self, other):
-        if(other.__class__ == self.__class__):
+        if other.__class__ == self.__class__:
             return self.__operator_name == other.__operator_name
+
 
 class CoerceFromBaseMorphism(Morphism):
     def __init__(self, domain, codomain):
@@ -545,6 +550,7 @@ class CoerceFromBaseMorphism(Morphism):
 
     def _call_(self, element):
         return self.codomain().element_class(self.codomain(), [self.domain()(element)], dict())
+
 
 class CoerceMapBetweenBases(Morphism):
     def __init__(self, domain, codomain, map):

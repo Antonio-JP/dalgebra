@@ -44,7 +44,9 @@ from .dmonoids import DMonomialGen, IndexBijection
 from .dpolynomial import is_DPolynomialRing, DPolynomial
 from ..logging.logging import loglevel
 
+
 logger = logging.getLogger(__name__)
+
 
 def key_variable(varname: str) -> tuple:
     r'''
@@ -66,6 +68,7 @@ def key_variable(varname: str) -> tuple:
         except ValueError:
             result.append(part)
     return tuple(result)
+
 
 class DSystem:
     r'''
@@ -98,11 +101,11 @@ class DSystem:
     ):
         # Building the common parent
         parents = [el.parent() for el in equations]
-        if(parent is not None):
+        if (parent is not None):
             parents.insert(0,parent)
 
         pushed = reduce(lambda p, q : pushout(p,q), parents)
-        if(not is_DPolynomialRing(pushed)):
+        if (not is_DPolynomialRing(pushed)):
             raise TypeError("The common parent is not a ring of differential polynomials. Not valid for a DSystem")
 
         self.__parent : Parent = pushed
@@ -111,7 +114,7 @@ class DSystem:
 
         # Checking the argument `variables`
         gens = self.parent().variable_names()
-        if(variables is not None or len(variables) > 0):
+        if (variables is not None or len(variables) > 0):
             dvars = []
             for var in variables:
                 v_name = var._name if isinstance(var, DMonomialGen) else str(var)
@@ -618,9 +621,9 @@ class DSystem:
                 u_2 + v_2 - v_3)
         '''
         # Checking the input of L
-        if(not isinstance(Ls, (list, tuple))):
+        if (not isinstance(Ls, (list, tuple))):
             raise TypeError("The argument must be a list or tuple")
-        if(any(el not in ZZ or el < 0 for el in Ls)):
+        if (any(el not in ZZ or el < 0 for el in Ls)):
             raise ValueError("The argument must be a list or tuple of non-negative integers")
 
         if self.parent().noperators() == 1 and operation is None:
@@ -629,7 +632,7 @@ class DSystem:
             raise ValueError("An operation must be provided when having several operations")
 
         Ls = tuple(Ls)
-        if((Ls,operation) not in self.__CACHED_SP1):
+        if ((Ls,operation) not in self.__CACHED_SP1):
             new_equations = [self.equation(i, (operation, k)) for i in range(self.size()) for k in range(Ls[i] + 1)]
             self.__CACHED_SP1[(Ls,operation)] = self.__class__(new_equations, self.parent(), self.variables)
 
@@ -722,7 +725,7 @@ class DSystem:
                 sage: same_system.extend_by_operation([1,2]).is_sp2()
                 False
         '''
-        if(self.is_homogeneous()):
+        if (self.is_homogeneous()):
             return len(self.algebraic_variables()) == self.size()
         return len(self.algebraic_variables()) == self.size() - 1
 
@@ -768,7 +771,7 @@ class DSystem:
                 raise ValueError(f"We obtained a zero resultant --> this is a degenerate case (used {to_use_alg})")
 
             ## Casting to parent ring
-            if output not in self.parent():    
+            if output not in self.parent():
                 OR = output.parent() # This will be a polynomial ring in the variables not used in system
                 imgs = []
                 for v in OR.gens():
@@ -820,8 +823,8 @@ class DSystem:
         else:
             raise ValueError("The algorithm for the algebraic resultant must be 'auto', 'dixon', 'macaulay' or 'iterative'")
 
-    def __get_extension(self, bound: int, operation: int, halt = lambda S : S.is_sp2()) -> tuple[int]:
-        if(bound not in ZZ or bound < 0):
+    def __get_extension(self, bound: int, operation: int, halt=lambda S : S.is_sp2()) -> tuple[int]:
+        if (bound not in ZZ or bound < 0):
             raise ValueError("The bound for the extension must be a non-negative integer")
 
         ## auxiliary generator to iterate in a "balanced way"
@@ -832,7 +835,7 @@ class DSystem:
 
         for L in gen_cartesian(self.size(), bound):
             logger.info(f"Trying the extension {L}")
-            if(halt(self.extend_by_operation(L, operation))):
+            if (halt(self.extend_by_operation(L, operation))):
                 logger.info(f"Found the valid extension {L}")
                 break
         else: # if we don't break, we have found nothing --> error
@@ -981,7 +984,7 @@ class DSystem:
             logger.info(f"--------------------------------------------------")
             last_index = lambda l, value : len(l) - 1 - l[::-1].index(value)
             alg_equs = [equ for equ in alg_equs if equ != 0]
-            while(len(alg_equs) > 1 and len(alg_vars) > 0):
+            while (len(alg_equs) > 1 and len(alg_vars) > 0):
                 logger.info(f"\tRemaining variables: {alg_vars}")
                 logger.info(f"\tPicking best algebraic variable to eliminate...")
                 # getting th degrees of each variable in each equation
@@ -1082,10 +1085,10 @@ class DSystem:
 
             This method computes a set of generators of this ideal given the set of variables. In order to do so, we extend the
             d-System until we can eliminate all the indicated variables (similar to the method :func:`diff_resultant`) and then
-            computes an elimination ideal considering all variables as independent algebraic variables. Then we translate back 
+            computes an elimination ideal considering all variables as independent algebraic variables. Then we translate back
             to the setting of d-Systems and eliminate redundant equations.
 
-            INPUT: 
+            INPUT:
 
             * ``variables``: list or tuple of d-variables to be eliminated. They can be provided as strings or :class:`DMonomialGen`.
               If the variables are not provided, this method will try to eliminate the given variables of the :class:`DSystem`.
@@ -1101,7 +1104,7 @@ class DSystem:
             variables = [self.parent().gen(v) if isinstance(v, str) else v for v in variables]
             if any(v not in self.parent().gens() for v in variables):
                 raise TypeError(f"Not all variables in {variables} are valid for the ring {self.parent()}")
-            
+
         ### We have checked the input variables
         method = self.__decide_elimination_algorithm(alg_res)
 
@@ -1111,7 +1114,7 @@ class DSystem:
             return DSystem([], self.parent(), self.parent().gens())
         else:
             return DSystem(output, self.parent(), [v for v in self.variables if v not in variables])
-        
+
     def __decide_elimination_algorithm(self, alg_res):
         if alg_res == "iterative":
             logger.info(f"We compute elimination ideal iteratively")
@@ -1127,7 +1130,7 @@ class DSystem:
             return self.__elimination_autoreduced
         else:
             raise NotImplementedError(f"Method {alg_res} for elimination ideal not recognized")
-        
+
     def __elimination_iterative(self, *variables, bound_L: int = 10):
         ## We first select the "best" variable to eliminate
         logger.info("[eliminate-iterative] Looking for best variable...")
@@ -1143,13 +1146,13 @@ class DSystem:
         else:
             logger.info(f"[eliminate-iterative] We have finished the elimination process")
             return S
-        
+
     def __elimination_algebraic(self, *variables, bound_L: int = 10):
         if bound_L in ZZ:
             bound_L = self.size()*[bound_L]
         elif not len(bound_L) == self.size():
             raise ValueError(f"Bounds for operations over equations not valid")
-        
+
         is_valid = lambda S: len(S.algebraic_variables()) < S.size() + (1 if S.is_homogeneous() else 0)
         bijection = IndexBijection(self.parent().noperators())
 
@@ -1165,7 +1168,7 @@ class DSystem:
             elim_ideal = Ideal(alg_equations).elimination_ideal(alg_vars_elim)
             logger.info(f"[eliminate-algebraic] Tried elimination:\n\t-Source: {alg_equations}\n\t-Vars:   {variables} -> {alg_vars_elim}\n\t-Result: {elim_ideal.gens()}")
             return tuple(R(g) for g in elim_ideal.gens())
-        
+
         system = DSystem(S, self.parent(), variables)
         if is_valid(system):
             logger.info("[eliminate-algebraic] Original system was valid to try the elimination...")
@@ -1191,7 +1194,7 @@ class DSystem:
                             if len(elim_gens) > 0 and elim_gens[0] != 0:
                                 return [self.parent()(self.parent().to_sage()(out)) for out in elim_gens]
                             logger.info("[eliminate-algebraic] We did not find an elimination ideal yet!")
-        
+
         logger.info(f"[eliminate-algebraic] No elimination ideal found until {bound_L}. Aborting")
         return 0
 
@@ -1242,8 +1245,6 @@ class DSystem:
             We can check that this solutions satisfy all the equations of the systems to be zero::
 
                 sage: all(equation(dic=sol) == 0 for equation in S.equations())
-                doctest:warning
-                ...
                 True
         '''
         if not self.is_linear():
@@ -1282,6 +1283,8 @@ class DSystem:
 
 
 RWOSystem = DSystem #: alias for DSystem (used for backward compatibility)
+
+
 class DifferentialSystem (DSystem):
     r'''
         Class representing a differential system.

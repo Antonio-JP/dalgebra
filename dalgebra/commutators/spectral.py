@@ -35,6 +35,7 @@ from ..dpolynomial.dpolynomial import DPolynomial, DifferentialPolynomialRing, i
 from ..logging.logging import loglevel
 from .ideals import SolutionBranch
 
+
 ################################################################################################
 ### TYPES USED IN THIS MODULE
 ################################################################################################
@@ -44,6 +45,7 @@ class SolutionBranch_SpectralData(TypedDict):
     h: Polynomial | MPolynomial
     first_nonzero: int
     rk: int
+
 
 #################################################################################################
 ###
@@ -95,6 +97,7 @@ def SpectralCurveOverIdeal(L: DPolynomial, P: DPolynomial, branches: ListType[So
         final_output[branch] = data
     return final_output
 
+
 def spectral_operators(*operators: DPolynomial, names: list[str] = None) -> tuple[DPolynomial]:
     r'''
         Method to create the spectral operators associated with several differential operators.
@@ -134,12 +137,14 @@ def spectral_operators(*operators: DPolynomial, names: list[str] = None) -> tupl
     constants = [DR(DR.base()(name)) for name in names]
     return tuple(DR(op) - c*z[0] for (op, c) in zip(operators, constants))
 
+
 def __simplify(element, curve):
     r'''Reduces the element with the generator of a curve'''
     P = element.parent()
     if isinstance(P, FractionField_generic): # element is a rational function
         return __simplify(element.numerator(), curve) / __simplify(element.denominator(), curve)
     return element % curve
+
 
 def BC_pair(L, P):
     r'''

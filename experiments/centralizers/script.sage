@@ -72,7 +72,7 @@ def get_templates(generators: tuple, family: str, n:int) -> dict:
         f = eta
     else:
         raise ValueError(f"Unknown family {family}")
-    
+   
     templates = {2:[f]}
     for i in range(3, n+1):
         g = f.derivative(times=i-2)
@@ -82,16 +82,16 @@ def get_templates(generators: tuple, family: str, n:int) -> dict:
 
 def add_constants(R, generators, n: int, family: str) -> dict:
     templates = get_templates(generators, family, n)
-    constants = {i: 
-                 [f"a_{i}_{j}" for j in range(len(templates[i]))] 
-                 if len(templates[i]) > 1 else [f"a_{i}"] 
+    constants = {i:
+                 [f"a_{i}_{j}" for j in range(len(templates[i]))]
+                 if len(templates[i]) > 1 else [f"a_{i}"]
                 for i in range(2,n+1)}
-    
+   
     all_constants = sum(constants.values(), [])
     R_wa = R.add_constants(*all_constants)
 
     constants = {k: [R_wa(el) for el in v] for k, v in constants.items()}
-    
+   
     return R_wa, constants
 
 def create_Us(generators: tuple, constants: dict, family: str):
@@ -103,7 +103,7 @@ def create_Us(generators: tuple, constants: dict, family: str):
     print(templates.keys())
     for k in templates.keys():
         Us[k] = sum(c*t for (c,t) in zip(constants[k], templates[k]))
-    
+   
     print(Us)
     n = min(Us.keys())
     return tuple([Us[i] for i in range(N, n-1, -1)])

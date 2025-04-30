@@ -1,5 +1,5 @@
 r'''
-SageMath script to generate indefinitely elements of the almost commuting basis for a given value of `n`. 
+SageMath script to generate indefinitely elements of the almost commuting basis for a given value of `n`.
 
 The result of these computations are cached in the `dalgebra` package, so they can then be used for updating the repository "da_wilson".
 

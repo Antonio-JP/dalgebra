@@ -162,6 +162,7 @@ from .dring import * # basic ring structures
 from .dpolynomial import * # ring of difference/differential polynomials
 from .dextension import * # extensions of d-rings
 
+
 def dalgebra_version():
     from importlib.metadata import version, PackageNotFoundError
     try:
