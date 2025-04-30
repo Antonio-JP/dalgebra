@@ -280,7 +280,34 @@ def GetCentralizer(
         current += 1
     
     ## We change the first element to be the actual "constant" operator
-    Goodearl_Basis[0] = L.parent().gen("z")[0]
+    z = L.parent().gen("z")
+    Goodearl_Basis[0] = z[0]
+
+    ## We compute all the operators (if necessary)
+    operators = []
+    for i in range(len(Goodearl_Basis)):
+        if isinstance(Goodearl_Basis[i], (list, tuple)):
+            operators.append(
+                reduce(
+                    lambda p,q : p.dot(q, "z"), 
+                    [Goodearl_Basis[k].sym_power(el, z) if el > 0 else z[0] for (k,el) in enumerate(Goodearl_Basis[i]) if not isinstance(el, (list,tuple))], 
+                    Goodearl_Basis[0]
+                )
+            )
+        else:
+            operators.append(Goodearl_Basis[i])
+    
+    ## We compute the permutation for sorting
+    permutation = list(zip(*sorted(((op, i) for i,op in enumerate(operators)), key=lambda op : op[0].order(z))))[1]
+
+    ## We change the relation on the cases we know
+    for i in range(len(Goodearl_Basis)):
+        if isinstance(Goodearl_Basis[i], (list, tuple)):
+            Goodearl_Basis[i] = ([Goodearl_Basis[i][j] for j in permutation], operators[i])
+    
+    ## We now reorder the whole basis
+    Goodearl_Basis = [Goodearl_Basis[i] for i in permutation]
+        
     return L, Goodearl_Basis, level_flag
 
 def __compute_bounds(n, *K, global_bound, ignore_bound=False):
@@ -855,17 +882,14 @@ class GDH_Solution:
             if self.is_error():
                 return tuple(self.n*[-1])
             else:
-                self.__orders = [
-                    el.order(self.gen) if not isinstance(el, list) else 
-                    sum(el[k]*self.basis[k].order(self.gen) for k in range(self.n) if el[k] != 0)
-                for el in self.basis]
+                self.__orders = [(el if not isinstance(el, (list,tuple)) else el[1]).order(self.gen) for el in self.basis]
         return self.__orders
     @property
     def operators_tex(self) -> tuple[str]:
         if self.__operators_tex is None:
             self.__operators_tex = [
                 latex(el) if not isinstance(el, list) 
-                else ''.join(f'A_{k}^{"" if el[k] == 1 else el[k]}' for k in range(self.n) if el[k] != 0)
+                else ''.join(f'G_{k}^\u007b *{"" if el[0][k] == 1 else el[0][k]}\u007d' for k in range(self.n) if el[0][k] != 0)
             for el in self.basis]
         return self.__operators_tex
     
@@ -873,7 +897,7 @@ class GDH_Solution:
         relations = []
         for i,el in enumerate(self.basis):
             if isinstance(el, list):
-                relations.append(f"A_{i} - {self.operators_tex[i]}")
+                relations.append(f"G_{i}^* - {self.operators_tex[i]}")
         return ", ".join(relations)
 
     @property
