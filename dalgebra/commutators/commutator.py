@@ -792,10 +792,10 @@ def BC_ideal(L: DPolynomial, basis: tuple[DPolynomial], gen: DPolynomialGen, *, 
             if exp > 0:
                 output = output.dot(basis[i].sym_power(exp, gen),gen)
         return output
-    basis_operators = tuple(el if not isinstance(el, list) else power_from_basis(*el) for el in basis)
+    basis_operators = tuple(el if not isinstance(el, (tuple,list)) else power_from_basis(*el) for el in basis)
 
     ## 2. Recover the basic relations from the original basis
-    known_relations = {i : basis[i] for i in range(len(basis)) if isinstance(basis[i], list)}
+    known_relations = {i : basis[i] for i in range(len(basis)) if isinstance(basis[i], (tuple,list))}
     ## Creating the final polynomial ring with as many elements as those that do not appear in known_relations
     
     names_mu, weights = zip(*[(f"{var_B}_{i}", basis[i].order(gen)) for i in range(1,len(basis)) if i not in known_relations])
@@ -850,7 +850,7 @@ class GDH_Solution:
         ## TeX code for the operators in the centralizer
         self.__operators_tex = None
         ## Goodearl's basis for the Centralizer as C[L]-module
-        self.__alg_gens = len([el for el in centr_GB if not isinstance(el, list)])
+        self.__alg_gens = len([el for el in centr_GB if not isinstance(el, (tuple,list))])
         ## Rank of the centralizer (computed so far)
         self.__rank = GCD([self.n] + [el for el in self.orders if el is not None])
 
@@ -888,7 +888,7 @@ class GDH_Solution:
     def operators_tex(self) -> tuple[str]:
         if self.__operators_tex is None:
             self.__operators_tex = [
-                latex(el) if not isinstance(el, list) 
+                latex(el) if not isinstance(el, (list,tuple)) 
                 else ''.join(f'G_{k}^\u007b *{"" if el[0][k] == 1 else el[0][k]}\u007d' for k in range(self.n) if el[0][k] != 0)
             for el in self.basis]
         return self.__operators_tex
@@ -896,7 +896,7 @@ class GDH_Solution:
     def relations(self) -> str:
         relations = []
         for i,el in enumerate(self.basis):
-            if isinstance(el, list):
+            if isinstance(el, (list,tuple)):
                 relations.append(f"G_{i}^* - {self.operators_tex[i]}")
         return ", ".join(relations)
 
