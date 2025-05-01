@@ -58,6 +58,17 @@ r'''
     **Elements provided by the module**
     -----------------------------------------
 '''
+
+# ****************************************************************************
+#  Copyright (C) 2025 Antonio Jimenez-Pastor <antonio.jimenezp@upm.es>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#                  https://www.gnu.org/licenses/
+# ****************************************************************************
+
 from __future__ import annotations
 
 import logging
@@ -998,7 +1009,7 @@ def AnalyzeGDH(n: int, m: int,
                         f"* Algebraic generators: {computed[-1].algebraic_generators}\n",
                         f"* Found rank: {computed[-1].rank}\n",
                         "* Centralizer:\n"] +
-                        [f"  - (${j}$ -- ${computed[-1].orders[j]}$) $G_{j} = {computed[-1].operators_tex[j]}$\n" for j in range(len(computed[-1].basis))] +
+                        [f"  - (${j}$ -- ${computed[-1].orders[j]}$) $G_{j}^* = {computed[-1].operators_tex[j]}$\n" for j in range(len(computed[-1].basis))] +
                         [f"* Orders: ${latex(computed[-1].orders)}$\n"]
                     )
             except (KeyboardInterrupt, RecursionError) as error:

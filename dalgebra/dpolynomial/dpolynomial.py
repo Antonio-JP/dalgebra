@@ -1,5 +1,48 @@
 from __future__ import annotations
 
+r'''
+    Class for D-polynomials (difference/differential polynomials) over rings with operators.
+
+    This module provides the main implementation of D-polynomials, which are polynomials in infinitely many variables
+    indexed by the application of one or more difference or differential operators to a set of generators.
+    The core classes include:
+
+    - DPolynomial: Represents a sparse D-polynomial as a sum of monomials with coefficients in a base ring with operators.
+    - DPolynomialGen: Generator object for D-polynomial variables, supporting operator indexing.
+    - DPolynomialRing_Monoid: The parent class for D-polynomial rings, supporting multiple operators and variables.
+    - DPolynomialRingFactory: Factory for creating and caching D-polynomial rings.
+    - DifferentialPolynomialRing / DifferencePolynomialRing: Convenience constructors for differential/difference polynomial rings.
+
+    The module supports:
+    - Construction and manipulation of D-polynomials with arbitrary numbers of operators and variables.
+    - Arithmetic operations, differentiation, shifting, and other operator actions.
+    - Extraction of coefficients, monomials, and variable orders.
+    - Weight and ranking functions for use in algorithms such as Gröbner bases.
+    - Conversion to and from SageMath polynomial rings and linear operator rings.
+
+    EXAMPLES::
+
+        sage: from dalgebra import *
+        sage: R.<u,v> = DifferentialPolynomialRing(QQ)
+        sage: f = 3*u[0]*v[1] + u[2] + 1
+        sage: f.derivative()
+        3*u_1*v_2 + u_3
+        sage: f.constant_coefficient()
+        1
+
+    See the documentation of each class for further details and advanced usage.
+'''
+
+# ****************************************************************************
+#  Copyright (C) 2025 Antonio Jimenez-Pastor <antonio.jimenezp@upm.es>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#                  https://www.gnu.org/licenses/
+# ****************************************************************************
+
 import logging
 
 from itertools import product
