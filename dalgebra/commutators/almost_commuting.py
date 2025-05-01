@@ -150,6 +150,16 @@ r'''
     **Elements provided by the module**
     -----------------------------------------
 '''
+# ****************************************************************************
+#  Copyright (C) 2025 Antonio Jimenez-Pastor <antonio.jimenezp@upm.es>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#                  https://www.gnu.org/licenses/
+# ****************************************************************************
+
 from __future__ import annotations
 
 import logging
@@ -170,6 +180,7 @@ from ..dpolynomial.dmonoids import DMonomial
 from ..dpolynomial.dpolynomial import DPolynomial, DPolynomialGen, DPolynomialSimpleMorphism, DPolynomialRing_Monoid, DifferentialPolynomialRing
 from ..dpolynomial.dsystems import DSystem
 from ..logging.logging import cache_in_file
+
 
 #################################################################################################
 ###
@@ -214,9 +225,11 @@ def __names_variables(order:int, var_name: str, *, simplify_names: bool = True) 
     '''
     return [f"{var_name}_{i+2}" for i in range(order-1)] if (order > 2 or (not simplify_names)) else [var_name] if order == 2 else []
 
+
 @lru_cache(maxsize=64)
 def generic_normal(n: int,
                    name_var: str = "u", name_partial: str = "z", *,
+                   output_base: DRings.ParentMethods = QQ,
                    output_ring: DRings.ParentMethods | None = None, simplify_names: bool = True
 ) -> DPolynomial:
     r'''
@@ -236,6 +249,7 @@ def generic_normal(n: int,
         * ``n``: the order of the generic operator in normal form `L`.
         * ``name_var`` (optional): base name for the `u` variables that will appear in `L`.
         * ``name_partial`` (optional): base name for the differential variable to represent `\partial`.
+        * ``output_base`` (optional): desired base d-ring to be used as coefficients. Only used if ``output_ring`` is None.
         * ``output_ring`` (optional): if provided, we use this ring as a base ring for creating the differential operator.
           It raises an error if any of the required variables is not included in the ring.
         * ``simplify_names`` (optional): used for the argument ``simplify_names`` in method :func:`__names_variables`.
@@ -277,13 +291,14 @@ def generic_normal(n: int,
         raise TypeError(f"[almost] The optional argument `output_ring` must be a ring of d-polynomials or ``None``")
 
     names_u = __names_variables(n, name_var, simplify_names=simplify_names)
-    output_ring = DifferentialPolynomialRing(QQ, names_u + [name_partial]) if output_ring is None else output_ring
+    output_ring = DifferentialPolynomialRing(output_base, names_u + [name_partial]) if output_ring is None else output_ring
     try:
         output_z = output_ring.gen(name_partial)
         output_u = [output_ring.gen(name) for name in names_u] # output_u = [u2, u3, ..., un]
     except ValueError:
         raise IndexError(f"[almost] An output ring was given but does not include all necessary variable: {names_u + [name_partial]}")
     return output_z[n] + sum(output_u[i-2][0]*output_z[n-i] for i in range(2,n+1))
+
 
 @cache_in_file
 def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "direct", solver:str = "integral"):
@@ -399,6 +414,7 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "direct", s
         output = (Pm,T)
     return output
 
+
 @cache_in_file
 def almost_commuting_wilson(n: int, m: int, name_u: str | list[str] | tuple[str] = "u", name_z: str = "z"):
     import os
@@ -443,6 +459,7 @@ def almost_commuting_wilson(n: int, m: int, name_u: str | list[str] | tuple[str]
 
     return Pm,T
 
+
 def __almost_commuting_direct(parent: DPolynomialRing_Monoid, order_L: int, order_P: int, name_p: str, name_u: str, name_z: str) -> tuple[DPolynomialRing_Monoid, list[DPolynomial], list[DPolynomial]]:
     r'''
         Direct method to compute the equations to solve for Wilson's almost commuting basis.
@@ -483,6 +500,7 @@ def __almost_commuting_direct(parent: DPolynomialRing_Monoid, order_L: int, orde
 
     ## Returning the full output
     return R, equations, T
+
 
 @lru_cache(maxsize=128)
 def __almost_commuting_recursive(parent: DPolynomialRing_Monoid, order_L: int, order_P: int, name_p: str, name_u: str, name_z: str) -> tuple[DPolynomialRing_Monoid, list[DPolynomial], list[DPolynomial]]:
@@ -600,6 +618,7 @@ def __almost_commuting_recursive(parent: DPolynomialRing_Monoid, order_L: int, o
 
         return R, output[n-1:], output[:n-1]
 
+
 def __almost_commuting_integral(parent: DPolynomialRing_Monoid, equations: list[DPolynomial], _: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
     r'''
         Integration method to solve the equations for obtaining Wilson's almost commuting basis.
@@ -620,6 +639,7 @@ def __almost_commuting_integral(parent: DPolynomialRing_Monoid, equations: list[
     '''
     S = DSystem(equations, parent=parent, variables=p)
     return S.solve_linear()
+
 
 def __almost_commuting_linear(parent: DPolynomialRing_Monoid, equations: list[DPolynomial], u: list[DPolynomialGen], p: list[DPolynomialGen]) -> dict[DPolynomialGen, DPolynomial]:
     r'''
@@ -675,6 +695,8 @@ def __almost_commuting_linear(parent: DPolynomialRing_Monoid, equations: list[DP
     return ansatz_evaluated
 ###
 #################################################################################################
+
+
 def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = None):
     r'''
         Return equations of the `m`-th step of the integrable hierarchy induced by `n`.
@@ -691,17 +713,20 @@ def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = N
         return H[i]
     return H
 
+
 def kdv(m: int):
     r'''
         KdV hierarchy (see :wiki:`KdV_hierarchy`) is the integrable hierarchy that appears from almost commutators of a generic operator of order 2.
     '''
     return hierarchy(2,m,0)
 
+
 def boussinesq(m: int, i: int | tuple[int] | list[int] | slice | None = None):
     r'''
         Boussinesq hierarchy (TODO: add reference)
     '''
     return hierarchy(3,m,i)
+
 
 @cache_in_file
 def recursion(n: int):
@@ -828,7 +853,7 @@ def recursion(n: int):
     logger.info(f"[recursion] ++ Created the linear systems. We have {len(equations)} equations")
     ## We solve the system (NOTE: right now we use groebner bases and reduce, maybe it is better to change this)
 
-    logger.info(f"[recursion] ++ Solving the linear system... (currently with Grobner basis)")
+    logger.info(f"[recursion] ++ Solving the linear system... (currently with Gröbner basis)")
     ideal_orig = Ideal(equations)
     ideal_gb = ideal_orig.groebner_basis()
     logger.info(f"[recursion] ++ Computing the final solutions")

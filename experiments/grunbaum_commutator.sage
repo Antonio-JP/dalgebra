@@ -39,8 +39,8 @@ def print_help():
     print("".ljust(PAD_SIZE, "-"))
 
 def process_arguments(*argv: str) -> tuple[
-                                           DPolynomial, 
-                                           tuple[DRing_WrapperElement,DRing_WrapperElement,DRing_WrapperElement], 
+                                           DPolynomial,
+                                           tuple[DRing_WrapperElement,DRing_WrapperElement,DRing_WrapperElement],
                                            tuple[Polynomial,DPolynomialGen],
                                            int,tuple[int,bool,str]
 ]:
@@ -124,11 +124,11 @@ def process_arguments(*argv: str) -> tuple[
     return L, (U,V,W), (x,z), order_P, (parallel, groebner, logfile)
 
 def run_execution(
-        L: DPolynomial, 
-        U: DRing_WrapperElement, V: DRing_WrapperElement, W: DRing_WrapperElement, 
-        x: Polynomial, z: DPolynomialGen, 
-        order_P: int, 
-        parallel: int, groebner: bool, logfile: str, 
+        L: DPolynomial,
+        U: DRing_WrapperElement, V: DRing_WrapperElement, W: DRing_WrapperElement,
+        x: Polynomial, z: DPolynomialGen,
+        order_P: int,
+        parallel: int, groebner: bool, logfile: str,
         outfile: TextIOWrapper
 ):
     outfile.writelines([
@@ -142,11 +142,11 @@ def run_execution(
     ]);  outfile.flush()
     ctime = time()
     L,P,H = GetEquationsForSolution(
-        order_P, 
-        n = order_L, 
-        U = [BD(str(L.coefficient(z[i]))) for i in range(order_L-1)], 
-        extract=partial(generate_polynomial_equations, var_name = str(x)), 
-        loglevel=logging.DEBUG, 
+        order_P,
+        n = order_L,
+        U = [BD(str(L.coefficient(z[i]))) for i in range(order_L-1)],
+        extract=partial(generate_polynomial_equations, var_name = str(x)),
+        loglevel=logging.DEBUG,
         logfile=logfile
     )
     time_conditions = time()-ctime
@@ -165,9 +165,9 @@ def run_execution(
     outfile.flush()
     ctime = time()
     branches = analyze_ideal(
-        H, 
-        partial_solution, 
-        [("var", f"c_{order_P}", 1)] + [("var", f"c_{a*order_L}", 0) for a in range(order_P//order_L)], 
+        H,
+        partial_solution,
+        [("var", f"c_{order_P}", 1)] + [("var", f"c_{a*order_L}", 0) for a in range(order_P//order_L)],
         P.parent().base().wrapped,
         parallel=parallel,
         groebner=groebner,
@@ -199,7 +199,7 @@ def run_execution(
             f"Final parent: {bL.parent()}\n"
             f"Final operator: {bL}\n"] if not isinstance(bL, str) else [bL]) + ([
             f"Final commutator: {bP}\n"] if not isinstance(bP, str) else [bP]) + ([
-            f"Lie bracket: {bL.lie_bracket(bP, z)}\n"] if all(not isinstance(e, str) for e in (bL, bP)) else []) + [ 
+            f"Lie bracket: {bL.lie_bracket(bP, z)}\n"] if all(not isinstance(e, str) for e in (bL, bP)) else []) + [
             f"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n"
         ]); outfile.flush()
 

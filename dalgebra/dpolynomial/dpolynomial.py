@@ -1,5 +1,48 @@
 from __future__ import annotations
 
+r'''
+    Class for D-polynomials (difference/differential polynomials) over rings with operators.
+
+    This module provides the main implementation of D-polynomials, which are polynomials in infinitely many variables
+    indexed by the application of one or more difference or differential operators to a set of generators.
+    The core classes include:
+
+    - DPolynomial: Represents a sparse D-polynomial as a sum of monomials with coefficients in a base ring with operators.
+    - DPolynomialGen: Generator object for D-polynomial variables, supporting operator indexing.
+    - DPolynomialRing_Monoid: The parent class for D-polynomial rings, supporting multiple operators and variables.
+    - DPolynomialRingFactory: Factory for creating and caching D-polynomial rings.
+    - DifferentialPolynomialRing / DifferencePolynomialRing: Convenience constructors for differential/difference polynomial rings.
+
+    The module supports:
+    - Construction and manipulation of D-polynomials with arbitrary numbers of operators and variables.
+    - Arithmetic operations, differentiation, shifting, and other operator actions.
+    - Extraction of coefficients, monomials, and variable orders.
+    - Weight and ranking functions for use in algorithms such as Gröbner bases.
+    - Conversion to and from SageMath polynomial rings and linear operator rings.
+
+    EXAMPLES::
+
+        sage: from dalgebra import *
+        sage: R.<u,v> = DifferentialPolynomialRing(QQ)
+        sage: f = 3*u[0]*v[1] + u[2] + 1
+        sage: f.derivative()
+        3*u_0*v_2 + 3*u_1*v_1 + u_3
+        sage: f.constant_coefficient()
+        1
+
+    See the documentation of each class for further details and advanced usage.
+'''
+
+# ****************************************************************************
+#  Copyright (C) 2025 Antonio Jimenez-Pastor <antonio.jimenezp@upm.es>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#                  https://www.gnu.org/licenses/
+# ****************************************************************************
+
 import logging
 
 from itertools import product
@@ -30,9 +73,11 @@ from typing import Collection
 from ..dring import DRings, DFractionField, AdditiveMap, DifferentialRing, DifferenceRing
 from .dmonoids import DMonomialMonoid, DMonomialGen, DMonomial, IndexBijection
 
+
 logger = logging.getLogger(__name__)
 _DRings = DRings.__classcall__(DRings)
 _Sets = Sets.__classcall__(Sets)
+
 
 ## Factories for all structures
 class DPolynomialRingFactory(UniqueFactory):
@@ -87,18 +132,23 @@ class DPolynomialRingFactory(UniqueFactory):
 
 DPolynomialRing = DPolynomialRingFactory("dalgebra.dpolynomial.dpolynomial.DPolynomialRing")
 RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing (used for backward compatibility)
+
+
 def DifferentialPolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_Monoid:
     if base not in _DRings:
         base = DifferentialRing(base, kwds.pop("derivation", diff))
     if not base.is_differential():
         raise TypeError("The base ring must be a differential ring")
     return DPolynomialRing(base, *names, **kwds)
+
+
 def DifferencePolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_Monoid:
     if base not in _DRings:
         base = DifferenceRing(base, kwds.pop("difference", base.Hom(base).one()))
     if not base.is_difference():
         raise TypeError("The base ring must be a difference ring")
     return DPolynomialRing(base, *names, **kwds)
+
 
 class DPolynomial(Element):
     r'''
@@ -649,10 +699,37 @@ class DPolynomial(Element):
         '''
         return sum(hash(m) for m in self.monomials())
 
-    def numerator(self) -> DPolynomial:
-        return self
+    ## Other methods for DRings.ElementMethods
     def denominator(self) -> DPolynomial:
-        return self.parent().one()
+        coefficients = self.coefficients()
+        if len(coefficients) == 0:
+            return 0
+        else:
+            return coefficients[0].lcm_denominators(*coefficients[1:])
+
+    def numerator(self) -> DPolynomial:
+        return self*self.denominator()
+
+    def conditions_to_zero(self) -> list[tuple[DPolynomial, Element]]:
+        r'''
+            Return the conditions to ``self`` to be zero.
+
+            The generators in a D-polynomial ring are considered to be d-algebraically independent.
+            This means that there is no polynomial combination of the generators and all their
+            operational successors that vanishes.
+
+            In this sense, we can conclude that an element is zero if and only if all their coefficients
+            are also zero in the base ring we are considering.
+
+            As the elements in the coefficients are in a D-Ring, we can compute the zero conditions for those
+            elements as well.
+        '''
+        output = list()
+        for (mon, coeff) in zip(self.monomials(), self.coefficients()):
+            for (mon2, condition) in coeff.conditions_to_zero():
+                output.append((self.parent()(mon)*mon2, condition))
+
+        return output
 
     ###################################################################################
     ### Operational operations
@@ -667,6 +744,7 @@ class DPolynomial(Element):
             We rely on the variable names of the parent. There are no coercions in this method, it simply computes the corresponding product
             with the corresponding values.
         '''
+        ## Processing the arguments
         if len(args) != 0:
             if dic is not None or len(kwds) != 0:
                 raise TypeError("Incorrect format for evaluating a DMonomial")
@@ -691,52 +769,9 @@ class DPolynomial(Element):
         if len(inner_kwds) > 0: # Evaluating coefficients -> this forces everything to remain in the same base ring
             return self.eval_coefficients(**inner_kwds)(**kwds)
 
-        if len(kwds) > 0:
-            ## Computing the final ring
-            from functools import reduce
-            final_base = reduce(pushout,
-                                (el.parent() if not is_DPolynomialRing(el.parent()) else el.parent().base()
-                                    for el in kwds.values()),
-                                self.parent().base())
-            R_w_kwds = self.parent().remove_variables(*list(kwds.keys())) # conversion from self.parent() to R_w_kwds is created
-            final_dvariables = set(R_w_kwds.variable_names()) if is_DPolynomialRing(R_w_kwds) else set()
-            for value in kwds.values():
-                if is_DPolynomialRing(value.parent()):
-                    final_dvariables.update(value.parent().variable_names())
-            if len(final_dvariables) > 0 and is_DPolynomialRing(R_w_kwds):
-                output_ring = DPolynomialRing(final_base, list(final_dvariables))
-                self_to_output = DPolynomialVariableMorphism(R_w_kwds, output_ring) * R_w_kwds.convert_map_from(self.parent())
-            elif len(final_dvariables) > 0:
-                output_ring = DPolynomialRing(final_base, list(final_dvariables))
-                self_to_output = output_ring.coerce_map_from(R_w_kwds) * R_w_kwds.convert_map_from(self.parent())
-            else:
-                output_ring = final_base
-                self_to_output = output_ring.coerce_map_from(R_w_kwds) * R_w_kwds.convert_map_from(self.parent())
+        ev_morph = self.parent().get_evaluation_morphism(kwds)
 
-            ## Changing names to integers
-            kwds = {
-                self.parent().variable_names().index(k) :
-                    DPolynomialVariableMorphism(v.parent(), output_ring)(v) if is_DPolynomialRing(v.parent()) else
-                    final_base(v)
-                for (k,v) in kwds.items()}
-
-            result = output_ring.zero()
-            for (m, c) in self._content.items():
-                ## Evaluating the monomial
-                ev_mon = final_base.one() # ev_mon will be in final_base or output_ring
-                rem_mon = dict() # rem_mon will be in output_ring using ``self_to_output``
-                for (v,o),e in m._variables.items():
-                    if v in kwds:
-                        el = kwds[v]
-                        P = el.parent()
-                        ev_mon *= P.apply_operations(el, o)**e
-                    else:
-                        rem_mon[(v,o)] = m._variables[(v,o)]
-                rem_mon = self.parent()(self.parent().monoids().element_class(self.parent().monoids(), rem_mon)) if len(rem_mon) > 0 else self.parent().one()
-                result += self_to_output(rem_mon) * final_base(c) * ev_mon
-            return result
-        else: # Nothing to evaluate -> we return the object
-            return self
+        return ev_morph(self)
 
     def lie_bracket(self, other: DPolynomial, gen: DMonomialGen = None) -> DPolynomial:
         r'''
@@ -745,17 +780,7 @@ class DPolynomial(Element):
         if other not in self.parent():
             raise ValueError(f"The two objects must be DPolynomials")
         other = self.parent()(other)
-
-        if isinstance(gen, DMonomialGen):
-            name_gen = self.parent().variable_names()[gen._index]
-        elif gen in ZZ:
-            name_gen = self.parent().variable_names()[gen]
-        elif isinstance(gen, str):
-            name_gen = gen
-        else:
-            raise TypeError("Incorrect generator for Lie bracket")
-
-        return self(**{name_gen: other}) - other(**{name_gen: self})
+        return self.dot(other,gen) - other.dot(self,gen)
 
     @cached_method
     def sym_power(self, power: int, gen: DMonomialGen = None) -> DPolynomial:
@@ -791,6 +816,22 @@ class DPolynomial(Element):
 
             ngen = gen.variable_name()
             return H1(**{ngen: H2})
+
+    def dot(self, other: DPolynomial, gen: DMonomialGen = None) -> DPolynomial:
+        if other not in self.parent():
+            raise ValueError(f"The two objects must be DPolynomials")
+        other = self.parent()(other)
+
+        if isinstance(gen, DMonomialGen):
+            name_gen = self.parent().variable_names()[gen._index]
+        elif gen in ZZ:
+            name_gen = self.parent().variable_names()[gen]
+        elif isinstance(gen, str):
+            name_gen = gen
+        else:
+            raise TypeError("Incorrect generator for Lie bracket")
+
+        return self(**{name_gen: other})
 
     def reduce_algebraic(self, polynomials) -> DPolynomial:
         r'''
@@ -1131,7 +1172,7 @@ class DPolynomial(Element):
                 Traceback (most recent call last):
                 ...
                 TypeError: The given polynomial ... is not linear or homogeneous over u_*
-                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homoeneous in v_*
+                sage: f2 = x*u[0] + x^2*u[2] - (1-x)*v[0] # not homogeneous in v_*
                 sage: f2._mathematica_(v)
                 Traceback (most recent call last):
                 ...
@@ -1221,6 +1262,7 @@ class DPolynomial(Element):
 
 RWOPolynomial = DPolynomial #: alias for DPolynomial (used for backward compatibility)
 
+
 class DPolynomialGen(DMonomialGen):
     r'''
         :class:`DPolynomial` version of the generator object :class:`DMonomialGen`. It guarantees the output is a :class:`DPolynomial`.
@@ -1290,6 +1332,7 @@ class DPolynomialGen(DMonomialGen):
     def __pow__(self, n):
         return self[0]**n
 
+
 class DPolynomialRing_Monoid(Parent):
     r'''
         Class for a ring of polynomials over a :class:`~dalgebra.dring.DRing`.
@@ -1327,8 +1370,6 @@ class DPolynomialRing_Monoid(Parent):
 
             sage: from dalgebra import *
             sage: R.<y> = DifferentialPolynomialRing(QQ['x']); x = R.base().gens()[0]; R
-            doctest:warning
-            ...
             Ring of operator polynomials in (y) over Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
             sage: S.<a,b> = DifferentialPolynomialRing(ZZ); S
             Ring of operator polynomials in (a, b) over Differential Ring [[Integer Ring], (0,)]
@@ -1478,12 +1519,14 @@ class DPolynomialRing_Monoid(Parent):
         self.__cache : list[dict[DPolynomial, DPolynomial]] = [dict() for _ in range(len(self.__operators))]
         self.__cache_ranking : dict[tuple[tuple[DPolynomial], str], RankingFunction] = dict()
         self.__fraction_field : DFractionField = None
+        self.__CACHED_EVALUATION_MORPHISM = dict()
+        self.__CACHED_EVALUATIONS = dict()
 
         # registering conversion to simpler structures
         current = self.base()
         morph = DPolynomialSimpleMorphism(self, current)
         current.register_conversion(morph)
-        while(not(current.base() == current)):
+        while not (current.base() == current):
             current = current.base()
             morph = DPolynomialSimpleMorphism(self, current)
             current.register_conversion(morph)
@@ -1563,7 +1606,7 @@ class DPolynomialRing_Monoid(Parent):
         '''
         if isinstance(i, str):
             i = self.variable_names().index(i)
-        if(not(i in ZZ) or (i < 0 or i > len(self.variable_names()))):
+        if (not (i in ZZ) or (i < 0 or i > len(self.variable_names()))):
             raise ValueError("Invalid index for generator")
 
         return self.gens()[i]
@@ -1600,7 +1643,7 @@ class DPolynomialRing_Monoid(Parent):
             return True
 
         coer = self._coerce_map_from_(S)
-        return (not(coer is False) and not(coer is None))
+        return (coer is True) or (coer is not None)
 
     def _element_constructor_(self, x) -> DPolynomial:
         r'''
@@ -1614,6 +1657,9 @@ class DPolynomialRing_Monoid(Parent):
         elif x in self.base():
             return self.element_class(self, {self.monoids().one(): x}) # casting elements in self.base()
         elif isinstance(x, DPolynomial):
+            if x.parent() is self:
+                return x
+            # logger.log(15, f"!3 Using element constructor from polynomial")
             return self.element_class(self, x) # this casts the coefficients
         else:
             ## Converting the input into a Symbolic Expression
@@ -1775,6 +1821,7 @@ class DPolynomialRing_Monoid(Parent):
     #     return destiny_ring(str(polynomial.polynomial()))
         raise NotImplementedError("This method is not yet implemented")
 
+    @cached_method
     def change_ring(self, R):
         r'''
             Return the operator polynomial ring changing the base ring to `R`.
@@ -1790,7 +1837,33 @@ class DPolynomialRing_Monoid(Parent):
 
             A :class:`DPolynomialRing_Monoid` over ``R`` with the same variables as ``self``.
         '''
-        return DPolynomialRing(R, *self.variable_names())
+        if self.base() == R:
+            return self
+
+        output = DPolynomialRing(R, *self.variable_names())
+        if self.base().has_coerce_map_from(R):
+            try:
+                output.register_coercion(DPolynomial_Base2BaseMorphism(output, self, R.coerce_map_from(self.base())))
+            except AssertionError:
+                pass
+        elif R.has_coerce_map_from(self.base()):
+            try:
+                self.register_coercion(DPolynomial_Base2BaseMorphism(self, output, self.base().coerce_map_from(R)))
+            except AssertionError:
+                pass
+
+        if self.base().convert_map_from(R):
+            try:
+                output.register_conversion(DPolynomial_Base2BaseMorphism(output, self, R.convert_map_from(self.base())))
+            except AssertionError:
+                pass
+        if R.convert_map_from(self.base()):
+            try:
+                self.register_conversion(DPolynomial_Base2BaseMorphism(self, output, self.base().convert_map_from(R)))
+            except AssertionError:
+                pass
+
+        return output
 
     def append_variables(self, *variables) -> DPolynomialRing_Monoid:
         r'''Add new d-variables to the current ring'''
@@ -1863,6 +1936,39 @@ class DPolynomialRing_Monoid(Parent):
             self.__fraction_field = DFractionField(self)
         return self.__fraction_field
 
+    def get_evaluation_morphism(self, images: dict) -> Morphism:
+        if len(images) == 0:
+            return self.hom(self) #identity morphism
+
+        key = tuple(sorted(images.items()))
+        if key not in self.__CACHED_EVALUATION_MORPHISM:
+            codomain, morphism = EvaluationMorphism_DPolynomial.decide_codomain(self, images)
+            self.__CACHED_EVALUATION_MORPHISM[key] = EvaluationMorphism_DPolynomial(self, codomain, images, domain_to_codomain=morphism)
+        return self.__CACHED_EVALUATION_MORPHISM[key]
+
+    def eval(self, element: DPolynomial, dic : dict[str, Element]) -> Element:
+        key = (element, tuple(sorted(dic.items())))
+        if key not in self.__CACHED_EVALUATIONS:
+            ###########################################################
+            ## Evaluating coefficients first
+            ###########################################################
+            inner_kwds = dict()
+            out_kwds = dict()
+            for entry, value in dic.items():
+                if entry not in self.variable_names():
+                    inner_kwds[entry] = value
+                else:
+                    out_kwds[entry] = value
+            dic = out_kwds
+
+            if len(inner_kwds) > 0: # Evaluating coefficients -> this forces everything to remain in the same base ring
+                return element.eval_coefficients(**inner_kwds)(**dic)
+
+            ev_morph = self.get_evaluation_morphism(dic)
+            self.__CACHED_EVALUATION_MORPHISM[key] = ev_morph(self)
+
+        return self.__CACHED_EVALUATION_MORPHISM[key]
+
     #################################################
     ### Magic python methods
     #################################################
@@ -1907,7 +2013,7 @@ class DPolynomialRing_Monoid(Parent):
 
         return self(p)
 
-    def as_polynomials(self, *elements : DPolynomial) -> list[Element]:
+    def as_polynomials(self, *elements : DPolynomial, as_sage: bool = False) -> list[Element]:
         r'''
             Transform the list of elements to polynomials in a common parent
 
@@ -1946,7 +2052,7 @@ class DPolynomialRing_Monoid(Parent):
         # This sort the variables first by index (i.e., alphabetically) then by order
         variables = sorted(variables, key=lambda p : tuple(next(iter(p._content))._variables.items())[0])
 
-        PR = PolynomialRing(self.base(), [str(v) for v in variables], sparse=True)
+        PR = PolynomialRing(self.base().to_sage() if as_sage else self.base(), [str(v) for v in variables], sparse=True)
         try:
             self.register_coercion(PR.hom(variables, self))
         except AssertionError:
@@ -1976,10 +2082,10 @@ class DPolynomialRing_Monoid(Parent):
             def __extended_homomorphism(element : DPolynomial) -> DPolynomial:
                 element = self(element)
 
-                if(element in self.base()):
+                if (element in self.base()):
                     return self(operator(self.base()(element)))
 
-                if(element not in self.__cache[operation]):
+                if (element not in self.__cache[operation]):
                     self.__cache[operation][element] = self.element_class(
                         self,
                         {m._shift_(operation) : operator(c) for (m,c) in element._content.items()}
@@ -1991,10 +2097,10 @@ class DPolynomialRing_Monoid(Parent):
             def __extended_derivation(element : DPolynomial) -> DPolynomial:
                 element = self(element)
 
-                if(element in self.base()):
+                if (element in self.base()):
                     return self(operator(self.base()(element)))
 
-                if(element not in self.__cache[operation]):
+                if (element not in self.__cache[operation]):
                     final_dict = dict()
                     for (m,c) in element._content.items():
                         for nm, e in m._derivative_(operation):
@@ -2015,6 +2121,9 @@ class DPolynomialRing_Monoid(Parent):
 
     def add_constants(self, *new_constants: str) -> DPolynomialRing_Monoid:
         return DPolynomialRing(self.base().add_constants(*new_constants), *self.variable_names())
+
+    def constant_ring(self):
+        return self.base().constant_ring()
 
     def linear_operator_ring(self) -> Ring:
         r'''
@@ -2178,6 +2287,10 @@ class DPolynomialRing_Monoid(Parent):
                 element -= partial_integral.operation(operation)
                 logger.debug(f"[integral_decomposition] Remaining to integrate: {element}")
                 return self.__integral_decomposition(element, operation, integral, nintegral)
+
+    def _lcm_denominators(self, *elements: DPolynomial):
+        from sage.arith.functions import lcm
+        return lcm(element.denominator() for element in elements)
 
     @cached_method
     def to_sage(self):
@@ -2537,6 +2650,8 @@ class DPolynomialRing_Monoid(Parent):
 
             This method creates a ranking for ``self`` using the arguments as in :class:`RankingFunction`.
         '''
+        if not self.is_differential():
+            raise NotImplementedError(f"Rankings only implemented for differential polynomials")
         if ordering is None:
             ordering = self.gens()
         elif isinstance(ordering, list):
@@ -2651,6 +2766,7 @@ class DPolynomialRing_Monoid(Parent):
         # return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
         raise NotImplementedError(f"Method need a revision")
 
+
 def is_DPolynomialRing(element):
     r'''
         Method to check whether an object is a ring of infinite polynomial with an operator.
@@ -2659,6 +2775,7 @@ def is_DPolynomialRing(element):
 
 
 is_RWOPolynomialRing = is_DPolynomialRing #: alias for is_DPolynomialRing (used for backward compatibility)
+
 
 #################################################################################################
 ### FUNCTORS AND MORPHISMS
@@ -2690,7 +2807,7 @@ class DPolyRingFunctor (ConstructionFunctor):
         return f"DPolynomialRing((*),{self.variables()})"
 
     def __eq__(self, other):
-        if(other.__class__ == self.__class__):
+        if (other.__class__ == self.__class__):
             return (other.variables() == self.variables())
 
     def merge(self, other):
@@ -2711,6 +2828,7 @@ class DPolyRingFunctor (ConstructionFunctor):
             raise ValueError(f"Repeated variables: impossible to extend the Functor")
         return self.__class__(self.variables().union(new_vars))
 
+
 class DPolynomialToLinOperator (Morphism):
     r'''
         Class representing a map to a ring of linear operators
@@ -2724,6 +2842,7 @@ class DPolynomialToLinOperator (Morphism):
 
     def _call_(self, p):
         return self.codomain()(self.domain().as_linear_operator(p))
+
 
 class DPolynomialVariableMorphism (Morphism):
     def __init__(self, domain, codomain):
@@ -2745,6 +2864,31 @@ class DPolynomialVariableMorphism (Morphism):
                 ) : c for (m,c) in p._content.items()
             }
         )
+
+
+class DPolynomial_Base2BaseMorphism (Morphism):
+    r'''
+        Class representing maps between rings of d-polynomial that changes the base ring.
+    '''
+    def __init__(self, domain, codomain, morphism):
+        if not isinstance(domain, DPolynomialRing_Monoid) or not isinstance(codomain, DPolynomialRing_Monoid):
+            raise TypeError(f"Morphism only valid for rings of d-polynomials")
+        if domain.construction()[0] != codomain.construction()[0]:
+            raise TypeError(f"Morphism only valid for rings of d-polynomials that are built equally")
+        if morphism.domain() != domain.base() or morphism.codomain() != codomain.base():
+            raise TypeError(f"Morphism only valid when the morphism given is between bases")
+
+        super().__init__(domain, codomain)
+        self.__morphism = morphism
+
+    def _call_(self, p:DPolynomial) -> DPolynomial:
+        return self.codomain().element_class(
+            self.codomain(),
+            {
+                m : self.__morphism(c) for (m,c) in p._content.items()
+            }
+        )
+
 
 class DPolynomialSimpleMorphism (Morphism):
     r'''
@@ -2778,10 +2922,13 @@ class DPolynomialSimpleMorphism (Morphism):
                     ) : c for (m,c) in p._content.items()
                 }
             )
-        elif(p.degree() == 0):
+        elif p == 0:
+            return self.codomain().zero()
+        elif p.degree() == 0:
             return self.codomain()(next(iter(p.coefficients())))
 
         return self.codomain()(str(p))
+
 
 class MapSageToDalgebra_Infinite(Morphism):
     def __init__(self, domain, codomain, map_of_variables):
@@ -2811,6 +2958,7 @@ class MapSageToDalgebra_Infinite(Morphism):
             output += nc*nm
         return output
 
+
 class MapDalgebraToSage_Infinite(Morphism):
     def __init__(self, domain, codomain, map_of_variables):
         super().__init__(domain, codomain)
@@ -2831,6 +2979,67 @@ class MapDalgebraToSage_Infinite(Morphism):
                     return NotImplementedError(f"We could not find generator for variable {v}")
             output += nc*nm
         return output
+
+
+class EvaluationMorphism_DPolynomial(Morphism):
+    @staticmethod
+    def decide_codomain(domain: DPolynomialRing_Monoid, images: dict[Element]) -> tuple[Parent, Morphism]:
+        r'''Returns the codomain for a given set of evaluations with a morphism to cast variables'''
+        from functools import reduce
+        final_base = reduce(pushout,
+                            (el.parent() if not is_DPolynomialRing(el.parent()) else el.parent().base()
+                                for el in images.values()),
+                            domain.base())
+        R_w_kwds = domain.remove_variables(*list(images.keys())) # conversion from domain to R_w_kwds is created
+        final_dvariables = set(R_w_kwds.variable_names()) if is_DPolynomialRing(R_w_kwds) else set()
+        for value in images.values():
+            if is_DPolynomialRing(value.parent()):
+                final_dvariables.update(value.parent().variable_names())
+        if len(final_dvariables) > 0 and is_DPolynomialRing(R_w_kwds):
+            output_ring = DPolynomialRing(final_base, list(final_dvariables))
+            self_to_output = DPolynomialVariableMorphism(R_w_kwds, output_ring) * R_w_kwds.convert_map_from(domain)
+        elif len(final_dvariables) > 0:
+            output_ring = DPolynomialRing(final_base, list(final_dvariables))
+            self_to_output = output_ring.coerce_map_from(R_w_kwds) * R_w_kwds.convert_map_from(domain)
+        else:
+            output_ring = final_base
+            self_to_output = output_ring.coerce_map_from(R_w_kwds) * R_w_kwds.convert_map_from(domain)
+
+        return output_ring, self_to_output
+
+    def __init__(self, domain: DPolynomialRing_Monoid, codomain: Parent, images: dict[Element],
+                 domain_to_codomain: Morphism):
+        super().__init__(domain, codomain)
+        ## Changing names to integers
+        self.__images = {
+            domain.variable_names().index(k) :
+                DPolynomialVariableMorphism(v.parent(), codomain)(v) if is_DPolynomialRing(v.parent()) else
+                codomain(v)
+            for (k,v) in images.items()}
+        ## Storing (if ne)
+        self.__domain_to_codomain = domain_to_codomain
+
+    @cached_method
+    def _imgs_order(self, element: int, order: tuple[int]) -> Element:
+        value = self.__images[element]
+        P = value.parent()
+        return P.apply_operations(value, order)
+
+    def _call_(self, element: DPolynomial) -> Element:
+        result = self.codomain().zero()
+        for (m, c) in element._content.items():
+            ## Evaluating the monomial
+            ev_mon = self.codomain().base().one() # ev_mon will be in final_base or output_ring
+            rem_mon = dict() # rem_mon will be in output_ring using ``self.__domain_to_codomain``
+            for (v,o),e in m._variables.items():
+                if v in self.__images:
+                    ev_mon *= self._imgs_order(v, o)**e
+                else:
+                    rem_mon[(v,o)] = m._variables[(v,o)]
+            rem_mon = self.domain()(self.domain().monoids().element_class(self.domain().monoids(), rem_mon)) if len(rem_mon) > 0 else self.domain().one()
+            result += self.__domain_to_codomain(rem_mon) * self.codomain().base()(c) * ev_mon
+        return result
+
 
 #################################################################################################
 ### WEIGHT AND RANKING FUNCTIONS
@@ -3151,6 +3360,7 @@ class WeightFunction(SetMorphism):
             raise ValueError("[WeightFunction] After operation, the result is not homogeneous")
 
         return self.as_vector(element)
+
 
 class RankingFunction:
     r'''
@@ -3526,6 +3736,28 @@ class RankingFunction:
 
         return all(self.is_reduced(p, [a for a in A if a != p]) for p in A)
 
+    def is_characteristic_set(self, A: list[DPolynomial]) -> bool:
+        r'''
+            Method that checks whether a set of d-polynomials is a characteristic set
+
+            This method uses the definition on page 82 of characteristic set on Kolchin's book,
+            namely, an autoreduced set is a characteristic set if it does not reduce to zero
+            the separants of its elements.
+        '''
+        return self.is_autoreduced(A) and all(self.remainder(self.separant(a), A)[0] != 0 for a in A)
+    ################################################################################
+    ### Some values for computations
+    ################################################################################
+    def H(self, A: DPolynomial | Collection[DPolynomial]):
+        r'''
+            Computes the value `H_A` given in page 77 of Kolchin's book.
+
+            This method assumes that `A` is autoreduced.
+        '''
+        if isinstance(A, DPolynomial):
+            return self.initial(A)*self.separant(A)
+        return prod(self.initial(a)*self.separant(a) for a in A)
+
     ################################################################################
     ### Operations for d-polynomials induced by ranking
     ################################################################################
@@ -3608,45 +3840,59 @@ class RankingFunction:
         z = self.parent().gens()[0]
         return sum(fact*z[k] for (k, (fact,_)) in b.items())
 
-    def partial_remainder(self, p: DPolynomial, A: DPolynomial | list[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
+    def partial_remainder(self, p: DPolynomial | list[DPolynomial], A: DPolynomial | list[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
         r'''
             Method to compute the partial remainder of `p` w.r.t. `A`. See pp. 77-78 of Kolchin's book.
         '''
-        print(f"[partial_remainder] STARTING A PARTIAL REMAINDER COMPUTATION")
         if not isinstance(A, set):
             A = set(A) if isinstance(A, (list, tuple)) else set([A])
 
         if not self.is_autoreduced(A):
             raise TypeError(f"The partial remainder only works for autoreduced sets.")
 
-        return self._partial_remainder(p, A)
+        if isinstance(p, DPolynomial): # Lemma 6
+            return self._partial_remainder(p, A)
+        elif isinstance(p, (list,tuple)): # Corollary of Lemma 6
+            par_reds = [self._partial_remainder(q, A) for q in p]
+            Fs = [par[0] for par in par_reds]
+            ss = [par[1] for par in par_reds]
+            t = {a : max(s[a] for s in ss) for a in A}
+            Gs = [prod(self.separant(a)**(t[a]-s[a]) for a in A)*F for (F,s) in zip(Fs, ss)]
+
+            return Gs, t
 
     def _partial_remainder(self, p: DPolynomial, A: set[DPolynomial]) -> tuple[DPolynomial, dict[DPolynomial,int]]:
-        logger.info(f"[partial_remainder] Starting partial remainder with leader {self.leader(p)} vs {[self.leader(a) for a in A]}")
-        F = p
+        logger.debug(f"[partial_remainder] Starting partial remainder with leader {self.leader(p)} vs {[self.leader(a) for a in A]}")
+
+        ## Special case: element in base field/ring
+        if p in self.parent().base():
+            return p, {a: 0 for a in A}
 
         ## We look for the first non-partially reduced
+        F = p
         A_sorted = self.sort(list(A), True) # sorted from biggest to smallest
         U = [self.leader(a) for a in A_sorted]
 
         for (a, u) in zip(A_sorted, U):
             gu = u.infinite_variables()[0]
-            v = self.sort([g for g in F.variables() if g in gu], True)[0]
-            if self.compare_variables(u, v) < 0: # v > u
-                logger.debug(f"[partial_remainder] Found element not partially reduced to")
-                to_apply = tuple([ov - ou for (ou, ov) in zip(gu.index(u, True), gu.index(v, True))])
-                logger.debug(f"[partial_remainder] Operation to apply: {to_apply}")
-                Sc = self.separant(a)
-                e = F.degree(v)
-                T = Sc*v - self.parent().apply_operations(a, to_apply)
-                logger.debug(f"[partial_remainder] Current v: {v}")
-                logger.debug(f"[partial_remainder] Found T: {T}")
-                G = Sc**e * F.coefficient_without_var(v) + sum(Sc**(e-i) * F.coefficient_full(v**i) * T**i for i in range(1, F.degree(v)+1))
-                logger.debug(f"[partial_remainder] Computed G: {G}")
+            vs = self.sort([g for g in F.variables() if g in gu], True)
+            if len(vs) > 0:
+                v = vs[0]
+                if self.compare_variables(u, v) < 0: # v > u
+                    logger.debug(f"[partial_remainder] Found element not partially reduced to")
+                    to_apply = tuple([ov - ou for (ou, ov) in zip(gu.index(u, True), gu.index(v, True))])
+                    logger.debug(f"[partial_remainder] Operation to apply: {to_apply}")
+                    Sc = self.separant(a)
+                    e = F.degree(v)
+                    T = Sc*v - self.parent().apply_operations(a, to_apply)
+                    logger.debug(f"[partial_remainder] Current v: {v}")
+                    logger.debug(f"[partial_remainder] Found T: {T}")
+                    G = Sc**e * F.coefficient_without_var(v) + sum(Sc**(e-i) * F.coefficient_full(v**i) * T**i for i in range(1, F.degree(v)+1))
+                    logger.debug(f"[partial_remainder] Computed G: {G}")
 
-                rF, rs = self._partial_remainder(G, A)
-                rs[a] += e
-                return rF, rs
+                    rF, rs = self._partial_remainder(G, A)
+                    rs[a] += e
+                    return rF, rs
 
         return F, {a : 0 for a in A}
 
@@ -3654,7 +3900,7 @@ class RankingFunction:
         r'''
             Method to compute the remainder w.r.t. to an autoreduced set `A`. See pp. 78-79 of Kolchin's book.
         '''
-        logger.info(f"[partial_remainder] STARTING A PARTIAL REMAINDER COMPUTATION")
+        logger.info(f"[partial_remainder] ++ STARTING A REMAINDER COMPUTATION")
         if not isinstance(A, set):
             A = set(A) if isinstance(A, (list, tuple)) else set([A])
 
@@ -3670,16 +3916,118 @@ class RankingFunction:
 
         i = dict()
 
+        logger.debug(f"[partial_remainder] Starting polynomial: {p}")
         for r in range(len(A)-1, -1, -1): # we go from biggest to smallest
             u, I = self.leader(A[r]), self.initial(A[r])
+            logger.debug(f"[partial_remainder] Getting reduced up to index {r}. Leader: {u}, Initial: {I}")
 
-            I = self.initial(A[r])
             i[A[r]] = max(0, p.degree(u) - A[r].degree(u) + 1)
 
             pa, pp, pu = self.parent().as_polynomials(A[r], I**i[A[r]] * p, u)
-            p = self.parent()(pa.parent()(pp.polynomial(pu) % pa.polynomial(pu)))
+            rem = pp.polynomial(pu) % pa.polynomial(pu)
+            rem = rem.parent().flattening_morphism()(rem)
 
+            map_to_dring = list()
+            for v in rem.parent().gens():
+                for g in self.parent().gens():
+                    if str(v) in g:
+                        map_to_dring.append(g[g.index(str(v))])
+            hom = rem.parent().hom(map_to_dring, self.parent())
+
+            logger.debug(f"[partial_remainder] Computed remainder: {rem}")
+            p = hom(rem)
+            logger.debug(f"[partial_remainder] New polynomial: {p}")
+
+        logger.debug(f"[partial_remainder] -- FINISHED A REMAINDER COMPUTATION")
         return p, s, i
+
+    def autoreduced(self, *polynomials: DPolynomial):
+        r'''
+            Computes an autoreduced set for a given list of polynomials.
+
+            The method works as follows:
+
+            * We extend the set of autoreduced introducing elements one by one.
+            * Each time we add an element, we restart the computation from where this element was placed.
+            * We start by sorting the elements in decreasing ranking order to use .pop for getting the next
+
+            INPUT:
+
+            * A list of :class:`DPolynomial` to compute the autoreduced set that generates the same differential ideal.
+
+            OUTPUT:
+
+            A list of :class:`DPolynomial` that are autoreduced and generate the same differential ideal that the input.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
+                sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
+                sage: r = R.ranking([v,u], "elimination")
+                sage: A = r.autoreduced(system.equations()); A
+                [-v_0 + x*v_1 + (x^3 - x^2)*v_3 - x^3*v_4,
+                 x*u_0 + (x - 1)*v_0 - x^2*v_2 + x^2*v_3]
+        '''
+        if len(polynomials) == 1 and isinstance(polynomials[0], (list, tuple)):
+            polynomials = polynomials[0]
+        # orig = list(polynomials)
+        logger.info(f"[autoreduced] Computing autoreduced set")
+        polynomials = list(self.sort(polynomials, reverse=True))
+        logger.debug(f"[autoreduced] Starting set (sorted): {polynomials}")
+
+        A = [polynomials.pop()] # `A` is sorted in ascending order
+
+        while len(polynomials) > 0:
+            logger.debug(f"[autoreduced] {len(polynomials)} elements remaining...")
+            p = polynomials.pop()
+            logger.debug(f"[autoreduced] Reducing {p} w.r.t. {A}")
+            p, _, _ = self.remainder(p, A)
+            if p == 0:
+                continue
+
+            logger.debug(f"[autoreduced] Adding {p} to the set...")
+            logger.debug(f"[autoreduced] Current set: {A}")
+            for ti in range(len(A)):
+                if self.compare(p, A[ti]) <= 0:
+                    # new element is smaller than some: we reduce them using this
+                    logger.debug(f"[autoreduced] Added on index {ti}. Adding {len(A)-ti} new elements to the queue")
+                    polynomials += list(reversed(A[ti:]))
+                    A = A[:ti] + [p]
+                    break
+            else:
+                # new element is bigger than everything, so everything is autoreduced still
+                logger.debug(f"[autoreduced] Found simple new element {p}. We continue")
+                A.append(p)
+
+        # assert self.is_autoreduced(A), "The result is not autoreduced"
+        # assert all(self.remainder(p, A)[0] == 0 for p in orig), "Some element is not in the final ideal"
+
+        return A
+
+    def comparative_rank(self, A: DPolynomial | list[DPolynomial], B: DPolynomial | list[DPolynomial]):
+        r'''Implementation of comparative rank defined in page 81 of Kolchin's book'''
+        if isinstance(A, DPolynomial):
+            A = [A]
+        if isinstance(B, DPolynomial):
+            B = [B]
+
+        if not self.is_autoreduced(A):
+            raise TypeError(f"Comparative rank only implemented for autoreduced sets")
+        elif not self.is_autoreduced(B):
+            raise TypeError(f"Comparative rank only implemented for autoreduced sets")
+
+        A_sorted = self.sort(list(A)) # sorted from smallest to biggest
+        B_sorted = self.sort(list(A)) # sorted from smallest to biggest
+        r = len(A_sorted)
+        s = len(B_sorted)
+
+        for i in range(min(r,s)):
+            cmp = self.compare(A_sorted[i],B_sorted[i])
+            if cmp != 0: # We found a difference in rank
+                return cmp
+        ## We did not find a difference in rank: we compare lengths
+        return (s-r)
 
     def smallest(self, p: DPolynomial, q: DPolynomial) -> tuple[DPolynomial, DPolynomial]:
         r'''
@@ -3814,6 +4162,7 @@ class RankingFunction:
     def __hash__(self) -> int:
         return hash((self.parent(), self.__ordering, self.__order_operators))
 
+
 class EliminationRanking(RankingFunction):
     r'''
         Class for representing an Elimination Ranking.
@@ -3854,6 +4203,7 @@ class EliminationRanking(RankingFunction):
 
     def _latex_(self) -> str:
         return r"\mathbf{ElimR}(" + "<".join(latex(v) for v in self.ordering) + r")"
+
 
 class OrderlyRanking(RankingFunction):
     r'''

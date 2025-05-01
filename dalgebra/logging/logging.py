@@ -27,8 +27,9 @@ import sys
 from sage.misc.persist import SagePickler # pylint: disable=no-name-in-module
 
 STDOUT_HANDLER = logging.StreamHandler(sys.stdout)
-
 __USED_LOGLEVEL = set()
+COUNTING_CALLS : dict[str, int] = dict()
+
 
 def cut_string(string, size):
     if not isinstance(string, str):
@@ -36,6 +37,7 @@ def cut_string(string, size):
     if len(string) <= size:
         return string
     return string[:size] + "..."
+
 
 def print_args(size, *args, **kwds):
     output = ""
@@ -46,7 +48,6 @@ def print_args(size, *args, **kwds):
     return output
 
 
-COUNTING_CALLS : dict[str, int] = dict()
 def count_calls(logger : logging.Logger):
     def inner(func):
         @functools.wraps(func)
@@ -61,6 +62,7 @@ def count_calls(logger : logging.Logger):
 
         return wrap
     return inner
+
 
 def loglevel(logger : logging.Logger):
     def inner(func):
@@ -86,9 +88,9 @@ def loglevel(logger : logging.Logger):
                         logger.addHandler(file_handler)
 
             try:
-                logger.info(f"[{func.__name__}] {''.rjust(50, '+')}\n{' Starting  execution '.ljust(15, '+').rjust(15,'+')}{print_args(20, *args, **kwds)}")
+                logger.log(15, f"[{func.__name__}] {''.rjust(50, '+')}\n{' Starting  execution '.ljust(15, '+').rjust(15,'+')}{print_args(20, *args, **kwds)}")
                 output = func(*args, **kwds)
-                logger.info(f"[{func.__name__}]{' Execution completed '.ljust(15, '-').rjust(15,'-')}{print_args(20, *args, **kwds)}\n{''.rjust(50,'-')}")
+                logger.log(15, f"[{func.__name__}]{' Execution completed '.ljust(15, '-').rjust(15,'-')}{print_args(20, *args, **kwds)}\n{''.rjust(50,'-')}")
                 return output
             finally: # This is done
                 if loglevel: # Removing the logger if was the original logged
@@ -99,6 +101,7 @@ def loglevel(logger : logging.Logger):
 
         return wrap
     return inner
+
 
 def verbose(logger):
     def inner(func):
@@ -127,6 +130,7 @@ def verbose(logger):
             return out
         return wrap
     return inner
+
 
 def cache_in_file(func):
     r'''
@@ -187,6 +191,7 @@ GENERAL_STDERR_HANDLER.setFormatter(FORMATTER)
 ## Adding the default handlers to the main logger
 logger.addHandler(GENERAL_STDERR_HANDLER)
 logger.propagate = False
+
 
 #### METHODS TO MANIPULATE THE LEVELS FOR DEFAULT HANDLERS
 def logging_stderr_level(new_level: int): GENERAL_STDERR_HANDLER.setLevel(new_level)

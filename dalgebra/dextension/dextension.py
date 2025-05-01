@@ -1,610 +1,397 @@
 from __future__ import annotations
-
 r'''
-    Module to create D-Extensions with several operations.
+    Module to create D-extensions for D-fields.
+
+    Let `(K, (d_1,\ldots,d_n))` be a d-Field with multiple difference-differential operators.
+    It is very common to add an element `x` and impose some conditions on the derivative in
+    order to extend the field.
+
+    In this case we will consider the most trivial case where the new element is always a
+    transcendental element. Moreover, the operations of the new element is a rational function
+    on the new field.
+
+    These types of extensions are very common in the literature. They include many special functions
+    such us the exponential function, the logarithm, the trigonometric functions, etc. For example,
+    for the exponential function we add a new element `e` that satisfies the condition `d(e) = e`, for
+    the logarithm, we start from the field `\mathbb{Q}(x)` and add a new element `L` that satisfies
+    `d(L) = 1/x`.
+
+    ## The case of derivations
+
+    A derivation is an operation that satisfies the Leibniz rule. In particular, if we have one of
+    these d-Extensions, let `d_x` be the derivative of the new added variable `x`. Then we can write
+    the derivative of any polynomial `p(x)` as:
+
+    .. MATH::
+
+        d(p(x)) = \kappa_d(p(x)) + \partial_x(p(x)) d_x,
+
+    where `\kappa_d(p(x))` is the polynomial `p(x)` where all the coefficients are derivated, while
+    `\partial_x(p(x))` is the derivative of `p(x)` with respect to `x`.
+
+    Hence, knowing the value of `d_x` is enough to compute the derivative of any polynomial.
+
+    ## The case of differences
+
+    A difference operator is an operation that is an homomorphism, i.e., `\sigma(pq)=\sigma(p)\sigma(q)`.
+    In particular, if we have one of these d-Extensions, let `s_x` be the difference of the new added
+    variable `x`. Then we can write the difference of any polynomial `p(x)` as:
+
+    .. MATH::
+
+        \sigma(p(x)) = \kappa_s(p(x))(s_x),
+
+    where, again, `\kappa_s(p(x))` is the polynomial `p(x)` where all the coefficients are shifted. Hence,
+    knowing the value of `s_x` is enough to compute the shifted of any polynomial.
+
+    ## The case of several variables
+
+    D-Extensions can be built incrementally, meaning we add one variable at a time. This is the most common
+    setting, but it is not the only one. For example, when adding the sine and cosine functions, we need
+    two variables at the same time, `s` and `c`, that satisfy the conditions `d(s) = c` and `d(c) = -s`.
+    We can not achieve this by adding one variable at a time. This is why we will provide a general
+    implementation that allow this additional case.
+
+    ## Monomial extension and tower of monomials.
+
+    Following the content of Bronstein's book, Symbolic Integration I: Transcendental Functions, we can
+    define a monomial `t` over a differential field `(K,\partial)` as a transcendental element that satisfies
+    that `\partial(t) = p(t)` for some polynomial `p \in K[t]`.
+
+    When managing d-Extensions, the variables will be sorted in a poset, where we see the dependencies
+    as field extensions between different variables. Looking into this poset, we can define equivalent
+    d-Extensions that are built in a different order. Moreover, if this construction never uses two variables
+    at once, we say we are managing a tower of monomials.
+
+    ## Basic examples
+
+    There are several basic examples of d-Extensions that we are going to use for testing:
+
+    * The exponential function: we start from the basic field of constants `\mathbb{Q}` and add a new element
+      `e` that satisfies `d(e) = e`. It only involves a derivation.
+    * The natural polynomial shift: we start from the basic field of constants `\mathbb{Q}` and add a new element
+      `n` that satisfies `s(n) = n+1`. It only involves a difference.
+    * The factorial sequence: building over the natural polynomial shift, we add a new element `f` that satisfies
+      `s(f) = f*(n+1)`. It involves only a difference, but it can be seen as a tower of monomials.
+    * The sine and cosine functions: we start from the basic field of constants `\mathbb{Q}` and add two new elements
+      `s` and `c` that satisfy `d(s) = c` and `d(c) = -s`. It involves a derivation and it can not be seen as a tower
+      of monomials.
+    * A diff-diff case: we can also create the field of rational functions with both the derivative and the
+      shift operator. This is a more complex case that involves both a derivation and a difference.
+    * Non-trivial tower of monomials: let us consider the mix case using the exponential function, the logarithm
+      and the variable `x`. It has 3 different ways to be built, because the exponential can be added at any
+      possible step. We must check that all the constructions are equivalent.
+
+    EXAMPLES:
+
+        sage: from dalgebra import *
+        sage: ## Exponential function
+        sage: Q_e.<e> = DExtension(DifferentialField(QQ), "e")
+        sage: e.derivative()
+        e
+        sage: (e^2 - 1)/(e.derivative() + 1)
+        e - 1
+        sage: Q_e.is_differential()
+        True
+        sage: Q_e.is_tower_of_monomials()
+        True
+        sage: Q_e.monomial_poset()
+        {e: []}
+        sage: ## Natural polynomial shift
+        sage: Q_n.<n> = DExtension(DifferenceField(QQ), "n + 1")
+        sage: n.shift()
+        n + 1
+        sage: (n^2 - 1)/(n.shift())
+        n - 1
+        sage: Q_n.is_difference()
+        True
+        sage: Q_n.is_tower_of_monomials()
+        True
+        sage: Q_n.monomial_poset()
+        {n: []}
+        sage: ## Factorial sequence
+        sage: Q_f.<f> = DExtension(Q_n, "f*(n+1)")
+        sage: f.shift()
+        f*(n + 1)
+        sage: (f.shift() - (n+1))/(n+1)
+        f-1
+        sage: Q_f.is_difference()
+        True
+        sage: Q_f.is_tower_of_monomials()
+        True
+        sage: Q_f.monomial_poset()
+        {n: [], f: [n]}
+        sage: ## Sine and cosine functions
+        sage: Q_sc.<s,c> = DExtension(DifferentialField(QQ), ["c", "-s"])
+        sage: s.derivative()
+        c
+        sage: c.derivative()
+        -s
+        sage: (s^2 + c^2 - 1) ## This can not be checked with this extension
+        s^2 + c^2 - 1
+        sage: Q_sc.is_differential()
+        True
+        sage: Q_sc.is_tower_of_monomials()
+        False
+        sage: Q_sc.monomial_poset()
+        {(s,c): []}
+        sage: ## Diff-diff case
+        sage: Q_dd.<x> = DExtension(DifferentialField(DifferenceField(QQ)), ["x+1", "1"]))
+        sage: x.derivative()
+        1
+        sage: x.shift()
+        x + 1
+        sage: (1/3*(x^3).derivative() - 1)/(x.shift())
+        x - 1
+        sage: Q_dd.is_differential()
+        False
+        sage: Q_dd.is_difference()
+        False
+        sage: Q_dd.is_tower_of_monomials()
+        True
+        sage: Q_dd.monomial_poset()
+        {x: []}
+        sage: ## Non-trivial tower of monomials
+        sage: Q_t.<x,l,e> = DExtension(DifferentialField(QQ), ["1", "1/x", "e"])
+        sage: l.derivative()
+        1/x
+        sage: e.derivative()
+        e
+        sage: (l^2 + e^2 - 1)/(l.derivative() * x)
+        l^2 + e^2 - 1
+        sage: Q_t.is_differential()
+        True
+        sage: Q_t.is_tower_of_monomials()
+        True
+        sage: Q_t.monomial_poset()
+        {x: [], l: [x], e: []}
+        sage: Q_t2.<e> = DExtension(DExtension(QQ_x, "1/x", names=("l",)), "e")
+        sage: Q_t == Q_t2
+        True
+        sage: Q_t3.<l> = DExtension(DExtension(QQ_x, "e", names=("e",)), "1/x")
+        sage: Q_t == Q_t3
+        True
+        sage: Q_t4.<x,l> = DExtension(QQ_e, ["1", "1/x"])
+        sage: Q_t == Q_t4
+        True
+
+    LIMITATIONS:
+
+    * This structure do not allow to have algebraic relations between variables. Other classes
+      such as :class:`~dalgebra.dextension.delliptic.DElliptic` will be used for this purpose.
 '''
+
+# ****************************************************************************
+#  Copyright (C) 2025 Antonio Jimenez-Pastor <antonio.jimenezp@upm.es>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#                  https://www.gnu.org/licenses/
+# ****************************************************************************
+
 from sage.categories.algebras import Algebras
 from sage.categories.category import Category
+from sage.categories.fields import Fields
 from sage.categories.morphism import Morphism
 from sage.categories.pushout import ConstructionFunctor
+from sage.misc.latex import latex_variable_name
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
-from sage.rings.infinity import Infinity
-from sage.rings.integer_ring import ZZ
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.structure.element import Element
 from sage.structure.factory import UniqueFactory
 from sage.structure.parent import Parent
-from sage.symbolic.ring import SR
 
 from typing import Collection
 
-from ..dring import AdditiveMap, DFractionField, DRings
+from ..dring import AdditiveMap, DRings
+
 
 _DRings = DRings.__classcall__(DRings)
+_Fields = Fields.__classcall__(Fields)
 
+
+#########################################################################
+### UNIQUE FACTORY TO CREATE EXTENSIONS
+#########################################################################
 class DExtensionFactory(UniqueFactory):
     r'''
         Factory to create a D-Extension.
+
+        An extension requires a base field and a tuple of tuples such that for each variable we can get the
+        corresponding operation. The way these tuple of tuples can be provided may change depending on how many
+        variables we want to add and how many operations there are.
     '''
-    def create_key(self, base, names: list[str] = None, imgs: list[Element] = None, map: dict[str, Element | list[Element]] = None, **kwds):
-        # We check now whether the base ring is valid or not
-        if base not in _DRings:
-            raise TypeError("The base ring must have operators attached")
+    def create_key(self, base, polynomial: str | Element, varname: str = None, *, names: tuple[str] = None, category=None):
+        if names is None and varname is None:
+            raise ValueError("The names of the variables must be provided")
+        elif names is None:
+            names = (varname,)
 
-        # We check the format of the input
-        if names is not None:
-            if imgs is None:
-                raise ValueError(f"When providing names, we need to provide the images")
-            map = dict(zip(names, imgs))
+        if base not in _DRings or base not in _Fields:
+            raise ValueError("The base must be a field that is also a d-ring")
 
-        if map is None:
-            raise ValueError(f"No information provided for new d-variables")
-        else:
-            if base.noperators() == 1: # Common format to tuples
-                map = {k : v if isinstance(v, (list, tuple)) else (v,) for (k,v) in map.items()}
-            if not all(
-                isinstance(value, (list, tuple)) and
-                len(value) == base.noperators() and
-                all(isinstance(v, (Element, str)) for v in value)
-                for value in map.values()
-            ):
-                raise TypeError(f"Error in the format to provide the images of the new variables")
-            map = {k : tuple(str(v) if isinstance(v, Element) else v for v in value) for (k,value) in map.items()}
+        ## We process the argument polynomial
+        if not isinstance(polynomial, (list,tuple)) and (len(names) != 1 or base.noperators() != 1):
+            raise TypeError("The polynomial argument must be a list if there are more than one variable or more than one operator")
+        elif not isinstance(polynomial, (list,tuple)): # case with 1 variable and 1 operator and 1 element
+            polynomial = ((polynomial,),)
 
-        return (base,tuple(sorted(map.items())))
+        ## Here polynomial is a list or tuple
+        if any(not isinstance(p, (list,tuple)) for p in polynomial) and (len(names) != 1 and base.noperators() != 1):
+            raise TypeError("The polynomial argument must be a list of lists if there are more than one variable and more than one operator")
+        elif any(not isinstance(p, (list,tuple)) for p in polynomial):
+            if len(names) == 1: # case with multiple operations and 1 variable
+                polynomial = (polynomial,)
+            else: # case with 1 operation and multiple variables
+                polynomial = tuple((p,) for p in polynomial)
 
-    def create_object(self, _, key) -> DExtension_PolyRing:
-        base, map = key
-        map = dict(map) # reconverting to dictionary
+        ## Now we know that polynomial is a tuple of tuples
+        polynomial = tuple(tuple(str(p) for p in poly) for poly in polynomial) # we make sure everything is a tuple
+        if len(polynomial) != len(names):
+            raise ValueError("The number of variables and the number of polynomials must match")
+        elif any(len(p) != base.noperators() for p in polynomial):
+            raise ValueError("The number of operators must match the number of polynomials")
 
-        return DExtension_PolyRing(base, map)
+        ## We fix the arguments if the base was already a DExtension (iterative construction)
+        if isinstance(base, DExtension_Field):
+            names = (str(g) for g in base.gens()) + names
+            polynomial = base.gens_imgs() + polynomial
+            base = base.base()
+
+        return (base, names, polynomial, category)
+
+    def create_object(self, _, key) -> DExtension_Field:
+        base, names, polynomial, category = key
+
+        return DExtension_Field(base, polynomial, names=names, category=category)
 
 
-DExtension = DExtensionFactory("dalgebra.dpolynomial.pseudo_doperator.DExtension")
+DExtension = DExtensionFactory("dalgebra.dextension.dextension.DExtension")
 
-class DExtension_Monomial(dict):
-    def __init__(self, *args, **kwds):
-        self.__blocked = False
-        super().__init__(*args, **kwds)
 
-        to_rem = [k for k in self if self[k] == 0]
-        for k in to_rem:
-            del self[k]
+#########################################################################
+### ELEMENT AND PARENT CLASSES FOR EXTENSIONS
+#########################################################################
+class DExtension_Element(Element):
+    def __init__(self, parent: DExtension_Field, value: Element):
+        pass
 
-        self.__blocked = True
 
-    def is_one(self) -> bool: #: Checks if the monomial is the 1 (i.e., it is empty)
-        return len(self) == 0
+class DExtension_Field(Parent):
+    Element = DExtension_Element
 
-    def degree(self) -> int:
-        return sum(self.values())
+    def _set_categories(self, base : Parent, category=None) -> list[Category]:
+        return [_DRings, Algebras(base), _Fields] + ([category] if category is not None else [])
 
-    def __setitem__(self, key, value) -> None:
-        if not self.__blocked:
-            return super().__setitem__(key, value)
-        raise NotImplementedError(f"DExtension_Monomial are ummutable objects")
+    def __init__(self,
+                 base : Parent, polynomial: tuple[tuple[str | Element]], varname:str = None,
+                 names:tuple[str] = None, category=None):
+        ## Checking that varname is not set
+        if varname is not None:
+            raise ValueError("The varname argument is not allowed for this class")
 
-    def __hash__(self) -> int:
-        return hash(tuple(sorted(self.items())))
-
-    def __mul__(self, other) -> DExtension_Monomial:
-        if isinstance(other, DExtension_Monomial):
-            result = self.copy() # this is a dict
-            for k in other:
-                if k in self:
-                    result[k] += other[k]
-                else:
-                    result[k] = other[k]
-
-            return DExtension_Monomial(result)
-        return NotImplemented
-
-    def __rmul__(self, other) -> DExtension_Monomial:
-        return self.__mul__(other)
-
-    def __truediv__(self, other) -> DExtension_Monomial:
-        if isinstance(other, DExtension_Monomial):
-            if all((k in self and self[k] > other[k]) for k in other):
-                result = self.copy()
-                for k in other:
-                    result[k] -= other[k]
-                return DExtension_Monomial(result)
-        return NotImplemented
-
-class DExtensionElement(Element):
-    def __init__(self, parent, *monomials: tuple[dict, Element], dic: dict[DExtension_Monomial, Element] = None):
-        if len(monomials) > 0 and dic is not None:
-            raise ValueError(f"Too much information to create a DExtensionElement")
-        elif dic is None:
-            self.__content = {DExtension_Monomial(k) : parent()(v) for (k,v) in monomials}
-        else:
-            self.__content = dic
-
-        super().__init__(parent)
-
-    ###################################################################################
-    ### Property methods
-    ###################################################################################
-    def is_zero(self) -> bool: #: Checker for the zero element
-        return len(self.__content) == 0
-
-    def is_one(self) -> bool: #: Checker for the one element
-        if len(self.__content) != 1:
-            return False
-        m, c = next(iter(self.__content.items()))
-        return m.is_one() and c == self.parent().base().one()
-
-    def is_monomial(self) -> bool: #: Checker for an element to be a monomial
-        if len(self.__content) != 1:
-            return False
-        c = next(iter(self.__content.values()))
-        return c == 1
-
-    def is_variable(self) -> bool: #: Checker for an element to be a variable
-        return self.is_monomial() and self.degree() == 1
-
-    @cached_method
-    def monomials(self) -> tuple[DExtensionElement]:
-        P = self.parent()
-        return tuple(P.element_class(P, (m, P.base().one())) for m in self.__content.keys())
-
-    @cached_method
-    def coefficients(self) -> tuple[Element]:
-        return tuple(self.__content.values())
-
-    def degree(self, variable: DExtensionElement = None):
-        variable = variable if variable is None else self.parent()(variable)
-        if variable is not None and not variable.is_variable():
-            raise TypeError(f"The input to check a degree must be a variable")
-
-        if self.is_zero():
-            return -Infinity
-
-        if variable is None:
-            return max(m.degree() for m in self.__content)
-        else:
-            i = self.parent().gen_index(str(variable))
-            return max(m.get(i,0) for m in self.__content)
-
-    # ###################################################################################
-    # ### Arithmetic operations
-    # ###################################################################################
-    # def _add_(self, other: PseudoDOperator) -> PseudoDOperator:
-    #     ## Adding the positive parts
-    #     positive = self.__positive.copy()
-    #     for (k, element) in other.__positive.items():
-    #         if k in positive:
-    #             element = element + positive[k]
-    #         positive[k] = element
-
-    #     ## Adding the negative parts (if possible)
-    #     negative = self.__negative.copy()
-    #     for (k, oa), ob in other.__negative.items():
-    #         if (k, oa) not in negative:
-    #             negative[(k, oa)] = ob
-    #         else:
-    #             negative[(k, oa)] += ob
-
-    #     return self.parent().element_class(self.parent(), positive, negative)
-
-    # def __neg__(self) -> PseudoDOperator:
-    #     positive = {k: -element for (k,element) in self.__positive.items()}
-    #     negative = {(k, after): -before for ((k, after), before) in self.__negative.items()}
-
-    #     return self.parent().element_class(self.parent(), positive, negative)
-
-    # def _sub_(self, other: PseudoDOperator) -> PseudoDOperator:
-    #     return self + (-other)
-
-    # def _mul_(self, other: PseudoDOperator) -> PseudoDOperator:
-    #     sp, sn = self.__positive, self.__negative
-    #     op, on = other.__positive, other.__negative
-
-    #     positive = dict()
-    #     negative = dict()
-
-    #     ## POSITIVE PART OF SELF
-    #     for (k, a) in sp.items():
-    #         ## POSITIVE PART OF OTHER
-    #         for (n, c) in op.items():
-    #             for i in range(k+1):
-    #                 if (k-i+n) not in positive:
-    #                     positive[k-i+n] = self.parent().base().zero()
-    #                 positive[k-i+n] = a*binomial(k, i)*c.derivative(times=i)
-    #         ## NEGATIVE PART OF OTHER
-    #         for ((n, d), c) in on.items():
-    #             n = -n # we make n positive
-    #             for i in range(0, k-n+1):
-    #                 for j in range(0, k-i-n+1):
-    #                     if (k-i-n-j) not in positive:
-    #                         positive[k-i-n-j] = self.parent().base().zero()
-    #                     positive[k-i-j-n] += binomial(k,i)*a*c.derivative(times=i)*binomial(k-i-n,j)*d.derivative(times=j)
-    #             for i in range(max(0,k-n+1), k+1):
-    #                 if (k-i-n, d) not in negative:
-    #                     negative[(k-i-n, d)] = binomial(k,i) * a * c.derivative(times=i)
-    #                 else:
-    #                     negative[(k-i-n, d)] += binomial(k,i) * a * c.derivative(times=i)
-
-    #     ## NEGATIVE PART OF SELF
-    #     for ((k, b), a) in sn.items():
-    #         k = -k # we make it positive
-    #         ## POSITIVE PART OF OTHER
-    #         for (n, c) in op.items():
-    #             for i in range(0,n-k+1):
-    #                 for j in range(0,n-k-i+1):
-    #                     if (n-k-i-j) not in positive:
-    #                         positive[n-k-i-j] = (-1)**i*a*binomial(n-k-i,j)*binomial(n,i)*(b*c).derivative(times=i+j)
-    #                     else:
-    #                         positive[n-k-i-j] += (-1)**i*a*binomial(n-k-i,j)*binomial(n,i)*(b*c).derivative(times=i+j)
-    #             for i in range(max(0,n-k+1), n+1):
-    #                 after = (b*c).derivative(times=i)
-    #                 if (n-k-i, after) not in negative:
-    #                     negative[(n-k-i, after)] = (-1)**i*a*binomial(n,i)
-    #                 else:
-    #                     negative[(n-k-i, after)] += (-1)**i*a*binomial(n,i)
-    #         ## NEGATIVE PART OF OTHER
-    #         for ((n, d), c) in on.items():
-    #             n = -n # we make it positive
-    #             if (b*c).derivative() == 0: # we can do something
-    #                 if (-n-k, d) not in negative:
-    #                     negative[(-n-k, d)] = a*b*c
-    #                 else:
-    #                     negative[(-n-k, d)] += a*b*c
-    #             else:
-    #                 return NotImplemented ## These cases are not well implemented yet
-
-    #     return self.parent().element_class(self.parent(), positive, negative)
-
-    # @cached_method
-    # def __pow__(self, power: int) -> PseudoDOperator:
-    #     if power == 0:
-    #         return self.parent().one()
-    #     elif power == 1:
-    #         return self
-    #     elif power < 0:
-    #         raise NotImplementedError("Negative powers not allowed")
-    #     else:
-    #         a,A = (self**(power//2 + power % 2), self**(power//2))
-    #         return a*A
-
-    # def __eq__(self, other) -> bool:
-    #     if not isinstance(other, self.__class__) or other.parent() != self.parent():
-    #         try:
-    #             other = self.parent()(other)
-    #         except Exception:
-    #             return False
-
-    #     return (self - other).is_zero()
-
-    # def __ne__(self, other) -> bool:
-    #     return not (self == other)
-
-    # def __hash__(self) -> int:
-    #     return hash((sorted(self.__positive.items()), sorted(self.__negative.items(), key=lambda t : (t[0][0], len(str(t[0][1]))))))
-
-    # def __call__(self, element: Element) -> Element:
-    #     result = sum((C*element.derivative(times=i) for (i, C) in self.__positive.items()), self.parent().base().zero())
-    #     for ((i,a), b) in self.__negative.items():
-    #         result += b * (element*a).integrate(times=-i)
-
-    #     return result
-
-    # @cached_method
-    # def __repr__(self) -> str:
-    #     if self.is_zero():
-    #         return "0"
-    #     elif self.is_identity():
-    #         return "1"
-
-    #     ## We know there is something in the element
-    #     g = self.parent().gen_name()
-    #     def term_str(order, element):
-    #         if isinstance(order, (list, tuple)):
-    #             order, after = order
-    #             before = "" if element == 1 else f"({element})"
-    #             after = "" if after == 1 else f"({after})"
-    #         else:
-    #             before = "" if element == 1 else f"({element})"
-    #             after = ""
-    #         order = f"{g}^({order})" if order < 0 else f"{g}^{order}" if order > 1 else g if order == 1 else ""
-
-    #         return "*".join([el for el in [before, order, after] if el != ""])
-
-    #     def sorting_key(_tuple):
-    #         if not isinstance(_tuple[0], (list, tuple)):
-    #             return (_tuple[0],)
-    #         else:
-    #             return (_tuple[0][0], len(str(_tuple[0][1])), str(_tuple[0][1]))
-
-    #     return " + ".join(
-    #         term_str(o, el) for (o,el) in
-    #         sorted(list(self.__positive.items()) + list(self.__negative.items()), key=sorting_key, reverse=True)
-    #     )
-
-    # @cached_method
-    # def _latex_(self) -> str:
-    #     if self.is_zero():
-    #         return "0"
-    #     elif self.is_identity():
-    #         return "1"
-
-    #     ## We know there is something in the element
-    #     g = self.parent().gen_name()
-    #     def term_str(order, element):
-    #         if isinstance(order, (list, tuple)):
-    #             order, after = order
-    #             before = "" if element == 1 else f"\\left({latex(element)}\\right)"
-    #             after = "" if after == 1 else f"\\left({latex(after)}\\right)"
-    #         else:
-    #             before = "" if element == 1 else f"\\left({latex(element)}\\right)"
-    #             after = ""
-    #         order = f"{g}^{{{order}}}" if order not in {0,1} else g if order == 1 else ""
-
-    #         return f"{before}{order}{after}"
-
-    #     def sorting_key(_tuple):
-    #         if not isinstance(_tuple[0], (list, tuple)):
-    #             return (_tuple[0],)
-    #         else:
-    #             return (_tuple[0][0], len(str(_tuple[0][1])), str(_tuple[0][1]))
-
-    #     return " + ".join(term_str(o, el) for (o,el) in sorted(list(self.__positive.items()) + list(self.__negative.items()), key=sorting_key, reverse=True))
-    pass
-
-class DExtension_PolyRing(Parent):
-    r'''
-        TODO: Write documentation
-    '''
-    Element = DExtensionElement
-
-    def _set_categories(self, base : Parent, category=None) -> list[Category]: return [_DRings, Algebras(base)] + ([category] if category is not None else [])
-
-    def __init__(self, base : Parent, map: dict[str, str], category=None):
-        if base not in _DRings:
-            raise TypeError("The base must be a ring with operators")
         ## Calling the super __init__ to stablish the categories and the main attributes
         super().__init__(base, category=tuple(self._set_categories(base, category)))
 
-        ## Creating the main attributes of the DExtension
-        self.__var_names = [list(map.keys())]
+        ## We create the inner sage structures
+        self.__algebraic_base = base.to_sage()
+        ## TODO: Go on here
+        pass
 
-        ## Creating the equivalent polynomial ring
-        try:
-            self.__poly_ring = PolynomialRing(base.to_sage(), self.__var_names)
-        except NotImplementedError:
-            self.__poly_ring = PolynomialRing(base, self.__var_names)
-        map_imgs = {self.__poly_ring(k) : tuple(self.__poly_ring(v) for v in value) for (k,value) in map.values()}
 
-        ## Creating the conversion maps
-        self.register_conversion(MapSageToDalgebra_PolyRing(self.__poly_ring, self, dict(zip(self.__var_names,self.__var_names))))
-        self.register_conversion(MapDalgebraToSage_PolyRing(self.__poly_ring, self, dict(zip(self.__var_names,self.__var_names))))
-
-        self.__imgs = {self(k): tuple(self(v) for v in value) for (k,value) in map_imgs}
-        self.__gens = tuple(self.__imgs.keys())
-
-        self.__fraction_field = None
-
-    ################################################################################
-    ### GETTER METHODS
-    ################################################################################
-    def gens(self) -> tuple[DExtensionElement]:
-        return self.__gens
-
-    def gen_index(self, variable: DExtensionElement | str):
-        if not isinstance(variable, str):
-            variable = str(variable)
-
-        if variable not in self.__var_names:
-            raise ValueError(f"Variable {variable} not found as a generator")
-
-        return self.__var_names.index(variable)
-
-    def variable(self, name) -> DExtensionElement:
-        r'''Create the variable object for a given name'''
-        return self.element_class(self, ({self.gen_index(name) : 1}, self.base().one()))
-
-    def one(self) -> DExtensionElement:
-        return self.element_class(self, (dict(), self.base().one()))
-    def zero(self) -> DExtensionElement:
-        return self.element_class(self, tuple())
-
-    #################################################
-    ### Coercion methods
-    #################################################
-    def _coerce_map_from_base_ring(self):
-        return CoerceFromBase(self.base(), self)
-
-    def construction(self) -> tuple[DExtensionFunctor, Parent]:
-        r'''
-            Return the associated functor and input to create ``self``.
-
-            The method construction returns a :class:`~sage.categories.pushout.ConstructionFunctor` and
-            a valid input for it that would create ``self`` again. This is a necessary method to
-            implement all the coercion system properly.
-        '''
-        return DExtensionFunctor(self.__var_names[0], self.__imgs), self.base()
-
-    def fraction_field(self):
-        if self.__fraction_field is None:
-            self.__fraction_field = DFractionField(self)
-
-    def change_base(self, R) -> DExtension_PolyRing:
-        new_ring = DExtension(R, self.__var_names, list(self.__imgs.values()))
-        ## Creating the coercion map if possible
-        try:
-            M = CoerceBetweenBases(self, new_ring, R.coerce_map_from(self.base()))
-            new_ring.register_coercion(M)
-        except AssertionError: # This ring was already created
-            pass
-
-        return new_ring
-
-    #################################################
-    ### Magic python methods
-    #################################################
-    def __repr__(self):
-        return f"Ring of pseudo-differential operators over {self.base()}"
-
-    def _latex_(self):
-        return latex(self.base()) + r"\langle" + self.__gens[0] + r"\rangle"
-
-    #################################################
-    ### Element generation methods
-    #################################################
-    def random_element(self,
-        up_bound : int = 0, lower_bound : int = 0,
-        *args,**kwds
-    ) -> DExtensionElement:
-        r'''
-            Creates a random element in this ring.
-
-            This method receives a bound for the degree and order of all the variables
-            appearing in the ring and also a sparsity measure to avoid dense polynomials.
-            Extra arguments are passed to the random method of the base ring.
-
-            INPUT:
-
-            * ``deg_bound``: total degree bound for the resulting polynomial.
-            * ``order_bound``: order bound for the resulting polynomial.
-            * ``sparsity``: probability of a coefficient to be zero.
-        '''
-        up_bound = 0 if ((up_bound not in ZZ) or up_bound < 0) else up_bound
-        lower_bound = 0 if ((lower_bound not in ZZ) or lower_bound < 0) else lower_bound
-
-        rand = lambda : self.base().random_element(*args, **kwds)
-        pos_coeffs = [rand() for _ in range(up_bound+1)]
-        neg_coeffs = {(-i, rand()): rand() for i in range(1, lower_bound)}
-
-        return self.element_class(self, pos_coeffs, neg_coeffs)
-
-    #################################################
-    ### Method from DRing category
-    #################################################
-    def operators(self) -> Collection[AdditiveMap]:
-        return self.__operators
-
-    def operator_types(self) -> tuple[str]:
-        return self.base().operator_types()
-
-    def add_constants(self, *new_constants: str) -> DExtension_PolyRing:
-        return DExtension(self.base().add_constants(*new_constants), self.__var_names, self.__imgs)
-
-    def linear_operator_ring(self) -> DExtension_PolyRing:
-        r'''
-            Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
-
-            This method builds the ring of linear operators on the base ring. It only works when the
-            ring of operator polynomials only have one variable.
-        '''
-        raise NotImplementedError(f"Ring of linear operators not yet implemented for D-Extensions")
-
-    def inverse_operation(self, element: DExtensionElement, operation: int = 0) -> DExtensionElement:
-        if element not in self:
-            raise TypeError(f"[inverse_operation] Impossible to apply operation to {element}")
-        element = self(element)
-
-        if operation != 0:
-            raise ValueError(f"The given operation({operation}) is not valid")
-
-        try:
-            return self.Di * element
-        except Exception:
-            raise NotImplementedError(f"The multiplication of {self.__gens[0]}^(-1) * {element} can not be computed.")
-
-    def to_sage(self):
-        return self.__poly_ring
-
+#########################################################################
+### CONSTRUCTIONS FUNCTOR FOR EXTENSIONS
+#########################################################################
 class DExtensionFunctor(ConstructionFunctor):
-    r'''
-        Class representing Functor for creating :class:`DPolynomialRing_Monoid`.
+    def __init__(self, polynomial: str | Element, varname: str):
+        pass
 
-        This class represents the functor `F: R \mapsto R\{y^(1),\ldots,y^{(n)}\}`.
-        The names of the variables must be given to the functor and, then
-        this can take any ring and create the corresponding ring of differential
-        polynomials.
-
-        INPUT:
-
-        * ``variables``: names of the variables that the functor will add (see
-          the input ``names`` in :class:`DPolynomialRing_Monoid`)
-    '''
-    def __init__(self, names: tuple[str], imgs: tuple[str]):
-        self.__names = names
-        self.__imgs = [tuple(str(SR(i)) for i in img) for img in imgs] # Simplifying the equality check for merging
-        super().__init__(_DRings,_DRings)
-        self.rank = 11 # just below DPolyRingFunctor
-
-    ### Methods to implement
     def _apply_functor(self, x):
-        return DExtension(x,self.__names,self.__imgs)
+        pass
 
     def _repr_(self):
-        return f"DExtension(*,{dict(zip(self.__names, self.__imgs))})"
+        pass
 
     def __eq__(self, other):
-        if(other.__class__ == self.__class__):
-            return self.__names == other.__names and self.__imgs == other.__imgs
+        pass
 
-    def merge(self, other):
-        if isinstance(other, DExtensionFunctor):
-            sdict = dict(zip(self.__names, self.__imgs))
-            odict = dict(zip(other.__names, other.__imgs))
 
-            for v in sdict:
-                if v in odict:
-                    if sdict[v] != odict[v]:
-                        return None # Incompatible images for the same variable
-
-            ## All chekings done
-            sdict.update(odict) # since when they coincide they are equal, this simply adds the new
-            return DExtensionFunctor(tuple(sdict.keys()), tuple(sdict.values()))
-        return None
-
-class MapSageToDalgebra_PolyRing(Morphism):
-    def __init__(self, domain, codomain, map_variables: dict[str, str]):
-        super().__init__(domain, codomain)
-        self.__map = map_variables
-
-    def _call_(self, element):
-        deg = lambda e, v : e.degree(v) if hasattr(element, "coefficient") else e.degree()
-        result = self.codomain().zero()
-        for (c, m) in zip(element.coefficients(), element.monomials()):
-            nc = self.codomain().base()(c)
-            nm = self.codomain().one()
-            for v in m.variables():
-                nm *= self.codomain().variable(self.__map[str(v)])**deg(m,v)
-            result += nc*nm
-        return result
-
-class MapDalgebraToSage_PolyRing(Morphism):
-    def __init__(self, domain, codomain, map_variables: dict[str, str]):
-        super().__init__(domain, codomain)
-        self.__map = map_variables
-
-    def _call_(self, element):
-        result = self.codomain().zero()
-        for (c, m) in zip(element.coefficients(), element.monomials()):
-            nc = self.codomain().base()(c)
-            nm = self.codomain().one()
-            for v in m.variables():
-                nm *= self.codomain().variable(self.__map[str(v)])**m.degree(v)
-            result += nc*nm
-        return result
-
-class CoerceFromBase(Morphism):
+#########################################################################
+### COERCIONS AND CONVERSION MORPHISMS FOR EXTENSIONS
+#########################################################################
+class MapDExtensionToField(Morphism):
     def __init__(self, domain, codomain):
-        super().__init__(domain, codomain)
+        pass
 
-    def _call_(self, element):
-        return self.codomain().element_class(self.codomain(), (dict(), element))
+    def _call_(self, element: DExtension_Element):
+        pass
 
-class CoerceBetweenBases(Morphism):
+
+class MapFieldToDExtension(Morphism):
     def __init__(self, domain, codomain):
-        if not isinstance(domain, DExtension_PolyRing) or not isinstance(codomain, DExtension_PolyRing):
-            raise TypeError("Inconsistent domain/codomain for Morphism")
-        elif domain.construction()[0] != codomain.construction()[0]:
-            raise ValueError("It seems domain and codomain are not related with the same d-variables")
+        pass
 
     def _call_(self, element):
-        return self.codomain().element_class(self.codomain(), *((m, self.codomain().base()(c)) for (m,c) in element._DExtensionElement__content.items))
+        pass
+
+
+class MapDExtensionToPoly(Morphism):
+    def __init__(self, domain, codomain):
+        pass
+
+    def _call_(self, element: DExtension_Element):
+        pass
+
+
+class MapPolyToDExtension(Morphism):
+    def __init__(self, domain, codomain):
+        pass
+
+    def _call_(self, element):
+        pass
+
+
+class MapDExtensionToAlgebraic(Morphism):
+    def __init__(self, domain, codomain):
+        pass
+
+    def _call_(self, element: DExtension_Element):
+        pass
+
+
+class MapAlgebraicToDExtension(Morphism):
+    def __init__(self, domain, codomain):
+        pass
+
+    def _call_(self, element):
+        pass
+
+
+class CoerceFromBase_DExtension(Morphism):
+    def __init__(self, domain, codomain):
+        pass
+
+    def _call_(self, element):
+        pass
+
+
+class ConversionToBase_DExtension(Morphism):
+    def __init__(self, domain, codomain):
+        pass
+
+    def _call_(self, element: DExtension_Element):
+        pass
+
+
+class CoerceBetweenBases_DExtension(Morphism):
+    def __init__(self, domain, codomain, coerce_map):
+        pass
+
+    def _call_(self, element: DExtension_Element) -> DExtension_Element:
+        pass
+
+
+__all__ = ["DExtension"]

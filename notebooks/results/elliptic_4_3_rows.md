@@ -1,0 +1,1 @@
+[(0, eta*eta_p), (0, 1), (0, eta), (0, eta^3), (0, eta_p), (0, eta^2*eta_p), (1, 1), (1, eta^2), (1, eta*eta_p), (1, eta), (1, eta^3), (2, eta_p), (2, 1), (2, eta^2), (2, eta*eta_p)]

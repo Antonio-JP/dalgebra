@@ -1,0 +1,1 @@
+[(0, 1), (0, cosh^2), (0, cosh^4), (1, cosh_p), (1, cosh^2*cosh_p), (2, 1), (2, cosh^2), (3, cosh_p)]

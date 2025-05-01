@@ -46,7 +46,7 @@ def read_data(n_filter: list[int] = list(), m_filter: list[int] = list(), equs_f
                             (len(solver_filter) == 0 or row['solver'] in solver_filter) and
                             row['m'] % row['n'] != 0 # we omit the trivial cases
                             )
-    
+   
     return DataFrame([row for (_,row) in data.iterrows() if filters(row)], columns = data.columns)
 
 def collect_data(data: DataFrame) -> DataFrame:
@@ -67,17 +67,17 @@ def collect_data(data: DataFrame) -> DataFrame:
 
     new_data = DataFrame([
         [key[0],key[1]]+[value[("Direct", "Integration")], value[("Direct", "Linear")], value[("Recursive", "Integration")], value[("Recursive", "Linear")]]+
-        [value[("Direct", "Integration")]/value[("Direct", "Linear")], value[("Direct", "Integration")]/value[("Recursive", "Integration")]] + 
+        [value[("Direct", "Integration")]/value[("Direct", "Linear")], value[("Direct", "Integration")]/value[("Recursive", "Integration")]] +
         [value[("Direct", "Linear")]/value[("Recursive", "Linear")], value[("Recursive", "Integration")]/value[("Recursive", "Linear")]]+
         [value[("Direct", "Integration")]/value[("Recursive", "Linear")]]
-        for (key,value) in sorted(new_rows.items()) if any(v != nan for v in value.values())], 
+        for (key,value) in sorted(new_rows.items()) if any(v != nan for v in value.values())],
         columns = ["n","m"] + ["D.I.","D.L.","R.I.","R.L."] + ["D.I./D.L.", "D.I./R.I."] + ["D.L./R.L.", "R.I./R.L."] +["D.I./R.L."]
     )
-    
+   
     new_data.set_index(["n","m"],inplace=True)
     return new_data
 
-def latex_table(data: DataFrame, file_name: str) -> DataFrame: 
+def latex_table(data: DataFrame, file_name: str) -> DataFrame:
     with open(f"./{file_name}.tex", "wt") as file:
         data.style.format_index(
             "\\textbf{{{}}}", escape="latex", axis=1).highlight_min(
@@ -102,7 +102,7 @@ def create_graphs_old(data: DataFrame):
     ## We plot the speed-up between "D.I." and "R.L."
     ## For each n, we plot in the `x` the values for "m" and in the `y` the speed-up
     DATA = concat(
-        {f"{n=}": 
+        {f"{n=}":
          data[["D.I./R.L."]].loc[(n,)] for n in data.droplevel('m').index.drop_duplicates()
         }, axis=1
     ).sort_index()
@@ -113,12 +113,12 @@ def create_graphs_old(data: DataFrame):
     for column in DATA.columns:
         col = DATA[column].dropna()
         plt.plot(*[col.index, col], linestyle="-", marker="o", label=column)
-    
+   
     plt.legend(loc="upper left")
     plt.xlabel("m", loc="right")
     # plt.title("Speed-up from Direct-Integration to Recursive-Linear", loc="center", y=-0.125)
 
-    plt.savefig("./speed-up.png")    
+    plt.savefig("./speed-up.png")   
     plt.close("all")
 
 def create_graphs(data: DataFrame):
@@ -129,7 +129,7 @@ def create_graphs(data: DataFrame):
     ## We plot the time for each n,m
     ## For each n, we plot in the `x` the values for "m" and in the `y` the speed-up
     DATA = concat(
-        {f"{n=}": 
+        {f"{n=}":
          data[["time"]].loc[(n,)] for n in data.droplevel('m').index.drop_duplicates()
         }, axis=1
     ).sort_index()
@@ -140,12 +140,12 @@ def create_graphs(data: DataFrame):
     for column in DATA.columns:
         col = DATA[column].dropna()
         plt.plot(*[col.index, col], linestyle="-", marker="o", label=column)
-    
+   
     plt.legend(loc="upper left")
     plt.xlabel("m", loc="right")
     # plt.title("Speed-up from Direct-Integration to Recursive-Linear", loc="center", y=-0.125)
 
-    plt.savefig("./speed-up.png")    
+    plt.savefig("./speed-up.png")   
     plt.close("all")
 
 def print_table_old(*argv):
@@ -207,7 +207,7 @@ def print_table(*argv):
     if graphs:
         print("Creating graphs...")
         create_graphs(to_print)
-            
+           
 def test(n: int, m: int, get_equs: str, solver: str, out_file, profile: bool = False):
     r'''
         Runs :func:`almost_commuting_wilson` for given arguments, measure time and checks output.

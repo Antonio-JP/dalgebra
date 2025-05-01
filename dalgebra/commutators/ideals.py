@@ -16,6 +16,16 @@ r'''
     **Elements provided by the module**
     -----------------------------------------
 '''
+# ****************************************************************************
+#  Copyright (C) 2025 Antonio Jimenez-Pastor <antonio.jimenezp@upm.es>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#                  https://www.gnu.org/licenses/
+# ****************************************************************************
+
 from __future__ import annotations
 
 import logging
@@ -25,8 +35,12 @@ logger = logging.getLogger(__name__)
 from functools import reduce
 
 from sage.categories.pushout import pushout
+from sage.combinat.combination import Combinations
+from sage.functions.other import binomial
 from sage.matrix.constructor import Matrix
 from sage.misc.cachefunc import cached_method
+from sage.misc.latex import latex
+from sage.modules.free_module_element import free_module_element as vector
 from sage.parallel.multiprocessing_sage import Pool
 from sage.rings.fraction_field import FractionField_generic
 from sage.rings.integer_ring import ZZ
@@ -41,7 +55,9 @@ from ..dring import DifferentialRing, DRings
 from ..dpolynomial.dpolynomial import DPolynomial, DPolynomialRing, is_DPolynomialRing
 from ..logging.logging import count_calls, cut_string, loglevel
 
+
 _DRings = DRings.__classcall__(DRings)
+
 
 #################################################################################################
 ###
@@ -49,6 +65,8 @@ _DRings = DRings.__classcall__(DRings)
 ###
 #################################################################################################
 __ProcessesPool = None
+
+
 def LoopInParallel(func, iterable, chunksize=1):
     r'''
         Method that tries to loop a function application in parallel. If no Pool is created, then we simply loop in the usual way.
@@ -59,10 +77,12 @@ def LoopInParallel(func, iterable, chunksize=1):
     else:
         return (func(*el) for el in iterable)
 
+
 def StartPool(ncpus: int = None):
     global __ProcessesPool
     if __ProcessesPool is None and ncpus not in (None, 1):
         __ProcessesPool = Pool(ncpus)
+
 
 #################################################################################################
 ###
@@ -141,14 +161,16 @@ class SolutionBranch:
             try:
                 B = reduce(lambda p, q : p.extension(q, names=str(q.variables()[0])), [QQ] + [poly.polynomial(poly.variables()[0]).change_ring(QQ) for poly in I.gens()])
             except Exception as e:
-                logger.error(f"Found an error: {e}")
+                logger.info(f"Found an error: {e}")
                 B = BB.quotient(I, names=BB.variable_names())
         else:
             algebraic_variables = []
 
         ## We now add the remaining variables as polynomial variables
         rem_vars = [v for v in self.remaining_variables() if v not in algebraic_variables]
-        B = PolynomialRing(B, rem_vars)
+        if len(rem_vars) > 0:
+            B = PolynomialRing(B, rem_vars)
+
         return B
 
     @cached_method
@@ -175,12 +197,23 @@ class SolutionBranch:
             key = str(key)
         return self.__solution.get(key, self.parent()(key)) # we get the value for the key or the key itself
 
+    @cached_method
+    def full_ideal(self, groebner: bool = True) -> Ideal:
+        polynomials = tuple(self.parent()(k) - v for (k,v) in self.__solution.items()) + tuple(self.I.gens())
+        full_ideal = ideal(polynomials)
+
+        if groebner:
+            return ideal(full_ideal.groebner_basis())
+        return full_ideal
+
     ######################################################################################################
     ### UTILITY METHODS
     ######################################################################################################
     def eval(self, element):
+        evaluating = (lambda p : p(**self.__solution)) if len(self.__solution) > 0 else (lambda p : p)
         if isinstance(element, DPolynomial): # case of differential polynomials
-            return element(**self.__solution) # this should evaluate coefficients and monomials
+            # this should evaluate coefficients and monomials
+            return evaluating(element)
 
         # case of coefficients
         if isinstance(element.parent(), FractionField_generic): # case of fractions
@@ -193,9 +226,9 @@ class SolutionBranch:
             except Exception:
                 element = self.parent().fraction_field()(element)
             try:
-                return self.final_parent()(str(element(**self.__solution)))
+                return self.final_parent()(str(evaluating(element)))
             except Exception:
-                return self.final_parent(True)(str(element(**self.__solution)))
+                return self.final_parent(True)(str(evaluating(element)))
 
     def remaining_variables(self):
         return [v for v in self.parent().gens() if str(v) not in self.__solution]
@@ -226,16 +259,7 @@ class SolutionBranch:
         return SolutionBranch(I, solution, decisions, self.parent())
 
     def is_subsolution(self, other: SolutionBranch) -> bool:
-        self_vars = self.remaining_variables()
-        other_vars = other.remaining_variables()
-
-        if any(v not in other_vars for v in self_vars):
-            return False
-
-        to_subs = {str(v): self[str(v)] for v in other_vars if (v not in self_vars)}
-        if len(to_subs) > 0:
-            other = other.subsolution(**to_subs)
-        return self == other
+        return all(self.full_ideal().reduce(g_other) == 0 for g_other in other.full_ideal(False).gens())
 
     def combine(self, other: SolutionBranch) -> list[SolutionBranch]:
         sol = SolutionBranch._dir_combine(self, other)
@@ -334,13 +358,23 @@ class SolutionBranch:
         parts = [f"Solution Branch"]
         if len(self.__solution) > 0:
             parts.append(f"[{','.join(f'{var}={val}' for (var, val) in self.__solution.items())}]")
-        if self.__I.ngens() > 1 and self.__I.gens()[0] != 0:
+        if self.__I.ngens() > 1 or self.__I.gens()[0] != 0:
             parts.append(f"with {self.__I.ngens()} relations {self.__I.gens()}")
         if len(self.__decisions) > 0:
             parts.append(f"with {len(self.__decisions)} decisions")
         if len(self.remaining_variables()) > 0:
             parts.append(f"and {','.join([str(v) for v in self.remaining_variables()])} as free variables")
         return f'{" ".join(parts)}.'
+
+    def _latex_(self) -> str:
+        from sage.misc.latex import latex_variable_name
+        parts = [r"\texttt{Solution}",
+                 f"\\left[{','.join(latex_variable_name(str(latex(v))) for v in self.remaining_variables())}\\right]",
+                 f"\\left({latex(self.I)}\\right)",
+                 r"\left\{" + ",".join(f"{latex_variable_name(k)}={latex(v)}" for (k,v) in self.__solution.items()) + r"\right\}"
+        ]
+
+        return "".join(parts)
 
     ######################################################################################################
     ### STATIC METHODS OF THE CLASS
@@ -350,11 +384,12 @@ class SolutionBranch:
         solution = {k: parent(v) for k,v in solution.items()}
         old_solution = None
 
-        while(solution != old_solution):
+        while solution != old_solution:
             old_solution = solution
             solution = {k: ideal.reduce(v(**old_solution)) for (k,v) in solution.items()}
 
         return solution
+
 
 #################################################################################################
 ###
@@ -364,6 +399,8 @@ class SolutionBranch:
 @loglevel(logger)
 def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: list = [], final_parent=None, groebner: bool = True, parallel: int = None) -> list[SolutionBranch]:
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
+    if I == ideal(I.ring()):
+        return (SolutionBranch.AllSolution(I.ring()),)
 
     StartPool(parallel) # starting (if needed) the processes pool
 
@@ -371,20 +408,20 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: 
     if isinstance(to_avoid, dict):
         to_avoid = [to_avoid]
 
-    logger.info(f"[IDEAL] We start with a general overview.")
+    logger.debug(f"[IDEAL] We start with a general overview.")
     branches = _analyze_ideal(I, partial_solution, to_avoid, decisions, final_parent, groebner=groebner)
 
     if not isinstance(I, (list, tuple)):
         I = I.gens()
     final_branches: set[SolutionBranch] = set()
 
-    logger.info(f"[IDEAL] Analyzing resulting branches ({len(branches)})...")
+    logger.debug(f"[IDEAL] Analyzing resulting branches ({len(branches)})...")
     while len(branches) > 0:
         logger.debug(f"[IDEAL] Analyzing one of the remaining branches...")
         branch = branches.pop()
-        branch_GB = branch.I.groebner_basis() # This should be efficient since the branches have passed through GB computations
+        branch_GB = branch.full_ideal() # This should be efficient since the branches have passed through GB computations
         logger.debug(f"[IDEAL] We compute the original equations in the resulting branch.")
-        equations = [ideal(branch_GB).reduce(equ(**branch._SolutionBranch__solution)) for equ in I]
+        equations = [branch_GB.reduce(equ) for equ in I]
         equations = [el for el in equations if el != 0] # cleaning zeros
         if len(equations) == 0:
             logger.debug(f"[IDEAL] All equations satisfied: we add this branch to final solution.")
@@ -404,14 +441,14 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: 
                 )
 
     ## Filtering solutions with data to avoid
-    logger.info(f"[IDEAL] Removing solutions to avoid (starting with {len(final_branches)})")
+    logger.debug(f"[IDEAL] Removing solutions to avoid (starting with {len(final_branches)})")
     final_branches = [branch for branch in final_branches if branch.is_avoiding(to_avoid)]
 
     ## Filtering subsolutions
-    logger.info(f"[IDEAL] Removing subsolutions (starting with {len(final_branches)})")
+    logger.debug(f"[IDEAL] Removing subsolutions (starting with {len(final_branches)})")
     output: list[SolutionBranch] = list()
     for (i,branch) in enumerate(final_branches):
-        (logger.info if i % 100 == 0 else logger.debug)(f"[IDEAL] Starting with new {i}/{len(final_branches)}...")
+        logger.debug(f"[IDEAL] Starting with new {i}/{len(final_branches)}...")
         for other in output:
             if other.is_subsolution(branch):
                 logger.debug(f"[IDEAL] Detected old branch as subsolution of new: removing old")
@@ -422,7 +459,7 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: 
         else:
             logger.debug(f"[IDEAL] Nothing detected: we add a new branch")
             output.append(branch)
-    logger.info(f"[IDEAL] Remaining branches: {len(output)}")
+    logger.debug(f"[IDEAL] Remaining branches: {len(output)}")
     return output
 
 
@@ -430,26 +467,26 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: 
 def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = [], final_parent=None, groebner: bool = True) -> list[SolutionBranch]:
     r'''Method that applies simple steps for analyzing an ideal without human intervention'''
     ## First we prune the solution
-    logger.info(f"[ideal] +++ Starting new execution of _analyze_ideal")
+    logger.debug(f"[ideal] +++ Starting new execution of _analyze_ideal")
     if _check_avoid(partial_solution, to_avoid):
-        logger.info(f"[ideal] ??? Pruning a branch where an undesired solution appear")
+        logger.debug(f"[ideal] ??? Pruning a branch where an undesired solution appear")
         return list()
 
     if not isinstance(I, (list, tuple)):
         I = I.gens()
 
     if len(I) == 0:
-        logger.info(f"[ideal] !!! No more polynomials to analyze. Returning this path")
+        logger.debug(f"[ideal] !!! No more polynomials to analyze. Returning this path")
         return [SolutionBranch(I, partial_solution, decisions, final_parent)]
 
     ## We copy the arguments to avoid possible collisions
     partial_solution = partial_solution.copy()
     decisions = decisions.copy()
 
-    logger.info(f"[ideal] +++ analyze_ideal ({len(I)} equations, {len(partial_solution)}/{I[0].parent().ngens()} variables)")
+    logger.debug(f"[ideal] +++ analyze_ideal ({len(I)} equations, {len(partial_solution)}/{I[0].parent().ngens()} variables)")
 
     if any(poly.degree() == 0  for poly in I): ## No solution case
-        logger.info(f"[ideal] Found a branch without a solution.")
+        logger.debug(f"[ideal] Found a branch without a solution.")
         return []
 
     ###########################################################################################################
@@ -463,7 +500,7 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
 
             value = poly.parent()(v - poly/c)
             if str(v) in to_eval and to_eval[str(v)] != value:
-                logger.info(f"[ideal] Found incompatibility for ({poly}): {v} = {to_eval[str(v)]}")
+                logger.debug(f"[ideal] Found incompatibility for ({poly}): {v} = {to_eval[str(v)]}")
                 return [] # no solution for incompatibility of two equations
             elif str(v) not in to_eval:
                 logger.debug(f"[ideal] ### Found simple polynomial ({poly}): adding solution {v} = {value}")
@@ -472,13 +509,13 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
             v = poly.variables()[0]
             value = poly.parent().zero()
             if str(v) in to_eval and to_eval[str(v)] != value:
-                logger.info(f"[ideal] Found incompatibility for ({poly}): {v} = {to_eval[str(v)]}")
+                logger.debug(f"[ideal] Found incompatibility for ({poly}): {v} = {to_eval[str(v)]}")
                 return [] # no solution for incompatibility of two equations
             elif str(v) not in to_eval:
                 logger.debug(f"[ideal] ### Found simple polynomial ({poly}): adding solution {v} = {value}")
                 to_eval[str(v)] = value
         elif poly.degree() == 0 and poly != 0: # No solution in the ideal
-            logger.info(f"[ideal] Found no solution for an ideal")
+            logger.debug(f"[ideal] Found no solution for an ideal")
             return []
     if len(to_eval):
         logger.debug(f"[ideal] ### Applying easy variables...")
@@ -493,7 +530,7 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
     logger.debug(f"[ideal] $$$ Looking for monomials implying a splitting in solutions")
     for poly in I:
         if poly.is_monomial():
-            logger.log(15, f"[ideal] $$$ Found a splitting monomial: {poly}")
+            logger.debug(f"[ideal] $$$ Found a splitting monomial: {poly}")
             args = []
             for v in poly.variables():
                 path_sol = partial_solution.copy()
@@ -513,7 +550,7 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
     for poly in sorted_polynomials:
         factors = poly.factor()
         if len(factors) > 1: # we can split
-            logger.log(15, f"[ideal] [[[ Found a splitting into {len(factors)} factors")
+            logger.debug(f"[ideal] [[[ Found a splitting into {len(factors)} factors")
             for factor in factors:
                 logger.debug(f"[ideal] [[[    {str(factor)[:20]}...")
             args = []
@@ -554,7 +591,7 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
     if groebner and len(I) > 1:
         ###########################################################################################################
         ## Sixth we try a Groebner basis
-        logger.log(15, f"[ideal] %%% Computing a GROEBNER BASIS of {len(I)} polynomials")
+        logger.debug(f"[ideal] %%% Computing a GROEBNER BASIS of {len(I)} polynomials")
         for (i,poly_I) in enumerate(I):
             logger.debug(f"[ideal] %%% \t{i:4} -> {cut_string(poly_I, 50)}")
 
@@ -566,13 +603,13 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
 
         ###########################################################################################################
         ## Seventh we try a primary decomposition
-        logger.log(15, f"[ideal] +++ Computing a PRIMARY DECOMPOSITION of {len(I)} polynomials")
+        logger.debug(f"[ideal] +++ Computing a PRIMARY DECOMPOSITION of {len(I)} polynomials")
         logger.debug(f"[ideal] +++ First, we compute the radical")
         I = ideal(I).radical().gens() # Computing the radical of the original ideal
         logger.debug(f"[ideal] +++ Now, we compute the primary decomposition.")
         primary_decomp = ideal(I).primary_decomposition()
         if len(primary_decomp) != 1: # We are not done: several component found
-            logger.log(15, f"[ideal] +++ Found {len(primary_decomp)} components: splitting into decisions")
+            logger.debug(f"[ideal] +++ Found {len(primary_decomp)} components: splitting into decisions")
             args = []
             for primary in primary_decomp:
                 logger.debug(f"[ideal] --- Computing radical ideal of primary component")
@@ -582,8 +619,9 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
 
             return sum((solutions for solutions in LoopInParallel(_analyze_ideal, args)), [])
 
-    logger.info(f"[ideal] !!! Reached ending point for analyzing an ideal. Returning this path")
+    logger.debug(f"[ideal] !!! Reached ending point for analyzing an ideal. Returning this path")
     return [SolutionBranch(I, partial_solution, decisions, final_parent)]
+
 
 def _check_avoid(partial_solution: dict, to_avoid: list):
     r'''
@@ -598,4 +636,87 @@ def _check_avoid(partial_solution: dict, to_avoid: list):
     return any(all(partial_solution.get(v, None) == avoiding[v] for v in avoiding) for avoiding in to_avoid)
 
 
-__all__ = ["analyze_ideal"]
+#################################################################################################
+###
+### PARTIAL ANALYSIS METHOD
+###
+#################################################################################################
+@loglevel(logger)
+def eliminate_linear_variables(I: Ideal, variables):
+    r'''
+        Method to eliminate the linear variables that are not relevant for the ideal.
+
+        Assume that `I \subset R[x_1,\ldots,x_n,y_1,\ldots,y_n]`, that we are interested in the
+        elimination ideal `I \cap R[x_1,\ldots, x_n]` and that the variables `y_1,\ldots,y_n`
+        appear linearly in the generators of `I`.
+
+        This method computes the elimination ideal by considering the induced linear system
+        by the generators of `I` and using the rank condition on this linear system to
+        obtain non-linear conditions on `x_1,\ldots,x_n`.
+
+        Need to be done:
+        * Check this is exactly the elimination ideal
+        * Perform a fast computation
+        * Compute GB while computing equations or not?
+    '''
+    logger.debug(f"[ELV] Eliminating linear variables {variables=} from ideal using minors")
+    generators = I.gens()
+    ring = I.parent().ring()
+
+    variables = [ring(v) for v in variables] # we make sure the variables are in the correct ring
+    if not all(v.is_generator() for v in variables):
+        raise ValueError(f"[ELV] We can only remove linear variables if variables are provided (given {variables})")
+    if not all(all(g.degree(v) <= 1 for v in variables) for g in generators):
+        raise ValueError(f"[ELV] We can only remove linear variables if the generators are linear in these variables.")
+
+    logger.debug(f"[ELV] Checking and filtering the input...")
+    ring = ring.remove_var(*variables)
+    variables = [v for v in variables if any(g.degree(v) > 0 for g in generators)] # removing unnecessary variables
+    generators = [g for g in generators if g != 0] # removing zero generators
+
+    logger.debug(f"[ELV] Building the matrix with n={len(generators)} rows and m={len(variables)} columns")
+    A = Matrix([[ring(g.coefficient(v)) for v in variables] for g in generators]) # matrix of linear system
+    logger.debug(f"[ELV] Computing the inhomogeneous vector...")
+    b = vector([ring(g.coefficient({v: 0 for v in variables})) for g in generators]) # inhomogeneous term
+    if b != 0:
+        raise NotImplementedError(f"[ELV] Elimination of linear variables for inhomogeneous systems not yet implemented.")
+    n = A.ncols()
+    m = A.nrows()
+
+    total = binomial(m,n) # this is how many minors we need to compute
+    total_10 = total//10
+    total_100 = total//100
+    final_ideal = ideal(ring)
+
+    C = [[i for i in range(A.nrows()) if A[i][j] != 0] for j in range(A.ncols())]
+
+    logger.debug(f"[ELV] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C))
+    print(f"[ELV] Rows for each column with non-zero elements:\n\t" + "\n\t".join(str(c) for c in C), flush=True)
+    for i,c in enumerate(Combinations(range(m), n)):
+        if total_10 == 0 or i == total-1 or i % total_10 == 0:
+            logger.debug(f"[ELV] ++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)")
+            print(f"[ELV] ++ Computing minor {i+1}/{total}... (Ideal with {final_ideal.ngens()} generators)", end="\r", flush=True)
+
+        A_ = A.matrix_from_rows(c)
+        red_det = final_ideal.reduce(A_.determinant())
+
+        if red_det != 0: # there is something to add
+            final_ideal = ideal(ideal(final_ideal.gens() + (red_det,)).groebner_basis())
+            if 1 in final_ideal:
+                break
+    print("\n[ELV] -- Finished the computation of minors")
+
+    logger.debug(f"[ELV] -- Finished elimination of linear variables")
+    return final_ideal
+
+
+def find_nonzero_minor(A, size):
+    from itertools import product
+    for rows in product(*[[i for i in range(A.nrows()) if A[i][c] != 0] for c in range(A.ncols())]):
+        for cols in Combinations(range(A.ncols()), size):
+            mrows = [rows[i] for i in cols]
+            if A.matrix_from_rows_and_columns(mrows, cols).determinant() != 0:
+                return (mrows, cols)
+
+
+__all__ = ["analyze_ideal", "eliminate_linear_variables"]

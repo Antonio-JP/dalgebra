@@ -17,6 +17,15 @@ install: clean_build clean_cache
 no-deps: clean_build
 	$(SAGE) -pip install --upgrade --no-deps .
 
+with-data: clean_build clean_cache import-data install
+	@echo "Installed dalgebra with data from almost_commuting_wilson"
+
+import-data:
+	@echo "Importing data for almost_commuting_wilson..."
+	@cd experiments/almost_commuting && \
+	sage manage_data.sage import -version $(VERSION) > /dev/null
+	@echo "DATA IMPORTED"
+	
 uninstall:
 	$(SAGE) -pip uninstall $(PACKAGE)
 
