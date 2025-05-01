@@ -114,7 +114,7 @@ class DSystem:
 
         # Checking the argument `variables`
         gens = self.parent().variable_names()
-        if (variables is not None or len(variables) > 0):
+        if (variables is not None and len(variables) > 0):
             dvars = []
             for var in variables:
                 v_name = var._name if isinstance(var, DMonomialGen) else str(var)
@@ -507,8 +507,7 @@ class DSystem:
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
-                Multivariate Polynomial Ring in u_0, u_1, u_2 over Differential
-                Ring [[Rational Field], (0,)]
+                Multivariate Polynomial Ring in u_0, u_1, u_2 over Rational Field
 
             The same can be checked for a multivariate differential polynomial::
 
@@ -530,7 +529,7 @@ class DSystem:
                 True
                 sage: parents[0]
                 Multivariate Polynomial Ring in u_0, u_1, u_2, u_3, v_0, v_1, v_2, v_3, v_4 over
-                Differential Ring [[Univariate Polynomial Ring in x over Rational Field], (d/dx,)]
+                Univariate Polynomial Ring in x over Rational Field
 
             The output of this method depends actively in the set of active variables that defines the system::
 
@@ -548,15 +547,14 @@ class DSystem:
 
                 sage: system_with_u.algebraic_equations()[0].parent()
                 Multivariate Polynomial Ring in u_0, u_1, u_2 over Multivariate Polynomial
-                Ring in v_0, v_1, v_2 over Differential Ring [[Univariate Polynomial Ring
-                in x over Rational Field], (d/dx,)]
+                Ring in v_0, v_1, v_2 over Univariate Polynomial Ring
+                in x over Rational Field
                 sage: parents = [el.parent() for el in system_with_u.extend_by_operation([1,2]).algebraic_equations()]
                 sage: all(el == parents[0] for el in parents[1:])
                 True
                 sage: parents[0]
                 Multivariate Polynomial Ring in u_0, u_1, u_2, u_3 over Multivariate Polynomial
-                Ring in v_0, v_1, v_2, v_3, v_4 over Differential Ring [[Univariate Polynomial
-                Ring in x over Rational Field], (d/dx,)]
+                Ring in v_0, v_1, v_2, v_3, v_4 over Univariate Polynomial Ring in x over Rational Field
         '''
         equations = tuple(self.parent().as_polynomials(*self.equations(), as_sage=True)) # These are already polynomials
         PR = equations[0].parent() # This parent is the same for all ``equations``

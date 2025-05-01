@@ -26,7 +26,7 @@ r'''
         sage: R.<u,v> = DifferentialPolynomialRing(QQ)
         sage: f = 3*u[0]*v[1] + u[2] + 1
         sage: f.derivative()
-        3*u_1*v_2 + u_3
+        3*u_0*v_2 + 3*u_1*v_1 + u_3
         sage: f.constant_coefficient()
         1
 
