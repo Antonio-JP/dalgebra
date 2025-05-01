@@ -18,6 +18,16 @@ r'''
     That is why we also provide a class :class:`DMonomialGen` that will represent the `a_*` that will
     generate all the associated free variables given the indices.
 '''
+# ****************************************************************************
+#  Copyright (C) 2025 Antonio Jimenez-Pastor <antonio.jimenezp@upm.es>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#                  https://www.gnu.org/licenses/
+# ****************************************************************************
+
 from __future__ import annotations
 
 import logging
@@ -37,8 +47,9 @@ from typing import Collection
 
 logger = logging.getLogger(__name__)
 _CommutativeMonoids = Monoids.Commutative.__classcall__(Monoids.Commutative)
-
 __BIJECTIONS = {}
+
+
 def IndexBijection(size : int):
     r'''
         Factory for the bijections of a given size.
@@ -87,6 +98,7 @@ def IndexBijection(size : int):
     if size not in __BIJECTIONS:
         __BIJECTIONS[size] = IndexBijection_Object(size)
     return __BIJECTIONS[size]
+
 
 class IndexBijection_Object (Morphism):
     def __init__(self, size : int):
@@ -149,6 +161,7 @@ class IndexBijection_Object (Morphism):
         quantity = IndexBijection_Object.elements_summing(sum_value, self.dim)
         for i in range(starting, starting + quantity):
             yield self(i)
+
 
 class DMonomial(Element):
     r'''
@@ -422,9 +435,10 @@ class DMonomial(Element):
         for ((v,o),e) in elements
         )
 
+
 class DMonomialGen:
     def __init__(self, parent: DMonomialMonoid, name: str, *, index: int = -1):
-        if(not isinstance(parent, DMonomialMonoid)):
+        if not isinstance(parent, DMonomialMonoid):
             raise TypeError("The DPolynomialGen must have a ring of polynomial with an operator as parent")
 
         self.index_map = IndexBijection(parent.noperators())
@@ -494,7 +508,7 @@ class DMonomialGen:
             the numerical value of ``Y`` or an error if not possible.
         '''
         as_tuple = self._parent.noperators() > 1 if as_tuple is None else as_tuple # defaulting value for as_tuple
-        if(self.contains(element)):
+        if self.contains(element):
             if isinstance(element, str): # Special case of str
                 element_parts = element.split("_")
                 index = tuple(ZZ(el) for el in element_parts[-self._parent.noperators():])
@@ -546,6 +560,7 @@ class DMonomialGen:
 
 
 RWOPolynomialGen = DMonomialGen #: alias for DMonomialGen (used for backward compatibility)
+
 
 class DMonomialMonoid(Parent):
     r'''

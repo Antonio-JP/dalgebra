@@ -2,48 +2,48 @@ from __future__ import annotations
 r'''
     Module to create D-extensions with elliptic behavior.
 
-    Let `(K, (d_1,\ldots,d_n))` be a d-Field with multiple difference-differential operators. 
-    It is very common to add an element `x` and impose some conditions on the derivative in 
+    Let `(K, (d_1,\ldots,d_n))` be a d-Field with multiple difference-differential operators.
+    It is very common to add an element `x` and impose some conditions on the derivative in
     order to extend the field.
 
     This is the case of many special functions for the differential case or with many special sequences
-    in the difference case. For example, if we consider the differential field `\mathbb{Q}(x)` with the 
+    in the difference case. For example, if we consider the differential field `\mathbb{Q}(x)` with the
     standard derivation `d/dx`, we may want to add the exponential function:
 
     .. MATH::
 
         \mathbb{K} = \mathbb{Q}(x,e^x),
-    
-    where the derivative is defined as `d/dx(e^x) = e^x`. Another classical example is the p-Weierstrass 
+
+    where the derivative is defined as `d/dx(e^x) = e^x`. Another classical example is the p-Weierstrass
     elliptic function. In this case, we add a new element `P` that satisfies
 
     .. MATH::
 
         (P')^2 = P^3 + g_2P + g_3.
 
-    In all these cases, we observe that the applied operation over the new element is algebraic over the 
+    In all these cases, we observe that the applied operation over the new element is algebraic over the
     field of fractions with this new element. We will call this type of extension "elliptic" (mainly because
     they extend the behavior of the p-Weierstrass function.
 
     ## The case with one operation
 
-    In the case with just one variable, we start with a d-field `K` with just one operation and add a new 
-    element `\eta`. Then we stablish that `d(\eta)` is algebraic over `K(\eta)`, meaning that there is a 
+    In the case with just one variable, we start with a d-field `K` with just one operation and add a new
+    element `\eta`. Then we stablish that `d(\eta)` is algebraic over `K(\eta)`, meaning that there is a
     minimal polynomial `p(y) \in K(\eta)[y]` such that `p(d(\eta)) = 0`.
 
     In this case we can build the field `K(\eta)[y]/(p) \simeq K(\eta) + d(\eta)K(\eta) + \ldots (d(\eta))^{\deg(p)-1}K(\eta)`.
-    This field can be seen as a `K(\eta)`-vector space, so addition and multiplication by elements in `K(\eta)` can 
+    This field can be seen as a `K(\eta)`-vector space, so addition and multiplication by elements in `K(\eta)` can
     be trivially implemented.
 
-    However, we would need to implement a multiplication by `d(\eta)`. This is a `K(\eta)`-linear map and has as 
-    matrix representation the companion matrix of the polynomial `p(y)`. Hence, we can easily implement the 
+    However, we would need to implement a multiplication by `d(\eta)`. This is a `K(\eta)`-linear map and has as
+    matrix representation the companion matrix of the polynomial `p(y)`. Hence, we can easily implement the
     ring structure of the full d-extension.
 
     The only piece that would need to be added is the operation `d`. It is clear what the image of `\eta` will be. But what
-    about the image of `d(\eta)`, namely, `d^2(\eta)`. For this we can follow the notes on Bronstein book and see that the 
+    about the image of `d(\eta)`, namely, `d^2(\eta)`. For this we can follow the notes on Bronstein book and see that the
     minimal polynomial for `d(\eta)` is providing the value for `d^2(\eta)`.
 
-    * In the differential case: we have that `0 = d(p(d(\eta)))`. If we write `p(y) = p_0 + p_1 y + \ldots + p_n y^n`, 
+    * In the differential case: we have that `0 = d(p(d(\eta)))`. If we write `p(y) = p_0 + p_1 y + \ldots + p_n y^n`,
       then we have that
 
       .. MATH::
@@ -57,8 +57,8 @@ r'''
 
         d^2(\eta) = -\kappa_d(p(d(\eta)))/\partial_y(p(d(\eta))).
 
-      Once we have this value fully computed, then the operation `d` is fully defined by observing that the elements of 
-      the extension are of the form: `X = a_0(\eta) + a_1(\eta)d(\eta) + \ldots + a_{n-1}(\eta)d(\eta)^{n-1}`, so the 
+      Once we have this value fully computed, then the operation `d` is fully defined by observing that the elements of
+      the extension are of the form: `X = a_0(\eta) + a_1(\eta)d(\eta) + \ldots + a_{n-1}(\eta)d(\eta)^{n-1}`, so the
       derivative can be seen as an operation on vectors as follows:
 
       .. MATH::
@@ -70,7 +70,7 @@ r'''
       .. MATH::
 
         d(X) \equiv \kappa_d(\mathbf{a}) + M_d \mathbf{a},
-      
+
       where `M_d` is the matrix whose columns are the derivative of `d(\eta)^k`.
 
     * In the difference case: similar computations lead to the fact that `d^2(\eta)` is algebraic of the same degree
@@ -112,12 +112,22 @@ r'''
 
     LIMITATIONS:
 
-    * This structure *do not* work with several d-elliptic variables. If some _monomial_ extensions are used, check the 
+    * This structure *do not* work with several d-elliptic variables. If some _monomial_ extensions are used, check the
       usual Wrapper differential ring.
     * This structure only works with 1 derivation. Shifts, skew-derivations and rings with multiple operations *do not work*.
     * Integration of these objects is not yet implemented.
     * The computation of all new constants is not yet implemented.
 '''
+
+# ****************************************************************************
+#  Copyright (C) 2025 Antonio Jimenez-Pastor <antonio.jimenezp@upm.es>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#                  https://www.gnu.org/licenses/
+# ****************************************************************************
 
 from sage.categories.algebras import Algebras
 from sage.categories.category import Category
@@ -139,6 +149,7 @@ from ..dring import AdditiveMap, DRings
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
 
+
 #########################################################################
 ### UNIQUE FACTORY TO CREATE ELLIPTIC EXTENSIONS
 #########################################################################
@@ -146,7 +157,7 @@ class DEllipticFactory(UniqueFactory):
     r'''
         Factory to create a D-Extension.
     '''
-    def create_key(self, base, polynomial: str | Element, varname: str = None, *, names: tuple[str] = None, category = None):
+    def create_key(self, base, polynomial: str | Element, varname: str = None, *, names: tuple[str] = None, category=None):
         if base not in _DRings:
             raise TypeError("The base must be a ring with operators")
         elif base.noperators() != 1 or not base.is_differential():
@@ -163,7 +174,7 @@ class DEllipticFactory(UniqueFactory):
             raise ValueError(f"Incorrect call: we need a `varname` or a list of one ``names``")
         elif varname is None:
             varname = names[0]
-        
+
         # We convert `polynomial` into a string
         polynomial = str(polynomial)
 
@@ -177,6 +188,7 @@ class DEllipticFactory(UniqueFactory):
 
 DElliptic = DEllipticFactory("dalgebra.dextension.delliptic.DElliptic")
 
+
 #########################################################################
 ### ELEMENT AND PARENT CLASSES FOR ELLIPTIC EXTENSIONS
 #########################################################################
@@ -184,13 +196,13 @@ class DElliptic_Element(Element):
     def __init__(self, parent: DElliptic_Field, *coefficients: Element):
         if len(coefficients) > parent.degree():
             raise ValueError(f"Too much information to create a DElliptic_Element")
-        
+
         super().__init__(parent)
 
         ## We store in self.__coeffs the list of all coefficients corresponding to (1,eta',...,eta'^{n-1})
         ## We fill with zeros if not long enough sequence is provided.
         self.__coeffs = tuple(
-            [parent.algebraic_base()(c) for c in coefficients] + 
+            [parent.algebraic_base()(c) for c in coefficients] +
             (parent.degree()-len(coefficients))*[parent.algebraic_base().zero()]
         )
 
@@ -212,13 +224,13 @@ class DElliptic_Element(Element):
 
     # def numerator(self) -> DElliptic_Element:
     #     return self
-    
+
     # def denominator(self) -> DElliptic_Element:
     #     return self.parent().one()
-    
+
     def denominator(self) -> DElliptic_Element:
         """
-            Compute the least common multiple (LCM) of the denominators of the coefficients 
+            Compute the least common multiple (LCM) of the denominators of the coefficients
             of an D-elliptic element.
 
             OUTPUT:
@@ -250,8 +262,8 @@ class DElliptic_Element(Element):
                 eta + 1
         """
         from sage.arith.functions import lcm
-        return lcm([coeff.denominator() for coeff in self.__coeffs]) 
-    
+        return lcm([coeff.denominator() for coeff in self.__coeffs])
+
     def numerator(self) -> DElliptic_Element:
         r'''
             Compute the result of multiplying this element by its denominator.
@@ -314,10 +326,10 @@ class DElliptic_Element(Element):
             See method :func:`DElliptic_Field.inner_derivative` for further information.
         '''
         eta_p = self.parent().variable_p()
-        as_algebraic = sum(self.parent().inner_derivative(coeff) * eta_p**i for (i,coeff) in enumerate(self.__coeffs) if coeff !=0)
+        as_algebraic = sum(self.parent().inner_derivative(coeff) * eta_p**i for (i,coeff) in enumerate(self.__coeffs) if coeff != 0)
 
         return self.parent()(as_algebraic)
-    
+
     ###################################################################################
     ### Other operational methods
     ###################################################################################
@@ -335,12 +347,12 @@ class DElliptic_Element(Element):
         self_poly_eta_p = self.algebraic().lift() # the algebraic element as polynomial
         conditions = list()
         # we do not need to check the zero coefficients
-        for (mon,coeff) in zip(reversed(self_poly_eta_p.monomials()),self_poly_eta_p.coefficients()): 
+        for (mon,coeff) in zip(reversed(self_poly_eta_p.monomials()),self_poly_eta_p.coefficients()):
             ## Here ``coeff`` is a rational function in ``self.base().to_sage()(eta)``.
             num = coeff.numerator() # polynomial in eta
             for (mon2, c) in zip(reversed(num.monomials()),num.coefficients()):
                 conditions.append((self.parent()(mon)*self.parent()(mon2), c))
-        
+
         return tuple(conditions)
 
     ###################################################################################
@@ -348,7 +360,7 @@ class DElliptic_Element(Element):
     ###################################################################################
     def _add_(self, other: DElliptic_Element) -> DElliptic_Element:
         return self.parent().element_class(self.parent(), *[self.__coeffs[i] + other.__coeffs[i] for i in range(self.parent().degree())])
-    
+
     def _neg_(self) -> DElliptic_Element:
         return self.parent().element_class(self.parent(), *[-self.__coeffs[i] for i in range(self.parent().degree())])
 
@@ -360,7 +372,7 @@ class DElliptic_Element(Element):
 
     def __invert__(self) -> DElliptic_Element:
         return self.parent()(~self.algebraic())
-        
+
     @cached_method
     def __pow__(self, power: int) -> DElliptic_Element:
         if power == 0:
@@ -402,11 +414,12 @@ class DElliptic_Element(Element):
         direct_latex = direct_latex.replace(var_p_latex, f"{var_latex}'")
 
         return direct_latex
-    
+
     def __call__(self, *args, **kwds):
         if self.parent().varname() in kwds:
             raise ValueError(f"The algebraic function can not be evaluated")
         return self.parent().element_class(self.parent(), *[coeff(*args, **kwds) if callable(coeff) else coeff for coeff in self.__coeffs])
+
 
 class DElliptic_Field(Parent):
     r'''
@@ -494,7 +507,7 @@ class DElliptic_Field(Parent):
 
     def degree(self) -> int:
         return self.__degree
-    
+
     def min_poly(self) -> Element:
         return self.__min_poly
 
@@ -515,8 +528,8 @@ class DElliptic_Field(Parent):
             if not element.is_simple():
                 raise TypeError(f"Impossible to compute the inner derivative for an element with `eta'`")
             element = element.coeffs[0]
-        
-        if not element in self.__algebraic_base:
+
+        if element not in self.__algebraic_base:
             raise TypeError(f"Impossible to compute the inner derivative if it is not a proper element")
         element = self.__algebraic_base(element)
 
@@ -543,7 +556,7 @@ class DElliptic_Field(Parent):
         der_den = self.algebraic()(dden)*self.__algebraic_var + kden
         num = self.algebraic()(num)
         den = self.algebraic()(den)
-        
+
         ## Now, as elements in the algebraic quotient, we compute the derivative using the quotient rule
         return (der_num * den - num * der_den) * (~den)**2
 
@@ -568,7 +581,7 @@ class DElliptic_Field(Parent):
             return self(kappa_element + partial_element * variable_pp)
 
         return AdditiveMap(self, __derivation)
-          
+
     #################################################
     ### Coercion methods
     #################################################
@@ -643,13 +656,14 @@ class DElliptic_Field(Parent):
 
     def inverse_operation(self, element: DElliptic_Element, operation: int = 0) -> DElliptic_Element:
         raise NotImplementedError(f"The integration in these fields is not yet implemented")
-    
+
     def _lcm_denominators(self, *elements: DElliptic_Element) -> DElliptic_Element:
         from sage.arith.functions import lcm
         return lcm(element.denominator() for element in elements)
 
     def to_sage(self):
         return self.__algebraic
+
 
 #########################################################################
 ### CONSTRUCTIONS FUNCTOR FOR ELLIPTIC EXTENSIONS
@@ -679,9 +693,10 @@ class DEllipticFunctor(ConstructionFunctor):
         return f"DElliptic(*,{self.__min_poly},{self.__varname})"
 
     def __eq__(self, other):
-        if(other.__class__ == self.__class__):
+        if (other.__class__ == self.__class__):
             return str(self.__min_poly) == str(other.__min_poly) and self.__varname == other.__varname
         return False
+
 
 #########################################################################
 ### COERCIONS AND CONVERSION MORPHISMS FOR ELLIPTIC EXTENSIONS
@@ -706,6 +721,7 @@ class MapDEllipticToField(Morphism):
             raise ValueError(f"This element does not belong to the main field {self.domain().algebraic_base()}")
         return self.domain().algebraic_base()(self.coeffs[0])
 
+
 class MapFieldToDElliptic(Morphism):
     r'''
         Coercion map between the associated base field and the Elliptic extension.
@@ -723,6 +739,7 @@ class MapFieldToDElliptic(Morphism):
 
     def _call_(self, element):
         return self.codomain().element_class(self.codomain(), self.codomain().algebraic_base()(element))
+
 
 class MapDEllipticToPoly(Morphism):
     r'''
@@ -742,6 +759,7 @@ class MapDEllipticToPoly(Morphism):
     def _call_(self, element: DElliptic_Element):
         return self.domain().algebraic()(element).lift()
 
+
 class MapPolyToDElliptic(Morphism):
     r'''
         Coercion map between the associated polynomial ring and the Elliptic extension.
@@ -759,6 +777,7 @@ class MapPolyToDElliptic(Morphism):
 
     def _call_(self, element):
         return self.codomain()(self.codomain().algebraic()(element))
+
 
 class MapDEllipticToAlgebraic(Morphism):
     r'''
@@ -781,6 +800,7 @@ class MapDEllipticToAlgebraic(Morphism):
 
         return sum(c*eta_p**i for i,c in enumerate(element.coeffs))
 
+
 class MapAlgebraicToDElliptic(Morphism):
     r'''
         Coercion map between the associated polynomial ring and the Elliptic extension.
@@ -802,9 +822,10 @@ class MapAlgebraicToDElliptic(Morphism):
 
         return self.codomain().element_class(self.codomain(), *element_poly.coefficients(False))
 
+
 class CoerceFromBase_DElliptic(Morphism):
     r'''
-        Basic coercion from the differential field that is the base of an elliptic extension and 
+        Basic coercion from the differential field that is the base of an elliptic extension and
         the elliptic extension itself
     '''
     def __init__(self, domain, codomain):
@@ -812,6 +833,7 @@ class CoerceFromBase_DElliptic(Morphism):
 
     def _call_(self, element):
         return self.codomain().element_class(self.codomain(), self.domain().to_sage()(element))
+
 
 class ConversionToBase_DElliptic(Morphism):
     r'''
@@ -828,6 +850,7 @@ class ConversionToBase_DElliptic(Morphism):
 
         raise ValueError(f"The given element ({element}) is not in the base field.")
 
+
 class CoerceBetweenBases_DElliptic(Morphism):
     r'''
         Conversion between elliptic extension when we change the base differential field.
@@ -840,17 +863,18 @@ class CoerceBetweenBases_DElliptic(Morphism):
     def _call_(self, element: DElliptic_Element) -> DElliptic_Element:
         new_coeffs = list()
         eta = self.codomain().variable()
-        for coeff in element.coeffs: 
+        for coeff in element.coeffs:
             # coeff is a rational function in F(eta)
             num = sum(
-                self.codomain().base().to_sage()(self.__inner_coercion(self.domain().base()(coeff)))*eta**i 
+                self.codomain().base().to_sage()(self.__inner_coercion(self.domain().base()(coeff)))*eta**i
                 for i,coeff in enumerate(coeff.numerator().coefficients(False))
             )
             den = sum(
-                self.codomain().base().to_sage()(self.__inner_coercion(self.domain().base()(coeff)))*eta**i 
+                self.codomain().base().to_sage()(self.__inner_coercion(self.domain().base()(coeff)))*eta**i
                 for i,coeff in enumerate(coeff.denominator().coefficients(False))
             )
             new_coeffs.append(num/den)
         return self.codomain().element_class(self.codomain(), *new_coeffs)
+
 
 __all__ = ["DElliptic"]
