@@ -249,7 +249,7 @@ def GetCentralizer(
             else: ## No solution -- we keep this coefficient for future searches
                 c_coeffs.append(current)
                 ## We check if there is something more in this congruence class
-                if current + n == bounds[r]: # next iteration will reach the bound -> it is a decomposition
+                if current + n >= bounds[r]: # next iteration will reach the bound -> it is a decomposition
                     logger.log(15, f"[GC] +! Preventing bound for congruence class {r} (mod {n}): {(current + n)}")
                     logger.log(15, f"[GC] +!     Computing decomposition with other elements of the basis...")
                     decomposition = len(bounds)*[0]
@@ -317,7 +317,7 @@ def GetCentralizer(
             operators.append(Goodearl_Basis[i])
 
     ## We compute the permutation for sorting
-    permutation = list(zip(*sorted(((op, i) for i,op in enumerate(operators)), key=lambda op : op[0].order(z))))[1]
+    permutation = list(zip(*sorted(((op, i) for i,op in enumerate(operators) if op != None), key=lambda op : op[0].order(z))))[1]
 
     ## We change the relation on the cases we know
     for i in range(len(Goodearl_Basis)):

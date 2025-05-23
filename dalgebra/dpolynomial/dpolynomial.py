@@ -727,7 +727,7 @@ class DPolynomial(Element):
         output = list()
         for (mon, coeff) in zip(self.monomials(), self.coefficients()):
             for (mon2, condition) in coeff.conditions_to_zero():
-                output.append((self.parent()(mon)*mon2, condition))
+                output.append((self.parent()(mon)*self.parent().base().to_sage()(mon2), condition))
 
         return output
 
