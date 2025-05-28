@@ -242,6 +242,8 @@ class DMonomial_Element (Element):
         if isinstance(data, dict): # special case of dictionary
             degree = max(data)+1 if len(data) > 0 else 0
             data = tuple(data.get(i,self.parent().base().zero()) for i in range(degree+1))
+        elif isinstance(data, str): # special case of string
+            data = (data,)
         
         ## We clean the data if the coefficients are zero
         i = len(data)
@@ -341,11 +343,21 @@ class DMonomial_Element (Element):
     
     ## Other operational methods
     def conditions_to_zero(self) -> tuple[tuple[DMonomial_Element,Element]]:
-        return tuple((m,c) for (m,c) in self.mons_cons_iter())
+        return tuple((m,c.to_sage()) for (m,c) in self.mons_cons_iter())
 
     def factor(self) -> Factorization:
         f = self.algebraic().factor()
         return Factorization([(self.parent()(p), e) for (p,e) in f], self.parent().base()(f.unit()))
+    
+    def lcm(self, *others: DMonomial_Element) -> DMonomial_Element:
+        if len(others) == 1 and isinstance(others[0], (list,tuple)):
+            others = others[0]
+
+        if len(others) == 0:
+            return self
+        else:
+            from sage.arith.functions import lcm
+            return self.parent()(lcm(self.algebraic(), *(o.algebraic() for o in others)))
 
     def content(self) -> Element:
         if self.is_zero():
@@ -452,10 +464,16 @@ class DMonomial_Element (Element):
     
     def hash(self) -> int:
         return hash(self.__coefficients)
+    
+    def __call__(self, *args, **kwds):
+        return self.parent()(self.to_sage()(*args, **kwds))
 
     ## Other functions
     def __repr__(self) -> str:
         return repr(self.algebraic())
+
+    def __hash__(self) -> int:
+        return hash(tuple(self.__coefficients))
     
     def _latex_(self) -> str:
         return latex(self.algebraic())
@@ -1057,6 +1075,7 @@ class DMonomial_Parent (Parent):
         self.__images = None
         self.__gen = None
         self.__operators = None
+        self.__fraction_field = None
 
         self._initialize_algebraic()
         self._initialize_data(gen_images)
@@ -1501,14 +1520,16 @@ class DMonomial_Parent (Parent):
         return DMonomialFunctor(self.__varname, tuple(self.__images)), self.base()
     
     def fraction_field(self) -> DFractionField:
-        return DFractionField(self)
+        if self.__fraction_field is None:
+            self.__fraction_field = DFractionField(self)
+        return self.__fraction_field
     
     def change_ring(self, new_base: Parent) -> DMonomial_Parent:
         old_base = self.base()
         if isinstance(old_base, DMonomial_Parent) and (not isinstance(new_base, DMonomial_Parent)):
             new_base = old_base.change_ring(new_base)
         
-        output = DMonomial(new_base, self.varname(), tuple(str(img) for img in self.__images))
+        output = DMonomial(new_base, tuple(str(img) for img in self.__images), self.varname())
         # coercion old -> new
         coercion = new_base.coerce_map_from(self.base())
         if coercion is not None:
@@ -1520,7 +1541,7 @@ class DMonomial_Parent (Parent):
         coercion = self.base().coerce_map_from(new_base)
         if coercion is not None:
             try:
-                output.register_coercion(DMM_BetweenBases(output, self, coercion))
+                self.register_coercion(DMM_BetweenBases(output, self, coercion))
             except AssertionError:
                 pass # the ring was already created
         # conversion old -> new
@@ -1534,9 +1555,11 @@ class DMonomial_Parent (Parent):
         conversion = self.base().convert_map_from(new_base)
         if conversion is not None:
             try:
-                output.register_conversion(DMM_BetweenBases(output, self, conversion))
+                self.register_conversion(DMM_BetweenBases(output, self, conversion))
             except AssertionError:
                 pass # the ring was already created
+    
+        return output
     
     def tower_change_order(self, *new_variable_order: DMonomial_Element) -> DMonomial_Parent:
         tower_gens = self.tower_gens()
@@ -1580,7 +1603,7 @@ class DMonomial_Parent (Parent):
         return self.base().operator_types()
 
     def add_constants(self, *new_constants: str) -> DMonomial_Parent:
-        return self.change_base(self.base().add_constants(*new_constants))
+        return self.change_ring(self.base().add_constants(*new_constants))
     
     def linear_operator_ring(self) -> DMonomial_Parent:
         r'''
@@ -1690,7 +1713,7 @@ class DMonomial_Parent (Parent):
 
         r = self.rothstein_trager(f, D, vname) # algebraic polynomial in __t
         ## We create the differential structure to manipulate r
-        E = DMonomial(self.base(), vname, [0 for _ in range(self.noperators())]) # this is the \kappa_D
+        E = DMonomial(self.base(), [0 for _ in range(self.noperators())], vname) # this is the \kappa_D
         r = E(r)
         r_n, r_s = r.splitting_factorization(D)
         F = r_s.factor() # factorization into irreducible factors of `r_s`
@@ -1702,8 +1725,8 @@ class DMonomial_Parent (Parent):
                 monomials.append((nvar, g.derivative(D)/g,alpha))
         
         E = DMonomial(self, 
-                      [m[0] for m in monomials],
-                      [[0 if i != D else m[1] for i in range(self.noperators())] for m in monomials])
+                      [[0 if i != D else m[1] for i in range(self.noperators())] for m in monomials],
+                      [m[0] for m in monomials])
         result = sum(m[2]*E.tower_gen(m[0]) for m in monomials)
 
         return result, r_n in self.base()
@@ -1727,7 +1750,7 @@ class DMonomial_Parent (Parent):
         d = self(f.denominator())
         p,a = self(f.numerator()).quo_rem(d) # f = p + a/d and `a` is normal
 
-        AR = DMonomial(self, "__z", [0 for _ in range(self.noperators())]) # we add new variable with \kappa_D
+        AR = DMonomial(self, [0 for _ in range(self.noperators())], "__z") # we add new variable with \kappa_D
         z = AR.gen()
         if d.derivative(D).degree() <= d.degree():
             r, R = AR(d).subresultant_sequence(a-z*d.derivative(D))
@@ -1753,8 +1776,8 @@ class DMonomial_Parent (Parent):
                 monomials.append((RequestName.get(*[str(g) for g in self.tower_gens()]), b.derivative(D)/b, alpha))
 
         E = DMonomial(self, 
-                      [m[0] for m in monomials],
-                      [[0 if i != D else m[1] for i in range(self.noperators())] for m in monomials])
+                      [[0 if i != D else m[1] for i in range(self.noperators())] for m in monomials],
+                      [m[0] for m in monomials])
         result = sum(m[2]*E.tower_gen(m[0]) for m in monomials)
 
         return result, n in self.base()
@@ -1812,7 +1835,7 @@ class DMonomial_Parent (Parent):
             t = self.gen()
             k = self.base()(t.derivative(D) / (t**2-1))
             new_var = RequestName.get(*[str(g) for g in self.tower_gens()])
-            E = DMonomial(self, new_var, ["0" if i == D else f"2*{t}*{k}" for i in range(self.noperators())])
+            E = DMonomial(self, ["0" if i == D else f"2*{t}*{k}" for i in range(self.noperators())], new_var)
             log_t2_1 = E.gen()
             return q_1+q_2+c*log_t2_1, True
         else:
@@ -1965,7 +1988,7 @@ class DMonomial_Parent (Parent):
 
         a = (f.denominator()//d_1).diophantine_half_euclidean(d_1, f.numerator())
 
-        E = DMonomial(self, "__z", [0 for _ in range(self.noperators())]) # added new variable with the `kappa_D` derivation
+        E = DMonomial(self, [0 for _ in range(self.noperators())], "__z") # added new variable with the `kappa_D` derivation
         t = self.gen()
         z = E.gen()
         gs = E.tower_gens()[:-2]
@@ -2353,10 +2376,10 @@ class DMonomialFunctor (ConstructionFunctor):
         self.__images = images
 
     def _apply_functor(self, x):
-        return DMonomial(x, self.__varname, self.__images)
+        return DMonomial(x, self.__images, self.__varname)
     
     def _repr_(self) -> str:
-        return f"DMonomial(*, {self.__varname}, {self.__images})"
+        return f"DMonomial(*, {self.__images}, {self.__varname})"
     
     def __eq__(self, other) -> bool:
         if not isinstance(other, DMonomialFunctor):
@@ -2419,7 +2442,16 @@ class DMM_BetweenBases (Morphism):
                              map_bases: Morphism):
         if not (map_bases.domain() == domain.base() and map_bases.codomain() == codomain.base()):
             raise TypeError(f"Incompatible map given for coercion between bases")
+        self.__map_bases = map_bases
         super().__init__(domain, codomain)
+
+    def _call_(self, element: DMonomial_Element) -> DMonomial_Element:
+        return self.codomain().element_class(
+            self.codomain(),
+            [
+                self.__map_bases(c) for c in element.coefficients(sparse=False)
+            ]
+        )
 
 class DMM_BetweenTowersReorder (Morphism):
     def __init__(self,
