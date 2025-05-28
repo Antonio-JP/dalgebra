@@ -2536,7 +2536,7 @@ class DPolynomialRing_Monoid(Parent):
             raise NotImplementedError(f"[sylvester_matrix] The case of inhomogeneous operators and positive {k=} is not implemented.")
 
         extra = 1 if homogeneous else 0
-        logger.info(f"Sylvester data: {n=}, {m=}, {k=}, {homogeneous=}")
+        logger.debug(f"Sylvester data: {n=}, {m=}, {k=}, {homogeneous=}")
 
         # Building the extension
         extended_P: list[DPolynomial] = [P.operation(times=i) for i in range(m-k+extra)]
@@ -2554,7 +2554,7 @@ class DPolynomialRing_Monoid(Parent):
         output = matrix([output[r*ncols:r*ncols + ncols] for r in range(nrows)])
 
         # Returning the matrix
-        logger.info(f"Obtained following matrix:\n{output}")
+        logger.debug(f"Obtained following matrix:\n{output}")
         return output
 
     def sylvester_subresultant_sequence(self, P: DPolynomial, Q: DPolynomial, gen: DMonomialGen = None) -> tuple[DPolynomial]:
