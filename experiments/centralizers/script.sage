@@ -48,6 +48,13 @@ def create_base(family: str, **kwds):
         cosh = E.gen()
         sinh = cosh.derivative()
         return E, (cosh, sinh), family
+    if family == "hyperbolic_exp":
+        BD = DifferentialRing(QQ)
+        E = DMonomial(BD, "e_x", "e_x")
+        t = E.gen()
+        cosh = (t + (1/t))/2
+        sinh = (t - (1/t))/2
+        return E.fraction_field(), (cosh, sinh), family
     if family.startswith("elliptic"):
         # kwds contains the parameters g_2 and g_3
         try:
@@ -83,6 +90,9 @@ def get_templates(generators: tuple, family: str, n:int) -> dict:
         cos = generators[0]
         f = 1/cos^2
     elif family == "hyperbolic":
+        cosh = generators[0]
+        f = 1/cosh^2
+    elif family == "hyperbolic_exp":
         cosh = generators[0]
         f = 1/cosh^2
     elif family.startswith("elliptic"):
@@ -150,7 +160,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Analyze centralizers for different families of coefficients.")
     parser.add_argument("-n", type=int, required=True, help="The size of the operator L to be analyzed.")
     parser.add_argument("-m", type=int, required=True, help="The order of the first non-trivial element in the centralizer.")
-    parser.add_argument("-family", type=str, required=True, choices=["rational", "trigonometric", "hyperbolic", "elliptic"], help="The family of coefficients.")
+    parser.add_argument("-family", type=str, required=True, choices=["rational", "trigonometric", "hyperbolic", "hyperbolic_exp", "elliptic"], help="The family of coefficients.")
     parser.add_argument("-simple", action="store_true", help="Consider as systems the ideal of the last column.")
     parser.add_argument("-maple", action="store_true", help="Use Maple to solve algebraic systems.")
     
@@ -167,4 +177,8 @@ if __name__ == "__main__":
         else:
             i += 1
 
+    from timeit import default_timer as timer
+    start = timer()
     cases, computed = main(args.n, args.m, args.family, args.maple, args.simple, **extra_args)
+    end = timer()
+    print(f"%%% Execution time: {end - start:.5f} seconds")
