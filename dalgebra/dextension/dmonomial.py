@@ -142,7 +142,7 @@ class RequestName():
         import re
         m = RequestName.gen
         for name in older_names:
-            M = re.match(f"{RequestName.base}_(\d+)", name)
+            M = re.match(f"{RequestName.base}_(\\d+)", name)
             if M != None:
                 m = max(m, M.groups()[0]+1)
         output = f"{RequestName.base}_{m}"

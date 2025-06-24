@@ -188,7 +188,6 @@ class DEllipticFactory(UniqueFactory):
 
 DElliptic = DEllipticFactory("dalgebra.dextension.delliptic.DElliptic")
 
-
 #########################################################################
 ### ELEMENT AND PARENT CLASSES FOR ELLIPTIC EXTENSIONS
 #########################################################################
@@ -664,6 +663,8 @@ class DElliptic_Field(Parent):
     def to_sage(self):
         return self.__algebraic
 
+
+DEllipticFactory.__doc__ += DElliptic_Field.__doc__
 
 #########################################################################
 ### CONSTRUCTIONS FUNCTOR FOR ELLIPTIC EXTENSIONS
