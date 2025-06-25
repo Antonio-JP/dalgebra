@@ -1549,7 +1549,7 @@ class DRing_Wrapper(Parent):
         ### CREATING CACHED VARIABLES
         self.__linear_operator_ring = None
         self.__fraction_field : DFractionField = None
-        self.__constant = None
+        self.__constant = [None] * len(self.__operators)
 
     @property
     def wrapped(self) -> CommutativeRing: return self.__wrapped
@@ -1557,17 +1557,6 @@ class DRing_Wrapper(Parent):
     def operators(self) -> tuple[WrappedMap]: return self.__operators
 
     def operator_types(self) -> tuple[str]: return self.__types
-
-    def constant_ring(self, operation: int = 0) -> Parent:
-        operation_type = self.operator_types()[operation]
-        if operation_type == "homomorphism":
-            if self.operators()[operation].function == self.wrapped.Hom(self.wrapped).one():
-                return self.wrapped
-        elif operation_type in ("skew", "derivation"):
-            if self.operators()[operation].function.function == 0:
-                return self.wrapped
-
-        raise NotImplementedError(f"Constant ring do not implemented for {self} (operation {operation})")
 
     def add_constants(self, *new_constants: str) -> DRing_Wrapper:
         from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -1608,13 +1597,25 @@ class DRing_Wrapper(Parent):
         return DRing(new_base, *operations, types=self.operator_types())
 
     def constant_ring(self, operation: int = 0) -> Parent:
-        if self.__constant is None:
-            super().constant_ring(operation)
-        else:
-            return self.__constant
+        if self.__constant[operation] is None:
+            operation_type = self.operator_types()[operation]
+            if operation_type == "homomorphism":
+                if self.operators()[operation].function == self.wrapped.Hom(self.wrapped).one():
+                    self.__constant[operation] = self
+                else:
+                    raise NotImplementedError(f"Unable to decide constant for homomorphism (operation {operation})")
+            elif operation_type in ("skew", "derivation"):
+                if self.operators()[operation].function.function == 0:
+                    self.__constant[operation] =  self
+                else:
+                    raise NotImplementedError(f"Unable to decide constant for derivation (operation {operation})")
+            else:
+                raise NotImplementedError(f"Constant ring do not implemented for {self} (operation {operation})")
+        
+        return self.__constant[operation]
 
     def set_constant(self, ring: Parent, operation: int = 0):
-        self.__constant = ring
+        self.__constant[operation] = ring
 
     def _lcm_denominators(self, *_: DRing_WrapperElement) -> DRing_WrapperElement:
         return self.one()
