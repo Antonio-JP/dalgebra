@@ -660,6 +660,12 @@ class DPolynomial(Element):
             m = ms*mo
             output[m] = output.get(m, self.parent().base().zero()) + self._content[ms]*other._content[mo]
         return self.parent().element_class(self.parent(), output)
+    def __invert__(self) -> DPolynomial:
+        if self in self.parent().base():
+            return self.parent()(~self.coefficients()[0])
+        else:
+            return super().__invert__()
+        
     def __truediv__(self, other: Element) -> DPolynomial:
         if other in self.parent().base():
             other = self.parent().base()(other)
@@ -686,7 +692,10 @@ class DPolynomial(Element):
             # Trying a faster comparison
             if set(self.monomials()) == set(other.monomials()) and all(self.coefficient(m) == other.coefficient(m) for m in self.monomials()):
                 return True
-        return super().__eq__(other)
+            
+        return (self - other).is_zero()
+        # return super().__eq__(other)
+    
     def __ne__(self, other) -> bool:
         return not self == other
 
