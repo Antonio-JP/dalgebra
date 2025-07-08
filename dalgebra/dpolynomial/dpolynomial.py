@@ -3681,7 +3681,7 @@ class RankingFunction:
             Method to check whether a d-polynomial `p` is *partially reduced* w.r.t. `A`.
 
             Let `A` be a d-polynomial and let `u_A` be its leader w.r.t. ``self``. We say that `p` is
-            partially reduced w.r.t. `A` if no derivated element from `u_A` appear in `p`. For example,
+            partially reduced w.r.t. `A` if no differentiated element from `u_A` appear in `p`. For example,
             if `u_3\'\'` is the leader of `A`, then `u_3\'` may appear in `p`, but `u_3\'\'\'` cannot.
 
             For further information about this property, we refer to "Differential Algebra and Algebraic

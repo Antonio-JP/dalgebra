@@ -30,10 +30,12 @@ from sage.categories.category import Category
 from sage.categories.morphism import Morphism
 from sage.categories.pushout import ConstructionFunctor
 from sage.functions.other import binomial
+from functools import lru_cache
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex, latex_variable_name
 from sage.rings.infinity import Infinity as oo
 from sage.rings.integer_ring import ZZ
+from sage.rings.rational_field import QQ
 from sage.rings.rational import Rational
 from sage.structure.element import Element
 from sage.structure.factory import UniqueFactory
@@ -408,8 +410,6 @@ class PseudoDOperator(Element):
                     D = self.parent().gen()
                     return (D**-p)*lc
 
-            from functools import lru_cache
-
             @lru_cache(maxsize=256)
             def coeff_inverse(k: int) -> Element:
                 if k > -p:
@@ -434,7 +434,44 @@ class PseudoDOperator(Element):
         elif power < 0:
             return (~self)**(-power)
         elif power not in ZZ:
-            raise ValueError(f"Power {power} is not an integer, only integer powers are allowed in pseudo-differential operators.")
+            if power not in QQ:
+                raise ValueError(f"Power {power} is not a rational number, only rational powers are allowed in pseudo-differential operators.")
+            n = power.numerator()
+            m = power.denominator()
+
+            if n == 1:
+                # This is the m-th root of the operator
+                if self.order() % m != 0:
+                    raise ValueError(f"The order of the operator {self} is not divisible by {m}, hence the root can not be computed.")
+                p = self.order() // m
+                lc = self[self.order()]
+                lc_root = lc**(QQ((1,m))) if lc != 1 else self.parent().base().one() # this checks we can do the operation
+
+                @lru_cache(maxsize=256)
+                def coeff_root(k: int) -> Element:
+                    if k > p:
+                        return self.parent().base().zero()
+                    elif k == p:
+                        return lc_root
+                    else: # k = order - s
+                        s = p - k
+                        from itertools import product
+                        from sage.combinat.composition import Compositions
+                        result = self.parent().base().zero()
+                        for Ks in product(range(p-s+1,p+1), repeat=m):
+                            if sum(Ks) >= m*p-s:
+                                part = self.parent().base().zero()
+                                for i in ([v - 1 for v in el] for el in Compositions(sum(Ks)+s-m*p + (m-1), min_length=m-1, max_length=m-1)):
+                                    term = coeff_root(Ks[0])
+                                    for j in range(m-1):
+                                        term *= coeff_root(Ks[j+1]).derivative(times=i[j])*binomial(sum(Ks[:j+1])-sum(i[:j]), i[j])
+                                    part += term
+                                result += part
+                        return (self[m*p-s] - result)/(m*lc_root**(m-1))
+                
+                return self.parent().element_class(self.parent(), coefficient_map=coeff_root, order_bound=p)
+            else:
+                return (self**n)**(QQ((1,m)))
         else:
             a,A = (self**(power//2 + power % 2), self**(power//2))
             return a*A
@@ -485,7 +522,7 @@ class PseudoDOperator(Element):
                 return el_str
             else:
                 return f"{el_str}*{op_str}"
-
+    
         if self.__finite:
             ## We print everything
             return " + ".join(term_str(o, self[o]) for o in range(self.order(), self.min_coeff() - 1, -1) if self[o] != 0)
@@ -493,8 +530,9 @@ class PseudoDOperator(Element):
             ## We print at least 3 terms up to order -bound
             order = self.order()
             min_order = min(-bound, order - 3)
-
-            return " + ".join(term_str(o, self[o]) for o in range(order, min_order - 1, -1) if self[o] != 0) + f" + o({g}^{min_order-1})"
+            
+            from itertools import chain
+            return " + ".join(chain((term_str(o, self[o]) for o in range(order, min_order - 1, -1) if self[o] != 0), (f"o({term_str(min_order-1,1)})",)))
 
     @CheckBound
     def _latex_(self, *, bound: int | None = None) -> str:
@@ -554,7 +592,7 @@ class PseudoDOperator_Ring(Parent):
 
         This make the computation with these objects terribly difficult. Hence we propose here an implementation of a *subring*
         of the pseudo differential operators that include the ring of linear differential operators and allow all possible computations
-        that keep the tail as finit eas possible (keeping all computations exact).
+        that keep the tail as finite as possible (keeping all computations exact).
 
         INPUT:
 
