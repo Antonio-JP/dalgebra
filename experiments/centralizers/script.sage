@@ -59,11 +59,11 @@ def create_base(family: str, **kwds):
         # kwds contains the parameters g_2 and g_3
         try:
             g_2 = QQ(kwds.get("g_2", "g_2"))
-        except ValueError:
+        except TypeError:
             g_2 = kwds.get("g_2", "g_2")
         try:
             g_3 = QQ(kwds.get("g_3", "g_3"))
-        except ValueError:
+        except TypeError:
             g_3 = kwds.get("g_3", "g_3")
         constants = [el for el in (g_2, g_3) if isinstance(el, str)]
         if not isinstance(g_2, str):

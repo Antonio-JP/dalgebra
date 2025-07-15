@@ -686,6 +686,8 @@ class DPolynomial(Element):
             return a*A
 
     def __eq__(self, other) -> bool:
+        if other is None:
+            return False
         if isinstance(other, DMonomial):
             return self == self.parent()(other)
         elif isinstance(other, DPolynomial):
