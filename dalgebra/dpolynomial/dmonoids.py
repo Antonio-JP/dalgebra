@@ -658,6 +658,12 @@ class DMonomialMonoid(Parent):
         return not (self == other)
     def __hash__(self) -> int:
         return hash((self.__noperators, self.variable_names()))
+    
+    def _element_constructor_(self, input: Element) -> DMonomial:
+        if input in self.gens():
+            i = self.gens().index(input)
+            return self.element_class(self, [(i, tuple(0 for _ in range(self.noperators())), 1)])
+        return super()._element_constructor_(input)
 
 
 __all__ = [
