@@ -307,6 +307,7 @@ class PseudoDOperator(Element):
         coeffs = {k : self[k] for k in range(min_coeff, self.order() + 1)}
         return self.parent().element_class(self.parent(), coefficients=coeffs)
 
+    @cached_method
     def lie_bracket(self, other: PseudoDOperator) -> PseudoDOperator:
         if not isinstance(other, self.__class__) or other.parent() != self.parent():
             other = self.parent()(other)
