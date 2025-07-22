@@ -1945,8 +1945,9 @@ def is_WrappedDRing(parent: Parent) -> bool:
 ###
 ####################################################################################################
 class DFractionFieldElement(FractionFieldElement):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent, numerator, denominator=1, 
+                 coerce: bool = True, reduce: bool = True):
+        super().__init__(parent, numerator, denominator, coerce=coerce, reduce=reduce)
 
     def derivative(self, derivation: int = None, times: int = 1):
         r'''Overridden method to force the use of the DRings structure'''
@@ -2015,6 +2016,23 @@ class DFractionField(FractionField_generic):
                 func = AdditiveMap(self, lambda p : (operator(p.numerator())*p.denominator() - p.numerator()*operator(p.denominator())) / (p.denominator() * twist(p.denominator())))
             self.__operators.append(func)
 
+    @staticmethod
+    def flatten_fraction_field(field) -> tuple[Parent, bool]:
+        if isinstance(field, FractionField_generic): # self is Fr(R)
+            if isinstance(field.base(), (PolynomialRing_generic, MPolynomialRing_base)): # R is a polynomial ring
+                recursion, frac_over_poly = DFractionField.flatten_fraction_field(field.base().base())
+                if not frac_over_poly: # the result can not be flatten
+                    return field, True
+                else:
+                    base = recursion.base().base() # this is a field 
+                    return PolynomialRing(base, recursion.gens() + field.gens()).fraction_field(), True
+        
+        ## This field is not a fraction field over a polynomial ring
+        return field, False
+
+    #################################################################################################
+    ### Methods from DRings.ParentMethods
+    #################################################################################################
     def operators(self) -> Sequence[AdditiveMap]:
         return self.__operators
 
@@ -2037,26 +2055,23 @@ class DFractionField(FractionField_generic):
     def inverse_operation(self, element, operator: int = 0):
         return self.base().inverse_operation(element, operator)
 
-    @staticmethod
-    def flatten_fraction_field(field) -> tuple[Parent, bool]:
-        if isinstance(field, FractionField_generic): # self is Fr(R)
-            if isinstance(field.base(), (PolynomialRing_generic, MPolynomialRing_base)): # R is a polynomial ring
-                recursion, frac_over_poly = DFractionField.flatten_fraction_field(field.base().base())
-                if not frac_over_poly: # the result can not be flatten
-                    return field, True
-                else:
-                    base = recursion.base().base() # this is a field 
-                    return PolynomialRing(base, recursion.gens() + field.gens()).fraction_field(), True
-        
-        ## This field is not a fraction field over a polynomial ring
-        return field, False
-
     @cached_method
     def to_sage(self):
         output = self.base().to_sage().fraction_field()
         output, _ = DFractionField.flatten_fraction_field(output)
         return output
 
+    ################################################################################################
+    ### Methods from FractionField_generic
+    ################################################################################################
+    def gen(self, i: int = 0) -> DFractionFieldElement:
+        r'''
+            Overridden method to return the i-th generator of the field of fractions to ensure coercion.
+        '''
+        x = self._R.gen(i)
+        one = self._R.one()
+        r = self._element_class(self, x, one)
+        return r
 
 ####################################################################################################
 ###
