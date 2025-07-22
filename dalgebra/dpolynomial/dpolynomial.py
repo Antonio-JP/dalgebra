@@ -60,6 +60,7 @@ from sage.misc.misc_c import prod
 from sage.modules.free_module_element import vector
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing, InfinitePolynomialGen, InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
+from sage.rings.infinity import Infinity as oo
 from sage.rings.integer_ring import ZZ
 from sage.rings.ring import Ring
 from sage.sets.family import LazyFamily
@@ -188,7 +189,7 @@ class DPolynomial(Element):
         return self.is_monomial() and next(iter(self._content)).is_variable()
 
     def is_unit(self) -> bool: #: Checker for an element to be a unit (i.e., has degree 0)
-        return self.degree() == 0
+        return (not self.is_zero()) and self.degree() == 0
 
     def is_linear(self, variables: Collection[DMonomialGen | DPolynomial] = None):
         r'''
@@ -213,9 +214,13 @@ class DPolynomial(Element):
     def divides(self, other: DPolynomial) -> bool:
         pself, pother = self.parent().as_polynomials(self, other)
         return pself.divides(pother)
+    
+    def content(self) -> Element:
+        from sage.arith.misc import GCD
+        return self.parent().base()(GCD(self.coefficients()))
 
     def gcd(self, other: DPolynomial) -> DPolynomial:
-        return self.parent()(self.to_sage().gcd(other.to_sage()))
+        return self.content()*self.parent()(self.to_sage().gcd(other.to_sage()))
 
     ###################################################################################
     ### Getter methods
@@ -607,6 +612,9 @@ class DPolynomial(Element):
         return self.lorders(operation)[gen._index]
 
     def degree(self, x=None) -> int:
+        if self.is_zero(): # Special case when the polynomial is zero
+            return -oo
+        
         if x is None: # general degree is computed
             return max(m.degree() for m in self._content)
 
@@ -671,7 +679,10 @@ class DPolynomial(Element):
         if self in self.parent().base():
             return self.parent()(~self.coefficients()[0])
         else:
-            return super().__invert__()
+            try:
+                return super().__invert__()
+            except ValueError: #We go to the fraction field
+                return self.parent().fraction_field()(1, self)
         
     def __truediv__(self, other: Element) -> DPolynomial:
         if other in self.parent().base():
@@ -680,12 +691,15 @@ class DPolynomial(Element):
         else:
             try:
                 return super().__truediv__(other)
-            except ValueError:
+            except (ValueError, TypeError):
                 return self.parent().fraction_field()(self, other)        
 
     def _floordiv_(self, other: DPolynomial) -> DPolynomial:
         as_ipoly = self.to_sage() // other.to_sage()
         return self.parent()(as_ipoly)
+
+    def _mod_(self, other: DPolynomial) -> DPolynomial:
+        return self - (self // other) * other
     
     @cached_method
     def __pow__(self, power: int) -> DPolynomial:
@@ -694,7 +708,9 @@ class DPolynomial(Element):
         elif power == 1:
             return self
         elif power < 0:
-            raise NotImplementedError("Negative powers not allowed")
+            return (~self)**(-power) 
+        elif power not in ZZ:
+            return self.parent()(self.to_sage()**power) # using implementation in InfinitePolynomialRing_dense
         else:
             a,A = (self**(power//2 + power % 2), self**(power//2))
             return a*A
@@ -1298,6 +1314,9 @@ class DPolynomialGen(DMonomialGen):
 
     def __getitem__(self, i: int | tuple[int]) -> DPolynomial:
         return self._poly_parent(super().__getitem__(i))
+    
+    def is_zero(self) -> bool:
+        return False  # Generators are never zero
 
     ## Special arithmetic for these generators
     def __add__(self, x):
@@ -1686,7 +1705,9 @@ class DPolynomialRing_Monoid(Parent):
             Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse`
             and then transforms the output into the corresponding type for ``self``.
         '''
-        if x in self.monoids():
+        if x in self.gens():
+            return x[0]
+        elif x in self.monoids():
             return self.element_class(self, {self.monoids()(x): self.base().one()})
         elif x in self.base():
             return self.element_class(self, {self.monoids().one(): x}) # casting elements in self.base()
@@ -3029,14 +3050,14 @@ class InfiniteToDPoly_Coercion(Morphism):
         for m,c in element.monomial_coefficients().items():
             # m is the list of exponents for some variables
             # c is the coefficient of the monomial
-            monom = self._monom_(m)
+            monom = self._monom_(m, element.polynomial().parent())
             coeff = self.codomain().base()(c) # this must work
             output += coeff * monom
         return output
 
-    def _monom_(self, monomial: tuple[int]) -> DPolynomial:
+    def _monom_(self, monomial: tuple[int], ring = None) -> DPolynomial:
         r'''Method to convert a tuple of integers to a DPolynomial'''
-        gens = self.domain().polynomial_ring().gens()
+        gens = self.domain().polynomial_ring().gens() if ring is None else ring.gens()
         if len(monomial) != len(gens):
             raise ValueError(f"Monomial {monomial} does not match the number of generators {len(gens)} in {self.domain()}")
         
