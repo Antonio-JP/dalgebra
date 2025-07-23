@@ -786,7 +786,10 @@ def module_quo_rem(P: DPolynomial, L: DPolynomial, basis: tuple[DPolynomial], ge
             P -= T  # We remove the term from P and reduces the order of `P`
 
     if P != 0:
-        R += P
+        if P.order(gen) == 0 and P.coefficient_full(gen[0]).derivative() == 0: # we have a constant
+            output[0][0] = output[0].get(0, CR.zero()) + CR(P.coefficient_full(gen[0]))
+        else:
+            R += P
 
     return tuple(tuple(out.get(i, CR.zero()) for i in range(max(out,default=-1)+1)) for out in output), R
 
@@ -1172,7 +1175,7 @@ def __generate_table(
 
 __all__ = [
     "Jset",
-    "GetCentralizer", "GetEquationsForLevel", "GetHierarchyLinearEquations", "PolynomialCommutator",
+    "GetCentralizer", "GetEquationsForLevel", "GetHierarchyLinearEquations", "PolynomialCommutator", "BC_ideal",
     "generate_polynomial_ansatz",
     "generate_polynomial_equations",
     "AnalyzeGDH"
