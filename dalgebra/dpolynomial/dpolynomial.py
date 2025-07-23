@@ -1313,7 +1313,7 @@ class DPolynomialGen(DMonomialGen):
         self._poly_parent = parent
 
     def __getitem__(self, i: int | tuple[int]) -> DPolynomial:
-        return self._poly_parent(super().__getitem__(i))
+        return self._poly_parent.element_class(self._poly_parent, {super().__getitem__(i): self._poly_parent.base().one()})
     
     def is_zero(self) -> bool:
         return False  # Generators are never zero
@@ -1898,23 +1898,23 @@ class DPolynomialRing_Monoid(Parent):
         output = DPolynomialRing(R, *self.variable_names())
         if self.base().has_coerce_map_from(R):
             try:
-                output.register_coercion(DPolynomial_Base2BaseMorphism(output, self, R.coerce_map_from(self.base())))
+                self.register_coercion(DPolynomial_Base2BaseMorphism(output, self, self.base().coerce_map_from(R)))
             except AssertionError:
                 pass
         elif R.has_coerce_map_from(self.base()):
             try:
-                self.register_coercion(DPolynomial_Base2BaseMorphism(self, output, self.base().coerce_map_from(R)))
+                output.register_coercion(DPolynomial_Base2BaseMorphism(self, output, R.coerce_map_from(self.base())))
             except AssertionError:
                 pass
 
         if self.base().convert_map_from(R):
             try:
-                output.register_conversion(DPolynomial_Base2BaseMorphism(output, self, R.convert_map_from(self.base())))
+                self.register_conversion(DPolynomial_Base2BaseMorphism(output, self, self.base().convert_map_from(R)))
             except AssertionError:
                 pass
         if R.convert_map_from(self.base()):
             try:
-                self.register_conversion(DPolynomial_Base2BaseMorphism(self, output, self.base().convert_map_from(R)))
+                output.register_conversion(DPolynomial_Base2BaseMorphism(self, output, R.convert_map_from(self.base())))
             except AssertionError:
                 pass
 
