@@ -1373,7 +1373,14 @@ class DRing_WrapperElement(Element):
         try:
             other = self.parent()(other) # trying to cast other to be in ``self.parent()``
             g = self.wrapped.gcd(other.wrapped) # computing gcd in the wrapped level
-            return self.parent().element_class(self.parent(), g)
+            ## Exception when the base ring is a polynomial ring
+            WR = self.parent().wrapped
+            if isinstance(WR, PolynomialRing_generic) or isinstance(WR, MPolynomialRing_base):
+                from sage.arith.misc import GCD 
+                content = WR(GCD(self.wrapped.coefficients() + other.wrapped.coefficients()))
+            else:
+                content = WR.one()
+            return self.parent().element_class(self.parent(), g * content)
         except AttributeError:
             raise AttributeError(f"[DRing] Wrapped element {self.wrapped} do no have method `gcd`")
 
@@ -1961,6 +1968,22 @@ class DFractionFieldElement(FractionFieldElement):
     def derivative(self, derivation: int = None, times: int = 1):
         r'''Overridden method to force the use of the DRings structure'''
         return DRings.ElementMethods.derivative(self, derivation, times)
+    
+    def reduce(self):
+        super().reduce()
+
+        n = self.numerator()
+        d = self.denominator()
+        try:
+            from sage.arith.misc import GCD 
+            g = GCD(n,d)
+            n //= g
+            d //= g
+        except (AttributeError, TypeError, NotImplementedError):
+            pass
+
+        self.__init__(self.parent(), n, d, coerce=False, reduce=False)
+
 
     def reduce_algebraic(self, polynomials):
         num = self.numerator().reduce_algebraic(polynomials)

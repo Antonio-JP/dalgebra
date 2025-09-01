@@ -2474,12 +2474,11 @@ class DPolynomialRing_Monoid(Parent):
         elif i < 0 or i > k:
             raise ValueError(f"[sylvester_subresultant] The index {i = } is out of proper bounds [0,...,{k}]")
 
-        S_k = self.sylvester_matrix(P,Q,gen,k)
-        S_ki = S_k.matrix_from_columns([i]+list(range(k+1,S_k.ncols())))
+        S_ki = self.sylvester_matrix(P,Q,gen,k,i)
         return S_ki.determinant()
 
     @cached_method
-    def sylvester_matrix(self, P: DPolynomial, Q: DPolynomial, gen: DMonomialGen = None, k: int = 0) -> Matrix:
+    def sylvester_matrix(self, P: DPolynomial, Q: DPolynomial, gen: DMonomialGen = None, k: int = 0, i: int | None = None) -> Matrix:
         r'''
             Method to obtain the `k`-Sylvester matrix for two operator polynomials.
 
@@ -2568,6 +2567,14 @@ class DPolynomialRing_Monoid(Parent):
         ## Checking the polynomials and ring arguments
         P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
 
+        ## Special case with the i-th argument
+        if i is not None:
+            if i < 0 or i > k:
+                raise ValueError(f"[sylvester_matrix] The index {i = } is out of proper bounds [0,...,{k}]")
+            Sk = self.sylvester_matrix(P,Q,gen,k)
+            Ski = Sk.matrix_from_columns([i]+list(range(k+1,Sk.ncols())))
+            return Ski
+
         ## Checking the k argument
         n, m = P.order(gen), Q.order(gen)
         N = min(n,m) - 1
@@ -2606,7 +2613,7 @@ class DPolynomialRing_Monoid(Parent):
         ncols = len(cols) + (1 if homogeneous else 0)
         output = sum([([self(equation).constant_coefficient(gen)] if homogeneous else []) + [self(equation.coefficient_full(m)) for m in cols] for equation in equations], [])
 
-        output = matrix([output[r*ncols:r*ncols + ncols] for r in range(nrows)])
+        output = matrix([output[r*ncols:r*ncols + ncols] for r in range(nrows)])            
 
         # Returning the matrix
         logger.debug(f"Obtained following matrix:\n{output}")
