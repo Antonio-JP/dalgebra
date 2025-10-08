@@ -1377,7 +1377,13 @@ class DRing_WrapperElement(Element):
             WR = self.parent().wrapped
             if isinstance(WR, PolynomialRing_generic) or isinstance(WR, MPolynomialRing_base):
                 from sage.arith.misc import GCD 
-                content = WR(GCD(self.wrapped.coefficients() + other.wrapped.coefficients()))
+                ## We check if the ring contains the element "I"
+                if len(PolynomialRing(WR, "aux__")("aux__^2 + 1").factor()) == 2:
+                    ## The content is compute considering real and imaginary parts
+                    content = WR(GCD([c for el in self.wrapped.coefficients() + other.wrapped.coefficients() for c in (el.real(), el.imag())]))
+                else:
+                    ## Otherwise we compute the content by taking gcd of coefficients
+                    content = WR(GCD(self.wrapped.coefficients() + other.wrapped.coefficients()))
             else:
                 content = WR.one()
             return self.parent().element_class(self.parent(), g * content)
