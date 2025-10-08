@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+title: "D-Algebra Package for SageMath"
+version: 0.0.8
+license: "GPL-3.0-or-later"
+type: software
+abstract: "Version 1.7.1 of the D-Algebra package containing experiments for the computation of Centralizers with rational, hyperbolic and elliptic coefficients. It contains the code of the package `dalgebra` together with the code and notebooks used for the experiments on the paper `Effective computation of centralizers of ODOs`."
+message: "If you use this software, please cite it as below."
+authors:
+  - given-names: Antonio
+    family-names: Jiménez-Pastor
+    affiliation: Universidad Politécnica de Madrid
+    orcid: "https://orcid.org/0000-0002-6096-0623"
+  - given-names: Sonia L.
+    family-names: Rueda
+    affiliation: Universidad Politécnica de Madrid
+    orcid: "https://orcid.org/0000-0003-4447-5027"
+keywords:
+  - computer science
+  - differential algebra
+  - centralizers
+  - almost commuting operators
