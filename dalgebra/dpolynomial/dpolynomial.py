@@ -2175,7 +2175,7 @@ class DPolynomialRing_Monoid(Parent):
         return AdditiveMap(self, func)
 
     def add_constants(self, *new_constants: str) -> DPolynomialRing_Monoid:
-        return DPolynomialRing(self.base().add_constants(*new_constants), *self.variable_names())
+        return self.change_ring(self.base().add_constants(*new_constants))
 
     def constant_ring(self):
         return self.base().constant_ring()

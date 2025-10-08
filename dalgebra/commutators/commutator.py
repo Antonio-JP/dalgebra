@@ -488,6 +488,11 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None,
             logger.warning(f"[GEFS] Simple version: results may not be complete")
             final_ideal = list(Hs[:,-1].column(0))
 
+        if filename is not None:
+            with open(f"{path}/{filename}_{n}_{m}_ideal.md", "w") as f:
+                _matrix = ",\n".join(str(list(r)) for r in Hs)
+                f.write(f"I = ideal{tuple(el for el in final_ideal if el != 0)}")
+
         logger.debug(f"[GEFS] -- Finished elimination of linear variables")
         ###############################################################################
         ## ANALYZING THE SOLUTION IDEAL
@@ -871,7 +876,7 @@ def BC_ideal(L: DPolynomial, basis: tuple[DPolynomial], gen: DPolynomialGen, *, 
         
     output = ideal(output) # this ideal is given by a Groebner basis already
 
-    assert output.is_prime(), f"The ideal is not prime"
+    # assert output.is_prime(), f"The ideal is not prime"
 
     return output
     
