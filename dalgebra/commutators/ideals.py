@@ -485,7 +485,7 @@ def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = 
 
     logger.debug(f"[ideal] +++ analyze_ideal ({len(I)} equations, {len(partial_solution)}/{I[0].parent().ngens()} variables)")
 
-    if any(poly.degree() == 0  for poly in I): ## No solution case
+    if any(poly.degree() == 0 for poly in I): ## No solution case
         logger.debug(f"[ideal] Found a branch without a solution.")
         return []
 

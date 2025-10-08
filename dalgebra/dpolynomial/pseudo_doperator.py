@@ -12,7 +12,7 @@ r'''
         sage: S
         Ring of pseudo-differential operators over Ring of operator polynomials in (u, v) over Differential Ring [[Rational Field], (0,)]
         sage: S.Di^2 * v[1] * S.D^2 * u[0] == u[0]*v[1] - 2*S.Di*(u[0]*v[2]) + S.Di^2*(u[0]*v[3])
-        True
+        10
 '''
 
 # ****************************************************************************
@@ -54,31 +54,35 @@ _DRings = DRings.__classcall__(DRings)
 #################################################################################
 GLOBAL_BOUND = 10
 
+
 def PDOChangeBound(bound: int):
     global GLOBAL_BOUND
-    if not bound in ZZ or bound < 0:
+    if bound not in ZZ or bound < 0:
         raise ValueError(f"The bound must be a non-negative integer, got {bound}.")
     GLOBAL_BOUND = bound
 
+
 def CheckBound(func):
     from functools import wraps
+
     @wraps(func)
     def wrapper(self: PseudoDOperator | PseudoDOperator_Ring, *args, **kwds):
         import inspect
         sig = inspect.signature(func)
-        if not "bound" in sig.parameters:
+        if "bound" not in sig.parameters:
             raise TypeError(f"The method {func.__name__} does not accept a 'bound' argument.")
         elif sig.parameters["bound"].default is not None:
             raise TypeError(f"The method {func.__name__} does not accept a default value for 'bound'.")
         value = kwds.pop("bound") if "bound" in kwds else GLOBAL_BOUND
-        
-        if not value in ZZ or value < 0:
+
+        if value not in ZZ or value < 0:
             raise TypeError(f"The method {func.__name__} requires a non-negative integer 'bound' argument to be passed.")
-        
+
         kwds["bound"] = value
-        
+
         return func(self, *args, **kwds)
     return wrapper
+
 
 #################################################################################
 ###
@@ -121,25 +125,25 @@ class PseudoDOperator(Element):
         A pseudo-differential operator is a Laurent series in the operator `D^{-1}`. They act naturally on elements of a differential ring
         by differentiating when applying `D` and integrating when applying `D^{-1}`. This translates into the following commutation rules
         as operators:
-        
+
         * `D \cdot f = f' + f D`, where `f'` is the derivative of `f`.
         * `D^{-1} \cdot f = \sum_{i\geq 0} (-1)^i f^{(i)} D^{-i}`, where `f^{(i)}` is the `i`-th derivative of `f`.
 
         This implies that the `pseudo-differential operators are non-finite by nature (left multiplication by D^{-1} produces a possibly infinite
-        tail of negative orders). This class handles this infinite tail by storing a method that computes (upon request) the coefficients for any given 
-        integer. 
+        tail of negative orders). This class handles this infinite tail by storing a method that computes (upon request) the coefficients for any given
+        integer.
 
-        This class has a clear limitation: computations are usually non exact. For example, the traditional zero-checking can only be performed 
-        up to some given order. These methods have an optional parameter ``bound`` that allows to specify the order up to which computations are 
-        performed. 
+        This class has a clear limitation: computations are usually non exact. For example, the traditional zero-checking can only be performed
+        up to some given order. These methods have an optional parameter ``bound`` that allows to specify the order up to which computations are
+        performed.
     '''
-    def __init__(self, parent: PseudoDOperator_Ring, *, 
-                 coefficient_map: Callable[[int],Element] | None = None, 
+    def __init__(self, parent: PseudoDOperator_Ring, *,
+                 coefficient_map: Callable[[int],Element] | None = None,
                  coefficients: Collection[Element] | Mapping[int, Element] | None = None,
                  order_bound: int | None = None
     ):
         base = parent.base()
-        
+
         if coefficient_map is not None and coefficients is not None:
             raise ValueError("You can not provide both coefficient_map and coefficients at the same time.")
         elif coefficient_map is None:
@@ -222,7 +226,7 @@ class PseudoDOperator(Element):
                 return -bound
             else:
                 return False
-            
+
     @CheckBound
     def is_pseudo(self, *, bound: int | None = None) -> bool | int: #: Checker whether the operator is pseudo-differential or not (i.e., has no differential part)
         order = self.order(bound=bound)
@@ -289,7 +293,7 @@ class PseudoDOperator(Element):
             pseudo_part = {k: self[k] for k in range(-1, self.__min_coeff - 1, -1)}
         else:
             order = self.order(bound=0)
-            return self.parent().element_class(self.parent(), 
+            return self.parent().element_class(self.parent(),
                 coefficient_map=lambda k : self[k] if k < 0 else self.parent().base().zero(),
                 order_bound=min(-1, order))
 
@@ -317,7 +321,7 @@ class PseudoDOperator(Element):
     def __getitem__(self, key: int) -> Element:
         if self.__min_computed is None or key < self.__min_computed:
             self.__min_computed = key
-        if not key in self.__cache_computed:
+        if key not in self.__cache_computed:
             self.__cache_computed[key] = self.__map(key)
         return self.__cache_computed[key]
 
@@ -330,7 +334,7 @@ class PseudoDOperator(Element):
             return other
         elif other.is_zero() is True:
             return self
-        
+
         if self.__finite and other.__finite:
             dict_coeff = {k : self[k] + other[k] for k in range(min(self.__min_coeff, other.__min_coeff), max(self.order(), other.order()) + 1)}
             return self.parent().element_class(self.parent(), coefficients=dict_coeff)
@@ -355,7 +359,7 @@ class PseudoDOperator(Element):
         else:
             neg_map = lambda k : -self[k]
             order_bound = self.order()
-            
+
             return self.parent().element_class(self.parent(), coefficient_map=neg_map, order_bound=order_bound)
 
     def _sub_(self, other: PseudoDOperator) -> PseudoDOperator:
@@ -374,7 +378,7 @@ class PseudoDOperator(Element):
                     self[k]*sum(
                         binomial(k,i)*other[s+i-k].derivative(times=i) for i in range(k+1)
                     ) for k in range(self.order()+1)
-                ) 
+                )
                 for s in range(other.__min_coeff, self.order() + other.order() + 1)
             }
             return self.parent().element_class(self.parent(), coefficients=dict_coeff)
@@ -383,7 +387,7 @@ class PseudoDOperator(Element):
                 s : sum(
                     self[s-l]*other[l]
                     for l in range(other.__min_coeff, other.order()+1)
-                ) 
+                )
                 for s in range(other.__min_coeff + self.__min_coeff, self.order() + other.order() + 1)
             }
             return self.parent().element_class(self.parent(), coefficients=dict_coeff)
@@ -419,9 +423,9 @@ class PseudoDOperator(Element):
                     return lc
                 s = k + p # s < 0
                 num = sum(coeff_inverse(l)*sum(binomial(l, l+k-s)*self[k].derivative(times=l+k-s) for k in range(s-l, p+1)) for l in range(s-p+1, -p+1))
-                
+
                 return -num * lc
-            
+
             return self.parent().element_class(self.parent(), coefficient_map=coeff_inverse, order_bound=-p)
 
         raise ZeroDivisionError(f"Inverse of (possibly) zero element do not exist: {self}.")
@@ -469,7 +473,7 @@ class PseudoDOperator(Element):
                                     part += term
                                 result += part
                         return (self[m*p-s] - result)/(m*lc_root**(m-1))
-                
+
                 return self.parent().element_class(self.parent(), coefficient_map=coeff_root, order_bound=p)
             else:
                 return (self**n)**(QQ((1,m)))
@@ -499,7 +503,7 @@ class PseudoDOperator(Element):
             return equals
         else:
             return True
-        
+
     ###################################################################################
     @CheckBound
     def __repr__(self, *, bound: int | None = None) -> str:
@@ -510,7 +514,7 @@ class PseudoDOperator(Element):
 
         ## We know there is something in the element
         g = self.parent().gen_name()
-        
+
         def term_str(order, element):
             el_str = f"({element})" if element != 1 else ""
             op_str = f"{g}" if order == 1 else f"{g}^({order})" if order != 0 else ""
@@ -523,7 +527,7 @@ class PseudoDOperator(Element):
                 return el_str
             else:
                 return f"{el_str}*{op_str}"
-    
+
         if self.__finite:
             ## We print everything
             return " + ".join(term_str(o, self[o]) for o in range(self.order(), self.min_coeff() - 1, -1) if self[o] != 0)
@@ -531,7 +535,7 @@ class PseudoDOperator(Element):
             ## We print at least 3 terms up to order -bound
             order = self.order()
             min_order = min(-bound, order - 3)
-            
+
             from itertools import chain
             return " + ".join(chain((term_str(o, self[o]) for o in range(order, min_order - 1, -1) if self[o] != 0), (f"o({term_str(min_order-1,1)})",)))
 
@@ -625,60 +629,59 @@ class PseudoDOperator_Ring(Parent):
         ## Setting up basic conversions
         try:
             self.base().register_conversion(PDOConvertToBase(self))
-        except AssertionError: # This conversion was already registered 
+        except AssertionError: # This conversion was already registered
             pass
-
 
     ################################################################################
     ### GETTER METHODS
     ################################################################################
     def gen_name(self) -> str:
         return self.__gens[0]
-    
+
     def gen(self) -> PseudoDOperator:
         r'''
             Return the generator of the ring of pseudo-differential operators.
         '''
         return self.D
-    
+
     def igen(self) -> PseudoDOperator:
         r'''
             Return the inverse generator of the ring of pseudo-differential operators.
         '''
         return self.Di
-    
+
     def ngens(self) -> int:
         r'''
             Return the number of generators of the ring of pseudo-differential operators.
         '''
         return 1
-    
+
     def one(self) -> PseudoDOperator:
         r'''
             Return the identity element of the ring of pseudo-differential operators.
         '''
         return self.element_class(self, coefficients=[self.base().one()])
-    
+
     def zero(self) -> PseudoDOperator:
         r'''
             Return the zero element of the ring of pseudo-differential operators.
         '''
         return self.element_class(self, coefficients=[])
-    
+
     def is_field(self) -> bool:
         r'''
             Check if the ring of ore operators is a field.
             This is always False for ore operators, as they are not fields.
         '''
         return False
-    
+
     def is_integral_domain(self) -> bool:
         r'''
             Check if the ring of ore operators is an integral domain.
             This depends directly from the base ring, since the ore operators are a domain if and only if their coefficients are an integral domain.
         '''
-        return self.base().is_integral_domain() 
-    
+        return self.base().is_integral_domain()
+
     #################################################
     ### Coercion methods
     #################################################
@@ -820,7 +823,7 @@ class PDOCoerceFromBase(Morphism):
     def __init__(self, codomain: PseudoDOperator_Ring):
         if not isinstance(codomain, PseudoDOperator_Ring):
             raise TypeError("The codomain must be a pseudo-differential operator ring")
-        
+
         super().__init__(codomain.base(), codomain)
 
     def _call_(self, element: Element) -> PseudoDOperator:
@@ -837,7 +840,7 @@ class PDOConvertToBase(Morphism):
     def _call_(self, element: PseudoDOperator) -> Element:
         if element.is_zero() is True or element.order(bound=1) == 0:
             return self.codomain()(element[0])
-        
+
 
 class PDOCoerceBetweenBases(Morphism):
     def __init__(self, domain: PseudoDOperator_Ring, codomain: PseudoDOperator_Ring, map: Morphism):
@@ -861,8 +864,8 @@ class PDOCoerceBetweenBases(Morphism):
 
             return self.codomain().element_class(self.codomain(), coefficients=coeffs)
         else: # infinite case
-            return self.codomain().element_class(self.codomain(), 
-                                                 coefficient_map=element._PseudoDOperator__map, 
+            return self.codomain().element_class(self.codomain(),
+                                                 coefficient_map=element._PseudoDOperator__map,
                                                  order_bound=element.order())
 
 
@@ -872,13 +875,13 @@ class PDOConvertFromDPolyRing(Morphism):
             raise TypeError("The domain must be a differential polynomial ring")
         if not isinstance(codomain, PseudoDOperator_Ring):
             raise TypeError("The codomain must be a pseudo-differential operator ring")
-        
+
         self.__gen = domain.gen(gen) if gen is not None else domain.gens()[-1]
 
         base = domain.remove_variables(gen)
         if base != codomain.base():
             raise ValueError("The base rings of the domain and codomain must be the same")
-        
+
         super().__init__(domain, codomain)
 
     def _call_(self, element: DPolynomial) -> PseudoDOperator:

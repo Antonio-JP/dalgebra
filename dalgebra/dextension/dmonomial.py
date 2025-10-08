@@ -2,22 +2,22 @@ from __future__ import annotations
 r'''
     Module for monomial extensions on D-Algebra.
 
-    Let `(K, (d_1,\ldots,d_n))` be a D-field (a field with several operations - both 
-    derivations and shifts). We say that `t` is a monomial over this D-field if it 
+    Let `(K, (d_1,\ldots,d_n))` be a D-field (a field with several operations - both
+    derivations and shifts). We say that `t` is a monomial over this D-field if it
     is a transcendental element over `K` and, for all `i =1,\ldots n`, `d_i(t) \in K[t]`.
 
     In this cases, we know that `d_i` are closed in `K[t]`: let `p(t) \in K[t]`, then
 
-    * If `d` is a derivation, then `d(p(t)) = \partial_t(p(t)) + \kappa_d(p(t))`, where 
+    * If `d` is a derivation, then `d(p(t)) = \partial_t(p(t)) + \kappa_d(p(t))`, where
         `\partial_t` is the partial derivative, and `\kappa_d` is the derivation where
         all coefficients are differentiated using `d` over `K`, but `t` remains intact.
     * If `d` is a shift, then `d(p(t)) = \kappa_d(p(t))(d(t))`.
 
     This module aims to provide a full implementation as univariate polynomials and their
-    fraction fields of monomial extensions. It is of crucial importance that we can iterate 
-    this construction building a "tower of monomials".    
+    fraction fields of monomial extensions. It is of crucial importance that we can iterate
+    this construction building a "tower of monomials".
 
-    EXAMPLES:: 
+    EXAMPLES::
 
     sage: from dalgebra.dmonomial import DMonomial
     sage: # Test (Q[x], dx)
@@ -57,7 +57,7 @@ r'''
     sage: f.difference()
     (x + 1)*f
 
-    This module will also allow the mis of several operations. Let us consider the partial derivatives or a 
+    This module will also allow the mis of several operations. Let us consider the partial derivatives or a
     difference-differential ring::
 
     sage: # Partial case (Q[x,t], dx, dt)
@@ -123,11 +123,12 @@ logger = logging.getLogger(__name__)
 #    - DMM_ParentToBase -> Conversion morphism from DMonomial_Parent to their bases
 #    - DMM_BaseToPArent -> Coercion morphism from a base field to DMonomial_Parent
 #    - DMM_BetweenBases -> Coercion morphism between two DMonomial_Parent with different bases
-## After these classes, everything else should be done by SageMath code. Things to be checked 
+## After these classes, everything else should be done by SageMath code. Things to be checked
 #    in the future
 #    - Vectors -> free modules over these rings and fields
 #    - Matrices -> matrices ring over these ring and fields
 #    - DElliptic -> how these DMonomial interact with DElliptic?
+
 
 class RequestName():
     r'''
@@ -143,11 +144,12 @@ class RequestName():
         m = RequestName.gen
         for name in older_names:
             M = re.match(f"{RequestName.base}_(\\d+)", name)
-            if M != None:
+            if M is not None:
                 m = max(m, M.groups()[0]+1)
         output = f"{RequestName.base}_{m}"
         RequestName.gen = m+1
         return output
+
 
 #####################################
 ### FACTORY CLASS
@@ -156,19 +158,19 @@ class DMonomialFactory (UniqueFactory):
     r'''
         Factory to create a D-Extension.
 
-        An extension requires a base field and a tuple of tuples such that for each variable we can get the 
+        An extension requires a base field and a tuple of tuples such that for each variable we can get the
         corresponding operation. The way these tuple of tuples can be provided may change depending on how many
         variables we want to add and how many operations there are.
     '''
-    def create_key(self, base, polynomial: str | Element, varname: str = None, *, names: tuple[str] = None, category = None):
+    def create_key(self, base, polynomial: str | Element, varname: str = None, *, names: tuple[str] = None, category=None):
         if names is None and varname is None:
             raise ValueError("The names of the variables must be provided")
         elif names is None:
             names = (varname,)
-        
+
         if base not in _DRings or base not in _Fields:
             raise ValueError("The base must be a field that is also a d-ring")
-        
+
         ## We process the argument polynomial
         if not isinstance(polynomial, (list,tuple)) and (len(names) != 1 or base.noperators() != 1):
             raise TypeError("The polynomial argument must be a list if there are more than one variable or more than one operator")
@@ -190,7 +192,7 @@ class DMonomialFactory (UniqueFactory):
             raise ValueError("The number of variables and the number of polynomials must match")
         elif any(len(p) != base.noperators() for p in polynomial):
             raise ValueError("The number of operators must match the number of polynomials")
-        
+
         ## We fix the arguments if the base was already a DExtension (iterative construction)
         if isinstance(base.base(), DMonomial_Parent):
                 names = tuple(str(g) for g in base.base().tower_gens()) + names
@@ -213,7 +215,9 @@ class DMonomialFactory (UniqueFactory):
             base = DMonomial(base, polynomial[:-1], names=names[:-1], category=category)
             return DMonomial_Parent(base.fraction_field(), names[-1], polynomial[-1], category=category)
 
+
 DMonomial = DMonomialFactory("dalgebra.dextension.dmonomial.DMonomial")
+
 
 #####################################
 ### ELEMENT CLASS
@@ -222,13 +226,13 @@ class DMonomial_Element (Element):
     r'''
         Implementation of a DMonomial Element
 
-        This is a normal implementation of a univariate polynomial in dense 
+        This is a normal implementation of a univariate polynomial in dense
         representation, i.e., the coefficients are stored in a list
         where the empty coefficients are represented with zeros.
 
         INPUT:
 
-        * ``parent``: the parent of this polynomial. It **has** to be a 
+        * ``parent``: the parent of this polynomial. It **has** to be a
             DMonomial_Parent.
         * ``data``: the coefficients of the polynomial. It can be a list/tuple of elements
             that will be interpreted as the coefficients sorted by degree; or a dictionary where
@@ -244,22 +248,22 @@ class DMonomial_Element (Element):
             data = tuple(data.get(i,self.parent().base().zero()) for i in range(degree+1))
         elif isinstance(data, str): # special case of string
             data = (data,)
-        
+
         ## We clean the data if the coefficients are zero
         i = len(data)
         while i > 0 and data[i-1] == 0:
             i -= 1
         self.__coefficients = list(self.parent().base()(d) for d in data[:i])
-        
+
     ## Getter and attribute methods
     def degree(self) -> int:
         if not self.__coefficients:
             return -oo
         return len(self.__coefficients)-1
-    
+
     def leading_coefficient(self) -> Element:
         return self.__coefficients[-1]
-    
+
     lc = leading_coefficient
 
     def monic(self) -> DMonomial_Element:
@@ -267,7 +271,7 @@ class DMonomial_Element (Element):
 
     def constant_coefficient(self) -> Element:
         return self.__coefficients[0]
-    
+
     cc = constant_coefficient
 
     def monomials(self) -> tuple[DMonomial_Element]:
@@ -279,7 +283,7 @@ class DMonomial_Element (Element):
             return tuple(c for c in self.__coefficients if c != 0)
         else:
             return tuple(self.__coefficients)
-        
+
     def mons_cons_iter(self) -> Iterator[tuple[DMonomial_Element,Element]]:
         return zip(self.monomials(), self.coefficients())
 
@@ -288,42 +292,42 @@ class DMonomial_Element (Element):
             return self.__coefficients[index]
         except IndexError:
             return self.parent().base().zero()
-    
+
     def __getitem__(self, i: int) -> Element:
         return self.coefficient(i)
-    
+
     def numerator(self) -> DMonomial_Element:
         return self
-    
+
     def denominator(self) -> DMonomial_Element:
         return self.parent().one()
-    
+
     def is_zero(self) -> bool:
         return not self.__coefficients
-    
+
     def is_one(self) -> bool:
         return len(self.__coefficients) == 1 and self[0] == 1
-    
+
     def is_unit(self) -> bool:
         return self in self.parent().base()
-    
+
     def is_constant(self) -> bool:
         return len(self.__coefficients) <= 1
-    
+
     def is_monomial(self) -> bool:
         coeffs = self.coefficients()
         return len(coeffs) == 1 and coeffs[0] == self.parent().base().one()
-    
+
     def is_monic(self) -> bool:
         return self.lc() == 1
-    
+
     @cached_method
     def algebraic(self) -> Element:
         return self.parent().to_sage()(self)
 
     def to_sage(self) -> Element:
         return self.algebraic()
-    
+
     ## Useful derivation methods
     @cached_method
     def kappa(self, operation: int = 0) -> DMonomial_Element:
@@ -337,10 +341,10 @@ class DMonomial_Element (Element):
         if self.is_constant():
             return self.parent().zero()
         return self.parent().element_class(
-            self.parent(), 
+            self.parent(),
             [i*self.__coefficients[i] for i in range(1, self.degree()+1)]
         )
-    
+
     ## Other operational methods
     def conditions_to_zero(self) -> tuple[tuple[DMonomial_Element,Element]]:
         return tuple((m,c.to_sage()) for (m,c) in self.mons_cons_iter())
@@ -348,7 +352,7 @@ class DMonomial_Element (Element):
     def factor(self) -> Factorization:
         f = self.algebraic().factor()
         return Factorization([(self.parent()(p), e) for (p,e) in f], self.parent().base()(f.unit()))
-    
+
     def lcm(self, *others: DMonomial_Element) -> DMonomial_Element:
         if len(others) == 1 and isinstance(others[0], (list,tuple)):
             others = others[0]
@@ -368,14 +372,14 @@ class DMonomial_Element (Element):
         if self.is_zero():
             return self.parent().zero()
         return self / self.content()
-    
+
     def is_primitive(self) -> bool:
         return (not self.is_zero()) and self == self.primitive()
 
     def is_squarefree(self) -> bool:
         F = self.squarefree()
         return len(F) <= 1 and all(exp == 1 for (_,exp) in F)
-    
+
     def wronskian(self, operation:int = 0, *other: DMonomial_Element) -> DMonomial_Element:
         r'''
             Compute the Wronskian of self with a set of polynomials for a given operation.
@@ -391,7 +395,7 @@ class DMonomial_Element (Element):
         return self.parent().element_class(
             self.parent(),
             [self[i] + other[i] for i in range(max(self.degree(), other.degree())+1)])
-        
+
     def _neg_(self) -> DMonomial_Element:
         return self.parent().element_class(
             self.parent(),
@@ -446,7 +450,7 @@ class DMonomial_Element (Element):
 
     def _floordiv_(self, other: DMonomial_Element) -> DMonomial_Element:
         return self.quo_rem(other)[0]
-    
+
     def _mod_(self, other: DMonomial_Element) -> DMonomial_Element:
         return self.quo_rem(other)[1]
 
@@ -461,10 +465,10 @@ class DMonomial_Element (Element):
 
     def __ne__(self, other) -> bool:
         return not (self == other)
-    
+
     def hash(self) -> int:
         return hash(self.__coefficients)
-    
+
     def __call__(self, *args, **kwds):
         return self.parent()(self.to_sage()(*args, **kwds))
 
@@ -474,10 +478,10 @@ class DMonomial_Element (Element):
 
     def __hash__(self) -> int:
         return hash(tuple(self.__coefficients))
-    
+
     def _latex_(self) -> str:
         return latex(self.algebraic())
-            
+
     ########################################
     ### Methods from Bronstein book
     ########################################
@@ -513,7 +517,7 @@ class DMonomial_Element (Element):
             Q += T
             R -= other*T
             delta = R.degree() - other.degree()
-        
+
         return (Q,R)
 
     def pseudo_quo_rem(self, other: DMonomial_Element) -> tuple[DMonomial_Element, DMonomial_Element]:
@@ -536,7 +540,7 @@ class DMonomial_Element (Element):
                 sage: 25*A == B*Q + R
                 True
                 sage: Q
-                14 + (15)*x 
+                14 + (15)*x
                 sage: R
                 111 + (52)*x
         '''
@@ -553,7 +557,7 @@ class DMonomial_Element (Element):
             R = b*R-T*other
             delta = R.degree() - other.degree()
         return b**N*Q, b**N*R
-    
+
     def gcd(self, other: DMonomial_Element) -> DMonomial_Element:
         return self.parent()(self.algebraic().gcd(other.algebraic()))
 
@@ -574,12 +578,12 @@ class DMonomial_Element (Element):
         while b != 0:
             a, b = b, a % b
         return a
-    
+
     def gcd_extended_euclidean_basic(self, other: DMonomial_Element) -> tuple[DMonomial_Element,DMonomial_Element,DMonomial_Element]:
         r'''
             Computes the GCD of two polynomials using the Extended Euclidean algorithm.
 
-            This means that this method returns three values `(s, t, g)` where ``s*self + t*other = g`` 
+            This means that this method returns three values `(s, t, g)` where ``s*self + t*other = g``
             and `g` is the ``gcd(self, other)``.
 
             EXAMPLES::
@@ -626,12 +630,12 @@ class DMonomial_Element (Element):
             s, b_1 = b_1, r_1
 
         return (s, a)
-    
+
     def gcd_extended_euclidean(self, other: DMonomial_Element) -> tuple[DMonomial_Element,DMonomial_Element,DMonomial_Element]:
         r'''
             Computes the GCD of two polynomials using the Extended Euclidean algorithm.
 
-            This means that this method returns three values `(s, t, g)` where ``s*self + t*other = g`` 
+            This means that this method returns three values `(s, t, g)` where ``s*self + t*other = g``
             and `g` is the ``gcd(self, other)``.
 
             EXAMPLES::
@@ -657,11 +661,11 @@ class DMonomial_Element (Element):
 
         return s,t,g
 
-    def diophantine_euclidean_basic(self, 
-                                    other: DMonomial_Element, 
+    def diophantine_euclidean_basic(self,
+                                    other: DMonomial_Element,
                                     goal: DMonomial_Element) -> tuple[DMonomial_Element, DMonomial_Element, DMonomial_Element]:
         r'''
-            Computes elements `s,t` such that ``s*self + t*other == goal``. 
+            Computes elements `s,t` such that ``s*self + t*other == goal``.
 
             EXAMPLES::
 
@@ -685,10 +689,10 @@ class DMonomial_Element (Element):
         s,t = s*q, t*q
         if s != 0 and s.degree() >= other.degree():
             q,r = s.quo_rem(other)
-            s, t = r, t+ q*self
-        
+            s, t = r, t + q*self
+
         return (s,t)
-    
+
     def diophantine_half_euclidean(self,
                                    other: DMonomial_Element,
                                    goal: DMonomial_Element):
@@ -700,16 +704,16 @@ class DMonomial_Element (Element):
 
         if r != 0:
             raise ValueError(f"The given goal ({goal}) is not in the ideal of {self} and {other}.")
-        
+
         s = s*q
 
         if s != 0 and s.degree() >= other.degree():
-            s = s%other
+            s = s % other
         return s
-    
+
     def diophantine(self, other: DMonomial_Element, goal: DMonomial_Element) -> tuple[DMonomial_Element, DMonomial_Element]:
         r'''
-            Computes elements `s,t` such that ``s*self + t*other == goal``. 
+            Computes elements `s,t` such that ``s*self + t*other == goal``.
 
             EXAMPLES::
 
@@ -728,7 +732,7 @@ class DMonomial_Element (Element):
         s = self.diophantine_half_euclidean(other, goal)
         t,r = (goal - s*self).quo_rem(other)
 
-        assert r==0
+        assert r == 0
 
         return (s,t)
 
@@ -752,16 +756,16 @@ class DMonomial_Element (Element):
         '''
         if not denominators:
             return (self,) # the denominator is 1
-        
+
         a_0, r = self.quo_rem(prod(denominators))
-        
+
         if len(denominators) == 1:
             return (a_0,r)
-        
+
         a_1, t = prod(denominators[1:]).diophantine(denominators[0], r)
         recursion = t.partial_fraction(*denominators[1:])
-        
-        return (recursion[0] + a_0, a_1, *recursion[1:]) 
+
+        return (recursion[0] + a_0, a_1, *recursion[1:])
 
     def partial_fraction_extended(self, denominators: tuple[DMonomial_Element], exponents: tuple[int]) -> tuple[DMonomial_Element]:
         r'''
@@ -787,7 +791,7 @@ class DMonomial_Element (Element):
             raise TypeError(f"The arguments 'denominators' and 'exponents' must be list or tuples")
         elif len(denominators) != len(exponents):
             raise ValueError(f"The arguments 'denominators' and 'exponents' must be of same length")
-        
+
         partial_fraction = self.partial_fraction(*(d**e for (d,e) in zip(denominators, exponents)))
         result = list()
         a_0 = partial_fraction[0]
@@ -799,7 +803,7 @@ class DMonomial_Element (Element):
                 to_add = [r] + to_add
             result.extend(to_add)
             a_0 += a
-        
+
         return [a_0] + result
 
         # TODO: Go on here
@@ -824,7 +828,7 @@ class DMonomial_Element (Element):
             return (self.parent().zero(), PRS)
         elif R[k-1].degree() == 1:
             return (R[k], PRS)
-        
+
         s, c = 1,1
         for j in range(1, k):
             if R[j-1].degree() % 2 and R[j].degree() % 2:
@@ -832,7 +836,7 @@ class DMonomial_Element (Element):
             c *= (beta[j]//r[j]**(1+delta[j]))**R[j].degree() * r[j]**(R[j-1].degree()-R[j+1].degree())
 
         return (s*c*R[k]**(R[k-1].degree()), PRS)
-    
+
     def resultant(self, other: DMonomial_Element) -> DMonomial_Element:
         r'''
             Compute the resultant of two polynomials
@@ -867,7 +871,7 @@ class DMonomial_Element (Element):
             sage: Q.<x> = DMonomial(DifferentialRing(QQ), [1])
             sage: A = x^8 + 6*x^6 + 12*x^4+8*x^2
             sage: F = A.squarefree_musser(); F
-            1 * x^2 * (x^2 + 2)^3
+            x^2 * (x^2 + 2)^3
         '''
         c = self.content()
         S = self.primitive() ## this remains as a DMonomial_Element
@@ -895,7 +899,7 @@ class DMonomial_Element (Element):
             sage: Q.<x> = DMonomial(DifferentialRing(QQ), [1])
             sage: A = x^8 + 6*x^6 + 12*x^4+8*x^2
             sage: F = A.squarefree_yun(); F
-            1 * x^2 * (x^2 + 2)^3
+            x^2 * (x^2 + 2)^3
         '''
         c = self.content()
         S = self.primitive()
@@ -911,7 +915,7 @@ class DMonomial_Element (Element):
         while Z != 0:
             A.append(S_star.gcd(Z).primitive())
             S_star, Y = S_star // A[-1], Z // A[-1]
-                        
+
             Z = Y - S_star.partial()
         A.append(S_star)
 
@@ -923,12 +927,12 @@ class DMonomial_Element (Element):
         if self.parent().operator_types()[operation] != "derivation":
             raise TypeError("The operation must be a derivation")
         return self.gcd(self.operation(operation)) in self.parent().base()
-    
+
     @cached_method
     def is_special(self, operation: int = 0) -> bool:
         if self.parent().operator_types()[operation] != "derivation":
             raise TypeError("The operation must be a derivation")
-        
+
         if self.parent().is_primitive(operation): # special case with D(t) in self.base()
             return self.monic().operation(operation) == 0
         elif self.parent().is_hyperexponential(operation): # special case with D(t)/t in self.base()
@@ -937,7 +941,7 @@ class DMonomial_Element (Element):
             d = p.degree()
             return p.operation(operation)*x**d == d*x**(d-1)*p
         return self.operation(operation) % self == 0
-    
+
     @cached_method
     def is_simple(self) -> bool:
         return True # a polynomial has always a normal denominator (i.e., 1)
@@ -951,8 +955,8 @@ class DMonomial_Element (Element):
         r'''
             Method to compute a splitting factorization of ``self``.
 
-            A splitting factorization is a pair `(q_n, q_s)`, where all squarefree factors of `q_n` are normal and `q_s` 
-            is special (see methods :func:`squarefree`, :func:`is_normal` and :func:`is_special`), and such that 
+            A splitting factorization is a pair `(q_n, q_s)`, where all squarefree factors of `q_n` are normal and `q_s`
+            is special (see methods :func:`squarefree`, :func:`is_normal` and :func:`is_special`), and such that
             `q_nq_s = self`.
 
             EXAMPLES::
@@ -966,17 +970,17 @@ class DMonomial_Element (Element):
                 4*x^4*t^3 + (-4*x^4 - 8*x^3)*t^2 + (8*x^3 + 4*x^2)*t - 4*x^2
                 sage: q_s
                 t^2 + 1/x*t + (-1/2*x + 1/4)/x^2
-                
+
         '''
         if self.parent().operator_types()[operation] != "derivation":
             raise TypeError("The operation must be a derivation")
-        
+
         S = self.gcd(self.operation(operation)).monic() // self.gcd(self.partial()).monic()
         if S.degree() == 0:
             return self, self.parent().one()
         q_n, q_s = (self // S).splitting_factorization(operation)
         return q_n, S*q_s
-    
+
     @cached_method
     def splitting_factorization_squarefree(self, operation: int = 0) -> tuple[Factorization, Factorization]:
         r'''
@@ -990,16 +994,16 @@ class DMonomial_Element (Element):
         '''
         if self.parent().operator_types()[operation] != "derivation":
             raise TypeError("The operation must be a derivation")
-        
+
         F = self.squarefree()
         normal, special = list(), list()
         for (f, exp) in F:
-            S = f.gcd(f.operation(operation)).monic() 
+            S = f.gcd(f.operation(operation)).monic()
             normal.append((f // S, exp))
             special.append((S, exp))
-        return (Factorization((factor for factor in normal if factor[0] != 1), unit=F.unit()), 
+        return (Factorization((factor for factor in normal if factor[0] != 1), unit=F.unit()),
                 Factorization((factor for factor in special if factor[0] != 1)))
-    
+
     ### CHAPTER 4: ORDER FUNCTION
     @cached_method
     def order_function(self) -> DMM_OrderFunction:
@@ -1010,17 +1014,17 @@ class DMonomial_Element (Element):
 
     def order_at(self, element: DMonomial_Element) -> int:
         return element.order_function()(self)
-    
+
     @cached_method
     def value_function(self) -> DMM_ValueFunction:
         return self.parent().value_function(self)
-    
+
     def value(self, element: DMonomial_Element | DFractionFieldElement) -> Element:
         return self.value_function()(element)
-    
+
     def value_at(self, element: DMonomial_Element) -> Element:
         return self.parent().value_function(element)(self)
-    
+
     def remainder(self, element: DMonomial_Element | DFractionFieldElement) -> DMonomial_Element:
         r'''
             Return the local remainder at ``self`` of ``element``.
@@ -1039,33 +1043,34 @@ class DMonomial_Element (Element):
             return self.parent()(value)
         else: # returns something in a quotient ring
             return self.parent()(value.lift())
-    
+
     @cached_method
     def residue_function(self, operation: int = 0) -> DMM_ResidueFunction:
         return self.parent().residue_function(self, operation)
-    
-    def residue(self, element: DMonomial_Element | DFractionFieldElement, operation: int = 0)  -> Element:
+
+    def residue(self, element: DMonomial_Element | DFractionFieldElement, operation: int = 0) -> Element:
         return self.residue_function(operation)(element)
-    
+
     def residue_at(self, element: DMonomial_Element, operation: int = 0) -> Element:
         return self.parent().residue_function(element, operation)(self)
-    
+
+
 #####################################
 ### PARENT CLASS
 #####################################
 class DMonomial_Parent (Parent):
     Element = DMonomial_Element
 
-    def _set_categories(self, base : Parent, category=None) -> list[Category]: 
+    def _set_categories(self, base : Parent, category=None) -> list[Category]:
         if base.is_commutative():
             return [_DRings, Algebras(base).Commutative()] + ([category] if category is not None else [])
         else:
             return [_DRings, Algebras(base)] + ([category] if category is not None else [])
 
     def __init__(self, base : Parent, varname:str, gen_images: tuple[str], category=None):
-        if not base in _Fields or not base in _DRings:
+        if base not in _Fields or base not in _DRings:
             raise TypeError(f"The base must be a field and have d-operations")
-        
+
         ## Calling the super __init__ to stablish the categories and the main attributes
         super().__init__(base, category=tuple(self._set_categories(base, category)))
 
@@ -1097,13 +1102,13 @@ class DMonomial_Parent (Parent):
         # self.__algebraic = PolynomialRing(self.base().to_sage(), self.varname())
         if self.tower_depth() > 1:
             base_field = PolynomialRing(
-                self.tower_base().to_sage(), 
+                self.tower_base().to_sage(),
                 self.tower_names()[:-1]).fraction_field()
         else:
             base_field = self.tower_base().to_sage()
 
         self.__algebraic = PolynomialRing(base_field, self.__varname)
-        
+
         ## Adding coercion and conversion morphisms
         self.base().register_conversion(DMM_ParentToBase(self))
         self.register_coercion(DMM_BaseToParent(self))
@@ -1125,7 +1130,7 @@ class DMonomial_Parent (Parent):
                 result.append(None)
             elif otype == "derivation":
                 t = self.gen()
-                if self.is_primitive(operation): 
+                if self.is_primitive(operation):
                     ## See Theorem 5.1.1 of Bronstein's book
                     try:
                         self.base()(t.operation(operation)).integrate(operation)
@@ -1153,27 +1158,27 @@ class DMonomial_Parent (Parent):
     ## Attributes methods
     def varname(self) -> str:
         return self.__varname
-    
+
     def gen(self) -> DMonomial_Element:
         if self.__gen is None:
             self.__gen = self.element_class(self, [self.base().zero(), self.base().one()])
         return self.__gen
-    
+
     def gens(self) -> tuple[DMonomial_Element]:
         return (self.gen(),)
-    
+
     def ngens(self) -> int:
         return 1
-    
+
     def one(self) -> DMonomial_Element:
         return self.element_class(self, [self.base().one()])
-    
+
     def zero(self) -> DMonomial_Element:
         return self.element_class(self, [self.base().zero()])
 
     def _first_ngens(self, amount: int) -> tuple[DMonomial_Element]:
         return self.tower_gens()[-amount:]
-    
+
     def constant_ring(self, operation: int = 0) -> Parent:
         output = self.__constants[operation]
         if output is None:
@@ -1198,7 +1203,7 @@ class DMonomial_Parent (Parent):
     def tower_gens(self) -> tuple[DMonomial_Element]:
         r'''
             Method to get the d-Monomial extension generators
-            
+
             A tower of monomials is a chain of D-Monomial extensions. This method return a list of generators from bottom to top
             of the generators of the tower as element of ``self``.
         '''
@@ -1209,14 +1214,14 @@ class DMonomial_Parent (Parent):
             current = current.base().base()
 
         return result
-    
+
     def tower_gen(self, name: str) -> DMonomial_Element:
         gens = self.tower_gens()
         for g in gens:
             if str(g) == name:
                 return g
         raise IndexError(f"Generator {name} not found")
-    
+
     @cached_method
     def tower_gens_operation(self, operation: int) -> tuple[DMonomial_Element]:
         r'''
@@ -1226,11 +1231,11 @@ class DMonomial_Parent (Parent):
             of the generators of the tower as element of ``self``.
         '''
         return tuple(g.operation(operation) for g in self.tower_gens())
-    
+
     @cached_method
     def tower_operations_for_gens(self) -> tuple[tuple[DMonomial_Element]]:
         return tuple(tuple(v.operation(i) for i in range(self.noperators())) for v in self.tower_gens())
-    
+
     @cached_method
     def tower_base(self) -> Parent:
         r'''
@@ -1241,19 +1246,19 @@ class DMonomial_Parent (Parent):
         while isinstance(current, DMonomial_Parent):
             mid = current.base()
             current = mid.base()
-        
+
         return mid
-            
+
     def tower_depth(self) -> int:
         return len(self.tower_names())
-    
+
     def tower_gen_lc(self, element: DMonomial_Element, gen: str) -> DFractionFieldElement:
         g = self.tower_gen(gen)
         shifted_gens = [G for G in self.tower_gens() if G != g] + [g]
 
         R = self.tower_change_order(*shifted_gens)
         return R(element).lc()
-    
+
     def tower_gen_degree(self, element: DMonomial_Element, gen: str) -> DFractionFieldElement:
         g = self.tower_gen(gen)
         shifted_gens = [G for G in self.tower_gens() if G != g] + [g]
@@ -1266,31 +1271,31 @@ class DMonomial_Parent (Parent):
         return False
 
     def is_integral_domain(self, _: bool = True) -> bool:
-        return True 
-    
+        return True
+
     ## Derivation methods
     def extend_derivation(self, operation: int) -> AdditiveMap:
         def __derivation(element: DMonomial_Element) -> DMonomial_Element:
-            return element.partial() * self.__images[operation] + element.kappa(operation) 
-        
+            return element.partial() * self.__images[operation] + element.kappa(operation)
+
         return AdditiveMap(self, __derivation)
 
     def extend_homomorphism(self, operation: int) -> AdditiveMap:
         def __homomorphism(element: DMonomial_Element) -> DMonomial_Element:
             return sum(
-                (c.operation(operation)*self.__images[operation]**i 
+                (c.operation(operation)*self.__images[operation]**i
                 for (i,c) in enumerate(element.coefficients(sparse=False))),
-                start = self.zero()
+                start=self.zero()
             )
-        
+
         return AdditiveMap(self, __homomorphism)
-    
+
     def wronskian_matrix(self, operation: int = 0, *elements: DMonomial_Element) -> Matrix:
         if operation < 0 or operation >= self.noperators():
             raise ValueError(f"Invalid operation provided")
         elif self.operator_types()[operation] != "derivation":
             raise ValueError(f"The operation provided is not a derivation")
-        
+
         return matrix([[el.operation(operation, times=i) for el in elements] for i in range(len(elements))])
 
     def wronskian(self, operation: int = 0, *elements: DMonomial_Element) -> DMonomial_Element:
@@ -1298,16 +1303,16 @@ class DMonomial_Parent (Parent):
             raise ValueError(f"Invalid operation provided")
         elif self.operator_types()[operation] != "derivation":
             raise ValueError(f"The operation provided is not a derivation")
-        
+
         M = self.wronskian_matrix(operation, *elements)
         return M.determinant()
 
     def d_degree(self, operation: int = 0) -> int:
         return self.gen().operation(operation).degree()
-    
+
     def d_leading_coefficient(self, operation: int = 0) -> Element:
         return self.gen().operation(operation).lc()
-    
+
     d_lc = d_leading_coefficient
 
     def is_primitive(self, operation: int = 0) -> bool:
@@ -1317,7 +1322,7 @@ class DMonomial_Parent (Parent):
             raise NotImplementedError(f"Primitive test not yet implemented for homomorphisms")
         else:
             raise ValueError(f"Invalid operation provided")
-        
+
     def is_hyper(self, operation: int = 0) -> bool:
         if self.operator_types()[operation] in ("derivation", "homomorphism"):
             Dt = self.gen().operation(operation)
@@ -1325,26 +1330,26 @@ class DMonomial_Parent (Parent):
             return r == 0 and q in self.base()
         else:
             raise ValueError(f"Invalid operation provided")
-        
+
     def is_hyperexponential(self, operation: int = 0) -> bool:
         if self.operator_types()[operation] != "derivation":
             raise ValueError(f"Invalid operation provided")
         return self.is_hyper(operation)
-    
+
     def is_hypergeometric(self, operation: int = 0) -> bool:
         if self.operator_types()[operation] != "homomorphism":
             raise ValueError(f"Invalid operation provided")
         return self.is_hyper(operation)
-    
+
     def is_hypertangent(self, operation: int = 0) -> bool:
         if self.operator_types()[operation] != "derivation":
             raise ValueError(f"Invalid operation provided")
-        if self.d_degree(operation) == 2: 
+        if self.d_degree(operation) == 2:
             t = self.gen()
             Dt = t.operation(operation)
             return Dt/(t**2 + 1) in self.base()
         return False
-    
+
     def is_tangent(self, operation: int = 0) -> bool:
         if self.is_hypertangent(self, operation):
             t = self.gen()
@@ -1356,7 +1361,7 @@ class DMonomial_Parent (Parent):
                 return True
             except (NotImplementedError, IntegrationError):
                 return False
-    
+
     def is_logarithm(self, operation: int = 0) -> bool:
         r'''
             `D(t)` is the logarithmic derivative on an element in ``self.base()``.
@@ -1370,7 +1375,7 @@ class DMonomial_Parent (Parent):
             except NotImplementedError:
                 return False
         return False
-    
+
     def is_exponential(self, operation: int = 0) -> bool:
         if self.operator_types()[operation] != "derivation":
             raise NotImplementedError(f"Exponential test not yet implemented for homomorphisms")
@@ -1382,7 +1387,7 @@ class DMonomial_Parent (Parent):
             except (IntegrationError, NotImplementedError):
                 return False
         return False
-    
+
     def is_liouvillian(self, operation:int = 0) -> bool:
         r'''
             Checks whether the monomial is Liouvillian.
@@ -1393,9 +1398,9 @@ class DMonomial_Parent (Parent):
         if self.operator_types()[operation] != "derivation":
             raise NotImplementedError(f"Liouvillian test not yet implemented for homomorphisms")
         t = self.gen()
-        return ((self.is_primitive(t) or self.is_hyperexponential(t)) and 
+        return ((self.is_primitive(t) or self.is_hyperexponential(t)) and
                 self.constant_ring(operation) == self.base().constant_ring())
-    
+
     @cached_method
     def tower_is_liouvillian(self, operation: int = 0) -> bool:
         r'''
@@ -1407,7 +1412,7 @@ class DMonomial_Parent (Parent):
 
     def is_elementary(self, operation: int = 0) -> bool:
         return self.is_liouvillian(operation) and (self.is_logarithm(operation) or self.is_exponential(operation))
-    
+
     @cached_method
     def tower_is_elementary(self, operation: int = 0) -> bool:
         if self.is_elementary(operation):
@@ -1418,10 +1423,10 @@ class DMonomial_Parent (Parent):
         if element in self:
             return True
         elif element in self.fraction_field():
-            return element.denominator().is_normal(operation) 
+            return element.denominator().is_normal(operation)
         else:
             raise ValueError(f"Invalid element provided {element} for the parent {self}")
-        
+
     def is_reduced_element(self, element: DMonomial_Element | DFractionFieldElement, operation: int = 0) -> bool:
         if element in self:
             return True
@@ -1430,7 +1435,7 @@ class DMonomial_Parent (Parent):
         else:
             raise ValueError(f"Invalid element provided {element} for the parent {self}")
 
-    def canonical_representation(self, 
+    def canonical_representation(self,
                                  element: DMonomial_Element | DFractionFieldElement,
                                  operation: int = 0
     ) -> tuple[DMonomial_Element, DFractionFieldElement, DFractionFieldElement]:
@@ -1468,21 +1473,21 @@ class DMonomial_Parent (Parent):
     @cached_method
     def order_function(self, element: DMonomial_Element) -> DMM_OrderFunction:
         return DMM_OrderFunction(self, element)
-    
+
     def order(self, base_element: DMonomial_Element, element: DMonomial_Element | DFractionFieldElement) -> int:
         return self.order_function(base_element)(element)
-    
+
     @cached_method
     def value_function(self, element: DMonomial_Element) -> DMM_ValueFunction:
         return DMM_ValueFunction(self, element)
-    
+
     def value(self, base_element: DMonomial_Element, element: DMonomial_Element | DFractionFieldElement) -> Element:
         return self.value_function(base_element)(element)
-    
+
     @cached_method
     def residue_function(self, element: DMonomial_Element, operation: int = 0) -> DMM_ResidueFunction:
         return DMM_ResidueFunction(self, element, operation)
-    
+
     def residue(self, base_element: DMonomial_Element, element: DMonomial_Element | DFractionFieldElement, operation: int = 0) -> Element:
         return self.residue_function(base_element, operation)(element)
 
@@ -1515,20 +1520,20 @@ class DMonomial_Parent (Parent):
     ## Coercion methods
     def _coerce_map_from_base_ring(self) -> Morphism:
         return DMM_BaseToParent(self)
-    
+
     def construction(self) -> tuple[ConstructionFunctor, Parent]:
         return DMonomialFunctor(self.__varname, tuple(self.__images)), self.base()
-    
+
     def fraction_field(self) -> DFractionField:
         if self.__fraction_field is None:
             self.__fraction_field = DFractionField(self)
         return self.__fraction_field
-    
+
     def change_ring(self, new_base: Parent) -> DMonomial_Parent:
         old_base = self.base()
         if isinstance(old_base, DMonomial_Parent) and (not isinstance(new_base, DMonomial_Parent)):
             new_base = old_base.change_ring(new_base)
-        
+
         output = DMonomial(new_base, tuple(str(img) for img in self.__images), self.varname())
         # coercion old -> new
         coercion = new_base.coerce_map_from(self.base())
@@ -1558,20 +1563,20 @@ class DMonomial_Parent (Parent):
                 self.register_conversion(DMM_BetweenBases(output, self, conversion))
             except AssertionError:
                 pass # the ring was already created
-    
+
         return output
-    
+
     def tower_change_order(self, *new_variable_order: DMonomial_Element) -> DMonomial_Parent:
         tower_gens = self.tower_gens()
         if any(el not in tower_gens for el in new_variable_order) or len(tower_gens) != len(new_variable_order):
             raise ValueError(f"Impossible to reshape the tower of Monomials: bad data provided")
-        
+
         images = tuple(tuple(str(v.operation(i)) for i in range(self.noperators())) for v in new_variable_order)
         try:
             output = DMonomial(self.tower_base(), images, names=tuple(str(v) for v in new_variable_order))
         except TypeError:
             raise ValueError(f"Impossible to reshape the tower of Monomials: the order is not valid")
-        
+
         try:
             self.register_coercion(DMM_BetweenTowersReorder(output, self))
             output.register_coercion(DMM_BetweenTowersReorder(self, output))
@@ -1590,10 +1595,10 @@ class DMonomial_Parent (Parent):
             )
 
     def _latex_(self) -> str:
-        return (latex(self.base()) + 
-                        r"[" + latex_variable_name(self.varname()) + 
-                        r"\mapsto (" + ", ".join(latex(img) for img in self.__images) + 
-                        r")]") 
+        return (latex(self.base()) +
+                        r"[" + latex_variable_name(self.varname()) +
+                        r"\mapsto (" + ", ".join(latex(img) for img in self.__images) +
+                        r")]")
 
     ## DRing category methods
     def operators(self) -> Collection[AdditiveMap]:
@@ -1604,7 +1609,7 @@ class DMonomial_Parent (Parent):
 
     def add_constants(self, *new_constants: str) -> DMonomial_Parent:
         return self.change_ring(self.base().add_constants(*new_constants))
-    
+
     def linear_operator_ring(self) -> DMonomial_Parent:
         r'''
             Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
@@ -1621,13 +1626,13 @@ class DMonomial_Parent (Parent):
                 raise IntegrationError(f"The element {element} do not have an integral in-field.")
             return result
         raise NotImplementedError(f"The integration in these fields is not yet implemented")
-    
+
     def _lcm_denominators(self, *_: DMonomial_Element) -> DMonomial_Element:
         return self.parent().one() # no denominators in this ring
 
     def to_sage(self):
         return self.__algebraic
-    
+
     ########################################
     ### Methods from Bronstein book
     ########################################
@@ -1640,11 +1645,11 @@ class DMonomial_Parent (Parent):
         remainder = self.base()(remainder)
         integral = self.base().symbolic_integral(remainder, operation)
         return integral + partial
-    
+
     def _symbolic_integral(self, element: DFractionFieldElement, operation: int = 0) -> tuple[DMonomial_Element, tuple]:
         if self.operator_types()[operation] != "derivation":
             raise ValueError(f"Symbolic integration only defined for derivations")
-        
+
         f = self.fraction_field()(element) # must be a rational function
 
         g_1, h, r = self.hermite_reduce(f, operation) # reduces partial_integral, simple and reduced parts
@@ -1653,16 +1658,16 @@ class DMonomial_Parent (Parent):
             return (g_1 + g_2, valid)
         q, valid = self.polynomial_integration(h - g_2.operation(operation) + r, operation)
         return (g_1 + g_2 + q, valid)
-    
-    def hermite_reduce(self, 
-                       f: DFractionFieldElement, 
+
+    def hermite_reduce(self,
+                       f: DFractionFieldElement,
                        D: int = 0
     ) -> tuple[DFractionFieldElement,DFractionFieldElement,DFractionFieldElement]:
         r'''
             Computes the Hermite reduction of an element in ``self.fraction_field()``.
 
             Given a derivation and an ``f=element`` in ``self.fraction_field()``, this method computes
-            three values `g, h, r` in the same field such that 
+            three values `g, h, r` in the same field such that
 
             .. MATH::
 
@@ -1671,11 +1676,11 @@ class DMonomial_Parent (Parent):
             and `h` is simple and `r` is reduced.
         '''
         p, s, n = self.canonical_representation(f, D)
-        a, d = n.numerator(), n.denominator() 
+        a, d = n.numerator(), n.denominator()
         ## We check `d` is monic
         if not d.is_monic():
             a, d = a/d.lc(), d.monic()
-        
+
         F = d.squarefree()
         g = self.zero()
 
@@ -1691,19 +1696,19 @@ class DMonomial_Parent (Parent):
 
         return (g, r/(u*v), q+p+s)
 
-    def residue_reduce_base(self, 
-                       f: DFractionFieldElement, 
+    def residue_reduce_base(self,
+                       f: DFractionFieldElement,
                        D: int = 0
     ) -> tuple[DMonomial_Element, bool]:
         r'''
             Method that applies the Rothstein-Trager resultant reduction (page 147 of Bronstein's book)
 
-            This method takes a simple element ``f = element`` in ``self.fraction_field()``, together with a 
-            derivation and returns a tuple `g, \beta` where `g` is an elementary function over ``self`` (includes 
+            This method takes a simple element ``f = element`` in ``self.fraction_field()``, together with a
+            derivation and returns a tuple `g, \beta` where `g` is an elementary function over ``self`` (includes
             some logarithms) and a boolean `\beta` such that
 
             * `\beta` is True if `f - D(g)` is an element of ``self``.
-            * `\beta` is False if for any special element `h` in ``self.fraction_field()``, `f + h - D(g)` do not 
+            * `\beta` is False if for any special element `h` in ``self.fraction_field()``, `f + h - D(g)` do not
               have an elementary integral.
         '''
         vname = f"__{self.gen()}"
@@ -1723,27 +1728,27 @@ class DMonomial_Parent (Parent):
                 nvar = RequestName.get(*[str(g) for g in self.tower_gens()])
                 g = d.gcd(a - alpha*d.derivative(D))
                 monomials.append((nvar, g.derivative(D)/g,alpha))
-        
-        E = DMonomial(self, 
+
+        E = DMonomial(self,
                       [[0 if i != D else m[1] for i in range(self.noperators())] for m in monomials],
                       [m[0] for m in monomials])
         result = sum(m[2]*E.tower_gen(m[0]) for m in monomials)
 
         return result, r_n in self.base()
 
-    def residue_reduce(self, 
-                       f: DFractionFieldElement, 
+    def residue_reduce(self,
+                       f: DFractionFieldElement,
                        D: int = 0
     ) -> tuple[DMonomial_Element, bool]:
         r'''
             Method that applies the Lazard-Rioboo-Rothstein-Trager resultant reduction (page 149 of Bronstein's book)
 
-            This method takes a simple element ``f = element`` in ``self.fraction_field()``, together with a 
-            derivation and returns a tuple `g, \beta` where `g` is an elementary function over ``self`` (includes 
+            This method takes a simple element ``f = element`` in ``self.fraction_field()``, together with a
+            derivation and returns a tuple `g, \beta` where `g` is an elementary function over ``self`` (includes
             some logarithms) and a boolean `\beta` such that
 
             * `\beta` is True if `f - D(g)` is an element of ``self``.
-            * `\beta` is False if for any special element `h` in ``self.fraction_field()``, `f + h - D(g)` do not 
+            * `\beta` is False if for any special element `h` in ``self.fraction_field()``, `f + h - D(g)` do not
               have an elementary integral.
         '''
         t = self.gen()
@@ -1775,7 +1780,7 @@ class DMonomial_Parent (Parent):
                 b = self(S[e].algebraic()(**{"__z": alpha}))
                 monomials.append((RequestName.get(*[str(g) for g in self.tower_gens()]), b.derivative(D)/b, alpha))
 
-        E = DMonomial(self, 
+        E = DMonomial(self,
                       [[0 if i != D else m[1] for i in range(self.noperators())] for m in monomials],
                       [m[0] for m in monomials])
         result = sum(m[2]*E.tower_gen(m[0]) for m in monomials)
@@ -1793,13 +1798,13 @@ class DMonomial_Parent (Parent):
             logger.warning(f"[polynomial-integration] Case of non-linear monomial: we assume no special polynomials exists")
             return self._nonlinear_nospecial_polynomial_integration(element, operation)
         raise ValueError(f"Impossible error reached")
-    
+
     def _primitive_polynomial_integration(self, p: DMonomial_Element, D: int = 0) -> tuple[DMonomial_Element,bool]:
         if p.degree() == 0:
             return self.zero(), True
         t = self.gen()
         a = p.lc()
-        sol = self.base().base().limited_integrate(a, t.derivative(D), D=D) 
+        sol = self.base().base().limited_integrate(a, t.derivative(D), D=D)
         if sol is None:
             return self.zero(), False
         b,(c,) = sol # a = D(b) + cD(t) --> c is constant
@@ -1808,7 +1813,7 @@ class DMonomial_Parent (Parent):
         q,valid = self._primitive_polynomial_integration(p - q_0.derivative(D), D)
 
         return q+q_0, valid
-    
+
     def _hyperexponential_polynomial_integration(self, p: DMonomial_Element, D: int = 0) -> tuple[DMonomial_Element,bool]:
         q = 0
         valid = True
@@ -1841,15 +1846,15 @@ class DMonomial_Parent (Parent):
         else:
             return q_1+q_2, False
 
-    def _hypertangent_polynomial_integration_pure(self, 
+    def _hypertangent_polynomial_integration_pure(self,
                                                   p: DMonomial_Element,
                                                   D: int = 0
     ) -> tuple[DMonomial_Element,DFractionFieldElement]:
         r'''
             Method to integrate a pure polynomial for hypertangent monomials.
 
-            Given a polynomial `p(t) \in k[t]` (`k[t]` is ``self``), this method computes 
-            a polynomial `q(t) \in k[t]` and an element `c \in k` such that 
+            Given a polynomial `p(t) \in k[t]` (`k[t]` is ``self``), this method computes
+            a polynomial `q(t) \in k[t]` and an element `c \in k` such that
 
             .. MATH::
 
@@ -1862,20 +1867,20 @@ class DMonomial_Parent (Parent):
         k = self.base()(t.derivative(D) / (t**2 + 1))
         c = r.coefficient(1)/2*k
         return q, c
-    
+
     def _hypertangent_reduced_integration(self, p: DMonomial_Element, D: int = 0) -> tuple[DMonomial_Element,bool]:
         t = self.gen()
         td = t**2 + 1
         m = td.order(t)
-        if m <= 0: 
+        if m <= 0:
             return 0, True
-        
+
         h = self(td**m * p) # h is now a polynomial in `t`
         r = h % td # deg(r) <= 1
         a = r.coefficient(1) # a = coeff(r, t)
         b = r.cc() # b = coeff(r, 1) = r - a*t
         k = self.base()(t.derivative(D) / td)
-        
+
         sol = self.base().coupled_de_system(0, 2*m*k, a, b, D)
         if sol is None: # no solution to coupled system
             return self.zero(), False
@@ -1890,15 +1895,15 @@ class DMonomial_Parent (Parent):
 
         return q_1, q_2 in self.base()
 
-    def polynomial_reduce(self, 
-                       p: DMonomial_Element, 
+    def polynomial_reduce(self,
+                       p: DMonomial_Element,
                        D: int = 0
     ) -> tuple[DMonomial_Element,DMonomial_Element]:
         r'''
             Computes a polynomial reduction.
 
             Given a polynomial `p(t) \in k[t]` (where `k[t]` is ``self``) where `t` is a nonlinear monomial,
-            this method computes two polynomials `q(t), r(t) \in k[t]` such that `p = D(q) + r` and 
+            this method computes two polynomials `q(t), r(t) \in k[t]` such that `p = D(q) + r` and
             `deg(r) < deg(D(t))`.
 
             This method looks like an Euclidean division but using now the derivative of the monomial.
@@ -1906,13 +1911,13 @@ class DMonomial_Parent (Parent):
         p = self(p)
         if p.degree() < self.d_degree(D):
             return self.zero(), p
-        
+
         m = p.degree() - self.d_degree(D) + 1
-        q_0 = (p.lc() / (m*self.d_lc(D)))* self.gen()**m
+        q_0 = (p.lc() / (m*self.d_lc(D))) * self.gen()**m
         q, r = self.polynomial_reduce(p - q_0.derivative(D), D)
 
         return q_0 + q, r
-        
+
     ### CHAPTER 6: Risch Differential Equation
     def risch_de(self, f: DFractionFieldElement, g: DFractionFieldElement, D:int = 0) -> DFractionFieldElement:
         ## Checking the input of the algorithm
@@ -1921,7 +1926,7 @@ class DMonomial_Parent (Parent):
 
         if self.operator_types()[D] != "derivation":
             raise ValueError(f"The given operator is not a derivation")
-        
+
         ## We first weakly normalize the element `f`
         q = self._weak_normalizer(f, D)
         f = f - q.derivative(D)/q
@@ -1931,7 +1936,7 @@ class DMonomial_Parent (Parent):
         normal = self._rde_normal_denominator(f,g,D)
         if normal is None:
             return None
-        
+
         a,b,c,dn = normal
         ## We now solve the equation aD(w) + b w = c for reduced solutions and the solution z is w/dn
         ## We compute the special part of the denominator
@@ -1961,23 +1966,23 @@ class DMonomial_Parent (Parent):
         y = z/q
 
         return y
-    
+
     def _weak_normalizer(self, f: DFractionField, D: int = 0) -> DMonomial_Element:
         r'''
             Given a derivation `D` and a rational function `f(t) \in K(t)` (where ``self`` is `K[t]`), this method computes
             a polynomial `q(t) \in K[t]` such that `f(t) - D(q(t))/q(t)` is weakly normalized.
 
-            Definition: a rational function `f(t) \in K(t)` is weakly normalized if its residue is not a positive integer for 
+            Definition: a rational function `f(t) \in K(t)` is weakly normalized if its residue is not a positive integer for
             any normal irreducible `p(t) \in K[t]` such that `f(t)` has order at least `-1`.
 
-            Note: let `f(t) = n(t)/d(t)` with `(n(t), d(t)) = 1`. Let `p(t)` be a normal polynomial (i.e., `(p,D(p)) = 1`) 
+            Note: let `f(t) = n(t)/d(t)` with `(n(t), d(t)) = 1`. Let `p(t)` be a normal polynomial (i.e., `(p,D(p)) = 1`)
             that we consider for this definition (i.e., the order of `f(t)` is at least -1). Then we have two cases:
             * `f(t) \in \mathcal{O}_p`, i.e., the order is at least 0. Then the residue is exactly 0 (no problem).
             * `p(t)` divides exactly once to `d(t)`. Then, we can write `d(t) = q(t)p(t)` with `q(t)` coprime with `p(t)`.
               In this case, the residue is the class of `n(t)/(D(p(t))q(t))`.
-            
+
             So the only normal polynomials that we need to consider are those that divides the denominator of self exactly once,
-            or said differently, those normal factors of the degree 1 factor from the squarefree factorization of ``d(t)``. 
+            or said differently, those normal factors of the degree 1 factor from the squarefree factorization of ``d(t)``.
             This fact allows to focus on these factors to compute a weakly normalized element from ``f(t)`` by subtracting
             a logarithmic derivative of a polynomial.
         '''
@@ -2000,10 +2005,10 @@ class DMonomial_Parent (Parent):
         roots = [r for r,_ in roots if (r in ZZ and r > 0)]
 
         return prod(d_1.gcd(a-r*d_1.derivative(D))**r for r in roots)
-    
-    def _rde_normal_denominator(self, 
-                                f: DFractionFieldElement, 
-                                g: DFractionFieldElement, 
+
+    def _rde_normal_denominator(self,
+                                f: DFractionFieldElement,
+                                g: DFractionFieldElement,
                                 D: int = 0
     ) -> None | tuple[DMonomial_Element, DFractionFieldElement, DFractionFieldElement, DMonomial_Element]:
         r'''
@@ -2012,11 +2017,11 @@ class DMonomial_Parent (Parent):
             Let us consider the Risch Differential Equation `D(y) + fy = g` for given `f(t), g(t) \in K(t)` (note
             that ``self`` is `K[t]`) where `f(t)` is weakly normalized (see :func:`_weak_normalizer`).
 
-            This method returns either ``None`` if there is no solution to this Risch Differential Equation or 
+            This method returns either ``None`` if there is no solution to this Risch Differential Equation or
             a tuple of elements `a(t), b(t), c(t), h(t)` where:
             * `a(t), h(t)` are elements of ``self`` (i.e., `K[t]`),
             * `b(t), c(t)` are reduced rational functions (i.e., their denominators are special polynomials),
-            such that for any rational solution `y(t)` to the Risch Differential Equation defined by `f(t)` and 
+            such that for any rational solution `y(t)` to the Risch Differential Equation defined by `f(t)` and
             `g(t)`, then `q(t) = y(t)h(t)` is a reduced rational function solution to `aD(q) + bq = c`.
 
             EXAMPLE::
@@ -2037,7 +2042,7 @@ class DMonomial_Parent (Parent):
         if (dn*h**2) % en != 0:
             return None
         return (dn*h, dn*h*f - dn*h.derivative(D), dn*h**2*g, h)
-        
+
     def _rde_special_denominator(self,
                                  a: DMonomial_Element, # leading coefficient of the diff. equation
                                  b: DFractionFieldElement, # reduced coefficient multiplying the function
@@ -2079,7 +2084,7 @@ class DMonomial_Parent (Parent):
                 ## We check if \alpha = m Dt/t + Dz/z for some z in self.base()
                 ## That is a parametric logarithmic derivative problem
                 par_log_der = self.base().log_derivative_param(alpha, t)
-                if par_log_der != None and par_log_der[1] == 1:
+                if par_log_der is not None and par_log_der[1] == 1:
                     n = min(n, par_log_der[2])
             N = max(0, -n_b, n - n_c)
             return (a*t**N, (b+n*a*Dt_t)*t**N, c*t**(N-n), t**(-n))
@@ -2088,7 +2093,7 @@ class DMonomial_Parent (Parent):
         else:
             raise NotImplementedError(f"[Special Part RDE] The case of a monomial {self.gen()} -> {self.gen().derivative()} is not implemented")
 
-    def _rde_degree_bound(self, 
+    def _rde_degree_bound(self,
                           a: DMonomial_Element,
                           b: DMonomial_Element,
                           c: DMonomial_Element,
@@ -2106,7 +2111,7 @@ class DMonomial_Parent (Parent):
         if self.is_primitive(D):
             if t.derivative(D) == 1 and self.constant_ring(D) == self.base(): # special case where derivation is just standard derivation w.r.t. t
                 n = max(0, d_c - max(d_b, d_a - 1))
-                if d_b == d_a -1: ## possible cancellation
+                if d_b == d_a - 1: ## possible cancellation
                     m = -b.lc()/a.lc()
                     if m in ZZ:
                         n = max(0, m, d_c - d_b)
@@ -2116,31 +2121,31 @@ class DMonomial_Parent (Parent):
                     alpha = -b.lc()/a.lc()
                     Dt = t.derivative(D)
                     lim_int = self.base().limited_integration(alpha, Dt)
-                    if lim_int != None and lim_int[1][0] in ZZ:
+                    if lim_int is not None and lim_int[1][0] in ZZ:
                         n = max(n,lim_int[1][0])
                 elif d_b == d_a:
                     alpha = -b.lc()/a.lc()
                     z = self.base().log_derivative(alpha)
-                    if z != None:
+                    if z is not None:
                         beta = -(a*z.derivative(D) + b*z).lc() / (z*a.lc())
                         lim_int = self.base().limited_integration(beta, Dt)
-                        if lim_int != None and lim_int[1][0] in ZZ:
+                        if lim_int is not None and lim_int[1][0] in ZZ:
                             n = max(n,lim_int[1][0])
         elif self.is_hyperexponential(D): # hyperexponential case
             n = max(0, d_c - max(d_b, d_a))
             if d_a == d_b: ## possible cancellation
                 alpha = -b.lc() / a.lc()
                 par_log_der = self.base().log_derivative_param(alpha, t)
-                if par_log_der != None and par_log_der[1] == 1:
+                if par_log_der is not None and par_log_der[1] == 1:
                     n = max(par_log_der[2], n)
         else:
             n = max(0, d_c - max(d_a+self.d_degree(D)-1, d_b))
-            if d_b == d_a + self.d_degree(D) -1: # possible cancellation
+            if d_b == d_a + self.d_degree(D) - 1: # possible cancellation
                 m = -b.lc()/(self.d_lc()*a.lc())
                 if m in ZZ:
                     n = max(0, ZZ(m), d_c - d_b)
         return n
-    
+
     def _rde_spde(self,
                   a: DMonomial_Element,
                   b: DMonomial_Element,
@@ -2151,9 +2156,9 @@ class DMonomial_Parent (Parent):
         r'''
             Reduces the SPDE problem to a polynomial Risch Differential Equation.
 
-            Given polynomials `a(t), b(t), c(t) \in K[t]` and a degree bound `n`, this method computes new 
+            Given polynomials `a(t), b(t), c(t) \in K[t]` and a degree bound `n`, this method computes new
             elements `\tilde{b}(t), \tilde{c}(t) \in K[t]`, a new bound `m \in \mathbb{N}` and elements
-            `\alpha(t),\beta(t) \in K[t]` such that any polynomial solution `y(t)` to 
+            `\alpha(t),\beta(t) \in K[t]` such that any polynomial solution `y(t)` to
 
             .. MATH::
 
@@ -2175,21 +2180,21 @@ class DMonomial_Parent (Parent):
                 return (self.zero(), self.zero(), 0, self.zero(), self.zero())
             else:
                 return None
-        
+
         g = a.gcd(b)
         if c % g != 0:
             return None
-        
+
         a, b, c = a//g, b//g, c//g
 
-        if a.degree() == 0: 
+        if a.degree() == 0:
             return (b/a.lc(), c/a.lc(), n, self.one(), self.zero())
-        
+
         r, z = b.diophantine(a, c)
         u = self._rde_spde(a, b+a.derivative(D), z - r.derivative(D), n-a.degree(), D)
         if u is None:
             return None
-        
+
         B,C,M,alpha,beta = u
         return (B, C, M, a*alpha, a*beta + r)
 
@@ -2215,14 +2220,14 @@ class DMonomial_Parent (Parent):
         ## The cancellation may happen when deg(D(y(t))) = deg(b) + deg(y)
         ## Since D(y(t)) = kappa_D(y(t)) + D(t)*partial_t(y), then
         ## deg(D(y(t))) <= max(deg(y(t)), deg(y(t)+deg(D(t))-1)) (with equality for non-linear monomials)
-        ## Going back to our equation, we can not have cancellation if 
+        ## Going back to our equation, we can not have cancellation if
         ## the degree of b(t) is too big (> max(0, deg(D(t))-1)),
         ## or if it is too small (in the non-linear case, < max(0, deg(D(t))-1))
         if self.d_degree(D) >= 2 or b.degree() > max(0, self.d_degree(D) - 1):
             return self._rde_polynomial_no_cancellation(b,c,n,D)
         else:
             return self._rde_polynomial_cancellation(b,c,n,D)
-    
+
     def _rde_polynomial_no_cancellation(self,
                                         b: DMonomial_Element,
                                         c: DMonomial_Element,
@@ -2242,7 +2247,7 @@ class DMonomial_Parent (Parent):
                 c -= (p.derivative(D) + b*p)
         elif b.degree() < self.d_degree(D) - 1: ## we know deg(D(t)) > 1, and now deg(b) is too small
             while c != 0:
-                m = 0 if n == 0 else c.degree() - self.d_degree(D) +1
+                m = 0 if n == 0 else c.degree() - self.d_degree(D) + 1
                 if n < 0 or m < 0 or m > n:
                     return None
                 if m > 0:
@@ -2280,7 +2285,7 @@ class DMonomial_Parent (Parent):
                 n = m - 1
                 c -= (p.derivative(D) + b*p)
         return q
-    
+
     def _rde_polynomial_cancellation(self,
                                         b: DMonomial_Element,
                                         c: DMonomial_Element,
@@ -2292,19 +2297,19 @@ class DMonomial_Parent (Parent):
         if self.is_primitive(D):
             ## in this case we know that `b` is in self.base()
             z = self.base().log_derivative(self.base()(b))
-            if z != None:
+            if z is not None:
                 p = self._rde_polynomial(self.zero(), z*c, n, D)
-                if p != None:
+                if p is not None:
                     return p/z
                 return None
             if c == 0:
                 return self.zero()
             if n < c.degree():
                 return None
-            
+
             while c != 0:
                 m = c.degree()
-                if n < m: 
+                if n < m:
                     return None
                 s = self.base().risch_de(self.base()(b), c.lc(), D)
                 if s is None:
@@ -2318,12 +2323,12 @@ class DMonomial_Parent (Parent):
                 z, N, m = log_der_param
                 if N == 1 and m in ZZ:
                     p = self.risch_de(self.zero(), c*z*t**m, D)
-                    if p != None and self.is_reduced_element(p, D):
+                    if p is not None and self.is_reduced_element(p, D):
                         try:
                             q = self(p/z*t**m)
                             if q.degree() <= n:
                                 return q
-                        except:
+                        except Exception:
                             pass
                     else:
                         return None
@@ -2347,9 +2352,9 @@ class DMonomial_Parent (Parent):
     ### CHAPTER 7: Parametric Problems
     def limited_integrate(self, f, *w, D: int = 0) -> tuple[DMonomial_Element, tuple[DMonomial_Element]]:
         raise NotImplementedError(f"Method of limited integration not yet implemented")
-    
-    ### CHAPTER 8: The Coupled Differential System    
-    def coupled_de_system_generic(self, 
+
+    ### CHAPTER 8: The Coupled Differential System
+    def coupled_de_system_generic(self,
                                   a: DFractionFieldElement, # must be constant
                                   b1: DFractionFieldElement, b2: DFractionFieldElement, # coefficients of the system
                                   c1: DFractionFieldElement, c2: DFractionFieldElement, # inhomogeneous part
@@ -2357,7 +2362,8 @@ class DMonomial_Parent (Parent):
                                   n: int = uoo # bound for degree of solutions
     ) -> tuple[DMonomial_Element, DMonomial_Element]:
         raise NotImplementedError(f"Generic coupled DE System not yet implemented.")
-    
+
+
 #####################################
 ### FUNCTOR CLASS
 #####################################
@@ -2368,7 +2374,7 @@ class DMonomialFunctor (ConstructionFunctor):
         It receives the name of the new added variable and the images of the variable
         in a string/element format.
     '''
-    def __init__(self, varname: str, images: tuple[str|Element]):
+    def __init__(self, varname: str, images: tuple[str | Element]):
         super().__init__(_DRings,_DRings)
         self.rank = 10 # just below DPolyRingFunctor
 
@@ -2377,14 +2383,15 @@ class DMonomialFunctor (ConstructionFunctor):
 
     def _apply_functor(self, x):
         return DMonomial(x, self.__images, self.__varname)
-    
+
     def _repr_(self) -> str:
         return f"DMonomial(*, {self.__images}, {self.__varname})"
-    
+
     def __eq__(self, other) -> bool:
         if not isinstance(other, DMonomialFunctor):
             return False
         return self.__varname == other.__varname and self.__images == other.__images
+
 
 #####################################
 ### MORPHISM CLASSES
@@ -2399,12 +2406,14 @@ class DMM_ParentToBase (Morphism):
             raise ValueError(f"{element} is not a constant element")
         return element[0]
 
+
 class DMM_BaseToParent (Morphism):
     def __init__(self, parent):
         super().__init__(parent.base(), parent)
 
     def _call_(self, element: Element) -> DMonomial_Element:
         return self.codomain().element_class(self.codomain(), [element])
+
 
 class DMM_ParentToAlgebraic (Morphism):
     def __init__(self, domain: DMonomial_Parent):
@@ -2413,9 +2422,10 @@ class DMM_ParentToAlgebraic (Morphism):
     def _call_(self, element: DMonomial_Element) -> Element:
         v = self.codomain()(self.domain().varname())
         return sum(
-            (self.codomain().base()(c.to_sage())*v**m.degree() for (m,c) in element.mons_cons_iter()), 
+            (self.codomain().base()(c.to_sage())*v**m.degree() for (m,c) in element.mons_cons_iter()),
             start=self.codomain().zero()
         )
+
 
 class DMM_AlgebraicToParent (Morphism):
     def __init__(self, codomain: DMonomial_Parent):
@@ -2426,7 +2436,7 @@ class DMM_AlgebraicToParent (Morphism):
             element = element.polynomial(self.codomain()(self.domain().varname()))
         elif not isinstance(self.domain(), PolynomialRing_generic):
             raise TypeError(f"Weird algebraic ring for a d-Monomial extension")
-        
+
         return self.codomain().element_class(
             self.codomain(),
             [
@@ -2435,10 +2445,11 @@ class DMM_AlgebraicToParent (Morphism):
             ]
         )
 
+
 class DMM_BetweenBases (Morphism):
-    def __init__(self, 
-                             domain: DMonomial_Parent, 
-                             codomain: DMonomial_Parent, 
+    def __init__(self,
+                             domain: DMonomial_Parent,
+                             codomain: DMonomial_Parent,
                              map_bases: Morphism):
         if not (map_bases.domain() == domain.base() and map_bases.codomain() == codomain.base()):
             raise TypeError(f"Incompatible map given for coercion between bases")
@@ -2453,23 +2464,25 @@ class DMM_BetweenBases (Morphism):
             ]
         )
 
+
 class DMM_BetweenTowersReorder (Morphism):
     def __init__(self,
                          domain: DMonomial_Parent,
                          codomain: DMonomial_Parent):
         if set(str(v) for v in domain.tower_gens()) != set(str(v) for v in codomain.tower_gens()):
             raise ValueError(f"The two tower of monomials do not have the same variables")
-        
+
         super().__init__(domain, codomain)
 
         ## We check if the operations are the same
         for v in domain.tower_gens():
             if any(self(v).operation(i) != self(v.operation(i)) for i in range(domain.noperators())):
                 raise ValueError(f"The operation of variable {v} do not match")
-    
+
     def _call_(self, element: DMonomial_Element) -> DMonomial_Element:
         return self.codomain()(self.codomain().to_sage()(str(element)))
-    
+
+
 ### ORDER MORPHISMS
 class DMM_OrderFunction (Morphism):
     def __init__(self, parent: DMonomial_Parent, element: DMonomial_Element):
@@ -2493,7 +2506,7 @@ class DMM_OrderFunction (Morphism):
                 output = oo # order of zero is infinity
             else:
                 q, r = element.quo_rem(self.__a)
-                order = 0                
+                order = 0
 
                 while r == 0:
                     order += 1
@@ -2501,7 +2514,8 @@ class DMM_OrderFunction (Morphism):
 
                 output = ZZ(order)
         return self.codomain()((ZZ(output) if output is not oo else ZZ(0), UnsignedInfinityRing(output)))
-    
+
+
 class DMM_ValueFunction (Morphism):
     def __init__(self, parent: DMonomial_Parent, element: DMonomial_Element):
         if element is oo:
@@ -2528,7 +2542,8 @@ class DMM_ValueFunction (Morphism):
             b = element.numerator()
             d,_ = element.denominator().gcd_half_extended_euclidean(self.__a)
             return self.codomain()((b*d).algebraic())
-    
+
+
 class DMM_ResidueFunction (Morphism):
     def __init__(self, parent: DMonomial_Parent, element: DMonomial_Element, operation: int = 0):
         if parent.operator_types()[operation] != "derivation":
@@ -2545,5 +2560,6 @@ class DMM_ResidueFunction (Morphism):
 
     def _call_(self, element: DFractionFieldElement) -> Element:
         return self.__value_function(element * self.__a / self.__a.operation(self.__operation))
+
 
 __all__ = ["DMonomial", "DMM_ValueFunction"]

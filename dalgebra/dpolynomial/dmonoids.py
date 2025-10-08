@@ -658,7 +658,7 @@ class DMonomialMonoid(Parent):
         return not (self == other)
     def __hash__(self) -> int:
         return hash((self.__noperators, self.variable_names()))
-    
+
     def _element_constructor_(self, input: Element) -> DMonomial:
         if input in self.gens():
             i = self.gens().index(input)

@@ -10,6 +10,7 @@ from sage.misc.cachefunc import cached_method
 from sage.rings.quotient_ring import QuotientRing_generic
 from sage.rings.quotient_ring_element import QuotientRingElement
 
+
 class QuotientRingElement_extended(QuotientRingElement):
     r"""
         A class to extend the behavior of the QuotientRingElement class.
@@ -28,11 +29,12 @@ class QuotientRingElement_extended(QuotientRingElement):
 
         c = self.content().gcd(other.content()) # this is the content of the elements
 
-        return c*g 
+        return c*g
 
     def content(self) -> Element:
         from sage.arith.misc import GCD
         return GCD(self.lift().coefficients())
+
 
 class QuotientRing_extended(QuotientRing_generic):
     r"""
@@ -49,5 +51,5 @@ class QuotientRing_extended(QuotientRing_generic):
     def is_finite(self):
         r"""
             Return whether the quotient ring is finite. In this case it is always false, since the ambient ring is infinite.
-        """ 
+        """
         return False

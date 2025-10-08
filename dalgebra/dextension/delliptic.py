@@ -191,6 +191,7 @@ class DEllipticFactory(UniqueFactory):
 
 DElliptic = DEllipticFactory("dalgebra.dextension.delliptic.DElliptic")
 
+
 #########################################################################
 ### ELEMENT AND PARENT CLASSES FOR ELLIPTIC EXTENSIONS
 #########################################################################
@@ -271,8 +272,8 @@ class DElliptic_Element(Element):
             Compute the result of multiplying this element by its denominator.
 
             The _numerator_ of an element that is in the field `C(\eta)(\eta')` where `\eta'`
-            is algebraic over `C(\eta)` can be view as the element `n` in `C[\eta](\eta')` 
-            such that ``self*D = n``, where `D` is the denominator of ``self`` (see method 
+            is algebraic over `C(\eta)` can be view as the element `n` in `C[\eta](\eta')`
+            such that ``self*D = n``, where `D` is the denominator of ``self`` (see method
             :func:`denominator`.)
 
             OUTPUT:
@@ -646,7 +647,7 @@ class DElliptic_Field(Parent):
 
     def add_constants(self, *new_constants: str) -> DElliptic_Field:
         return self.change_base(self.base().add_constants(*new_constants))
-    
+
     def constant_ring(self) -> Parent:
         r'''
             Overridden method from :func:`~DRings.ParentMethods.constant_ring`.
@@ -677,6 +678,7 @@ class DElliptic_Field(Parent):
 
 
 DEllipticFactory.__doc__ += DElliptic_Field.__doc__
+
 
 #########################################################################
 ### CONSTRUCTIONS FUNCTOR FOR ELLIPTIC EXTENSIONS
