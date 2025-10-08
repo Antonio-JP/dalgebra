@@ -23,3 +23,4 @@ AUTHORS:
 from .dmonoids import *
 from .dpolynomial import *
 from .dsystems import *
+from .pseudo_doperator import *

@@ -129,6 +129,8 @@ r'''
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
+import logging
+
 from sage.categories.algebras import Algebras
 from sage.categories.category import Category
 from sage.categories.fields import Fields
@@ -148,6 +150,7 @@ from ..dring import AdditiveMap, DRings
 
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
+logger = logging.getLogger(__name__)
 
 
 #########################################################################
@@ -270,7 +273,7 @@ class DElliptic_Element(Element):
 
             The _numerator_ of an element that is in the field `C(\eta)(\eta')` where `\eta'`
             is algebraic over `C(\eta)` can be view as the element `n` in `C[\eta](\eta')`
-            such that ``self*D = n``, where `D` is the denimonator of ``self`` (see method
+            such that ``self*D = n``, where `D` is the denominator of ``self`` (see method
             :func:`denominator`.)
 
             OUTPUT:
@@ -645,6 +648,15 @@ class DElliptic_Field(Parent):
     def add_constants(self, *new_constants: str) -> DElliptic_Field:
         return self.change_base(self.base().add_constants(*new_constants))
 
+    def constant_ring(self) -> Parent:
+        r'''
+            Overridden method from :func:`~DRings.ParentMethods.constant_ring`.
+
+            This method returns the constant ring of the base ring. It is the same as the base ring.
+        '''
+        logger.warning(f"Method constant_ring() not properly implemented for D-Extensions.")
+        return self.base().constant_ring()
+
     def linear_operator_ring(self) -> DElliptic_Field:
         r'''
             Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
@@ -663,6 +675,9 @@ class DElliptic_Field(Parent):
 
     def to_sage(self):
         return self.__algebraic
+
+
+DEllipticFactory.__doc__ += DElliptic_Field.__doc__
 
 
 #########################################################################

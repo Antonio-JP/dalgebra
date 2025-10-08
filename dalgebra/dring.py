@@ -149,15 +149,20 @@ from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.categories.quotient_fields import QuotientFields
 from sage.categories.rings import Rings
 from sage.matrix.constructor import matrix
+from sage.matrix.matrix0 import Matrix
 from sage.misc.abstract_method import abstract_method
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
 from sage.rings.fraction_field import FractionField_generic
 from sage.rings.fraction_field_element import FractionFieldElement
+from sage.rings.infinity import UnsignedInfinityRing
 from sage.rings.integer_ring import ZZ
+from sage.rings.rational_field import QQ
 from sage.rings.morphism import RingHomomorphism_im_gens
+from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.polynomial_ring import PolynomialRing_generic
 from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_base
+from sage.rings.quotient_ring import QuotientRing_generic
 from sage.rings.ring import Ring, CommutativeRing
 from sage.rings.derivation import RingDerivationModule
 from sage.structure.element import parent, Element
@@ -172,6 +177,7 @@ _Rings = Rings.__classcall__(Rings)
 _CommutativeRings = CommutativeRings.__classcall__(CommutativeRings)
 _CommutativeAdditiveGroups = CommutativeAdditiveGroups.__classcall__(CommutativeAdditiveGroups)
 _QuotientFields = QuotientFields.__classcall__(QuotientFields)
+uoo = UnsignedInfinityRing.an_element()
 
 
 ####################################################################################################
@@ -295,7 +301,35 @@ class DRings(Category):
             return result
 
         def inverse_operation(self, element: Element, operator: int = None) -> Element:
+            r'''
+                Method to compute an in-field inverse operation over an element once.
+
+                This method computes (if possible) the inverse of an operation over an element.
+                This means that if ``output`` is the result of ``self.inverse_operation(element, operator)``,
+                then ``output.operation(operator) == element`` AND ``output`` is an element in ``self``.
+
+                When this method returns an IntegrationError, it means that the inverse operation is not
+                possible to compute. Any other error means there was a problem on the actual implementation,
+                hinting for a bug or lack of implementation.
+
+                *NOTE*: the method allows both elements of ``self`` and elements in ``self.fraction_field()``.
+            '''
             raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
+
+        def symbolic_inverse_operation(self, element: Element, operator: int = None) -> Element:
+            if self.noperators() == 0:
+                raise TypeError("Operators not defined for this ring.")
+            elif operator is None and self.noperators() == 1:
+                operator = 0
+            elif operator is None:
+                raise IndexError("An index for the operator must be provided when having several operators")
+
+            if self.operator_types()[operator] == "homomorphism":
+                return self.symbolic_sym(self, element, operator)
+            elif self.operator_types()[operator] == "derivation":
+                return self.symbolic_integral(self, element, operator)
+            else:
+                raise ValueError(f"Invalid type of operator.")
 
         @abstract_method
         def operator_types(self) -> tuple[str]:
@@ -368,7 +402,12 @@ class DRings(Category):
                 raise IndexError("An index for the derivation must be provided when having several derivations")
             return self.derivations()[derivation](element)
 
+        #######################################################################################
+        ### GENERIC METHODS FOR DIFFERENTIAL FIELDS INSPIRED FROM BRONSTEIN'S BOOK
         def integral(self, element: Element, derivation: int = None) -> Element:
+            r'''
+                Computes the in-field integration
+            '''
             if self.nderivations() == 0:
                 raise TypeError("Derivations not defined for this ring.")
             elif derivation is None and self.nderivations() == 1:
@@ -376,6 +415,150 @@ class DRings(Category):
             elif derivation is None:
                 raise IndexError("An index for the derivation must be provided when having several derivations")
             return self.inverse_operation(element, self.operators().index(self.derivations()[derivation]))
+
+        def symbolic_integral(self, element: Element, derivation: int = None) -> Element:
+            r'''
+                Compute an symbolic antiderivative of ``element``
+
+                This method contrast with :func:`integral` in the sense that :func:`integral` compute
+                the integral *in-field* meaning that it either computes and antiderivative on ``self``
+                for ``element`` or it raises an :class:`IntegrationError`.
+
+                This method, on the other hand, can change the ring where it is working in order to find an antiderivative.
+                Of course, we could simply add an element and define its derivative as ``element``. However,
+                this new differential ring is not something we control (in the sense of the type of elements
+                that belong there or the ring of constants).
+
+                Each type of D-ring must implement their way of extending the ring preserving this type of
+                properties. If not possible, they must raise a :class:`IntegrationError`. If the method will
+                be implemented (or has not been considered), the method will raise a :class:`NotImplementedError`.
+            '''
+            raise NotImplementedError(f"Symbolic Integration method not implemented.")
+
+        ### CHAPTER 3: Deciding method for differential properties
+        def log_derivative(self, element: Element, derivation: int = 0) -> Element:
+            r'''
+                Method that checks whether ``element`` is a logarithmic derivative of an element of ``self``.
+
+                The logarithmic derivative of an element `u` is the quotient `u'/u`. This method checks if
+                the input ``element`` is the logarithmic derivative of an element of ``self`` and, if possible,
+                computes the corresponding element `u`.
+
+                It is important to remark that the element `u` is not uniquely defined. In fact, if `u` is the
+                has ``self`` as logarithmic derivative, then `v = \alpha u` for any constant `\alpha` has the
+                same logarithmic derivative.
+
+                This method can return `True`, `False` if it can check whether the element is a logarithmic
+                derivative but it can not compute the element `u`. Otherwise it return the element `u`.
+            '''
+            raise NotImplementedError(f"Logarithmic derivative method not yet implemented.")
+
+        def log_derivative_rad(self, element: Element, derivation: int = 0) -> Element:
+            r'''
+                Method that checks whether ``element`` is a logarithmic derivative of a radical element of ``self``.
+
+                We say that ``element`` is the logarithmic derivative of a radical of ``self`` if there is
+                an integer `n \in \mathbb{Z}\setminus\{0\}` and an element `u` in ``self`` such that
+                ``n*element == u'/u``.
+
+                This method can return `True`, `False` if it can check whether the element is a logarithmic
+                derivative but it can not compute the element `u`. Otherwise it return the element `u`.
+            '''
+            raise NotImplementedError(f"Logarithmic derivative method not yet implemented.")
+
+        ### CHAPTER 6: Risch Differential Equation
+        def risch_de(self, f: DFractionFieldElement, g: DFractionFieldElement, D:int = 0) -> DFractionFieldElement:
+            r'''
+                Solves Risch Differential Equation.
+
+                Given two elements `f,g` in ``self.fraction_field()``, this method computes (when possible) an
+                element `v` in ``self.fraction_field()`` such that
+
+                .. MATH::
+
+                    D(v) + fv = g.
+
+                When this solution does not exist, this method returns ``None``.
+            '''
+            raise NotImplementedError(f"Method for Risch DE not implemented.")
+
+        ### CHAPTER 7: parametric problems
+        def risch_de_param(self, f: DFractionField, *g: DFractionFieldElement, D:int = 0) -> tuple[tuple[DFractionFieldElement], Matrix]:
+            r'''
+                Method to solve the Parametric Risch Differential Equation
+
+                Given an element `f` in the field of ``self`` and a list of elements `g_i` in the same field with `i=1,\ldots,n`,
+                this method computes a tuple of functions `(h_1,\ldots,h_r)` in the same field and a matrix of constants
+                with `n+r` columns such that:
+
+                An element `y` is the solution to the parametric Risch Differential Equation
+
+                .. MATH::
+
+                    D(y) + f * y = \sum_{i=1}^n c_i g_i
+
+                **if and only if** `y = \sum_{j=1}^r d_j` and `A \cdot (c_1,\ldots,c_n,d_1,\ldots,d_j)^T = 0`
+            '''
+            raise NotImplementedError(f"The Parametric Risch D.E. is not implemented")
+
+        def limited_integrate(self, f: DFractionFieldElement , *w: DFractionFieldElement, D: int = 0) -> tuple[DRings.ElementMethods, tuple[DRings.ElementMethods]]:
+            r'''
+                Method to solve the Limited Integration Problem (see Bronstein's page 241)
+
+                Given `f,w_1,\ldots,w_n \in \mathbb{K}`, this method decides whether there are constants `c_1,\ldots,c_n` such that
+                we can split `f` into a linear combination of `w_1,\ldots,w_n` and a total derivative for an element `v \in \mathbb{K}`.
+
+                This method return the element `v` and the constants `c_1,\ldots,c_n` if they exist or ``None`` if there is no such solution.
+            '''
+            raise NotImplementedError(f"Method of limited integration not yet implemented")
+
+        def log_derivative_rad_param(self, f: DFractionFieldElement, l: DFractionFieldElement, D: int = 0) -> tuple[DFractionFieldElement, int, int]:
+            r'''
+                Method to solve the Parametric logarithmic derivative of a radical problem.
+
+                Given an element `f` in the field of ``self`` and a hyperexponential element over that field `l`, this method computes
+                an element `v` in the same field and two integers `n,m` such that
+
+                .. MATH::
+
+                    n f = \frac{D(v)}{v} + m\frac{D(l)}{l}.
+
+                If no such solution exist this method returns ``None``.
+            '''
+            raise NotImplementedError(f"Method for parametric logarithmic derivative problem not implemented")
+
+        ### CHAPTER 8: The Coupled Differential System
+        def coupled_de_system(self, f1, f2, g1, g2, D: int = 0) -> tuple[DRings.ElementMethods, DRings.ElementMethods]:
+            r'''
+                Find a polynomial solution (c,d) in ``self.fraction_field()`` to the coupled differential system
+
+                .. MATH::
+
+                    \left\{\begin{array}{rl}c' + f_1 c - f_2 d &{}= g_1\\d' + f_2 c + f_1 d &{}= g_2\end{array}\right.`
+
+                If not possible to find such a solution, this method returns ``None``.
+            '''
+            return self.coupled_de_system_generic(self, -1, f1, f2, g1, g2, D)
+
+        def coupled_de_system_generic(self,
+                                    a: DFractionFieldElement, # must be constant
+                                    b1: DFractionFieldElement, b2: DFractionFieldElement, # coefficients of the system
+                                    c1: DFractionFieldElement, c2: DFractionFieldElement, # inhomogeneous part
+                                    D: int = 0, # derivative we are integrating
+                                    n: int = uoo # bound for degree of solutions
+        ) -> tuple[DRings.ElementMethods, DRings.ElementMethods]:
+            r'''
+                Method that solves the following coupled differential system:
+
+                .. MATH::
+
+                    \begin{pmatrix}q_1'\\q_2'\end{pmatrix} + \begin{pmatrix}b_1 & ab_2\\b_2 & b_1\end{pmatrix} \begin{pmatrix}q_1\\q_2\end{pmatrix} = \begin{pmatrix}c_1\\c_2\end{pmatrix}
+
+                with polynomial solutions in ``self`` with degree bounded by the argument `n`.
+
+                If no such solution exists, then this method returns ``None``.
+            '''
+            raise NotImplementedError(f"Generic coupled DE System not yet implemented.")
 
         ### 'difference'
         @cached_method
@@ -426,11 +609,54 @@ class DRings(Category):
                 raise IndexError("An index for the difference must be provided when having several differences")
             return self.differences()[difference](element)
 
+        def shifts(self) -> Sequence[Morphism]:
+            r'''
+                Alias for :func:`~DRings.ParentMethods.differences`.
+            '''
+            return self.differences()
+
+        def nshifts(self) -> Sequence[Morphism]:
+            r'''
+                Alias for :func:`~DRings.ParentMethods.ndifferences`.
+            '''
+            return self.ndifferences()
+
         def shift(self, element: Element, shift: int = None) -> Element:
             r'''
                 Alias for :func:`~DRings.ParentMethods.difference`.
             '''
             return self.difference(element, shift)
+
+        def sum(self, element: Element, shift: int = None) -> Element:
+            r'''
+                Computes the in-field sum
+            '''
+            if self.nshifts() == 0:
+                raise TypeError("Differences not defined for this ring.")
+            elif shift is None and self.nshifts() == 1:
+                shift = 0
+            elif shift is None:
+                raise IndexError("An index for the shift must be provided when having several shifts")
+            return self.inverse_operation(element, self.operators().index(self.shifts()[shift]))
+
+        def symbolic_sym(self, element: Element, shift: int = None) -> Element:
+            r'''
+                Compute an symbolic sum of ``element``
+
+                This method contrast with :func:`integral` in the sense that :func:`integral` compute
+                the integral *in-field* meaning that it either computes and sum on ``self``
+                for ``element`` or it raises an :class:`IntegrationError`.
+
+                This method, on the other hand, can change the ring where it is working in order to find an sum.
+                Of course, we could simply add an element and define its sum as ``element``. However,
+                this new differential ring is not something we control (in the sense of the type of elements
+                that belong there or the ring of constants).
+
+                Each type of D-ring must implement their way of extending the ring preserving this type of
+                properties. If not possible, they must raise a :class:`IntegrationError`. If the method will
+                be implemented (or has not been considered), the method will raise a :class:`NotImplementedError`.
+            '''
+            raise NotImplementedError
 
         ### 'skews'
         @cached_method
@@ -964,8 +1190,14 @@ class DRingFactory(UniqueFactory):
                     return hom_set([base(func(gen)) for gen in base.gens()], base_map=base_map)
                 new_operator = hom_from_callable(base, operator)
             elif ttype == "derivation":
-                der_module = base.derivation_module()
-                to_sum = tuple((base(operator(base_gen)), der_gen) for (base_gen, der_gen) in zip(base.gens(),der_module.gens()))
+                ## We distinguish two cases:a quotient ring or a normal ring
+                if isinstance(base, QuotientRing_generic): # derivation module not implemented, we do a lifting
+                    ambient = base.ambient()
+                    der_module = ambient.derivation_module()
+                    to_sum = tuple((ambient(operator(base_gen)), der_gen) for (base_gen, der_gen) in zip(ambient.gens(),der_module.gens()))
+                else:
+                    der_module = base.derivation_module()
+                    to_sum = tuple((base(operator(base_gen)), der_gen) for (base_gen, der_gen) in zip(base.gens(),der_module.gens()))
                 new_operator = DerivationMap(
                     base,
                     sum((im_gen*der_gen for (im_gen, der_gen) in to_sum if im_gen != 0), der_module.zero())
@@ -1092,14 +1324,16 @@ class DRing_WrapperElement(Element):
         if x is None:
             return False
 
+        try:
+            return (self - x).is_zero()
+        except TypeError:
+            pass
+
         if isinstance(x, DRing_WrapperElement):
             return self.wrapped == x.wrapped
         else:
             return self.wrapped == x
-        # r = pushout(self.parent(), parent(x))
-        # if isinstance(r, DRing_Wrapper):
-        #     return self.wrapped == r(x).wrapped
-        # return r(self) == r(x)
+
     def __ne__(self, x) -> bool: return not (self == x)
 
     ## Other methods from rings and element
@@ -1139,7 +1373,20 @@ class DRing_WrapperElement(Element):
         try:
             other = self.parent()(other) # trying to cast other to be in ``self.parent()``
             g = self.wrapped.gcd(other.wrapped) # computing gcd in the wrapped level
-            return self.parent().element_class(self.parent(), g)
+            ## Exception when the base ring is a polynomial ring
+            WR = self.parent().wrapped
+            if isinstance(WR, PolynomialRing_generic) or isinstance(WR, MPolynomialRing_base):
+                from sage.arith.misc import GCD
+                ## We check if the ring contains the element "I"
+                if len(PolynomialRing(WR, "aux__")("aux__^2 + 1").factor()) == 2:
+                    ## The content is compute considering real and imaginary parts
+                    content = WR(GCD([c for el in self.wrapped.coefficients() + other.wrapped.coefficients() for c in (el.real(), el.imag())]))
+                else:
+                    ## Otherwise we compute the content by taking gcd of coefficients
+                    content = WR(GCD(self.wrapped.coefficients() + other.wrapped.coefficients()))
+            else:
+                content = WR.one()
+            return self.parent().element_class(self.parent(), g * content)
         except AttributeError:
             raise AttributeError(f"[DRing] Wrapped element {self.wrapped} do no have method `gcd`")
 
@@ -1324,7 +1571,7 @@ class DRing_Wrapper(Parent):
         ### CREATING CACHED VARIABLES
         self.__linear_operator_ring = None
         self.__fraction_field : DFractionField = None
-        self.__constant = None
+        self.__constant = [None] * len(self.__operators)
 
     @property
     def wrapped(self) -> CommutativeRing: return self.__wrapped
@@ -1332,17 +1579,6 @@ class DRing_Wrapper(Parent):
     def operators(self) -> tuple[WrappedMap]: return self.__operators
 
     def operator_types(self) -> tuple[str]: return self.__types
-
-    def constant_ring(self, operation: int = 0) -> Parent:
-        operation_type = self.operator_types()[operation]
-        if operation_type == "homomorphism":
-            if self.operators()[operation].function == self.wrapped.Hom(self.wrapped).one():
-                return self.wrapped
-        elif operation_type in ("skew", "derivation"):
-            if self.operators()[operation].function.function == 0:
-                return self.wrapped
-
-        raise NotImplementedError(f"Constant ring do not implemented for {self} (operation {operation})")
 
     def add_constants(self, *new_constants: str) -> DRing_Wrapper:
         from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -1383,13 +1619,25 @@ class DRing_Wrapper(Parent):
         return DRing(new_base, *operations, types=self.operator_types())
 
     def constant_ring(self, operation: int = 0) -> Parent:
-        if self.__constant is None:
-            super().constant_ring(operation)
-        else:
-            return self.__constant
+        if self.__constant[operation] is None:
+            operation_type = self.operator_types()[operation]
+            if operation_type == "homomorphism":
+                if self.operators()[operation].function == self.wrapped.Hom(self.wrapped).one():
+                    self.__constant[operation] = self
+                else:
+                    raise NotImplementedError(f"Unable to decide constant for homomorphism (operation {operation})")
+            elif operation_type in ("skew", "derivation"):
+                if self.operators()[operation].function.function == 0:
+                    self.__constant[operation] = self
+                else:
+                    raise NotImplementedError(f"Unable to decide constant for derivation (operation {operation})")
+            else:
+                raise NotImplementedError(f"Constant ring do not implemented for {self} (operation {operation})")
+
+        return self.__constant[operation]
 
     def set_constant(self, ring: Parent, operation: int = 0):
-        self.__constant = ring
+        self.__constant[operation] = ring
 
     def _lcm_denominators(self, *_: DRing_WrapperElement) -> DRing_WrapperElement:
         return self.one()
@@ -1477,28 +1725,100 @@ class DRing_Wrapper(Parent):
         ## No need to create the conversion morphism because they already exist
         return self.wrapped
 
-    def is_field(self) -> bool: return self.wrapped.is_field()
+    def is_integral_domain(self, proof: bool = False) -> bool: return self.wrapped.is_integral_domain(proof=proof)
 
+    def is_field(self, proof: bool = False) -> bool: return self.wrapped.is_field(proof=proof)
+
+    #######################################################################################
+    ### GENERIC METHODS FOR DIFFERENTIAL FIELDS INSPIRED FROM BRONSTEIN'S BOOK
     def inverse_operation(self, element: DRing_WrapperElement, operator: int = None) -> DRing_WrapperElement:
         if self.operator_types()[operator] == "homomorphism":
             try:
                 return self.element_class(self, self.operators()[operator].function.inverse()(element.wrapped))
             except Exception as e:
                 raise NotImplementedError(f"[inverse_operation] Inverses not implemented in general. Moreover: {e}")
+        elif self.operator_types()[operator] == "derivation":
+            if self.operators()[operator].function.function == 0: # all are constants
+                if element == 0:
+                    return element
+                raise IntegrationError(f"Non-constant element in constant ring can not be integrated")
 
         raise NotImplementedError("[inverse_operation] Inverses not implemented in general.")
+
+    ### CHAPTER 6: Risch Differential Equation
+    def risch_de(self, f: DFractionFieldElement, g: DFractionFieldElement, D:int = 0) -> DFractionFieldElement:
+        ## Solving the Risch Differential Equation for all constant elements
+        if self.operator_types()[D] == "derivation":
+            if self.operators()[D].function.function == 0: # all are constants
+                ## Looking for y such that D(y) + fy = g
+                ## If all elements are constants, this equation goes to fy = g, i.e., y=g/f
+                return g/f
+            raise NotImplementedError(f"Risch Differential Equation solved only for constants.")
+        raise TypeError(f"Risch Differential Equation only defined for the differential case.")
+
+    ### CHAPTER 7: Parametric Problems
+    def risch_de_param(self, f: DFractionField, *g: DFractionFieldElement, D:int = 0) -> tuple[tuple[DFractionFieldElement], Matrix]:## Solving the Limited Integration Problem for all constant elements
+        if self.operator_types()[D] == "derivation":
+            if self.operators()[D].function.function == 0: # all are constants
+                ### When all elements are constants the differential equation gets reduced to a normal linear equation
+                ### f*y = \sum_i c_i g_i       where (y, c_1,...c_n) are all constants. Equivalently
+                ### f*y + \sum_i c_i g_i = 0   where (y, c_1,...c_n) are all constants.
+                ### Let phi: K^{n+1} --> K defined by phi(c_1,...,c_n,y) = \sum_i c_i g_i + f*y. This is a linear map and its
+                ### kernel is a subspace spanned by vectors `v_1,\ldots, v_m`. Hence building the matrix A whose rows are `v_j`
+                ### then we have that solutions are vectors C=(c_1,...,c_n,y) such that A*C = 0.
+                ### Then the output of this method is (1,), A
+                A = matrix([[*[el.to_sage() for el in g], f.to_sage()]]).right_kernel_matrix()
+                return (self.one(), A)
+            raise NotImplementedError(f"Limited Integration Problem solved only for constants.")
+        raise TypeError(f"Limited Integration Problem only defined for the differential case.")
+
+    def limited_integrate(self, f: DFractionFieldElement , *w: DFractionFieldElement, D: int = 0) -> tuple[DRings.ElementMethods, tuple[DRings.ElementMethods]]:
+        ## Solving the Limited Integration Problem for all constant elements
+        if self.operator_types()[D] == "derivation":
+            if self.operators()[D].function.function == 0: # all are constants
+                ## Looking for v, c_1,...,c_n with f = D(v) + c_1w_1 + ... + c_nw_n
+                ## If all are constants, any `v` will work and there are plenty of solutions
+                ## We take (0, (1,0,..,0)) as a default solution
+                return self.zero(), (self.one(), *[self.zero() for _ in range(len(w)-1)])
+            return None
+        raise TypeError(f"Limited Integration Problem only defined for the differential case.")
+
+    def log_derivative_rad_param(self, f: DFractionFieldElement, l: DFractionFieldElement, D: int = 0) -> tuple[DFractionFieldElement, int, int]:
+        Dl_l = self(l.derivative(D)/l)
+        if f == 0: # 1*0 = D(1)/1 + 0*D(l)/l
+            return (self.one(), self.one(), self.zero())
+        elif (Dl_l / f) in QQ:
+            r = QQ(Dl_l / f)
+            return (self.one(), self(r.numerator()), self(r.denominator()))
+
+        raise NotImplementedError(f"Method for parametric logarithmic derivative problem not implemented")
+
+    ### CHAPTER 8: The Coupled Differential System
+    def coupled_de_system_generic(self,
+                                a: DFractionFieldElement, # must be constant
+                                b1: DFractionFieldElement, b2: DFractionFieldElement, # coefficients of the system
+                                c1: DFractionFieldElement, c2: DFractionFieldElement, # inhomogeneous part
+                                D: int = 0, # derivative we are integrating
+                                n: int = uoo # bound for degree of solutions
+    ) -> tuple[DRings.ElementMethods, DRings.ElementMethods]:
+        ## Solving the Coupled D.E. System for all constant elements
+        if self.operator_types()[D] == "derivation":
+            if self.operators()[D].function.function == 0: # all are constants
+                Ab = matrix([[b1.to_sage(), (a*b2).to_sage(), c1.to_sage()], [b2.to_sage(), b1.to_sage(), c2.to_sage()]])
+                A = A[:,:-1] # matrix of the system
+                b = A[:,-1].column(0) # vector of the system
+                if Ab.rank() != A.rank():
+                    return None
+                solution = A.solve_right(b)
+                return tuple(self.fraction_field()(v) for v in solution)
+            raise NotImplementedError(f"Coupled D.E. System solved only for constants.")
+        raise TypeError(f"Coupled D.E. System only defined for the differential case.")
 
     ## Coercion methods
     def _coerce_map_from_(self, S):
         if isinstance(S, DRing_Wrapper):
             return self._coerce_map_from_(S.wrapped) ## TODO: WARNING: THIS DOES NOT CHECK FOR CORRECTNESS IN OPERATIONS
         return self.wrapped == S or self.wrapped._coerce_map_from_(S) is not None
-
-    # def __call__(self, x, *args, **kwds):
-    #     result = self.wrapped(x, *args, **kwds)
-    #     if result in self.wrapped:
-    #         return self._element_constructor_(result)
-    #     return result
 
     def _element_constructor_(self, x) -> DRing_WrapperElement:
         r'''
@@ -1561,6 +1881,7 @@ class DRing_Wrapper(Parent):
         if self.__fraction_field is None:
             self.__fraction_field = DFractionField(self)
         return self.__fraction_field
+
     def characteristic(self) -> int:
         return self.wrapped.characteristic()
 
@@ -1646,12 +1967,28 @@ def is_WrappedDRing(parent: Parent) -> bool:
 ###
 ####################################################################################################
 class DFractionFieldElement(FractionFieldElement):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent, numerator, denominator=1,
+                 coerce: bool = True, reduce: bool = True):
+        super().__init__(parent, numerator, denominator, coerce=coerce, reduce=reduce)
 
     def derivative(self, derivation: int = None, times: int = 1):
         r'''Overridden method to force the use of the DRings structure'''
         return DRings.ElementMethods.derivative(self, derivation, times)
+
+    def reduce(self):
+        super().reduce()
+
+        n = self.numerator()
+        d = self.denominator()
+        try:
+            from sage.arith.misc import GCD
+            g = GCD(n,d)
+            n //= g
+            d //= g
+        except (AttributeError, TypeError, NotImplementedError):
+            pass
+
+        self.__init__(self.parent(), n, d, coerce=False, reduce=False)
 
     def reduce_algebraic(self, polynomials):
         num = self.numerator().reduce_algebraic(polynomials)
@@ -1708,14 +2045,31 @@ class DFractionField(FractionField_generic):
         self.__operators = []
         for operator, ttype in zip(R.operators(), R.operator_types()):
             if ttype == "homomorphism":
-                func = AdditiveMap(self, lambda p : operator(p.numerator()) / operator(p.denominator()))
+                func = DFractionField_Homomorphism(self, operator)
             elif ttype == "derivation":
-                func = AdditiveMap(self, lambda p : (operator(p.numerator())*p.denominator() - p.numerator()*operator(p.denominator())) / (p.denominator()**2))
+                func = DFractionField_Derivation(self, operator)
             elif ttype == "skew":
                 twist = operator.twist # this is necessary to know
                 func = AdditiveMap(self, lambda p : (operator(p.numerator())*p.denominator() - p.numerator()*operator(p.denominator())) / (p.denominator() * twist(p.denominator())))
             self.__operators.append(func)
 
+    @staticmethod
+    def flatten_fraction_field(field) -> tuple[Parent, bool]:
+        if isinstance(field, FractionField_generic): # self is Fr(R)
+            if isinstance(field.base(), (PolynomialRing_generic, MPolynomialRing_base)): # R is a polynomial ring
+                recursion, frac_over_poly = DFractionField.flatten_fraction_field(field.base().base())
+                if not frac_over_poly: # the result can not be flatten
+                    return field, True
+                else:
+                    base = recursion.base().base() # this is a field
+                    return PolynomialRing(base, recursion.gens() + field.gens()).fraction_field(), True
+
+        ## This field is not a fraction field over a polynomial ring
+        return field, False
+
+    #################################################################################################
+    ### Methods from DRings.ParentMethods
+    #################################################################################################
     def operators(self) -> Sequence[AdditiveMap]:
         return self.__operators
 
@@ -1738,8 +2092,23 @@ class DFractionField(FractionField_generic):
     def inverse_operation(self, element, operator: int = 0):
         return self.base().inverse_operation(element, operator)
 
+    @cached_method
     def to_sage(self):
-        return self.base().to_sage().fraction_field()
+        output = self.base().to_sage().fraction_field()
+        output, _ = DFractionField.flatten_fraction_field(output)
+        return output
+
+    ################################################################################################
+    ### Methods from FractionField_generic
+    ################################################################################################
+    def gen(self, i: int = 0) -> DFractionFieldElement:
+        r'''
+            Overridden method to return the i-th generator of the field of fractions to ensure coercion.
+        '''
+        x = self._R.gen(i)
+        one = self._R.one()
+        r = self._element_class(self, x, one)
+        return r
 
 
 ####################################################################################################
@@ -1866,7 +2235,7 @@ class DRingFunctor(ConstructionFunctor):
         return None # Following definition of merge in ConstructionFunctor
 
     @property
-    def operators(self) -> Sequence[Morphism]:  return self.__operators
+    def operators(self) -> Sequence[Morphism]: return self.__operators
     @property
     def types(self): return self.__types
 
@@ -1916,14 +2285,28 @@ class AdditiveMap(SetMorphism):
 
 class SkewMap(AdditiveMap):
     def __init__(self, domain : Parent, twist : Morphism, function : Callable):
-        # we check the input
-        if twist not in domain.Hom(domain):
-            raise TypeError("The twist for a skew derivation must be an homomorphism.")
-        tw_der_module = domain.derivation_module(twist=twist)
-        if function not in tw_der_module:
-            raise TypeError("The function for a skew derivation must be in the corresponding module")
-        self.twist = twist
-        super().__init__(domain, function)
+        if isinstance(domain, QuotientRing_generic): # this do not have derivation modules
+            if twist != domain.Hom(domain).one():
+                raise TypeError("The twist for a skew derivation must be the identity homomorphism in a quotient ring.")
+
+            I = domain.defining_ideal()
+            der_module = domain.ambient().derivation_module()
+            if function not in der_module:
+                raise TypeError("The function for a skew derivation must be in the corresponding module")
+            elif any(function(p) not in I for p in I.basis):
+                raise TypeError("The function for a skew derivation must be in the ideal generated by the basis of the ideal.")
+
+            new_function = lambda p : domain(function(p.lift()))
+        else:
+            # we check the input
+            if twist not in domain.Hom(domain):
+                raise TypeError("The twist for a skew derivation must be an homomorphism.")
+            tw_der_module = domain.derivation_module(twist=twist)
+            if function not in tw_der_module:
+                raise TypeError("The function for a skew derivation must be in the corresponding module")
+            self.twist = twist
+            new_function = function
+        super().__init__(domain, new_function)
 
     def __str__(self) -> str:
         return f"Skew Derivation [{repr(self)}] over (({self.domain()}))"
@@ -1967,6 +2350,54 @@ class WrappedMap(AdditiveMap):
         elif isinstance(self.function, IdentityMorphism):
             return r"\text{id}"
         return super()._latex_()
+
+
+### SPECIAL MORPHISM FOR DFractionField
+class DFractionField_Derivation(AdditiveMap):
+    def __init__(self, domain: DFractionField, operator: AdditiveMap):
+        if not isinstance(domain, DFractionField):
+            raise TypeError("A DFractionFieldMap can only be created for a 'DFractionField'")
+
+        if operator.domain() != domain.base():  # we check the domain of the operator
+            raise ValueError(f"The map to be wrapped must have appropriate domain: ({domain.base()}) instead of ({operator.domain()})")
+
+        def __extended_method(element):
+            num, den = element.numerator(), element.denominator()
+            assert all(el.parent() is domain.base() for el in (num, den)), "The elements must be in the base ring"
+            dnum, dden = operator(num), operator(den)
+            return (dnum*den - num*dden) / den**2
+
+        super().__init__(domain, __extended_method)
+        self.__operator = operator
+
+    def __str__(self) -> str:
+        return f"Der. Extension to DFractionField for {self.__operator}"
+
+
+class DFractionField_Homomorphism(AdditiveMap):
+    def __init__(self, domain: DFractionField, operator: AdditiveMap):
+        if not isinstance(domain, DFractionField):
+            raise TypeError("A DFractionFieldMap can only be created for a 'DFractionField'")
+
+        if operator.domain() != domain.base():  # we check the domain of the operator
+            raise ValueError(f"The map to be wrapped must have appropriate domain: ({domain.base()}) instead of ({operator.domain()})")
+
+        def __extended_method(element):
+            num, den = element.numerator(), element.denominator()
+            assert all(el.parent() is domain.base() for el in (num, den)), "The elements must be in the base ring"
+            dnum, dden = operator(num), operator(den)
+            return dnum / dden
+
+        super().__init__(domain, __extended_method)
+        self.__operator = operator
+
+    def __str__(self) -> str:
+        return f"Hom. Extension to DFractionField for {self.__operator}"
+
+
+### SPECIAL ERRORS FOR THIS MODULE
+class IntegrationError(Exception):
+    pass
 
 
 __all__ = [

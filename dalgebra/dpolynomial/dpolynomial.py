@@ -59,7 +59,8 @@ from sage.misc.latex import latex
 from sage.misc.misc_c import prod
 from sage.modules.free_module_element import vector
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
-from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing, InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
+from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing, InfinitePolynomialGen, InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
+from sage.rings.infinity import Infinity as oo
 from sage.rings.integer_ring import ZZ
 from sage.rings.ring import Ring
 from sage.sets.family import LazyFamily
@@ -172,8 +173,6 @@ class DPolynomial(Element):
 
         super().__init__(parent)
 
-    ## TODO: Add element "monomial_coefficients"
-
     ###################################################################################
     ### Property methods
     ###################################################################################
@@ -190,7 +189,7 @@ class DPolynomial(Element):
         return self.is_monomial() and next(iter(self._content)).is_variable()
 
     def is_unit(self) -> bool: #: Checker for an element to be a unit (i.e., has degree 0)
-        return self.degree() == 0
+        return (not self.is_zero()) and self.degree() == 0
 
     def is_linear(self, variables: Collection[DMonomialGen | DPolynomial] = None):
         r'''
@@ -215,6 +214,13 @@ class DPolynomial(Element):
     def divides(self, other: DPolynomial) -> bool:
         pself, pother = self.parent().as_polynomials(self, other)
         return pself.divides(pother)
+
+    def content(self) -> Element:
+        from sage.arith.misc import GCD
+        return self.parent().base()(GCD(self.coefficients()))
+
+    def gcd(self, other: DPolynomial) -> DPolynomial:
+        return self.content()*self.parent()(self.to_sage().gcd(other.to_sage()))
 
     ###################################################################################
     ### Getter methods
@@ -606,6 +612,9 @@ class DPolynomial(Element):
         return self.lorders(operation)[gen._index]
 
     def degree(self, x=None) -> int:
+        if self.is_zero(): # Special case when the polynomial is zero
+            return -oo
+
         if x is None: # general degree is computed
             return max(m.degree() for m in self._content)
 
@@ -644,6 +653,12 @@ class DPolynomial(Element):
     def as_linear_operator(self) -> Element:
         return self.parent().as_linear_operator(self)
 
+    ####################################################################################
+    ### Algebra_With_Basis methods
+    ####################################################################################
+    def monomial_coefficients(self, copy: bool = True) -> dict[DMonomial, Element]:
+        return dict(zip(self.monomials(), self.coefficients())) if copy else self._content
+
     ###################################################################################
     ### Arithmetic operations
     ###################################################################################
@@ -660,13 +675,32 @@ class DPolynomial(Element):
             m = ms*mo
             output[m] = output.get(m, self.parent().base().zero()) + self._content[ms]*other._content[mo]
         return self.parent().element_class(self.parent(), output)
+    def __invert__(self) -> DPolynomial:
+        if self in self.parent().base():
+            return self.parent()(~self.coefficients()[0])
+        else:
+            try:
+                return super().__invert__()
+            except ValueError: #We go to the fraction field
+                return self.parent().fraction_field()(1, self)
+
     def __truediv__(self, other: Element) -> DPolynomial:
         if other in self.parent().base():
             other = self.parent().base()(other)
             return self.parent().element_class(self.parent(), {m : c/other for (m,c) in self._content.items()})
-        return super().__truediv__(other)
-    def _floordiv_(self, _: DPolynomial) -> DPolynomial:
-        return NotImplemented
+        else:
+            try:
+                return super().__truediv__(other)
+            except (ValueError, TypeError):
+                return self.parent().fraction_field()(self, other)
+
+    def _floordiv_(self, other: DPolynomial) -> DPolynomial:
+        as_ipoly = self.to_sage() // other.to_sage()
+        return self.parent()(as_ipoly)
+
+    def _mod_(self, other: DPolynomial) -> DPolynomial:
+        return self - (self // other) * other
+
     @cached_method
     def __pow__(self, power: int) -> DPolynomial:
         if power == 0:
@@ -674,19 +708,26 @@ class DPolynomial(Element):
         elif power == 1:
             return self
         elif power < 0:
-            raise NotImplementedError("Negative powers not allowed")
+            return (~self)**(-power)
+        elif power not in ZZ:
+            return self.parent()(self.to_sage()**power) # using implementation in InfinitePolynomialRing_dense
         else:
             a,A = (self**(power//2 + power % 2), self**(power//2))
             return a*A
 
     def __eq__(self, other) -> bool:
+        if other is None:
+            return False
         if isinstance(other, DMonomial):
             return self == self.parent()(other)
         elif isinstance(other, DPolynomial):
             # Trying a faster comparison
             if set(self.monomials()) == set(other.monomials()) and all(self.coefficient(m) == other.coefficient(m) for m in self.monomials()):
                 return True
-        return super().__eq__(other)
+
+        return (self - other).is_zero()
+        # return super().__eq__(other)
+
     def __ne__(self, other) -> bool:
         return not self == other
 
@@ -727,7 +768,7 @@ class DPolynomial(Element):
         output = list()
         for (mon, coeff) in zip(self.monomials(), self.coefficients()):
             for (mon2, condition) in coeff.conditions_to_zero():
-                output.append((self.parent()(mon)*mon2, condition))
+                output.append((self.parent()(mon)*self.parent().base().to_sage()(mon2), condition))
 
         return output
 
@@ -1272,7 +1313,10 @@ class DPolynomialGen(DMonomialGen):
         self._poly_parent = parent
 
     def __getitem__(self, i: int | tuple[int]) -> DPolynomial:
-        return self._poly_parent(super().__getitem__(i))
+        return self._poly_parent.element_class(self._poly_parent, {super().__getitem__(i): self._poly_parent.base().one()})
+
+    def is_zero(self) -> bool:
+        return False  # Generators are never zero
 
     ## Special arithmetic for these generators
     def __add__(self, x):
@@ -1615,6 +1659,15 @@ class DPolynomialRing_Monoid(Parent):
         return self.monoids().ngens()
 
     ################################################################################
+    ### RINGS METHODS (from Rings.ParentMethods)
+    ################################################################################
+    def is_field(self) -> bool:
+        return False
+
+    def is_integral_domain(self, proof: bool = True) -> bool:
+        return self.base().is_integral_domain(proof=proof)
+
+    ################################################################################
     ### MONOIDS.ALGEBRAS METHODS (from Monoids.Algebras.ParentMethods)
     ################################################################################
     def basis(self) -> LazyFamily:
@@ -1652,7 +1705,9 @@ class DPolynomialRing_Monoid(Parent):
             Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse`
             and then transforms the output into the corresponding type for ``self``.
         '''
-        if x in self.monoids():
+        if x in self.gens():
+            return x[0]
+        elif x in self.monoids():
             return self.element_class(self, {self.monoids()(x): self.base().one()})
         elif x in self.base():
             return self.element_class(self, {self.monoids().one(): x}) # casting elements in self.base()
@@ -1843,23 +1898,23 @@ class DPolynomialRing_Monoid(Parent):
         output = DPolynomialRing(R, *self.variable_names())
         if self.base().has_coerce_map_from(R):
             try:
-                output.register_coercion(DPolynomial_Base2BaseMorphism(output, self, R.coerce_map_from(self.base())))
+                self.register_coercion(DPolynomial_Base2BaseMorphism(output, self, self.base().coerce_map_from(R)))
             except AssertionError:
                 pass
         elif R.has_coerce_map_from(self.base()):
             try:
-                self.register_coercion(DPolynomial_Base2BaseMorphism(self, output, self.base().coerce_map_from(R)))
+                output.register_coercion(DPolynomial_Base2BaseMorphism(self, output, R.coerce_map_from(self.base())))
             except AssertionError:
                 pass
 
         if self.base().convert_map_from(R):
             try:
-                output.register_conversion(DPolynomial_Base2BaseMorphism(output, self, R.convert_map_from(self.base())))
+                self.register_conversion(DPolynomial_Base2BaseMorphism(output, self, self.base().convert_map_from(R)))
             except AssertionError:
                 pass
         if R.convert_map_from(self.base()):
             try:
-                self.register_conversion(DPolynomial_Base2BaseMorphism(self, output, self.base().convert_map_from(R)))
+                output.register_conversion(DPolynomial_Base2BaseMorphism(self, output, R.convert_map_from(self.base())))
             except AssertionError:
                 pass
 
@@ -2120,7 +2175,7 @@ class DPolynomialRing_Monoid(Parent):
         return AdditiveMap(self, func)
 
     def add_constants(self, *new_constants: str) -> DPolynomialRing_Monoid:
-        return DPolynomialRing(self.base().add_constants(*new_constants), *self.variable_names())
+        return self.change_ring(self.base().add_constants(*new_constants))
 
     def constant_ring(self):
         return self.base().constant_ring()
@@ -2298,8 +2353,8 @@ class DPolynomialRing_Monoid(Parent):
         map_of_variables = dict(zip(self.gens(), result.gens()))
         inverse_map_of_variables = list(zip(result.gens(), self.gens()))
         ## Creating the conversion between ``self`` and the plain sage equivalent
-        self.register_conversion(MapSageToDalgebra_Infinite(result, self, inverse_map_of_variables))
-        result.register_conversion(MapDalgebraToSage_Infinite(self, result, map_of_variables))
+        self.register_coercion(InfiniteToDPoly_Coercion(result, self, inverse_map_of_variables))
+        result.register_coercion(DPolyToInfinite_Coercion(self, result, map_of_variables))
 
         return result
 
@@ -2415,16 +2470,15 @@ class DPolynomialRing_Monoid(Parent):
         '''
         ## Checking the argument `i`
         if i not in ZZ:
-            raise TypeError(f"[sylvester_subresultant] The argument {i = } must be an integer")
+            raise TypeError(f"[sylvester_subresultant] The argument {i=} must be an integer")
         elif i < 0 or i > k:
-            raise ValueError(f"[sylvester_subresultant] The index {i = } is out of proper bounds [0,...,{k}]")
+            raise ValueError(f"[sylvester_subresultant] The index {i=} is out of proper bounds [0,...,{k}]")
 
-        S_k = self.sylvester_matrix(P,Q,gen,k)
-        S_ki = S_k.matrix_from_columns([i]+list(range(k+1,S_k.ncols())))
+        S_ki = self.sylvester_matrix(P,Q,gen,k,i)
         return S_ki.determinant()
 
     @cached_method
-    def sylvester_matrix(self, P: DPolynomial, Q: DPolynomial, gen: DMonomialGen = None, k: int = 0) -> Matrix:
+    def sylvester_matrix(self, P: DPolynomial, Q: DPolynomial, gen: DMonomialGen = None, k: int = 0, i: int | None = None) -> Matrix:
         r'''
             Method to obtain the `k`-Sylvester matrix for two operator polynomials.
 
@@ -2513,6 +2567,14 @@ class DPolynomialRing_Monoid(Parent):
         ## Checking the polynomials and ring arguments
         P,Q,gen = self.__process_sylvester_arguments(P,Q,gen)
 
+        ## Special case with the i-th argument
+        if i is not None:
+            if i < 0 or i > k:
+                raise ValueError(f"[sylvester_matrix] The index {i=} is out of proper bounds [0,...,{k}]")
+            Sk = self.sylvester_matrix(P,Q,gen,k)
+            Ski = Sk.matrix_from_columns([i]+list(range(k+1,Sk.ncols())))
+            return Ski
+
         ## Checking the k argument
         n, m = P.order(gen), Q.order(gen)
         N = min(n,m) - 1
@@ -2524,11 +2586,11 @@ class DPolynomialRing_Monoid(Parent):
             return matrix([[Q]]) # Q does not contain the variable `u` to eliminate
 
         if k not in ZZ:
-            raise TypeError(f"[sylvester_matrix] The index {k = } is not an integer.")
+            raise TypeError(f"[sylvester_matrix] The index {k=} is not an integer.")
         elif N == -1 and k != 0:
-            raise TypeError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0].")
+            raise TypeError(f"[sylvester_matrix] The index {k=} is out of proper bounds [0].")
         elif N >= 0 and (k < 0 or k > N):
-            raise ValueError(f"[sylvester_matrix] The index {k = } is out of proper bounds [0,...,{N}]")
+            raise ValueError(f"[sylvester_matrix] The index {k=} is out of proper bounds [0,...,{N}]")
 
         homogeneous = any(poly.constant_coefficient(gen) != 0 for poly in (P,Q))
 
@@ -2536,7 +2598,7 @@ class DPolynomialRing_Monoid(Parent):
             raise NotImplementedError(f"[sylvester_matrix] The case of inhomogeneous operators and positive {k=} is not implemented.")
 
         extra = 1 if homogeneous else 0
-        logger.info(f"Sylvester data: {n=}, {m=}, {k=}, {homogeneous=}")
+        logger.debug(f"Sylvester data: {n=}, {m=}, {k=}, {homogeneous=}")
 
         # Building the extension
         extended_P: list[DPolynomial] = [P.operation(times=i) for i in range(m-k+extra)]
@@ -2554,7 +2616,7 @@ class DPolynomialRing_Monoid(Parent):
         output = matrix([output[r*ncols:r*ncols + ncols] for r in range(nrows)])
 
         # Returning the matrix
-        logger.info(f"Obtained following matrix:\n{output}")
+        logger.debug(f"Obtained following matrix:\n{output}")
         return output
 
     def sylvester_subresultant_sequence(self, P: DPolynomial, Q: DPolynomial, gen: DMonomialGen = None) -> tuple[DPolynomial]:
@@ -2930,54 +2992,97 @@ class DPolynomialSimpleMorphism (Morphism):
         return self.codomain()(str(p))
 
 
-class MapSageToDalgebra_Infinite(Morphism):
-    def __init__(self, domain, codomain, map_of_variables):
+InfinitePolynomialRing_type = InfinitePolynomialRing_sparse | InfinitePolynomialRing_dense
+
+
+class DPolyToInfinite_Coercion(Morphism):
+    def __init__(self, domain: DPolynomialRing_Monoid, codomain: InfinitePolynomialRing_type, map_of_variables: dict[DMonomialGen, InfinitePolynomialGen]):
+        if not isinstance(domain, DPolynomialRing_Monoid):
+            raise TypeError(f"Domain must be a DPolynomialRing_Monoid, not {type(domain)}")
+        elif not isinstance(codomain, InfinitePolynomialRing_type):
+            raise TypeError(f"Codomain must be an InfinitePolynomialRing, not {type(codomain)}")
+        elif any(not isinstance(v, DMonomialGen) for v in map_of_variables.keys()):
+            raise TypeError(f"Keys of map_of_variables must be DMonomialGen")
+        elif any(not isinstance(v, InfinitePolynomialGen) for v in map_of_variables.values()):
+            raise TypeError(f"Values of map_of_variables must be InfinitePolynomialGen")
+
+        ## We also check the variables covers everything
+        if len(map_of_variables) != domain.ngens():
+            raise ValueError(f"Map of variables must cover all generators of {domain}, not {len(map_of_variables)} out of {domain.ngens()}")
+
         super().__init__(domain, codomain)
         self.__map = map_of_variables
 
-    def _call_(self, element):
+    def _call_(self, element): ## TODO: Go on here
         output = self.codomain().zero()
-        for (c, m) in zip(element.coefficients(), element.monomials()):
-            nc = self.codomain().base()(c)
-            nm = self.codomain().one()
-            for v in m.variables():
-                vname, vindex = str(v).split("_")
-                vindex = int(vindex)
-                deg = m.degree(v)
-                for g in self.domain().gens():
-                    if vname == repr(g).removesuffix("_*"):
-                        for (g_old, g_new) in self.__map:
-                            if g_old == g:
-                                nm *= g_new[vindex]**deg
-                                break
-                        else:
-                            return NotImplementedError(f"We could not find new generator for gen {g}")
-                        break
-                else:
-                    return NotImplementedError(f"We could not find generator for variable {v}")
-            output += nc*nm
+        for (m,c) in element.monomial_coefficients().items():
+            mon = self._monom_(m)
+            coeff = self.codomain().base()(c) # this must work
+            output += coeff * mon
+
         return output
 
+    @cached_method
+    def _monom_(self, monomial: DMonomial) -> Element:
+        r'''Method to convert a DMonomial to an InfinitePolynomial'''
+        result = self.codomain().one()
+        for ((i,o),e) in monomial._variables.items():
+            # i in the index of the generator
+            # o is the list of orders for the generator
+            # e is the exponent of the generator
+            g = self.domain().gen(i)
+            index = g.index(g[o], as_tuple=False)
+            result *= self.__map[g][index]**e
+        return result
 
-class MapDalgebraToSage_Infinite(Morphism):
-    def __init__(self, domain, codomain, map_of_variables):
+
+class InfiniteToDPoly_Coercion(Morphism):
+    def __init__(self, domain: InfinitePolynomialRing_type, codomain: DPolynomialRing_Monoid, map_of_variables: tuple[tuple[InfinitePolynomialGen, DMonomialGen]]):
+        if not isinstance(domain, InfinitePolynomialRing_type):
+            raise TypeError(f"Domain must be an InfinitePolynomialRing, not {type(domain)}")
+        elif not isinstance(codomain, DPolynomialRing_Monoid):
+            raise TypeError(f"Codomain must be a DPolynomialRing_Monoid, not {type(codomain)}")
+        elif any(not isinstance(v[0], InfinitePolynomialGen) for v in map_of_variables):
+            raise TypeError(f"Keys of map_of_variables must be InfinitePolynomialGen")
+        elif any(not isinstance(v[1], DMonomialGen) for v in map_of_variables):
+            raise TypeError(f"Values of map_of_variables must be DMonomialGen")
+        elif len(map_of_variables) != domain.ngens():
+            raise ValueError(f"Map of variables must cover all generators of {domain}, not {len(map_of_variables)} out of {domain.ngens()}")
+        elif len(set(v[0]._name for v in map_of_variables)) != len(map_of_variables):
+            raise ValueError(f"Map of variables must have unique names, not {len(set(v[0]._name for v in map_of_variables))} out of {len(map_of_variables)}")
+
         super().__init__(domain, codomain)
-        self.__map = map_of_variables
+        self.__map = {v[0]._name : v[1] for v in map_of_variables}
 
     def _call_(self, element):
         output = self.codomain().zero()
-        for (c, m) in zip(element.coefficients(), element.monomials()):
-            nc = self.codomain().base()(c)
-            nm = self.codomain().one()
-            for v in m.variables():
-                deg = m.degree(v)
-                for g in self.domain().gens():
-                    if v in g:
-                        nm *= self.__map[g][g.index(v, False)]**deg
-                        break
-                else:
-                    return NotImplementedError(f"We could not find generator for variable {v}")
-            output += nc*nm
+        for m,c in element.monomial_coefficients().items():
+            # m is the list of exponents for some variables
+            # c is the coefficient of the monomial
+            monom = self._monom_(m, element.polynomial().parent())
+            coeff = self.codomain().base()(c) # this must work
+            output += coeff * monom
+        return output
+
+    def _monom_(self, monomial: tuple[int], ring=None) -> DPolynomial:
+        r'''Method to convert a tuple of integers to a DPolynomial'''
+        gens = self.domain().polynomial_ring().gens() if ring is None else ring.gens()
+        if len(monomial) != len(gens):
+            raise ValueError(f"Monomial {monomial} does not match the number of generators {len(gens)} in {self.domain()}")
+
+        ## For each generator we find the DPolynomial analog
+        ngens = []
+        str_gens = [g._name for g in self.domain().gens()]
+        ngens = []
+        for el in gens:
+            g,i = str(el).split("_") # must be of this shape
+            ngens.append((str_gens.index(g),int(i)))
+        gens = ngens
+
+        output = self.codomain().one()
+        for ((v,o),e) in zip(gens,monomial):
+            output *= self.__map[self.domain().gen(v)._name][o]**e
+
         return output
 
 
@@ -3672,7 +3777,7 @@ class RankingFunction:
             Method to check whether a d-polynomial `p` is *partially reduced* w.r.t. `A`.
 
             Let `A` be a d-polynomial and let `u_A` be its leader w.r.t. ``self``. We say that `p` is
-            partially reduced w.r.t. `A` if no derivated element from `u_A` appear in `p`. For example,
+            partially reduced w.r.t. `A` if no differentiated element from `u_A` appear in `p`. For example,
             if `u_3\'\'` is the leader of `A`, then `u_3\'` may appear in `p`, but `u_3\'\'\'` cannot.
 
             For further information about this property, we refer to "Differential Algebra and Algebraic

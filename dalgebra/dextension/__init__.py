@@ -20,5 +20,5 @@ AUTHORS:
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
-from .dextension import *
 from .delliptic import *
+from .dmonomial import *

@@ -284,7 +284,7 @@ def generic_normal(n: int,
     '''
     ## Checking the input
     if (n not in ZZ) or ZZ(n) <= 0:
-        raise ValueError(f"[almost] The value {n = } must be a positive integer")
+        raise ValueError(f"[almost] The value {n=} must be a positive integer")
     if name_var == name_partial:
         raise ValueError(f"[almost] The names for the differential variables must be different. Given {name_var} and {name_partial}")
     if output_ring is not None and not isinstance(output_ring, DPolynomialRing_Monoid):
@@ -368,9 +368,9 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "direct", s
     name_z: str = "z"
 
     if (n not in ZZ) or ZZ(n) <= 0:
-        raise ValueError(f"[almost] The value {n = } must be a positive integer")
+        raise ValueError(f"[almost] The value {n=} must be a positive integer")
     if (m not in ZZ) or ZZ(m) < 0:
-        raise ValueError(f"[almost] The value {m = } must be a non-negative integer")
+        raise ValueError(f"[almost] The value {m=} must be a non-negative integer")
     if name_u == name_z:
         raise ValueError(f"[almost] The names for the differential variables must be different. Given {name_u} and {name_z}")
 
