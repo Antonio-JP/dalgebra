@@ -65,7 +65,12 @@ def create_base(family: str, **kwds):
             g_3 = QQ(kwds.get("g_3", "g_3"))
         except TypeError:
             g_3 = kwds.get("g_3", "g_3")
+        
+        lc = QQ(kwds.get("lc", 4))
+
         constants = [el for el in (g_2, g_3) if isinstance(el, str)]
+        if lc != 1:
+            family = f"{family}_lc[{lc}]"
         if not isinstance(g_2, str):
             family = f"{family}_{g_2}"
         if not isinstance(g_3, str):
@@ -76,7 +81,7 @@ def create_base(family: str, **kwds):
             BD = DifferentialRing(B, [0,0]).fraction_field()
         else:
             BD = DifferentialRing(QQ)
-        E = DElliptic(BD, f"eta_p^2 - eta^3 - {g_2}*eta - {g_3}", names=("eta",))
+        E = DElliptic(BD, f"eta_p^2 - {lc}*eta^3 - {g_2}*eta - {g_3}", names=("eta",))
         eta = E.gens()[0]
         return E, (eta,), family
     raise ValueError(f"Unknown family {family}")
