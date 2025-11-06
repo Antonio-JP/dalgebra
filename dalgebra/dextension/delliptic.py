@@ -354,7 +354,7 @@ class DElliptic_Element(Element):
             ## Here ``coeff`` is a rational function in ``self.base().to_sage()(eta)``.
             num = coeff.numerator() # polynomial in eta
             for (mon2, c) in zip(reversed(num.monomials()),num.coefficients()):
-                conditions.append((self.parent()(mon)*self.parent()(mon2), c))
+                conditions.append((self.parent()(mon)*self.parent()(str(mon2)), c))
 
         return tuple(conditions)
 
