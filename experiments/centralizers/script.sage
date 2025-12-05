@@ -81,7 +81,7 @@ def create_base(family: str, **kwds):
             BD = DifferentialRing(B, [0,0]).fraction_field()
         else:
             BD = DifferentialRing(QQ)
-        E = DElliptic(BD, f"eta_p^2 - {lc}*eta^3 - {g_2}*eta - {g_3}", names=("eta",))
+        E = DElliptic(BD, f"eta_p^2 - {lc}*eta^3 + {g_2}*eta + {g_3}", names=("eta",))
         eta = E.gens()[0]
         return E, (eta,), family
     raise ValueError(f"Unknown family {family}")
