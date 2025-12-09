@@ -337,6 +337,7 @@ class PSeries_Element(Element):
                     self.__cache_computed[key] = num_val / denom_val / factorial(key)
             
         return self.__cache_computed[key]
+    
 
     ###################################################################################
     ### Arithmetic operations
@@ -899,6 +900,55 @@ class PSeries_Ring(Parent):
                 return self.element_class(self, coefficient_map=lambda k: (k+1)*element[k+1])
 
         return AdditiveMap(self, derivation_map)
+
+    @staticmethod
+    def evaluate_dpoly_at_zero(dpoly: DPolynomial, **kwds: PSeries_Element) -> Element:
+        r'''
+            Static method to evaluate a differential polynomial at given formal power series without computing the full substitution.
+
+            INPUT:
+
+            * ``dpoly``: a differential polynomial in the differential polynomial ring over the formal power series base ring.
+            * ``kwds``: dictionary with the variables to substitute and their corresponding formal power series.
+
+            OUTPUT:
+
+            An :class:`Element` resulting from the evaluation of ``dpoly`` at the given formal power series.
+        '''
+        from functools import reduce
+
+        DRing = dpoly.parent()
+
+        if not isinstance(DRing, DPolynomialRing_Monoid):
+            raise TypeError("The differential polynomial must be in a differential polynomial ring.")
+        variables = DRing.variable_names()
+        
+        ## We check the inputs in kwds
+        if any(v not in variables for v in kwds):
+            raise ValueError("Some variable in the differential polynomial is not in the given keywords.")
+        if any(v not in kwds for v in variables):
+            raise ValueError("Some variable in the differential polynomial is missing in the given keywords.")
+        
+        ## We compute the pushout of the parents for kwds
+        data = list(kwds.values())
+        output = data[0].parent()
+        output = reduce(lambda x,y: pushout(x,y), (d.parent() for d in data[1:]), output)
+
+        if not isinstance(output, PSeries_Ring):
+            raise TypeError("The resulting ring after pushout is not a formal power series ring.")
+        
+        newRing = DRing.change_ring(output)
+        dpoly = newRing(dpoly)
+
+        result = output.base().zero()
+        for mon,coeff in zip(dpoly.monomials(), dpoly.coefficients()):
+            term = output.base().one()
+            for var, exp in mon._variables:
+                i,o = var
+                term *= (kwds[variables[i]][o]/factorial(o))**exp ## TODO: Check this operation
+            result += term * coeff[0]
+        return result
+        
 
 class PseudoDOperatorFunctor(ConstructionFunctor):
     r'''
