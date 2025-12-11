@@ -30,7 +30,8 @@ r'''
 
 from enum import Enum
 
-from sage.categories.algebras import Algebras
+from sage.arith.misc import GCD
+from sage.categories.commutative_algebras import CommutativeAlgebras
 from sage.categories.category import Category
 from sage.categories.fields import Fields
 from sage.categories.morphism import Morphism
@@ -60,7 +61,7 @@ _Fields = Fields.__classcall__(Fields)
 ### FACTORY FOR PSEUDO DIFFERENTIAL OPERATORS
 ###
 #################################################################################
-GLOBAL_BOUND = 50
+GLOBAL_BOUND = 5
 
 
 def PSChangeBound(bound: int):
@@ -161,7 +162,7 @@ class PSeries_Element(Element):
     def __init__(self, parent: PSeries_Ring, *,
                  coefficient_map: Callable[[int],Element] | None = None,
                  coefficients: Collection[Element] | Mapping[int, Element] | None = None,
-                 differential_equation: DPolynomial | None = None, initial_conditions: Collection[Element] | Mapping[int, Element] | None = None
+                 differential_equation: DPolynomial | None = None, initial_conditions: Collection[Element] | Mapping[int, Element] | None = None, simplify: bool = False
     ):
         base = parent.base()
 
@@ -196,6 +197,12 @@ class PSeries_Element(Element):
         else: # dalgebraic
             self.__type = self.TYPES.dalgebraic
             differential_equation = parent.equ_ring()(differential_equation)
+            
+            ## We simplify the equation
+            if simplify and not differential_equation.is_term():
+                differential_equation //= differential_equation.common_term()
+            elif simplify:
+                differential_equation //= differential_equation.content()
 
             # small analysis for the initial conditions
             DEP = differential_equation.parent()
@@ -248,6 +255,14 @@ class PSeries_Element(Element):
     @CheckBound
     def is_one(self, *, bound: int | None = None) -> bool | int: #: Checker for the identity element
         return (self - self.parent().one()).is_zero(bound=bound)
+    
+    def is_unit(self) -> bool:
+        r'''
+            Checker for whether the element is a unit or not.
+
+            An element is a unit if its constant term is invertible in the base ring.
+        '''
+        return self[0] != 0
 
     @CheckBound
     def order(self, *, bound: int | None = None) -> int: # Gets degree of first non-zero element
@@ -283,6 +298,17 @@ class PSeries_Element(Element):
             Method to check whether the formal power series is finite or not.
         '''
         return self.__type == self.TYPES.polynomial
+    
+    @CheckBound
+    def is_monomial(self, *, bound: int | None = None) -> bool | int:
+        zero = self.is_zero(bound=bound+1) 
+        if zero == bound+1:
+            return bound
+        elif zero is True:
+            return False
+        
+        order = self.order(bound=bound) # this is a true value
+        return (self - self.parent().gen()**order).is_zero(bound=bound) is True
 
     def truncate(self, order: int) -> PSeries_Element:
         r'''
@@ -303,7 +329,6 @@ class PSeries_Element(Element):
             Gets the differential equation that defines the element. (Not always possible)
         '''
         if self.__type == self.TYPES.polynomial:
-            from sage.arith.misc import GCD
             c = self.polynomial()
             d = c.derivative()
             g = GCD(c,d)
@@ -314,7 +339,9 @@ class PSeries_Element(Element):
         raise TypeError("The element is not defined by a differential equation.")
 
     def __getitem__(self, key: int) -> Element:
-        if key not in self.__cache_computed:
+        if isinstance(key, slice):
+            return [self[i] for i in range(key.start or 0, key.stop or oo, key.step or 1)]
+        elif key not in self.__cache_computed:
             if self.__type == self.TYPES.default:
                 self.__cache_computed[key] = self.parent().base()(self.__map(key))
             elif self.__type == self.TYPES.polynomial:
@@ -323,22 +350,21 @@ class PSeries_Element(Element):
                 if key < len(self.__dalgebraic[1]):
                     self.__cache_computed[key] = self.__dalgebraic[1][key]
                 else:
-                    ## TODO: Fix this using the non-constant coefficients properly
                     equ = self.__dalgebraic[0]
                     u = equ.parent().gens()[0]
                     o = equ.order(u)
 
                     equ = equ.derivative(times=key-o) # now the equation is of order key
-                    denom = equ.coefficient_full(u[o])
-                    num = denom*u[o] - equ
+                    denom = equ.coefficient_full(u[key])
+                    num = denom*u[key] - equ
 
-                    num_val = num.polynomial()(**{str(u[i]): self[i]*factorial(i) for i in range((key))})
-                    denom_val = denom.polynomial()(**{str(u[i]): self[i]*factorial(i) for i in range((key))})
-                    self.__cache_computed[key] = num_val / denom_val / factorial(key)
+                    num_val = PSeries_Ring.evaluate_dpoly_at_zero(num, **{u.variable_name(): self})
+                    denom_val = PSeries_Ring.evaluate_dpoly_at_zero(denom, **{u.variable_name(): self})
+                    
+                    self.__cache_computed[key] = num_val / factorial(key) / denom_val
             
         return self.__cache_computed[key]
     
-
     ###################################################################################
     ### Arithmetic operations
     ###################################################################################
@@ -367,11 +393,23 @@ class PSeries_Element(Element):
 
             u = self_equ.parent().gens()[0]
 
-            # TODO: To be implemented
-            new_equ = self_equ.add_sol(other_equ, u)
-            new_initials = {k: self[k] + other[k] for k in range(new_equ.order(u)+1)}
+            if all(equ.is_linear((u,)) for equ in (self_equ, other_equ)):
+                R = self_equ.parent().append_variables("__aux1", "__aux2")
+                ue = R.gen(u.variable_name())
+                a1 = R.gen("__aux1")
+                a2 = R.gen("__aux2")
+                self_equ_ext = self_equ(**{ue.variable_name(): a1[0]})
+                other_equ_ext = other_equ(**{ue.variable_name(): a2[0]})
+                sum_equ_ext = ue[0] - (a1[0] + a2[0])
+                new_equ = sum_equ_ext.sylvester_resultant(self_equ_ext, a1).sylvester_resultant(other_equ_ext, a2)
 
-            return self.parent().element_class(self.parent(), differential_equation=new_equ, initial_conditions=new_initials)
+                final_equ = self_equ.parent()(new_equ)
+            else:
+                raise NotImplementedError("Addition of dalgebraic formal power series is only implemented for linear equations.")
+
+            new_initials = {k: self[k] + other[k] for k in range(final_equ.order(u))}
+
+            return self.parent().element_class(self.parent(), differential_equation=final_equ, initial_conditions=new_initials)
 
     def __neg__(self) -> PSeries_Element:
         if self.is_zero() is True:
@@ -383,7 +421,7 @@ class PSeries_Element(Element):
             equ = self.equation()
             u = equ.parent().gens()[0]
             new_equ = equ(**{u.variable_name(): -u[0]})
-            new_initials = {k: -self[k] for k in range(new_equ.order(u)+1)}
+            new_initials = {k: -self[k] for k in range(new_equ.order(u))}
             return self.parent().element_class(self.parent(), differential_equation=new_equ, initial_conditions=new_initials)
         else:
             neg_map = lambda k : -self[k]
@@ -417,12 +455,75 @@ class PSeries_Element(Element):
             other_equ = other.equation()
             u = self_equ.parent().gens()[0]
 
-            ## TODO: To be implemented
-            new_equ = self_equ.mul_sol(other_equ, u)
-            new_initials = {k: self[k] + other[k] for k in range(new_equ.order(u)+1)}
+            if all(equ.is_linear((u,)) for equ in (self_equ, other_equ)):
+                R = self_equ.parent().append_variables("__aux1", "__aux2")
+                ue = R.gen(u.variable_name())
+                a1 = R.gen("__aux1")
+                a2 = R.gen("__aux2")
+                self_equ_ext = self_equ(**{ue.variable_name(): a1[0]})
+                other_equ_ext = other_equ(**{ue.variable_name(): a2[0]})
+                sum_equ_ext = ue[0] - (a1[0] * a2[0])
+                new_equ = sum_equ_ext.sylvester_resultant(self_equ_ext, a1).sylvester_resultant(other_equ_ext, a2)
 
-            return self.parent().element_class(self.parent(), differential_equation=new_equ, initial_conditions=new_initials)
+                final_equ = self_equ.parent()(new_equ)
+            else:
+                raise NotImplementedError("Addition of dalgebraic formal power series is only implemented for linear equations.")
 
+            new_initials = {k: self[k] * other[k] for k in range(final_equ.order(u))}
+
+            return self.parent().element_class(self.parent(), differential_equation=final_equ, initial_conditions=new_initials)
+
+    def _div_(self, other: PSeries_Element) -> PSeries_Element:
+        if self.is_zero() is True:
+            return self.parent().zero()
+        elif self.__eq__(other) is True:
+            return self.parent().one()
+        elif other.is_unit():
+            return self * (~other)
+        elif other.is_zero() is not False:
+            raise ZeroDivisionError("Division by zero (possible) formal power series.")
+        
+        order_den = other.order() # this value is exact
+        order_num = self.order(bound=order_den)
+        if order_num < order_den:
+            raise ValueError(f"Division not possible as power series")
+        
+        if other.is_monomial() is True:
+            if self.__type == self.TYPES.polynomial:
+                coeffs = {k - order_den: self[k] / other[order_den] for k in range(order_den, order_num + 1)}
+                return self.parent().element_class(self.parent(), coefficients=coeffs)
+            elif self.__type == self.TYPES.dalgebraic:
+                self_equ = self.equation()
+                x = self.parent().gen()
+                u = self_equ.parent().gens()[0]
+                new_equ = self_equ(**{u.variable_name(): u[0]*(other[order_den]*x**order_den)})
+                new_initials = {k: self[k + order_den] / other[order_den] for k in range(new_equ.order(u))}
+                return self.parent().element_class(self.parent(), differential_equation=new_equ, initial_conditions=new_initials)
+            else: # default
+                div_map = lambda k: self[k + order_den] / other[order_den]
+                return self.parent().element_class(self.parent(), coefficient_map=div_map)
+        else: # division by non-monomial
+            x = self.parent().gen()
+            return (self / x**order_den) / (other / x**order_den) # here the denominator became a unit
+
+    def _floordiv_(self, other: PSeries_Element) -> PSeries_Element:
+        if self.is_zero() is True:
+            return self.parent().zero()
+        elif other.is_unit():
+            return self / other
+        elif other.is_zero() is not False:
+            raise ZeroDivisionError("Division by zero (possible) formal power series.")
+        
+        order_den = other.order() # must be known, since is_zero is False, we have a value here
+        self_tr = self.truncate(order_den - 1)
+
+        ## (self - self_tr) is divisible by other
+        return (self - self_tr) / other        
+    
+    def _mod_(self, other: PSeries_Element) -> PSeries_Element:
+        q = self // other
+        return self - q*other
+    
     @cached_method
     def __invert__(self) -> PSeries_Element:
         r'''
@@ -443,12 +544,16 @@ class PSeries_Element(Element):
         if self.__type == self.TYPES.default:
             return self.parent().element_class(self.parent(), coefficient_map=inverse_coeffs)
         else: # There is an equation
+            if (self - self[0]).is_zero() is True:
+                # it is a constant series -- we get a polynomial
+                return self.parent().element_class(self.parent(), coefficients={0: 1/self[0]})
+                
             self_equ = self.equation()
             u = self_equ.parent().gens()[0]
 
             new_equ = self_equ(**{u.variable_name(): ~u[0]}).numerator()
-            new_initials = {k: inverse_coeffs(k) for k in range(new_equ.order(u)+1)}
-            return self.parent().element_class(self.parent(), differential_equation=new_equ, initial_conditions=new_initials)
+            new_initials = {k: inverse_coeffs(k) for k in range(new_equ.order(u))}
+            return self.parent().element_class(self.parent(), differential_equation=new_equ, initial_conditions=new_initials, simplify=True)
 
     @cached_method
     def __pow__(self, power: int | Rational) -> PSeries_Element:
@@ -510,6 +615,29 @@ class PSeries_Element(Element):
         elif equals is False:
             return True
         return equals
+
+    def __hash__(self) -> int:
+        return hash(self.__repr__(bound=100))
+
+    @CheckBound
+    def gcd(self, other: PSeries_Element, *, bound: int | None = None) -> PSeries_Element:
+        r'''
+            Computes the greatest common divisor of two formal power series.
+
+            In a formal power series, the GCD is always a power of the generator since all power series with non-zero constant term are units. Hence, we can compute this GCD when we can compute the order exactly. If not, we assume the GCD is 1.
+        '''
+        if all(el.is_zero(bound=bound) is True for el in (self, other)):
+            return self.parent().zero()
+        elif self.is_zero(bound=bound) is True:
+            return other
+        elif other.is_zero(bound=bound) is True:
+            return self
+        
+        order_self = self.order(bound=bound+1)
+        order_other = other.order(bound=bound+1)
+        x = self.parent().gen()
+
+        return x**min(order_self, order_other)
 
     ###################################################################################
     @CheckBound
@@ -661,7 +789,7 @@ class PSeries_Ring(Parent):
     '''
     Element = PSeries_Element
 
-    def _set_categories(self, base : Parent, category=None) -> list[Category]: return [_DRings, Algebras(base)] + ([category] if category is not None else [])
+    def _set_categories(self, base : Parent, category=None) -> list[Category]: return [_DRings, CommutativeAlgebras(base)] + ([category] if category is not None else [])
 
     def __init__(self, base : Parent, name : str, category=None):
         if base not in _DRings:
@@ -681,7 +809,6 @@ class PSeries_Ring(Parent):
         self.__gen = self.element_class(self, coefficients={1: self.base().one()})
         self.__poly_ring = PolynomialRing(base.to_sage(), name)
         self.__d_poly_ring = DifferentialRing(self.__poly_ring)
-        # self.__equ_ring = DPolynomialRing(self.d_poly_ring().fraction_field(), "u")
         self.__equ_ring = DPolynomialRing(self, "u")
 
         ## Setting up basic conversions
@@ -728,7 +855,7 @@ class PSeries_Ring(Parent):
         r'''
             Return the identity element of the ring of pseudo-differential operators.
         '''
-        return self.element_class(self, coefficients=[0,self.base().one()])
+        return self.element_class(self, coefficients=[self.base().one()])
 
     def zero(self) -> PSeries_Element:
         r'''
@@ -736,14 +863,14 @@ class PSeries_Ring(Parent):
         '''
         return self.element_class(self, coefficients=[])
 
-    def is_field(self) -> bool:
+    def is_field(self, proof: bool = True) -> bool:
         r'''
             Check if the ring of ore operators is a field.
             This is always False for ore operators, as they are not fields.
         '''
         return False
 
-    def is_integral_domain(self) -> bool:
+    def is_integral_domain(self, proof: bool = True) -> bool:
         r'''
             Check if the ring of ore operators is an integral domain.
             This depends directly from the base ring, since the ore operators are a domain if and only if their coefficients are an integral domain.
@@ -870,7 +997,7 @@ class PSeries_Ring(Parent):
 
             return self.element_class(self, 
                                         differential_equation=equ(**{u.variable_name(): u[1]}), 
-                                        initial_conditions=inits
+                                        initial_conditions=inits, simplify=True
             )
         else:
             return self.element_class(self, coefficient_map=lambda k: 0 if k == 0 else element[k-1]/k)
@@ -894,7 +1021,8 @@ class PSeries_Ring(Parent):
 
                 return self.element_class(self, 
                                           differential_equation=equ.derivative()(**{u.variable_name(): u[0]}), 
-                                          initial_conditions={k: element[k+1]*(k+1) for k in range(equ.order(u)+1)}
+                                          initial_conditions={k: element[k+1]*(k+1) for k in range(equ.order(u))},
+                                          simplify=True
                 )
             else:
                 return self.element_class(self, coefficient_map=lambda k: (k+1)*element[k+1])
@@ -943,9 +1071,9 @@ class PSeries_Ring(Parent):
         result = output.base().zero()
         for mon,coeff in zip(dpoly.monomials(), dpoly.coefficients()):
             term = output.base().one()
-            for var, exp in mon._variables:
-                i,o = var
-                term *= (kwds[variables[i]][o]/factorial(o))**exp ## TODO: Check this operation
+            for var, exp in mon._variables.items():
+                i,(o,) = var
+                term *= (kwds[variables[i]][o]*factorial(o))**exp ## TODO: Check this operation
             result += term * coeff[0]
         return result
         
@@ -1027,11 +1155,12 @@ class PSCoerceBetweenBases(Morphism):
             u = equ.parent().gens()[0]
 
             new_equ = equ.change_base(self.base_map)
-            new_initials = {k: self.base_map(element[k]) for k in range(new_equ.order(u)+1)}
+            new_initials = {k: self.base_map(element[k]) for k in range(new_equ.order(u))}
 
             return self.codomain().element_class(self.codomain(),
                                                  differential_equation=new_equ,
-                                                 initial_conditions=new_initials)
+                                                 initial_conditions=new_initials,
+                                                 simplify=True)
         else: # default case
             new_map = lambda k: self.base_map(element[k])
             return self.codomain().element_class(self.codomain(),
@@ -1087,3 +1216,4 @@ class PSConvertFromDPoly(Morphism):
 
     def _call_(self, element: PSeries_Element) -> DPolynomial:
         return self.codomain()(self.codomain().wrapped(element))
+
