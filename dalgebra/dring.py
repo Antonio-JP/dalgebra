@@ -1271,7 +1271,7 @@ class DRing_WrapperElement(Element):
             raise TypeError(f"An element outside the parent [{parent}] is requested")
 
         Element.__init__(self, parent=parent)
-        self.wrapped = element
+        self.wrapped = parent.wrapped(element)
 
     # Arithmetic methods
     def _add_(self, x) -> DRing_WrapperElement:
@@ -1976,8 +1976,6 @@ class DFractionFieldElement(FractionFieldElement):
         return DRings.ElementMethods.derivative(self, derivation, times)
 
     def reduce(self):
-        super().reduce()
-
         n = self.numerator()
         d = self.denominator()
         try:
@@ -1989,6 +1987,18 @@ class DFractionFieldElement(FractionFieldElement):
             pass
 
         self.__init__(self.parent(), n, d, coerce=False, reduce=False)
+
+    def _add_(self, other: DFractionFieldElement) -> DFractionFieldElement:
+        r'''Overridden method to force the use of the DRings structure'''
+        prev = super()._add_(other)
+        prev.reduce()
+        return prev
+
+    def _mul_(self, other: DFractionFieldElement) -> DFractionFieldElement:
+        r'''Overridden method to force the use of the DRings structure'''
+        prev = super()._mul_(other)
+        prev.reduce()
+        return prev
 
     def reduce_algebraic(self, polynomials):
         num = self.numerator().reduce_algebraic(polynomials)
@@ -2004,6 +2014,12 @@ class DFractionFieldElement(FractionFieldElement):
             return tuple(set(self.numerator().variables()).union(set(self.denominator().variables())))
         except AttributeError:
             raise AttributeError("'DFractionFieldElement' object has no attribute 'variables'")
+        
+    def __hash__(self) -> int:
+        hn, hd = hash(self.numerator()), hash(self.denominator())
+        if self.denominator() == 1:
+            return hn
+        return hash((hn,hd))
 
     ## Methods from DRings.ElementMethods
     def conditions_to_zero(self) -> list[tuple[Element,Element]]:
