@@ -248,6 +248,43 @@ class DMonomial(Element):
             new_dict[k] = new_dict[k] + v if (k in new_dict) else v
         return self._parent.element_class(self._parent, new_dict)
 
+    def gcd(self, other: DMonomial) -> DMonomial:
+        if isinstance(other, (tuple, list)):
+            if len(other) == 0:
+                return self
+            elif len(other) == 1:
+                return self.gcd(other[0])
+            return self.gcd(other[0]).gcd(other[1]) # recursive call
+        else:
+            out = dict()
+            for k in self._variables:
+                if k in other._variables:
+                    out[k] = min(self._variables[k], other._variables[k])
+
+            return self._parent.element_class(self._parent, out)
+    
+    def divides(self, other: DMonomial) -> bool:
+        r'''
+            Method to check if ``self`` divides ``other``.
+        '''
+        for k in self._variables:
+            if k not in other._variables:
+                return False
+            if self._variables[k] > other._variables[k]:
+                return False
+        return True
+    
+    def _div_(self, other: DMonomial) -> DMonomial:
+        if not other.divides(self):
+            raise ValueError(f"The d-monomial {other} does not divide {self}")
+        new_dict = self._variables.copy()
+        for (k,v) in other._variables.items():
+            if new_dict[k] == v:
+                new_dict.pop(k)
+            else:
+                new_dict[k] = new_dict[k] - v
+        return self._parent.element_class(self._parent, new_dict)
+
     ##############################################################################
     ### PROPERTY METHODS
     ##############################################################################
