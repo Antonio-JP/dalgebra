@@ -47,6 +47,7 @@ import logging
 
 from itertools import product
 
+from sage.arith.misc import GCD
 from sage.calculus.functional import diff
 from sage.categories.category import Category
 from sage.categories.monoids import Monoids
@@ -216,11 +217,34 @@ class DPolynomial(Element):
         return pself.divides(pother)
 
     def content(self) -> Element:
-        from sage.arith.misc import GCD
         return self.parent().base()(GCD(self.coefficients()))
+    
+    def common_term(self) -> DPolynomial:
+        if self.is_zero():
+            return self.parent().zero()
+        
+        mons = self.monomials()
+        basic_mon = self.parent()(GCD(mons[0], mons[1:])) # common monomials
+        return self.content()*basic_mon
 
     def gcd(self, other: DPolynomial) -> DPolynomial:
-        return self.content()*self.parent()(self.to_sage().gcd(other.to_sage()))
+        if self == self.parent().zero():
+            return other
+        elif other == self.parent().zero():
+            return self
+        elif self.is_term() and other.is_term():
+            mon = GCD(self.monomials()[0], other.monomials()[0])
+            coeff = GCD(self.coefficients()[0], other.coefficients()[0])
+            return coeff*self.parent()(mon)
+        
+        basic = GCD(self.common_term(), other.common_term())
+        if basic.degree() == 0: # the common term is a constant
+            try:
+                return self.parent()(self.to_sage().gcd(other.to_sage()))
+            except NotImplementedError:
+                return basic
+        else:
+            return basic * (self//basic).gcd(other//basic)
 
     ###################################################################################
     ### Getter methods
@@ -695,6 +719,14 @@ class DPolynomial(Element):
                 return self.parent().fraction_field()(self, other)
 
     def _floordiv_(self, other: DPolynomial) -> DPolynomial:
+        if other.is_term():
+            mon = next(iter(other._content.keys()))
+            coef = other._content[mon]
+
+            if any(not mon.divides(m) for m in self.monomials()):
+                raise ValueError("Division not possible: some monomial does not divide the divisor")
+            return self.parent().element_class(self.parent(), {m / mon : c//coef for (m,c) in self._content.items()})
+        
         as_ipoly = self.to_sage() // other.to_sage()
         return self.parent()(as_ipoly)
 
