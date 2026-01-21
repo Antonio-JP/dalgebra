@@ -986,6 +986,75 @@ class DPolynomial(Element):
         rem = -self + coeff*gen[self.order(gen)] # we know ``gen`` do not show up in rem
         return (rem/coeff).inverse_operation(0, times=self.order(gen)) # the division is with coefficient only
 
+    def indicial_equation(self, gen: DMonomialGen, varname: str = "n") -> Element:
+        r'''
+            Method to compute the indicial equation of a d-polynomial w.r.t. a variable.
+
+            The indicial equation is a polynomial in an algebraic variable `n` that gives information about
+            possible solutions of the d-polynomial of the form of a Puiseux series  with order `n` such as
+            
+            .. MATH::
+                
+                u(x) = Cx^r + \ldots
+            
+            where `C` is a constant and `r` is a rational number.
+
+            INPUT:
+
+            * ``gen``: the generator in ``self.parent()`` that will be used as main variable (i.e., `u`).
+            * ``varname``: name of the algebraic variable that will be used to build the indicial equation.
+
+            OUTPUT:
+
+            A polynomial with coefficients in ``self.parent().base()`` that represents the indicial equation.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<u> = DPolynomialRing(DifferentialRing(QQ, lambda p:0))
+                sage: p = u[2] - 3*u[1] + 2*u[0]
+                sage: p.indicial_equation(u)
+                n^2 - 4*n + 4
+                sage: p = u[3] - 6*u[2] + 11*u[1] - 6*u[0]
+                sage: p.indicial_equation(u)
+                n^3 - 9*n^2 + 26*n - 24
+        '''
+        raise NotImplementedError("Indicial equation not implemented yet.")
+    
+    def power_series_solution(self, gen: DMonomialGen, initials: dict[int, Element]) -> Element:
+        from ..pseries.laurent import LaurentSeries
+        from sage.functions.other import factorial
+        C = self.parent().constant_ring()
+        LR = LaurentSeries(C, 't')
+
+        ## Checking the conditions for the generator
+        if self.parent().noperators() > 1:
+            raise NotImplementedError("[laurent_series_solution] Method implemented only for 1 operator.")
+        elif any(c not in C for c in self.coefficients(gen)):
+            raise ValueError(f"[laurent_series_solution] Some coefficients do not belong to the constant field {C}.")
+        
+        order = self.order(gen)
+        if self.degree(gen[order]) != 1:
+            raise NotImplementedError("[laurent_series_solution] Method implemented only for linear polynomials in the main variable.")
+        
+        lc = C(self.coefficient_full(gen[order])) # since degree is one and the coefficients are constants, this is a constant
+        rem = lc*gen[order] - self 
+
+        computed = {f"{gen.variable_name()}_{k}": v for k, v in initials.items()}
+
+        def init_values(n: int) -> Element:
+            nn = f"{gen.variable_name()}_{n}"
+            if nn not in computed:
+                poly = rem.derivative(times=n-order).to_sage().polynomial()
+                for v in poly.variables():
+                    init_values(gen.index(str(v), True)[0]) # ensure all lower coefficients are computed
+
+                poly_vars = [str(v) for v in poly.variables()]
+                computed[nn] = poly(**{k:v for k, v in computed.items() if k in poly_vars})/lc.to_sage()
+            return computed[nn]
+        
+        return LR.element_class(LR, coefficient_map=lambda k: init_values(k) / factorial(k), order=0)
+
     ###################################################################################
     ### Weight methods
     ###################################################################################
