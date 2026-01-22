@@ -831,7 +831,7 @@ class DRings(Category):
             current = self.base()
 
             while current.ngens() > 0 and (1 not in to_check):
-                to_check.extend([self.element_class(self, el) for el in current.gens()])
+                to_check.extend([self(el) for el in current.gens()])
                 current = current.base()
             to_check.extend(self.random_element(*args, **kwds) for _ in range(points))
 
@@ -1423,7 +1423,7 @@ class DRing_WrapperElement(Element):
             return list(zip(reversed(self.wrapped.monomials()), self.wrapped.coefficients()))
         elif isinstance(self.parent().wrapped, MPolynomialRing_base):
             ## We look for the variables that are not constant
-            no_constant_gens = [g.wrapped for g in self.parent().gens() if not g.d_constant()]
+            no_constant_gens = [g.wrapped for g in self.parent().gens() if any(not g.d_constant(i) for i in range(self.parent().noperators()))]
             if len(no_constant_gens) == 0:
                 return [(1, self.wrapped)]
 
