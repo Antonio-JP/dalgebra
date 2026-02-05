@@ -1024,7 +1024,12 @@ class DPolynomial(Element):
     def power_series_solution(self, gen: DMonomialGen, initials: dict[int, Element]) -> Element:
         from ..pseries.laurent import LaurentSeries
         from sage.functions.other import factorial
-        C = self.parent().constant_ring()
+
+        ## We check the initials:
+        if any(ini.derivative() != 0 for ini in initials.values()):
+            raise TypeError(f"Initial conditions must be all constants")
+        from functools import reduce
+        C = pushout(self.parent().constant_ring(), reduce(lambda p,q : pushout(p,q), (el.parent() for el in initials.values())))
         LR = LaurentSeries(C, 't')
 
         ## Checking the conditions for the generator
@@ -1043,6 +1048,9 @@ class DPolynomial(Element):
         computed = {f"{gen.variable_name()}_{k}": v for k, v in initials.items()}
 
         def init_values(n: int) -> Element:
+            if n < 0: return C.zero() # power series has zero negative exponents
+            ## Case with 0 <= n < order must be given with initials
+
             nn = f"{gen.variable_name()}_{n}"
             if nn not in computed:
                 poly = rem.derivative(times=n-order).to_sage().polynomial()
@@ -1053,7 +1061,10 @@ class DPolynomial(Element):
                 computed[nn] = poly(**{k:v for k, v in computed.items() if k in poly_vars})/lc.to_sage()
             return computed[nn]
         
-        return LR.element_class(LR, coefficient_map=lambda k: init_values(k) / factorial(k), order=0)
+        return LR.element_class(LR, 
+                                coefficient_map=lambda k: 
+                                    (init_values(k) / factorial(k)) if k > 0 else init_values(k), 
+                                order=0)
 
     ###################################################################################
     ### Weight methods

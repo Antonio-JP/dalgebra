@@ -596,6 +596,16 @@ class LSeries_Element(Element):
 
     def __hash__(self) -> int:
         return hash(self.__repr__(bound=100))
+    
+    def __call__(self, **kwds) -> Element:
+        if self.__type == self.TYPES.polynomial:
+            new_poly = {k: el(**kwds) for (k,el) in self.__poly.items()}
+            return self.parent().element_class(self.parent(),coefficients=new_poly)
+        elif self.__type == self.TYPES.default:
+            new_func = lambda n : self[n](**kwds)
+            return self.parent().element_class(self.parent(), coefficient_map=new_func, order=self.order())
+        else:
+            raise ValueError("Impossible type for a Laurent series")
 
     ###################################################################################
     @CheckBound
@@ -696,6 +706,7 @@ class LSeries_Element(Element):
                 output = operator_str(order)
                 
             else: # element is something != 1
+                op_str = operator_str(order)
                 if str(element)[0] == "-":
                     sign = " - " if not first else "-"
                     element = -element
@@ -706,7 +717,6 @@ class LSeries_Element(Element):
                     el_str = f"\\left({latex(element)}\\right)"
                 else:
                     el_str = latex(element)
-                    op_str = operator_str(order)
 
                 output = f"{sign}{el_str}{op_str}"
             return output
