@@ -465,12 +465,31 @@ class DMonomial(Element):
 
         variable_names = self._parent.variable_names()
         elements = sorted(self._variables.items())
-        return "".join(
-            (f"\u007b{variable_names[v]}\u007d") + # variable name surrounded by brackets
-            (r"_{" + f"({','.join(str(oo) for oo in o)})" + r"}") + # Section representing the operators applied
-            (f'^\u007b{e}\u007d' if e != 1 else '') # exponent of the variable
-        for ((v,o),e) in elements
-        )
+
+        def wo_exp(v,o):
+            if all(oo == 0 for oo in o):
+                extra = ""
+            elif len(o) == 1: # special case with one operation
+                if o[0] == 1:
+                    extra = "'"
+                elif o[0] == 2:
+                    extra = "''"
+                else:
+                    extra = r"^{" + f"({o[0]})" + r"}"
+            else:
+                extra = r"^{" + f"({','.join(str(oo) for oo in o)})" + r"}"
+            return f"\u007b{variable_names[v]}\u007d" + extra
+        def with_exp(v,o,e):
+            wo = wo_exp(v,o)
+            if e != 1:
+                if any(oo != 0 for oo in o):
+                    return f"({wo})^\u007b{e}\u007d"
+                else:
+                    return f"{wo}^\u007b{e}\u007d"
+            else:
+                return wo
+            
+        return "".join(with_exp(v,o,e) for ((v,o),e) in elements)
 
 
 class DMonomialGen:
