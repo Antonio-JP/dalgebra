@@ -16,14 +16,18 @@ r'''
 #                  https://www.gnu.org/licenses/
 # ****************************************************************************
 
+import logging
+
 from enum import Enum
+
+from functools import lru_cache
 
 from sage.categories.commutative_algebras import CommutativeAlgebras
 from sage.categories.category import Category
 from sage.categories.fields import Fields
 from sage.categories.morphism import Morphism
 from sage.categories.pushout import ConstructionFunctor, pushout
-from functools import lru_cache
+from sage.matrix.constructor import matrix
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex, latex_variable_name
 from sage.rings.infinity import Infinity as oo
@@ -41,6 +45,8 @@ from ..dpolynomial.dpolynomial import DPolynomial
 
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
+
+logger = logging.getLogger(__name__)
 
 #################################################################################
 ###
@@ -959,7 +965,72 @@ class LSeries_Ring(Parent):
                 return self.element_class(self, coefficient_map=lambda k: (k+1)*element[k+1] + element[k].derivative(), order=element.order()-1)
 
         return AdditiveMap(self, derivation_map)
-  
+    
+    @CheckBound
+    def system_for_constant_solutions(self, system, homogeneous: bool = True, bound: int = None):
+        r'''
+            Method that extends a linear system for computing constant solutions.
+
+            Given a linear system `(A|b)` over a field `F`, we can look for a set of
+            constant solutions in `C \subset F`. This method provides (when possible)
+            an extended system `(\tilde{A}|\tilde{b})` such that every constant
+            solution of the original system is a solution for the new system and vice-versa.
+
+            INPUT:
+
+            * ``system``: a matrix containing the system `(A|b)`.
+
+            OUTPUT:
+
+            A new matrix with coefficients in `C` fulfilling the desired condition,
+            and a list of enumerated monomials indicating the origin of each new equation.
+        '''
+        if homogeneous is False:
+            raise NotImplementedError("The non-homogeneous case is not yet implemented.")
+        
+        logger.debug(f"[SFCS] Extending system for constant solutions (Laurent series)")
+        # For a system of Laurent series to have a constant solution, then all the systems induced for each order
+        # must have the same constant solution. Hence, we need to extend the system with the equations given by 
+        # the condition of being a solution for each order. 
+        system = [[self(element) for element in row] for row in system]
+        ## Matrix of orders
+        orders = [[el.order() for el in row] for row in system]
+        mo = min(min(o for o in row) for row in orders)
+        nrows = len(system)
+        ncols = -1 if nrows == 0 else len(system[0])
+
+        logger.debug(f"[SFCS] Computing the system for each order")
+        systems = []
+        co = mo
+        ck = matrix(self.constant_ring(), 1, ncols).right_kernel()
+
+        equals = 0
+
+        while equals < bound and ck.dimension() > 0:
+            ## We compute the next system
+            systems.append(matrix([[el[co] for el in row] for row in system]))
+            ## We compute and compare its solution with the previous one
+            nk = systems[-1].right_kernel()
+            rk = ck.intersection(nk)
+
+            if rk.dimension() == ck.dimension(): # they coincide, we count
+                equals += 1
+            else:
+                equals = 0
+            
+            ## Updating variables for the next iteration
+            ck = rk
+            co += 1
+
+        ## We have either that many systems had the same solution or the dimension of the solution is zero
+        if ck.dimension() == 0: ## Unique solution: all zeros -> we return the identity matrix
+            logger.debug(f"[SFCS] Unique solution found after checking {equals} systems, returning identity matrix")
+            return matrix(self.constant_ring(), nrows, ncols).identity_matrix(), [(0,()) for _ in range(nrows)]
+        
+        ## Now we had a solution space, we build a matrix with that solution space as kernel.
+        M = ck.matrix().right_kernel_matrix()
+        raise RuntimeError
+        return M, [(0,()) for _ in range(M.nrows())]  
 
 class LaurentSeriesFunctor(ConstructionFunctor):
     r'''
