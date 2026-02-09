@@ -357,6 +357,32 @@ class DElliptic_Element(Element):
                 conditions.append((self.parent()(mon)*self.parent()(str(mon2)), c))
 
         return tuple(conditions)
+    
+    def reduce_algebraic(self, ideal) -> DElliptic_Element:
+        r'''
+            Reduces the coefficients of ``self`` with respect to the ideal of conditions given by ``ideal``.
+        '''
+        result = []
+        for coeff in self.coeffs:
+            # elements in F[eta]
+            num = self.__reduce_algebraic_poly_eta(coeff.numerator(), ideal)
+            den = self.__reduce_algebraic_poly_eta(coeff.denominator(), ideal)
+            if den == 0:
+                raise ZeroDivisionError(f"Impossible to reduce the element since the denominator is reduced to zero")
+            result.append(num/den)
+        return self.parent().element_class(self.parent(), *result)
+    
+    def __reduce_algebraic_poly_eta(self, element, ideal: tuple[Element]) -> Element:
+        output = []
+        deg = element.degree() # degree in eta
+        for i in range(deg+1):
+            coeff = self.parent().base()(element[i]) # coefficient of eta^i with differential structure
+            coeff = coeff.reduce_algebraic(ideal) # recursive call for reduction
+            output.append(self.parent().algebraic_base().base()(coeff)) # converting again without differential structure
+
+        return self.parent().algebraic_base()(output)
+
+        
 
     ###################################################################################
     ### Arithmetic operations

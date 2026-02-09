@@ -710,7 +710,7 @@ class DRings(Category):
         ##########################################################
         ### LINEAR ALGEBRA METHODS
         ##########################################################
-        def system_for_constant_solutions(self, system):
+        def system_for_constant_solutions(self, system, homogeneous=True):
             r'''
                 Method that extends a linear system for computing constant solutions.
 
@@ -767,6 +767,8 @@ class DRings(Category):
             return self._lcm_denominators(*elements)
 
         def _lcm_denominators(self, *_) -> DRings.ElementMethods:
+            if self.is_field():
+                return self.one()
             raise NotImplementedError(f"Method _lcm_denominators not yet implemented for {self.__class__}")
 
         ##########################################################
@@ -1398,10 +1400,35 @@ class DRing_WrapperElement(Element):
         except AttributeError:
             raise AttributeError(f"[DRing] Wrapped element {self.wrapped} do no have method `lcm`")
 
-    def reduce_algebraic(self, polynomials):
-        if hasattr(self.wrapped, "reduce"):
-            return self.parent()(self.wrapped.reduce([self.parent().wrapped(el) for el in polynomials]))
-        return self
+    def reduce_algebraic(self, ideal):
+        from sage.rings.polynomial.term_order import TermOrder
+        R = ideal.ring()
+        S = self.parent().wrapped
+        if R != S:
+            if not isinstance(S, (PolynomialRing_generic, MPolynomialRing_base)):
+                raise ValueError(f"Reduction only implemented for ideals in the same ring or in a polynomial ring over it. Found {R} and {S}")
+                # logger.warning(f"Reduction only implemented for ideals in the same ring or in a polynomial ring over it. Found {R} and {S}")
+                # return self
+            ## Parent of self is a polynomial ring
+            ## We try to make a morphism based on variable names
+            vars_in_R = [str(v) for v in R.gens()]
+            vars_in_S = [str(v) for v in S.gens()]
+
+            if not all(var in vars_in_S for var in vars_in_R):
+                raise ValueError(f"Reduction only implemented for ideals in the same ring or in a polynomial ring over it. Found {R} and {S} with variables {vars_in_R} and {vars_in_S}")
+                # logger.warning(f"Reduction only implemented for ideals in the same ring or in a polynomial ring over it. Found {R} and {S} with variables {vars_in_R} and {vars_in_S}")
+                # return self
+
+            ## We now know that R is a subring of S. We need to build the order is S to make the reduction
+            extra = [el for el in vars_in_S if el not in vars_in_R]
+            T = PolynomialRing(S.base_ring(), extra + vars_in_R, order=TermOrder("deglex", len(extra))+R.term_order())
+            output = S(ideal.change_ring(T).reduce(T(self.wrapped)))
+        else:
+            output = ideal.reduce(self.wrapped)
+        return self.parent()(output)
+
+    def _im_gens_(self, codomain, im_gens, base_map=None):
+        return self.wrapped._im_gens_(codomain, im_gens, base_map=base_map)
 
     def is_unit(self) -> bool:
         return self.wrapped.is_unit()
@@ -2000,9 +2027,9 @@ class DFractionFieldElement(FractionFieldElement):
         prev.reduce()
         return prev
 
-    def reduce_algebraic(self, polynomials):
-        num = self.numerator().reduce_algebraic(polynomials)
-        den = self.denominator().reduce_algebraic(polynomials)
+    def reduce_algebraic(self, ideal):
+        num = self.numerator().reduce_algebraic(ideal)
+        den = self.denominator().reduce_algebraic(ideal)
 
         if den != 0:
             return num/den
