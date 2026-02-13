@@ -1421,7 +1421,10 @@ class DRing_WrapperElement(Element):
 
             ## We now know that R is a subring of S. We need to build the order is S to make the reduction
             extra = [el for el in vars_in_S if el not in vars_in_R]
-            T = PolynomialRing(S.base_ring(), extra + vars_in_R, order=TermOrder("deglex", len(extra))+R.term_order())
+            T = PolynomialRing(S.base_ring(), 
+                               extra + vars_in_R, 
+                               order=TermOrder("deglex", len(extra))+R.term_order() if len(extra) > 0 else R.term_order()
+            )
             output = S(ideal.change_ring(T).reduce(T(self.wrapped)))
         else:
             output = ideal.reduce(self.wrapped)
