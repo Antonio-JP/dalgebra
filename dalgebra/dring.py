@@ -941,6 +941,8 @@ class DRings(Category):
 
             if imgs is None:
                 raise ValueError("Argument 'imgs' is required to create a Laurent morphism")
+            elif self.noperators() != 1 or not self.is_differential():
+                raise ValueError("This method is only available for differential rings with exactly one operator")
 
             output = self._laurent_morphism(imgs, constant)
 
@@ -1736,8 +1738,34 @@ class DRing_Wrapper(Parent):
         r'''
             Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
         '''
-        # //TODO: Implement Laurent morphism
-        raise NotImplementedError("Laurent morphism not implemented for DRing_Wrapper")
+        ## TODO: Check this implementation when the wrapped ring is a quotient ring.
+        given_imgs = {str(gen): imgs[gen] for gen in self.wrapped.gens() if str(gen) in imgs}
+        rem_gens = [gen for gen in self.wrapped.gens() if str(gen) not in imgs]
+
+        ## It is necessary that all remaining variables are constants
+        if any(not gen.is_constant() for gen in rem_gens):
+            raise ValueError(f"Unable to create Laurent morphism because not all variables have an image and some of the remaining variables are not constant. Remaining variables: {rem_gens}")
+        
+        ## We build the codomain: if constant is given, we use it
+        if constant is None:
+            base_wo_gens = self.wrapped.base() # we remove the gens
+            new_base = PolynomialRing(base_wo_gens, rem_gens)
+            constant = DifferentialRing(new_base) # the derivative is the zero derivative
+        if not constant.is_field():
+            constant = constant.fraction_field()
+
+        from .pseries.laurent import LaurentSeries
+        codomain = LaurentSeries(constant, "t")
+        given_imgs = {str(gen): codomain(img) for gen, img in given_imgs.items()}
+        output = DRingWrapperLaurentMorphism(self, given_imgs, constant)
+
+        ## We check the validity of the morphism by testing it on the generators
+        for gen in self.wrapped.gens():
+            if str(gen) in given_imgs:
+                if output(gen.derivative()) != output(gen).derivative():
+                    raise ValueError(f"Laurent morphism does not commute with the derivative for {gen}. Got {output(gen.derivative())} and {output(gen).derivative()} instead.")
+                
+        return output
 
     def _lcm_denominators(self, *_: DRing_WrapperElement) -> DRing_WrapperElement:
         return self.one()
@@ -2205,8 +2233,8 @@ class DFractionField(FractionField_generic):
         r'''
             Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
         '''
-        # //TODO: Implement Laurent morphism
-        raise NotImplementedError("Laurent morphism not implemented for DFractionField")
+        base = self.base()._laurent_morphism(imgs, constant)
+        return DFractionFieldLaurentMorphism(self, base.codomain(), base)
 
     def _lcm_denominators(self, *elements: DFractionFieldElement):
         from sage.arith.functions import lcm
@@ -2415,8 +2443,12 @@ class DFractionFieldLaurentMorphism(MorphismToLaurent):
     r'''
         Laurent morphism class associated with :class:`DFractionField`.
     '''
-    # //TODO: Implement DFractionFieldLaurentMorphism
-    pass
+    def __init__(self, domain, codomain, base_morph = None):
+        super().__init__(domain, codomain, base_morph)
+
+    def _call_(self, frac: DFractionFieldElement):
+        num, den = frac.numerator(), frac.denominator()
+        return self._base(num) / self._base(den)
 
 
 ####################################################################################################
