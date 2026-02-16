@@ -72,7 +72,7 @@ from sage.symbolic.ring import SR
 
 from typing import Collection
 
-from ..dring import DRings, DFractionField, AdditiveMap, DifferentialRing, DifferenceRing
+from ..dring import DRings, DFractionField, AdditiveMap, DifferentialRing, DifferenceRing, MorphismToLaurent
 from .dmonoids import DMonomialMonoid, DMonomialGen, DMonomial, IndexBijection
 
 
@@ -2289,6 +2289,13 @@ class DPolynomialRing_Monoid(Parent):
     def add_constants(self, *new_constants: str) -> DPolynomialRing_Monoid:
         return self.change_ring(self.base().add_constants(*new_constants))
 
+    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+        r'''
+            Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
+        '''
+        # //TODO: Implement Laurent morphism
+        raise NotImplementedError("Laurent morphism not implemented for DPolynomialRing_Monoid")
+
     def constant_ring(self):
         return self.base().constant_ring()
 
@@ -3001,6 +3008,14 @@ class DPolyRingFunctor (ConstructionFunctor):
         if len(variables) > len(new_vars) or new_vars.intersection(self.variables()):
             raise ValueError(f"Repeated variables: impossible to extend the Functor")
         return self.__class__(self.variables().union(new_vars))
+
+
+class DPolynomialLaurentMorphism(MorphismToLaurent):
+    r'''
+        Laurent morphism class associated with :class:`DPolynomialRing_Monoid`.
+    '''
+    # //TODO: Implement DPolynomialLaurentMorphism
+    pass
 
 
 class DPolynomialToLinOperator (Morphism):

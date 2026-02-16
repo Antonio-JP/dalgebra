@@ -43,7 +43,7 @@ from sage.structure.parent import Parent
 
 from typing import Collection, Mapping, Callable
 from .dpolynomial import DPolynomialRing_Monoid, DPolynomial
-from ..dring import AdditiveMap, DRings
+from ..dring import AdditiveMap, DRings, MorphismToLaurent
 
 _DRings = DRings.__classcall__(DRings)
 
@@ -765,6 +765,13 @@ class PseudoDOperator_Ring(Parent):
         #!!!!!!!!!!!!!!
         return PseudoDOperatorRing(self.base().add_constants(*new_constants), self.__gens[0])
 
+    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+        r'''
+            Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
+        '''
+        # //TODO: Implement Laurent morphism
+        raise NotImplementedError("Laurent morphism not implemented for PseudoDOperator_Ring")
+
     def linear_operator_ring(self) -> PseudoDOperator_Ring:
         r'''
             Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
@@ -817,6 +824,14 @@ class PseudoDOperatorFunctor(ConstructionFunctor):
     def __eq__(self, other):
         if other.__class__ == self.__class__:
             return self.__operator_name == other.__operator_name
+
+
+class PseudoDOperatorLaurentMorphism(MorphismToLaurent):
+    r'''
+        Laurent morphism class associated with :class:`PseudoDOperator_Ring`.
+    '''
+    # //TODO: Implement PseudoDOperatorLaurentMorphism
+    pass
 
 
 class PDOCoerceFromBase(Morphism):

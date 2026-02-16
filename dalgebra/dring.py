@@ -905,6 +905,69 @@ class DRings(Category):
             '''
             raise NotImplementedError("Method 'add_constants' not implemented")
 
+        def laurent_morphism(self, imgs: dict[str|Element, Element] = None, constant: Parent = None, set_default: bool = False) -> MorphismToLaurent:
+            r'''
+                Method to build a morphism from ``self`` to a Laurent series ring.
+
+                This method is a public wrapper around :func:`_laurent_morphism` and can
+                optionally store a default morphism for later reuse.
+
+                INPUT:
+
+                * ``imgs``: images for the generators of ``self`` in the Laurent series ring.
+                    This argument is required to create a new morphism.
+                * ``constant`` (``None`` by default): field/ring of constants to enforce in the
+                    Laurent series codomain.
+                * ``set_default`` (``False`` by default): if ``True``, the morphism created by
+                    :func:`_laurent_morphism` is stored and returned in later calls where no input
+                    data is provided.
+
+                OUTPUT:
+
+                A :class:`MorphismToLaurent` from ``self`` to a Laurent series ring.
+
+                BEHAVIOR:
+
+                * If ``imgs`` and ``constant`` are both ``None``, this method returns the default
+                    Laurent morphism previously stored.
+                * Otherwise, this method calls :func:`_laurent_morphism(imgs, constant)`.
+                * If ``set_default`` is ``True``, the computed morphism is stored as default,
+                    replacing the previous one if present.
+            '''
+            if imgs is None and constant is None:
+                if hasattr(self, "_default_laurent_morphism"):
+                    return self._default_laurent_morphism
+                raise ValueError("No default Laurent morphism has been set")
+
+            if imgs is None:
+                raise ValueError("Argument 'imgs' is required to create a Laurent morphism")
+
+            output = self._laurent_morphism(imgs, constant)
+
+            if set_default:
+                self._default_laurent_morphism = output
+
+            return output
+
+        @abstract_method
+        def _laurent_morphism(self, imgs: dict[str|Element, Element], constant: Parent = None) -> MorphismToLaurent:
+            r'''
+                Internal method to build a morphism to a Laurent series ring.
+
+                Concrete parent classes in :class:`DRings` must implement this method.
+
+                INPUT:
+
+                * ``imgs``: images for the generators of ``self`` in the Laurent series ring.
+                * ``constant`` (``None`` by default): field/ring of constants to enforce in the
+                    Laurent series codomain.
+
+                OUTPUT:
+
+                A :class:`MorphismToLaurent` from ``self`` to a Laurent series ring.
+            '''
+            raise NotImplementedError("Method '_laurent_morphism' not implemented")
+
     ## Defining methods for the Element structures of this category
     class ElementMethods: #pylint: disable=no-member
         ##########################################################
@@ -1669,6 +1732,13 @@ class DRing_Wrapper(Parent):
     def set_constant(self, ring: Parent, operation: int = 0):
         self.__constant[operation] = ring
 
+    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+        r'''
+            Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
+        '''
+        # //TODO: Implement Laurent morphism
+        raise NotImplementedError("Laurent morphism not implemented for DRing_Wrapper")
+
     def _lcm_denominators(self, *_: DRing_WrapperElement) -> DRing_WrapperElement:
         return self.one()
 
@@ -2131,6 +2201,13 @@ class DFractionField(FractionField_generic):
     def add_constants(self, *new_constants: str) -> DFractionField:
         return self.base().add_constants(*new_constants).fraction_field()
 
+    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+        r'''
+            Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
+        '''
+        # //TODO: Implement Laurent morphism
+        raise NotImplementedError("Laurent morphism not implemented for DFractionField")
+
     def _lcm_denominators(self, *elements: DFractionFieldElement):
         from sage.arith.functions import lcm
         return lcm(element.denominator() for element in elements)
@@ -2298,6 +2375,48 @@ class DRing_Wrapper_SimpleMorphism(Morphism):
 
     def _call_(self, p):
         return self.codomain()(p.wrapped)
+
+
+class MorphismToLaurent(Morphism):
+    r'''
+        Base class for morphisms from d-rings to Laurent series rings.
+
+        INPUT:
+
+        * ``domain``: source parent of the morphism.
+        * ``codomain``: target parent of the morphism. It must be a Laurent
+          series ring.
+        * ``base_morph`` (``None`` by default): optional morphism on the base
+          ring, stored in ``self._base`` for later use.
+    '''
+    def __init__(self, domain: Parent, codomain: Parent, base_morph: Morphism = None):
+        from .pseries.laurent import LSeries_Ring
+
+        if base_morph is None:
+            raise NotImplementedError("The base morphism must be provided for the moment. This is the morphism on the base ring that will be used to compute the image of the generators of the base ring in the Laurent series ring. This is necessary to be able to compute the image of any element in the d-ring, but it can not be automatically computed for now.")
+        if not base_morph.domain() == domain.base() or not base_morph.codomain() == codomain:
+            raise ValueError("Error in the format for the morphism")
+        if not isinstance(codomain, LSeries_Ring):
+            raise TypeError(f"The codomain must be a Laurent series ring. Got {codomain}")
+
+        self._base = base_morph
+        super().__init__(domain, codomain)
+
+
+class DRingWrapperLaurentMorphism(MorphismToLaurent):
+    r'''
+        Laurent morphism class associated with :class:`DRing_Wrapper`.
+    '''
+    # //TODO: Implement DRingWrapperLaurentMorphism
+    pass
+
+
+class DFractionFieldLaurentMorphism(MorphismToLaurent):
+    r'''
+        Laurent morphism class associated with :class:`DFractionField`.
+    '''
+    # //TODO: Implement DFractionFieldLaurentMorphism
+    pass
 
 
 ####################################################################################################

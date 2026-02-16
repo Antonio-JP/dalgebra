@@ -40,7 +40,7 @@ from sage.structure.factory import UniqueFactory
 from sage.structure.parent import Parent
 
 from typing import Collection, Mapping, Callable
-from ..dring import AdditiveMap, DRings, DifferentialRing
+from ..dring import AdditiveMap, DRings, DifferentialRing, MorphismToLaurent
 from ..dpolynomial.dpolynomial import DPolynomial
 
 _DRings = DRings.__classcall__(DRings)
@@ -775,6 +775,8 @@ class LSeries_Ring(Parent):
             raise TypeError("The base must not be a formal power series ring")
         if base.noperators() != 1 or not base.is_differential():
             raise TypeError("The base must be a differential ring with 1 operation")
+        elif base.constant_ring() != base:
+            raise TypeError("The base must be a differential ring with trivial constants")
 
         ## Setting the inner variables of the ring
         super().__init__(base, category=tuple(self._set_categories(base, category)))
@@ -936,6 +938,13 @@ class LSeries_Ring(Parent):
     def add_constants(self, *new_constants: str) -> LSeries_Ring:
         return LaurentSeries(self.base().add_constants(*new_constants), self.__gens[0])
 
+    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+        r'''
+            Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
+        '''
+        base_morph = self.base()._laurent_morphism(imgs, constant=constant)
+        return LSeriesLaurentMorphism(self, base_morph.codomain(), base_morph)
+
     def linear_operator_ring(self):
         r'''
             Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
@@ -1060,6 +1069,25 @@ class LaurentSeriesFunctor(ConstructionFunctor):
     def __eq__(self, other):
         if other.__class__ == self.__class__:
             return self.__gen_name == other.__gen_name
+
+
+class LSeriesLaurentMorphism(MorphismToLaurent):
+    r'''
+        Laurent morphism class associated with :class:`LSeries_Ring`.
+    '''
+    def __init__(self, domain: LSeries_Ring, codomain: LSeries_Ring, base_map: Morphism):
+        super().__init__(domain, codomain, base_map)
+
+    def _call_(self, element: LSeries_Element) -> LSeries_Element:
+        # Here we assume the element is in self.domain()
+        if element.type() == LSeries_Element.TYPES.polynomial:
+            coeffs = {k: self.base_map(element[k]) for k in element._LSeries_Element__poly}
+            return self.codomain().element_class(self.codomain(), coefficients=coeffs)
+        elif element.type() == LSeries_Element.TYPES.dalgebraic:
+            raise NotImplementedError("Coercion of differential algebraic formal laurent series is not yet implemented.")
+        else: # default case
+            ## Coercion is performed outside the method:
+            return self.codomain().element_class(self.codomain(), coefficient_map=element._LSeries_Element__map, order=element.order())
 
 
 class LSCoerceFromBase(Morphism):

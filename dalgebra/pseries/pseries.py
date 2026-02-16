@@ -50,7 +50,7 @@ from sage.structure.factory import UniqueFactory
 from sage.structure.parent import Parent
 
 from typing import Collection, Mapping, Callable
-from ..dring import AdditiveMap, DRings, DifferentialRing
+from ..dring import AdditiveMap, DRings, DifferentialRing, MorphismToLaurent
 from ..dpolynomial.dpolynomial import DPolynomial, DPolynomialRing, DPolynomialRing_Monoid
 
 _DRings = DRings.__classcall__(DRings)
@@ -968,6 +968,13 @@ class PSeries_Ring(Parent):
     def add_constants(self, *new_constants: str) -> PSeries_Ring:
         return PSeries(self.base().add_constants(*new_constants), self.__gens[0])
 
+    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+        r'''
+            Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
+        '''
+        # //TODO: Implement Laurent morphism
+        raise NotImplementedError("Laurent morphism not implemented for PSeries_Ring")
+
     def linear_operator_ring(self):
         r'''
             Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
@@ -1107,6 +1114,14 @@ class PseudoDOperatorFunctor(ConstructionFunctor):
     def __eq__(self, other):
         if other.__class__ == self.__class__:
             return self.__operator_name == other.__operator_name
+
+
+class PSeriesLaurentMorphism(MorphismToLaurent):
+    r'''
+        Laurent morphism class associated with :class:`PSeries_Ring`.
+    '''
+    # //TODO: Implement PSeriesLaurentMorphism
+    pass
 
 
 class PSCoerceFromBase(Morphism):

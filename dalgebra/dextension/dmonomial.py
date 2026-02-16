@@ -108,7 +108,7 @@ from sage.structure.parent import Parent
 
 from typing import Collection, Iterator
 
-from ..dring import AdditiveMap, DRings, DFractionField, DFractionFieldElement, IntegrationError
+from ..dring import AdditiveMap, DRings, DFractionField, DFractionFieldElement, IntegrationError, MorphismToLaurent
 
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
@@ -1610,6 +1610,13 @@ class DMonomial_Parent (Parent):
     def add_constants(self, *new_constants: str) -> DMonomial_Parent:
         return self.change_ring(self.base().add_constants(*new_constants))
 
+    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+        r'''
+            Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
+        '''
+        # //TODO: Implement Laurent morphism
+        raise NotImplementedError("Laurent morphism not implemented for DMonomial_Parent")
+
     def linear_operator_ring(self) -> DMonomial_Parent:
         r'''
             Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
@@ -2391,6 +2398,14 @@ class DMonomialFunctor (ConstructionFunctor):
         if not isinstance(other, DMonomialFunctor):
             return False
         return self.__varname == other.__varname and self.__images == other.__images
+
+
+class DMonomialLaurentMorphism(MorphismToLaurent):
+    r'''
+        Laurent morphism class associated with :class:`DMonomial_Parent`.
+    '''
+    # //TODO: Implement DMonomialLaurentMorphism
+    pass
 
 
 #####################################
