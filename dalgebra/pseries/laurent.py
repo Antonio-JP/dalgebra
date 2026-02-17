@@ -53,7 +53,7 @@ logger = logging.getLogger(__name__)
 ### BOUNDS MANAGEMENT FOR LAURENT DIFFERENTIAL FIELDS
 ###
 #################################################################################
-LS_GLOBAL_BOUND = 5
+LS_GLOBAL_BOUND = 20
 
 
 def LSChangeBound(bound: int):

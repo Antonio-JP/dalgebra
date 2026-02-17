@@ -948,6 +948,15 @@ class DRings(Category):
 
             if set_default:
                 self._default_laurent_morphism = output
+                try:
+                    output.codomain().register_coercion(output)
+                except AssertionError:
+                    ## We remove the previous coercion
+                    dom, codom = output.domain(), output.codomain()
+                    codom._remove_from_coerce_cache(dom)
+                    codom._introspect_coerce()['_coerce_from_list'].remove([mor for mor in codom._introspect_coerce()['_coerce_from_list'] if mor.domain() == dom][0])
+                    ## We register the new coercion
+                    codom.register_coercion(output)
 
             return output
 
@@ -1739,7 +1748,7 @@ class DRing_Wrapper(Parent):
             Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
         '''
         ## TODO: Check this implementation when the wrapped ring is a quotient ring.
-        given_imgs = {str(gen): imgs[gen] for gen in self.wrapped.gens() if str(gen) in imgs}
+        given_imgs = {str(gen): imgs[str(gen)] for gen in self.wrapped.gens() if str(gen) in imgs}
         rem_gens = [gen for gen in self.wrapped.gens() if str(gen) not in imgs]
 
         ## It is necessary that all remaining variables are constants
@@ -1749,7 +1758,7 @@ class DRing_Wrapper(Parent):
         ## We build the codomain: if constant is given, we use it
         if constant is None:
             base_wo_gens = self.wrapped.base() # we remove the gens
-            new_base = PolynomialRing(base_wo_gens, rem_gens)
+            new_base = PolynomialRing(base_wo_gens, rem_gens) if len(rem_gens) > 0 else base_wo_gens
             constant = DifferentialRing(new_base) # the derivative is the zero derivative
         if not constant.is_field():
             constant = constant.fraction_field()
@@ -1757,12 +1766,13 @@ class DRing_Wrapper(Parent):
         from .pseries.laurent import LaurentSeries
         codomain = LaurentSeries(constant, "t")
         given_imgs = {str(gen): codomain(img) for gen, img in given_imgs.items()}
-        output = DRingWrapperLaurentMorphism(self, given_imgs, constant)
+        given_imgs.update({str(gen): constant(gen) for gen in rem_gens})
+        output = DRingWrapperLaurentMorphism(self, codomain, given_imgs)
 
         ## We check the validity of the morphism by testing it on the generators
-        for gen in self.wrapped.gens():
+        for gen in self.gens():
             if str(gen) in given_imgs:
-                if output(gen.derivative()) != output(gen).derivative():
+                if (output(gen.derivative()) - output(gen).derivative()).is_zero() is False:
                     raise ValueError(f"Laurent morphism does not commute with the derivative for {gen}. Got {output(gen.derivative())} and {output(gen).derivative()} instead.")
                 
         return output
@@ -2435,9 +2445,13 @@ class DRingWrapperLaurentMorphism(MorphismToLaurent):
     r'''
         Laurent morphism class associated with :class:`DRing_Wrapper`.
     '''
-    # //TODO: Implement DRingWrapperLaurentMorphism
-    pass
+    def __init__(self, domain, codomain, given_imgs: dict[str,Element]):
+        super().__init__(domain, codomain, domain.base().hom(codomain))
+        self._given_imgs = given_imgs
 
+    def _call_(self, element: Element) -> DRing_WrapperElement:
+        return self.codomain()(element.wrapped(**self._given_imgs))
+    
 
 class DFractionFieldLaurentMorphism(MorphismToLaurent):
     r'''

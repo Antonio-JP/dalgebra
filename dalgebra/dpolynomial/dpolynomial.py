@@ -2293,8 +2293,21 @@ class DPolynomialRing_Monoid(Parent):
         r'''
             Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
         '''
-        # //TODO: Implement Laurent morphism
-        raise NotImplementedError("Laurent morphism not implemented for DPolynomialRing_Monoid")
+        ## Images for each generator are provided in the input imgs in the format {name : image}
+        ## Hence, for a morphism to exist we need images for ALL GENERATORS
+        if any(name not in imgs for name in self.variable_names()):
+            raise ValueError("Impossible to create a Laurent morphism without images for all generators")
+        my_imgs = {name : img for name, img in imgs.items() if name in self.variable_names()}
+        rem_imgs = {name : img for name, img in imgs.items() if name not in self.variable_names()}
+
+        ## First, we build the base morphism 
+        base_morph = self.base()._laurent_morphism(rem_imgs, constant=constant)
+
+        ## We cast the images to the obtained codomain
+        my_imgs = {name : base_morph.codomain()(img) for name, img in my_imgs.items()}
+
+        ## We build now the morphism for the whole ring
+        return DPolynomialLaurentMorphism(self, base_morph.codomain(), my_imgs, base_morph)
 
     def constant_ring(self):
         return self.base().constant_ring()
@@ -3014,8 +3027,20 @@ class DPolynomialLaurentMorphism(MorphismToLaurent):
     r'''
         Laurent morphism class associated with :class:`DPolynomialRing_Monoid`.
     '''
-    # //TODO: Implement DPolynomialLaurentMorphism
-    pass
+    from ..pseries.laurent import LSeries_Element
+    def __init__(self, domain, codomain, images, base_morphism):
+        super().__init__(domain, codomain, base_morphism)
+        self._images = {i : images[str(gen)] for (i,gen) in enumerate(domain.gens())} # images indexed by the index of the generator
+
+    def _call_(self, poly: DPolynomial) -> LSeries_Element:
+        return sum((self._base(c)*self._call_monomial_(m) for (m,c) in zip(poly.monomials(), poly.coefficients())), self.codomain().zero())
+
+    def _call_monomial_(self, monomial: DPolynomial) -> LSeries_Element:
+        m = monomial.monomials()[0]
+        output = self.codomain().one()
+        for ((v,o),e) in m._variables.items():
+            output *= self._images[v].derivative(times=o[0])**e
+        return output
 
 
 class DPolynomialToLinOperator (Morphism):
