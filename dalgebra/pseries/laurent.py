@@ -709,8 +709,9 @@ class LSeries_Element(Element):
             if element == 0: return ""
             ## If the element is 1, we just return the monomial
             if element == 1:
-                output = operator_str(order)
-                
+                output = (" + " if not first else "") + operator_str(order)
+            elif element == -1:
+                output = (" - " if not first else "") + operator_str(order)
             else: # element is something != 1
                 op_str = operator_str(order)
                 if str(element)[0] == "-":
