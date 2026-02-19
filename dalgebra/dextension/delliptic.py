@@ -675,12 +675,12 @@ class DElliptic_Field(Parent):
     def add_constants(self, *new_constants: str) -> DElliptic_Field:
         return self.change_base(self.base().add_constants(*new_constants))
 
-    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+    def _laurent_morphism(self, imgs, constant=None, set_default=False) -> MorphismToLaurent:
         r'''
             Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
         '''
         img_gen = imgs.pop(str(self.gen())) # if this is not provided, then this is an error
-        base_morph = self.base()._laurent_morphism(imgs, constant=constant) # we compute the morphism for the base ring
+        base_morph = self.base().laurent_morphism(imgs, constant=constant, set_default=set_default) # we compute the morphism for the base ring
 
         ## We check that the image of self satisfies the corresponding algebraic relation
         I, I_p = img_gen, img_gen.derivative()

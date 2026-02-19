@@ -934,11 +934,20 @@ class DRings(Category):
                 * If ``set_default`` is ``True``, the computed morphism is stored as default,
                     replacing the previous one if present.
             '''
-            if imgs is None and constant is None:
+            if imgs is None:
                 if hasattr(self, "_default_laurent_morphism"):
-                    return self._default_laurent_morphism
+                    constant = constant if constant is not None else "default"
+                    if not constant in self._default_laurent_morphism:
+                        ## We try to build it from other default morphism
+                        try:
+                            mor = self._default_laurent_morphism["default"]
+                        except KeyError:
+                            mor = list(self._default_laurent_morphism.values())[0]
+                        codomain = mor.codomain().change_base(constant) # Laurent series with new constants
+                        self._default_laurent_morphism[constant] = ExtendedLaurentMorphism(mor.domain(), codomain, mor)
+                    return self._default_laurent_morphism[constant]
                 raise ValueError("No default Laurent morphism has been set")
-
+            
             if imgs is None:
                 raise ValueError("Argument 'imgs' is required to create a Laurent morphism")
             elif self.noperators() != 1 or not self.is_differential():
@@ -947,7 +956,7 @@ class DRings(Category):
             output = self._laurent_morphism(imgs, constant)
 
             if set_default:
-                self._default_laurent_morphism = output
+                self._default_laurent_morphism = {constant if constant is not None else "default": output}
                 try:
                     output.codomain().register_coercion(output)
                 except AssertionError:
@@ -961,7 +970,7 @@ class DRings(Category):
             return output
 
         @abstract_method
-        def _laurent_morphism(self, imgs: dict[str|Element, Element], constant: Parent = None) -> MorphismToLaurent:
+        def _laurent_morphism(self, imgs: dict[str|Element, Element], constant: Parent = None, set_default: bool = False) -> MorphismToLaurent:
             r'''
                 Internal method to build a morphism to a Laurent series ring.
 
@@ -972,6 +981,8 @@ class DRings(Category):
                 * ``imgs``: images for the generators of ``self`` in the Laurent series ring.
                 * ``constant`` (``None`` by default): field/ring of constants to enforce in the
                     Laurent series codomain.
+                * ``set_default`` (``False`` by default): if ``True``, the morphism created by
+                    this method is stored and returned in later calls where no input data is provided.
 
                 OUTPUT:
 
@@ -1720,7 +1731,18 @@ class DRing_Wrapper(Parent):
                     operations.append(new_base.derivation(imgs_on_gens, twist=new_twist)) # extension by zero
             else:
                 raise TypeError("Impossible to create constants when they are not defined.")
-        return DRing(new_base, *operations, types=self.operator_types())
+
+        output = DRing(new_base, *operations, types=self.operator_types())
+        ## If possible, we set the constant ring of the new structure as the output of the previous constant ring
+        for i in range(self.noperators()):
+            try:
+                try:
+                    output.constant_ring(i)
+                except NotImplementedError: # Only if the constants are not automatic
+                    output.set_constant(self.constant_ring(i).add_constants(*new_constants), i)
+            except NotImplementedError: # If we can not extend, we do nothing
+                pass
+        return output
 
     def constant_ring(self, operation: int = 0) -> Parent:
         if self.__constant[operation] is None:
@@ -1743,7 +1765,7 @@ class DRing_Wrapper(Parent):
     def set_constant(self, ring: Parent, operation: int = 0):
         self.__constant[operation] = ring
 
-    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+    def _laurent_morphism(self, imgs, constant=None, _: bool = False) -> MorphismToLaurent:
         r'''
             Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
         '''
@@ -2239,11 +2261,11 @@ class DFractionField(FractionField_generic):
     def add_constants(self, *new_constants: str) -> DFractionField:
         return self.base().add_constants(*new_constants).fraction_field()
 
-    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+    def _laurent_morphism(self, imgs, constant=None, set_default=False) -> MorphismToLaurent:
         r'''
             Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
         '''
-        base = self.base()._laurent_morphism(imgs, constant)
+        base = self.base().laurent_morphism(imgs, constant, set_default=set_default)
         return DFractionFieldLaurentMorphism(self, base.codomain(), base)
 
     def _lcm_denominators(self, *elements: DFractionFieldElement):
@@ -2463,6 +2485,20 @@ class DFractionFieldLaurentMorphism(MorphismToLaurent):
     def _call_(self, frac: DFractionFieldElement):
         num, den = frac.numerator(), frac.denominator()
         return self._base(num) / self._base(den)
+
+class ExtendedLaurentMorphism(Morphism):
+    def __init__(self, domain, codomain, base_morph):
+        from .pseries.laurent import LSeries_Ring
+        if base_morph.domain() != domain:
+            raise ValueError("The base morphism must have the same domain as the morphism to be extended.")
+        elif not isinstance(codomain, LSeries_Ring):
+            raise TypeError("The codomain must be a Laurent series ring.")
+        
+        super().__init__(domain, codomain)
+        self._base = base_morph
+
+    def _call_(self, element):
+        return self.codomain()(self._base(element))
 
 
 ####################################################################################################

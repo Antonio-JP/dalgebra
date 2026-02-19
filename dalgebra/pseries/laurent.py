@@ -936,14 +936,17 @@ class LSeries_Ring(Parent):
     def operator_types(self) -> tuple[str]:
         return self.base().operator_types()
 
+    def constant_ring(self, _: int = 0) -> Parent:
+        return self.base()
+
     def add_constants(self, *new_constants: str) -> LSeries_Ring:
         return LaurentSeries(self.base().add_constants(*new_constants), self.__gens[0])
 
-    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+    def _laurent_morphism(self, imgs, constant=None, set_default=False) -> MorphismToLaurent:
         r'''
             Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
         '''
-        base_morph = self.base()._laurent_morphism(imgs, constant=constant)
+        base_morph = self.base().laurent_morphism(imgs, constant=constant, set_default=set_default)
         return LSeriesLaurentMorphism(self, base_morph.codomain(), base_morph)
 
     def linear_operator_ring(self):
@@ -1132,7 +1135,7 @@ class LSCoerceBetweenBases(Morphism):
     def _call_(self, element: LSeries_Element) -> LSeries_Element:
         if element.type() == LSeries_Element.TYPES.polynomial:
             return self.codomain().element_class(self.codomain(),
-                                                 coefficients={k: self.base_map(element[k]) for k in self._LSeries_Element__poly})
+                                                 coefficients={k: self.base_map(element[k]) for k in element._LSeries_Element__poly})
         elif element.type() == LSeries_Element.TYPES.dalgebraic:
             raise NotImplementedError("Coercion of differential algebraic formal laurent series between different bases is not yet implemented.")
         else: # default case
