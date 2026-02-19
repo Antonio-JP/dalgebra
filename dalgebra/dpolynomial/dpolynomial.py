@@ -63,6 +63,7 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing, InfinitePolynomialGen, InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.infinity import Infinity as oo
 from sage.rings.integer_ring import ZZ
+from sage.rings.rational_field import QQ
 from sage.rings.ring import Ring
 from sage.sets.family import LazyFamily
 from sage.structure.element import Element, Matrix
@@ -151,6 +152,27 @@ def DifferencePolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_Mono
         raise TypeError("The base ring must be a difference ring")
     return DPolynomialRing(base, *names, **kwds)
 
+
+def LaurentMethod(func):
+    from functools import wraps
+
+    @wraps(func)
+    def wrapper(self, *args, **kwds):
+        import inspect
+        sig = inspect.signature(func)
+        if "laurent_morph" not in sig.parameters:
+            raise TypeError(f"The method {func.__name__} does not accept a 'laurent_morph' argument.")
+        elif sig.parameters["laurent_morph"].default is not None:
+            raise TypeError(f"The method {func.__name__} does not accept a default value for 'laurent_morph'.")
+        morph = kwds.pop("laurent_morph") if "laurent_morph" in kwds else self.parent().laurent_morphism()
+
+        if morph.domain() != self.parent().base():
+            raise ValueError(f"The morphism to Laurent series must be defined on the base ring of the D-polynomial: got {morph.domain()}, expected {self.parent().base()}")
+
+        kwds["laurent_morph"] = morph
+
+        return func(self, *args, **kwds)
+    return wrapper
 
 class DPolynomial(Element):
     r'''
@@ -986,7 +1008,36 @@ class DPolynomial(Element):
         rem = -self + coeff*gen[self.order(gen)] # we know ``gen`` do not show up in rem
         return (rem/coeff).inverse_operation(0, times=self.order(gen)) # the division is with coefficient only
 
-    def indicial_equation(self, gen: DMonomialGen, varname: str = "n") -> Element:
+
+    ###################################################################################
+    ### Solving - Laurent Series methods
+    ###################################################################################
+    @LaurentMethod
+    def is_DFinite(self, gen: DMonomialGen, *, laurent_morph: MorphismToLaurent = None) -> bool:
+        r'''
+            Method to check if a d-polynomial is D-finite with respect to a variable.
+
+            A d-polynomial `p` is D-finite with respect to a variable `u` it is a linear equation
+            with polynomial coefficients. This if not trivial to decide, since we need an embedding into
+            the ring of formal power series (or Laurent series).
+        '''
+        from ..pseries.laurent import LSeries_Element
+        
+        return all(laurent_morph(coeff).type() is LSeries_Element.TYPES.polynomial for coeff in self.coefficients(gen))
+
+    @staticmethod
+    def _monomial_order(m: DMonomial, k: Element) -> int:
+        order = 0
+        for (_,o),e in m._variables:
+            order += (k - o)*e
+        return order
+    
+    @staticmethod
+    def _monomial_min_value(m: DMonomial, k: Element) -> int:
+        order = "*".join(r"u_{" + f"{k}-{o}" + r"}" + f"^({e})" for (_,o),e in m._variables)
+
+    @LaurentMethod
+    def indicial_equation(self, gen: DMonomialGen, varname: str = "n", *, laurent_morph: MorphismToLaurent = None) -> Element:
         r'''
             Method to compute the indicial equation of a d-polynomial w.r.t. a variable.
 
@@ -1019,47 +1070,87 @@ class DPolynomial(Element):
                 sage: p.indicial_equation(u)
                 n^3 - 9*n^2 + 26*n - 24
         '''
-        raise NotImplementedError("Indicial equation not implemented yet.")
+        PR = PolynomialRing(QQ, varname)
+        k = PR.gen()
+        coeffs, monoms = self.coefficients(gen), self.monomials(gen)
+        mo = min(0, *(laurent_morph(c).order() for c in coeffs)) # if < 0, we would need to consider the equation multiplied by t^mo
+        coeffs_ord = [laurent_morph(c).order() - mo for c in coeffs]
+        monoms_ord = [self._monomial_order(m, k) for m in monoms]
+        orders = [coeffs_ord[i] + monoms_ord[i] for i in range(len(coeffs))] # symbolic order for each element
+
+        comp = {(monoms[i], monoms[j]) : orders[i] - orders[j] for i in range(len(monoms)) for j in range(i+1, len(monoms))} # maps pair of monomials to the difference of their order
+        candidates = {k : "all" if v == 0 else [r for r in v.roots() if r in ZZ] for k,v in comp.items()}
+
+        # TODO: We need to check the minimal term of the equation for each candidate.
+        # Special cases: 
+        # * If all is a candidate: we need to check one example in between the numerical candidates to check the behavior there. 
+        # * If only "all" is a candidate, it means all orders are equal, so we take that coefficient from the equation and check what must hold.
+        #    - The DFinite case work: it provides values for the order.
+        #    - The D-algebraic case may not lead to anything: raise a NotImplementedError when this is the case.
+        # * We add as candidates the orders 0,1,2,...,self.order(gen)-1.
+        # What is checking the behavior?
+        # We set up a finite laurent series with "enough" information, plug it into the equation and check the first self.order(gen) coefficients. They should all vanish.
+        # "Enough" means that adding further terms to the solution will not affect the first self.order(gen) coefficients of the evaluated equation.
+        
+
+        if self.is_DFinite(gen, laurent_morph=laurent_morph): # D-finite case is easier
+            raise NotImplementedError("Indicial equation for D-finite equations not implemented yet.")
+            
+        raise NotImplementedError("Indicial equation for general equations not implemented yet.")
     
     def power_series_solution(self, gen: DMonomialGen, initials: dict[int, Element]) -> Element:
         from ..pseries.laurent import LaurentSeries
         from sage.functions.other import factorial
+        from functools import lru_cache
 
         ## We check the initials:
         if any(ini.derivative() != 0 for ini in initials.values()):
             raise TypeError(f"Initial conditions must be all constants")
         from functools import reduce
-        C = pushout(self.parent().constant_ring(), reduce(lambda p,q : pushout(p,q), (el.parent() for el in initials.values())))
+        C = pushout(self.parent().constant_ring(), reduce(lambda p,q : pushout(p,q), (el.parent().constant_ring() for el in initials.values())))
+        computed = {k : C(ini) for k, ini in initials.items()}
         LR = LaurentSeries(C, 't')
-
+        mor = self.parent().base().laurent_morphism(constant=C)
+        
         ## Checking the conditions for the generator
         if self.parent().noperators() > 1:
             raise NotImplementedError("[laurent_series_solution] Method implemented only for 1 operator.")
-        elif any(c not in C for c in self.coefficients(gen)):
-            raise ValueError(f"[laurent_series_solution] Some coefficients do not belong to the constant field {C}.")
+        elif self.parent().ngens() > 1:
+            raise NotImplementedError("[laurent_series_solution] Method implemented only for 1 variable.")
         
         order = self.order(gen)
         if self.degree(gen[order]) != 1:
             raise NotImplementedError("[laurent_series_solution] Method implemented only for linear polynomials in the main variable.")
         
-        lc = C(self.coefficient_full(gen[order])) # since degree is one and the coefficients are constants, this is a constant
+        lc = self.coefficient_full(gen[order]) # since degree is one and the coefficients are constants, this is a constant
         rem = lc*gen[order] - self 
 
-        computed = {f"{gen.variable_name()}_{k}": v for k, v in initials.items()}
+        def eval_monomial(m: DMonomial) -> Element:
+            output = C.one()
+            for (_,o),e in m._variables.items():
+                output*=init_values(o[0])**e
+            return output
+        
+        @lru_cache(maxsize=None)
+        def eval_polynomial(p: DPolynomial) -> Element:
+            return sum(mor(self.parent().base()(c))[0]*eval_monomial(m) for (m,c) in zip(p.monomials(gen), p.coefficients(gen)))
+        
+        ## We check that the leading coefficient does not vanish
+        assert eval_polynomial(lc) != 0, "The leading coefficient must not vanish for the method to work"
 
         def init_values(n: int) -> Element:
             if n < 0: return C.zero() # power series has zero negative exponents
-            ## Case with 0 <= n < order must be given with initials
+            elif not n in computed: 
+                ## Case with 0 <= n < order must be given with initials
+                if n < order:
+                    raise ValueError(f"Initial condition for order {n} not given (not enough data)")
 
-            nn = f"{gen.variable_name()}_{n}"
-            if nn not in computed:
-                poly = rem.derivative(times=n-order).to_sage().polynomial()
-                for v in poly.variables():
-                    init_values(gen.index(str(v), True)[0]) # ensure all lower coefficients are computed
+                k = n-order # k >= 0
+                num_der = eval_polynomial(rem.derivative(times=k)) # recursion if needed up to order n-1
+                den_ders = [eval_polynomial(lc.derivative(times=k)) for k in range(k+1)] # recursion if needed up to order n-1
 
-                poly_vars = [str(v) for v in poly.variables()]
-                computed[nn] = poly(**{k:v for k, v in computed.items() if k in poly_vars})/lc.to_sage()
-            return computed[nn]
+                computed[n] = (num_der - sum(init_values(order+l)*den_ders[k-l] for l in range(k))) / den_ders[0] # recursion if needed up to order n-1
+            return computed[n]
         
         return LR.element_class(LR, 
                                 coefficient_map=lambda k: 
@@ -2289,7 +2380,7 @@ class DPolynomialRing_Monoid(Parent):
     def add_constants(self, *new_constants: str) -> DPolynomialRing_Monoid:
         return self.change_ring(self.base().add_constants(*new_constants))
 
-    def _laurent_morphism(self, imgs, constant=None) -> MorphismToLaurent:
+    def _laurent_morphism(self, imgs, constant=None, set_default=False) -> MorphismToLaurent:
         r'''
             Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
         '''
@@ -2301,7 +2392,10 @@ class DPolynomialRing_Monoid(Parent):
         rem_imgs = {name : img for name, img in imgs.items() if name not in self.variable_names()}
 
         ## First, we build the base morphism 
-        base_morph = self.base()._laurent_morphism(rem_imgs, constant=constant)
+        try:
+            base_morph = self.base().laurent_morphism(rem_imgs, constant=constant, set_default=set_default)
+        except ValueError: # we try to check for a default morphism
+            base_morph = self.base().laurent_morphism(None, constant=constant, set_default=set_default)
 
         ## We cast the images to the obtained codomain
         my_imgs = {name : base_morph.codomain()(img) for name, img in my_imgs.items()}
@@ -3030,15 +3124,14 @@ class DPolynomialLaurentMorphism(MorphismToLaurent):
     from ..pseries.laurent import LSeries_Element
     def __init__(self, domain, codomain, images, base_morphism):
         super().__init__(domain, codomain, base_morphism)
-        self._images = {i : images[str(gen)] for (i,gen) in enumerate(domain.gens())} # images indexed by the index of the generator
+        self._images = {i : images[gen.variable_name()] for (i,gen) in enumerate(domain.gens())} # images indexed by the index of the generator
 
     def _call_(self, poly: DPolynomial) -> LSeries_Element:
         return sum((self._base(c)*self._call_monomial_(m) for (m,c) in zip(poly.monomials(), poly.coefficients())), self.codomain().zero())
 
     def _call_monomial_(self, monomial: DPolynomial) -> LSeries_Element:
-        m = monomial.monomials()[0]
         output = self.codomain().one()
-        for ((v,o),e) in m._variables.items():
+        for ((v,o),e) in monomial._variables.items():
             output *= self._images[v].derivative(times=o[0])**e
         return output
 
