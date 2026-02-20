@@ -315,6 +315,16 @@ class DPolynomial(Element):
             return tuple([self._content[m] for m in self.monomials()])
         else:
             return tuple([self.coefficient_full(m).constant_coefficient(*gens) for m in self.monomials(*gens)])
+        
+    def coefficient_dict(self, *gens: DMonomialGen) -> dict[DMonomial, Element]:
+        r'''
+            Method to get the dictionary of monomials and coefficients for ``self``.
+
+            If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
+            This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in
+            `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
+        '''
+        return dict(zip(self.monomials(*gens), self.coefficients(*gens)))
 
     def coefficient(self, monomial: DMonomial, *gens: DMonomialGen) -> Element:
         r'''
@@ -1028,13 +1038,108 @@ class DPolynomial(Element):
     @staticmethod
     def _monomial_order(m: DMonomial, k: Element) -> int:
         order = 0
-        for (_,o),e in m._variables:
-            order += (k - o)*e
+        for (_,o),e in m._variables.items():
+            order += (k - o[0])*e
         return order
     
     @staticmethod
-    def _monomial_min_value(m: DMonomial, k: Element) -> int:
-        order = "*".join(r"u_{" + f"{k}-{o}" + r"}" + f"^({e})" for (_,o),e in m._variables)
+    def _monomial_min_value(m: DMonomial, gen: DMonomialGen, k: Element) -> int:
+        from sage.arith.misc import falling_factorial
+        R = pushout(gen[0].parent(), k.parent())
+        u = R(gen[0])
+        k = R(k)
+        result = R.one()
+        for (_,(o,)),e in m._variables.items():
+            result *= (falling_factorial(k, o)*u)**e
+        return result
+
+    def _check_candidate(self, candidate: int, variable: Element, orders: list[int], *, laurent_morph: MorphismToLaurent = None) -> bool:
+        orders_candidate = [order(**{str(variable): candidate}) for order in orders]
+        mo = min(orders_candidate)
+        if orders_candidate.count(mo) == 1:
+            pass
+                
+        return False
+
+    @staticmethod
+    def EXAMPLE():
+        from dalgebra import *
+        from dalgebra.pseries.laurent import *
+        C = DifferentialRing(QQ)
+        R = DifferentialRing(QQ[x], [1])
+        F = R.fraction_field()
+        R.set_constant(C)
+        DO.<u> = DifferentialPolynomialRing(F)
+        x = R('x')
+        L = x^3*u[3] - u[2]*u[0]+u[1]^2 - (x+1)*u[0]
+        LS.<t> = LaurentSeries(C)
+        mor = F.laurent_morphism(imgs={'x':t}, set_default=True)
+        cs =[mor(c) for c in L.coefficients(u)]
+        ms = L.monomials(u)
+        os =[c.order() for c in cs]
+        mc =[c[o] for (c,o) in zip(cs,os)]
+        P = DO.add_constants("k"); k = P.base()("k"); P = P.constant_ring()
+        mo = [L._monomial_order(m,k) for m in ms]
+        mco = [mo[i]+os[i] for i in range(len(mo))]
+        diff = ["all" if mco[i]-mco[j] == 0 else [ZZ(el[0]) for el in P(mco[i]-mco[j]).numerator().roots() if el[0] in ZZ] for i in range(len(mo)) for j in range(i+1,len(mo))]
+        candidates = sorted(set(sum((el for el in diff if el != "all"), [])))
+        have_all = "all" in diff
+        to_eval_candidates = list()
+        for c in candidates:
+            ev_os = [ZZ(mco[i](**{str(k): c})) for i in range(len(mo))]
+            m_ev_os = min(ev_os)
+            if (c < 0 or c >= L.order(u)) and ev_os.count(m_ev_os) > 1:
+                to_eval_candidates.append(c)
+            else:
+                to_eval_candidates.append("Invalid")
+        all_candidates = [c-1 for c in candidates] + [candidates[-1]+1]
+        all_candidates = [c if c not in candidates else "Empty" for c in all_candidates]
+        to_eval_all = list()
+        for c in all_candidates:
+            if c == "Empty":
+                to_eval_all.append(c)
+            else:
+                ev_os = [ZZ(mco[i](**{str(k): c})) for i in range(len(mo))]
+                m_ev_os = min(ev_os)
+                if ev_os.count(m_ev_os) > 1:
+                    to_eval_all.append(c)
+        equ_all = list()
+        for c in to_eval_all:
+            if c == "Empty":
+                equ_all.append(c)
+            else:
+                ev_os = [ZZ(mco[i](**{str(k): c})) for i in range(len(mo))]
+                m_ev_os = min(ev_os)
+                filtered = [False if ev_os[i] != m_ev_os else True for i in range(len(mo))]
+                equ_all.append(sum((mc[i]*L._monomial_min_value(ms[i],u,k) for i in range(len(mo)) if filtered[i]), 0))
+        equ_candidates = list()
+        for c in to_eval_candidates:
+            if c == "Invalid":
+                equ_candidates.append(c)
+            else:
+                ev_os = [ZZ(mco[i](**{str(k): c})) for i in range(len(mo))]
+                m_ev_os = min(ev_os)
+                filtered = [False if ev_os[i] != m_ev_os else True for i in range(len(mo))]
+                equ_candidates.append(sum((mc[i]*L._monomial_min_value(ms[i],u,k) for i in range(len(mo)) if filtered[i]), 0))
+        PP = PolynomialRing(PolynomialRing(QQ, "u_0").fraction_field(), "k")
+        roots_all = list()
+        intervals = ([(-oo,candidates[0])] + [(candidates[i],candidates[i+1]) for i in range(len(candidates)-1)] + [(candidates[-1], oo)]) if len(candidates) > 0 else [(-oo, oo)]
+        for i in range(len(equ_all)):
+            if isinstance(equ_all[i], str):
+                roots_all.append([])
+            else:
+                equ = PP(str(equ_all[i]))
+                roots = [el[0] for el in equ.roots()]
+                interval = intervals[i]
+                roots_all.append([root for root in roots if ((not root in ZZ) or (root in ZZ and (ZZ(root) > interval[0] and ZZ(root) < interval[1]) and (ZZ(root) < 0 or ZZ(root) >= L.order(u))))])
+        roots_candidates = list()
+        for i in range(len(equ_candidates)):
+            if isinstance(equ_candidates[i], str):
+                roots_candidates.append("Invalid")
+            else:
+                equ = PP(str(equ_all[i]))(k = candidates[i])
+                roots_candidates.append("Invalid" if equ in QQ and equ != 0 else equ)
+        return tuple((tuple(zip(intervals, roots_all)), tuple(zip(candidates, roots_candidates)), None))
 
     @LaurentMethod
     def indicial_equation(self, gen: DMonomialGen, varname: str = "n", *, laurent_morph: MorphismToLaurent = None) -> Element:
@@ -1070,8 +1175,9 @@ class DPolynomial(Element):
                 sage: p.indicial_equation(u)
                 n^3 - 9*n^2 + 26*n - 24
         '''
-        PR = PolynomialRing(QQ, varname)
-        k = PR.gen()
+        C = laurent_morph.codomain().base() # always a ring of constants
+        CE = C.add_constants(varname)
+        k = CE(varname)
         coeffs, monoms = self.coefficients(gen), self.monomials(gen)
         mo = min(0, *(laurent_morph(c).order() for c in coeffs)) # if < 0, we would need to consider the equation multiplied by t^mo
         coeffs_ord = [laurent_morph(c).order() - mo for c in coeffs]
@@ -1080,6 +1186,14 @@ class DPolynomial(Element):
 
         comp = {(monoms[i], monoms[j]) : orders[i] - orders[j] for i in range(len(monoms)) for j in range(i+1, len(monoms))} # maps pair of monomials to the difference of their order
         candidates = {k : "all" if v == 0 else [r for r in v.roots() if r in ZZ] for k,v in comp.items()}
+
+        ## Two cases: 
+        ## 1. there is an "all" in candidates: we need to look for intervals of values and decide
+        ## 2. the values are all fixed, we need to decide
+        ## We first check the exact candidates
+        exact_candidates = sorted(list(set(sum((v if v != "all" else [] for v in candidates.values()), [])))) # list sorted
+        filtered_candidates = [c for c in exact_candidates if self._check_candidate(c, k, laurent_morph=laurent_morph)]
+
 
         # TODO: We need to check the minimal term of the equation for each candidate.
         # Special cases: 
