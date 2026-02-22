@@ -59,6 +59,7 @@ from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
 from sage.misc.misc_c import prod
 from sage.modules.free_module_element import vector
+from sage.rings.ideal import Ideal_generic
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing, InfinitePolynomialGen, InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.infinity import Infinity as oo
@@ -162,7 +163,7 @@ def LaurentMethod(func):
         sig = inspect.signature(func)
         if "laurent_morph" not in sig.parameters:
             raise TypeError(f"The method {func.__name__} does not accept a 'laurent_morph' argument.")
-        elif sig.parameters["laurent_morph"].default is not None:
+        elif sig.parameters["laurent_morph"].default is None:
             raise TypeError(f"The method {func.__name__} does not accept a default value for 'laurent_morph'.")
         morph = kwds.pop("laurent_morph") if "laurent_morph" in kwds else self.parent().laurent_morphism()
 
@@ -1076,9 +1077,20 @@ class DPolynomial(Element):
         
         return ceil(lower) if lower not in ZZ else ZZ(lower) + 1
          
+    def _indicial_low_order(self, u: DMonomialGen, varnames: str = "_a", laurent_morph: MorphismToLaurent = None) -> Ideal_generic:
+        order = self.order(u)
+        # We are looking for conditions in the initial conditions for this equation to have a low-order solution.
+        # This is always true in the case of a linear differential equation.
+        # The out can be the ideal (1) for no solutions, or the ideal (0) for any combination is solution.
+        # TODO: Go on here
+        ## Idea 1: create truncated Laurent Series "sum_{i=0}^n a_it^i", plug it into the equation and check if it can get to zero.
+        ##         - increase the truncation until... when?
+        ##         * there must be an order where, beyond it, all elements of order < self.order() do not affect any longer. If we conclude there that
+        ##           the only solution is having all terms of lower order 0, then there is no solution of low order.
+
     @cached_method
     @LaurentMethod
-    def indicial_equation(self: DPolynomial, u: DMonomialGen, varname: str = "k", *, laurent_morph: MorphismToLaurent) -> tuple[tuple[tuple[Element, list[Element]]], tuple[Element, Element], None]:
+    def indicial_equation(self, u: DMonomialGen, varname: str = "k", *, laurent_morph: MorphismToLaurent) -> tuple[tuple[tuple[Element, list[Element]]], tuple[Element, Element], None]:
         ## Getting variables that may be useful - data of the ring of computation       
         DO = self.parent()
         F = DO.base()
