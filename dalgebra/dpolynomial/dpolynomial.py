@@ -1038,7 +1038,7 @@ class DPolynomial(Element):
 
     @staticmethod
     def _monomial_order(m: DMonomial, k: Element) -> int:
-        order = 0
+        order = k.parent().zero()
         for (_,o),e in m._variables.items():
             order += (k - o[0])*e
         return order
@@ -1077,7 +1077,8 @@ class DPolynomial(Element):
         
         return ceil(lower) if lower not in ZZ else ZZ(lower) + 1
          
-    def _indicial_low_order(self, u: DMonomialGen, varnames: str = "_a", laurent_morph: MorphismToLaurent = None) -> Ideal_generic:
+    def _indicial_low_order(self, u: DMonomialGen, varnames: str = "A", laurent_morph: MorphismToLaurent = None) -> Ideal_generic:
+        from sage.rings.ideal import Ideal
         order = self.order(u)
         # We are looking for conditions in the initial conditions for this equation to have a low-order solution.
         # This is always true in the case of a linear differential equation.
@@ -1087,6 +1088,30 @@ class DPolynomial(Element):
         ##         - increase the truncation until... when?
         ##         * there must be an order where, beyond it, all elements of order < self.order() do not affect any longer. If we conclude there that
         ##           the only solution is having all terms of lower order 0, then there is no solution of low order.
+        parent_c = self.parent().add_constants(*[f"{varnames}_{i}" for i in range(order)] + [varnames])
+        gen_c = parent_c.gen(u.variable_name())
+        C_p = parent_c.constant_ring()
+        base_p = parent_c.base()
+
+        variables, aux = [base_p(f"{varnames}_{i}") for i in range(order)], base_p(f"{varnames}")
+        base_p.laurent_morphism(constant=C_p) # this should extend laurent_morph
+
+        gen_sol=self.power_series_solution(u, {i : variables[i] for i in range(len(variables))})
+        aux_var = aux.numerator().wrapped
+        ## We force the power series to have low order, hence one of the first variables must not vanish.
+        I_gens = [prod(1-aux*v for v in variables).numerator().wrapped]
+        I = [Ideal(I_gens).elimination_ideal(aux_var)]
+
+        ## We compute more initial conditions and we stop twice the order
+        for _ in range(2*order):
+            I_gens.append(gen_sol[len(I_gens)-1].numerator().wrapped)
+            I.append(Ideal(I_gens).elimination_ideal(aux_var))
+        
+        ## We print (for debugging purposes) all the ideals
+        print(I)
+
+        ## We return the last one (since the ideals are included one into the next)
+        return I[-1]
 
     @cached_method
     @LaurentMethod
@@ -1100,6 +1125,8 @@ class DPolynomial(Element):
 
         ## Generating variables that may be useful - extra data for indicial computations
         P = DO.add_constants(varname); k = P.base()(varname); P = P.constant_ring()
+        ## P is a fraction field with (maybe) more variables
+        PP = P.base().polynomial_ring(varname) # we push other variables to the bottom
 
         ## Getting variables that may be useful - data of the polynomial
         cs =[laurent_morph(c) for c in self.coefficients(u)]
@@ -1114,7 +1141,7 @@ class DPolynomial(Element):
 
         ## Computing the candidates (critical values for the indicial variable)
         ## REMARK: we keep the rational candidates in case we need to consider intervals due to the existence of an "all" term.
-        diff = ["all" if mco[i]-mco[j] == 0 else [QQ(el[0]) for el in P(mco[i]-mco[j]).numerator().roots() if el[0] in QQ] for i in range(len(mo)) for j in range(i+1,len(mo))]
+        diff = ["all" if mco[i]-mco[j] == 0 else [QQ(el[0]) for el in PP(P(mco[i]-mco[j]).numerator()).roots() if el[0] in QQ] for i in range(len(mo)) for j in range(i+1,len(mo))]
         candidates = sorted(set(sum((el for el in diff if el != "all"), []))) # contains the critical points
         have_all = "all" in diff
 
@@ -1123,18 +1150,22 @@ class DPolynomial(Element):
         ##  - Valid if several terms get to the same order
         to_eval_candidates = list()
         for c in candidates:
-            ev_os[c] = [mco[i](**{str(k): c}) for i in range(len(mo))] # this evaluation work since c is already in QQ
+            ev_os[c] = [QQ(mco[i](**{str(k): c})) for i in range(len(mo))] # this evaluation work since c is already in QQ
             m_ev_os[c] = min(ev_os[c])
-            if c in ZZ and 0 <= c < ord_self and ev_os[c].count(m_ev_os[c]) == 1:
-                to_eval_candidates.append(c)
+            if (c in ZZ) and (c >= 0 and c < ord_self):
+                to_eval_candidates.append("Small")
+            elif c in ZZ and ev_os[c].count(m_ev_os[c]) == 1:
+                to_eval_candidates.append("No-cancellation")
+            elif c not in ZZ:
+                to_eval_candidates.append("No-integer")
             else:
-                to_eval_candidates.append("Invalid")
+                to_eval_candidates.append(c)
 
         ## Evaluating the candidates:
         ##  - If valid, we compute the minimal term on the terms with minimal order. This will vanish
         equ_candidates = list()
         for c in to_eval_candidates:
-            if c == "Invalid":
+            if isinstance(c, str):
                 equ_candidates.append(c)
             else:
                 filtered = [False if ev_os[c][i] != m_ev_os[c] else True for i in range(len(mo))]
@@ -1161,12 +1192,14 @@ class DPolynomial(Element):
                 m_ev_os[c] = min(ev_os[c])
                 if ev_os[c].count(m_ev_os[c]) > 1:
                     to_eval_all.append(c)
+                else:
+                    to_eval_all.append("No-cancellation")
 
         ## Evaluating the all_candidates:
         ##  - If valid, we compute the minimal term on the terms with minimal order. This will vanish
         equ_all = list()
         for c in to_eval_all:
-            if c == "Empty":
+            if isinstance(c, str):
                 equ_all.append(c)
             else:
                 filtered = [False if ev_os[c][i] != m_ev_os[c] else True for i in range(len(mo))]
@@ -1174,17 +1207,17 @@ class DPolynomial(Element):
         
         ## We solve the indicial equations in each place
         ### - Creating the ring where the evaluation will belong
-        PP = PolynomialRing(PolynomialRing(QQ, f"{u.variable_name()}_0").fraction_field(), varname)
+        PP = P.base().add_constants(f"{u.variable_name()}_0").polynomial_ring(varname).wrapped
         ### - Getting the roots for the critical candidates
         roots_candidates = list()
         for i in range(len(equ_candidates)):
             if isinstance(equ_candidates[i], str):
-                roots_candidates.append("Invalid")
+                roots_candidates.append(equ_candidates[i])
             else:
-                equ = PP(str(equ_all[i]))(**{varname: candidates[i]}) ## cast work because name is set on purpose
+                equ = PP(str(equ_candidates[i]))(**{varname: candidates[i]}) ## cast work because name is set on purpose
                 ## The evaluation may be constant, so no value of "u_0" will vanish this term -> no solution
                 ## Otherwise, the zeroes of the equation remaining are initial conditions valid for the solution
-                roots_candidates.append("Invalid" if equ in QQ and equ != 0 else equ)
+                roots_candidates.append(("No-generic", equ) if equ in QQ and equ != 0 else equ)
         ### - Getting the roots for the intervals
         ###   Correct values are integer roots on "k" of the values in the interval that are not in the range (0, 1, ..., order(u)-1)
         ###   that annihilate the polynomial independently of the value of "u_0".
@@ -1209,7 +1242,8 @@ class DPolynomial(Element):
                     )])
         
         ## TODO: Perform the analysis for the case when the order of the solution is in (0,1,...,ord(L)-1)
-        conditions_low_order = None
+        conditions_low_order = self._indicial_low_order(u, laurent_morph=laurent_morph)
+
         ## Returning the results:
         ##  - For critical candidates: a map "order" -> "condition"
         ##  - For intervals: a map "interval" -> "orders with solution" ## TODO: this may be refined later

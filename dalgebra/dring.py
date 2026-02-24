@@ -1774,7 +1774,7 @@ class DRing_Wrapper(Parent):
         rem_gens = [gen for gen in self.wrapped.gens() if str(gen) not in imgs]
 
         ## It is necessary that all remaining variables are constants
-        if any(not gen.is_constant() for gen in rem_gens):
+        if any(not self(gen).d_constant() for gen in rem_gens):
             raise ValueError(f"Unable to create Laurent morphism because not all variables have an image and some of the remaining variables are not constant. Remaining variables: {rem_gens}")
         
         ## We build the codomain: if constant is given, we use it
@@ -2029,6 +2029,56 @@ class DRing_Wrapper(Parent):
         if hashable:
             return self.__cached_pushouts[other]
         return None
+
+    @cached_method
+    def _polynomial_ring(self, *gens: str | DRing_WrapperElement) -> DRing_Wrapper:
+        if not isinstance(self.wrapped, (PolynomialRing_generic, MPolynomialRing_base)):
+            raise TypeError(f"Polynomial ring structure only implemented when the wrapped ring is a polynomial ring. Found {self.wrapped}")
+        elif any(any(not self(g).d_constant(i) for i in range(self.noperators())) for g in gens):
+            raise ValueError(f"All the provided generators must be constants for all the operators. Found {gens}")
+        
+        varnames = [str(g) for g in self.gens()]
+        gens = [str(g) for g in gens]
+
+        if any(g not in varnames for g in gens):
+            raise ValueError(f"All the provided generators must be among the generators of the wrapped ring. Found {gens} and {varnames}")
+        
+        rem_varnames = [v for v in varnames if v not in gens]
+
+        if len(rem_varnames) == 0:
+            return self
+
+        base_ring = PolynomialRing(self.wrapped.base(), rem_varnames).fraction_field()
+        ring = PolynomialRing(base_ring, gens)
+        operator_imgs = [[self(gen).operation(i) for gen in gens] for i in range(self.noperators())]
+        return DRing(ring, *operator_imgs, types=self.operator_types())
+
+    @cached_method
+    def polynomial_ring(self, *gens: str | DRing_WrapperElement) -> DRing_Wrapper:
+        r'''
+            Method to create a polynomial ring structure based on the generators provided, keeping other generators as base elements.
+
+            NOTE: this method only works when the wrapped ring is a polynomial ring and the non-provided generators are constants for all the operators.
+        '''
+        ring = self._polynomial_ring(*gens)
+
+        ## Setting if possible the ring of constants
+        for i in range(self.noperators()):
+            try:
+                old_constant = self.constant_ring(i)
+                if old_constant != self:
+                    cgens = [gen for gen in gens if self(gen).d_constant(i)]
+                    ring.set_constant(old_constant.polynomial_ring(*cgens), i)
+                else:
+                    ring.set_constant(ring, i)
+            except (NotImplementedError, TypeError, ValueError):
+                pass
+
+        ## Creating coercion between the two rings
+        ring.register_coercion(DRing_Wrapper_ToPolyRingMorphism(self, *gens))
+        self.register_coercion(DRing_Wrapper_FromPolyRingMorphism(self, *gens))
+        return ring
+        
 
     # Rings methods
     def fraction_field(self):
@@ -2436,6 +2486,26 @@ class DRing_Wrapper_SimpleMorphism(Morphism):
     def _call_(self, p):
         return self.codomain()(p.wrapped)
 
+
+class DRing_Wrapper_ToPolyRingMorphism(Morphism):
+    def __init__(self, domain, *gens: str | DRing_WrapperElement):
+        super().__init__(domain, domain._polynomial_ring(*gens))
+
+    def _call_(self, element: DRing_WrapperElement) -> DRing_WrapperElement:
+        wrapped_codomain = self.codomain().wrapped
+        dict_to_codomain = {str(g): wrapped_codomain(str(g)) for g in self.domain().gens()}
+
+        return self.codomain()(element.wrapped(**dict_to_codomain))
+    
+class DRing_Wrapper_FromPolyRingMorphism(Morphism):
+    def __init__(self, codomain, *gens: str | DRing_WrapperElement):
+        super().__init__(codomain._polynomial_ring(*gens), codomain)
+
+    def _call_(self, element: DRing_WrapperElement) -> DRing_WrapperElement:
+        wrapped_codomain = self.codomain().wrapped
+        dict_to_codomain = {str(g): wrapped_codomain(str(g)) for g in self.codomain().gens()}
+
+        return self.codomain()(element.wrapped(**dict_to_codomain))
 
 class MorphismToLaurent(Morphism):
     r'''
