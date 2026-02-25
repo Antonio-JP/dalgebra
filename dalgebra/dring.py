@@ -946,7 +946,12 @@ class DRings(Category):
                         codomain = mor.codomain().change_base(constant) # Laurent series with new constants
                         self._default_laurent_morphism[constant] = ExtendedLaurentMorphism(mor.domain(), codomain, mor)
                     return self._default_laurent_morphism[constant]
-                raise ValueError("No default Laurent morphism has been set")
+                elif all(gen.d_constant() for gen in self.gens()):
+                    ## We can build a default morphism from the generators
+                    imgs = {gen: gen for gen in self.gens()}
+                    return self.laurent_morphism(imgs, constant, set_default=True)
+                else:
+                    raise ValueError("No default Laurent morphism has been set")
             
             if imgs is None:
                 raise ValueError("Argument 'imgs' is required to create a Laurent morphism")
@@ -2075,8 +2080,10 @@ class DRing_Wrapper(Parent):
                 pass
 
         ## Creating coercion between the two rings
-        ring.register_coercion(DRing_Wrapper_ToPolyRingMorphism(self, *gens))
-        self.register_coercion(DRing_Wrapper_FromPolyRingMorphism(self, *gens))
+        if ring != self:
+            ring.register_coercion(DRing_Wrapper_ToPolyRingMorphism(self, *gens))
+            self.register_coercion(DRing_Wrapper_FromPolyRingMorphism(self, *gens))
+
         return ring
         
 
@@ -2188,6 +2195,9 @@ class DFractionFieldElement(FractionFieldElement):
     def reduce(self):
         n = self.numerator()
         d = self.denominator()
+        if n.is_unit() or d.is_unit(): # nothing to do
+            return
+        
         try:
             from sage.arith.misc import GCD
             g = GCD(n,d)
@@ -2539,7 +2549,7 @@ class DRingWrapperLaurentMorphism(MorphismToLaurent):
     '''
     def __init__(self, domain, codomain, given_imgs: dict[str,Element]):
         super().__init__(domain, codomain, domain.base().hom(codomain))
-        self._given_imgs = given_imgs
+        self._given_imgs = {key: codomain(val) for key, val in given_imgs.items()}
 
     def _call_(self, element: Element) -> DRing_WrapperElement:
         return self.codomain()(element.wrapped(**self._given_imgs))

@@ -68,6 +68,7 @@ from sage.rings.rational_field import QQ
 from sage.rings.ring import Ring
 from sage.sets.family import LazyFamily
 from sage.structure.element import Element, Matrix
+from sage.structure.factorization import Factorization
 from sage.structure.factory import UniqueFactory
 from sage.structure.parent import Parent
 from sage.symbolic.ring import SR
@@ -238,6 +239,10 @@ class DPolynomial(Element):
     def divides(self, other: DPolynomial) -> bool:
         pself, pother = self.parent().as_polynomials(self, other)
         return pself.divides(pother)
+
+    def factor(self) -> Factorization:
+        base_factorization: Factorization = self.to_sage().factor()
+        return Factorization([(self.parent()(factor), exponent) for (factor, exponent) in base_factorization], self.parent()(base_factorization.unit()))
 
     def content(self) -> Element:
         return self.parent().base()(GCD(self.coefficients()))
@@ -1077,8 +1082,33 @@ class DPolynomial(Element):
         
         return ceil(lower) if lower not in ZZ else ZZ(lower) + 1
          
+    def _generic_pseries_solution(self, u: DMonomialGen, varnames: str = "A", laurent_morph: MorphismToLaurent = None) -> Element | tuple[Element]:
+        order = self.order(u)
+        if self.degree(u[order]) > 1: # equation is not linear -> we derivate
+            return self.derivative()._generic_pseries_solution(u, varnames, laurent_morph=laurent_morph)
+        
+        ## We split the computation factoring the polynomial
+        ## In case only one factor exists, we do the computations
+        factors = self.factor()
+        if len(factors) > 1:
+            return tuple(factor[0]._generic_pseries_solution(u, varnames, laurent_morph=laurent_morph) for factor in factors)
+        
+        ## In the case of only one factor, we do the computations
+        parent_c = self.parent().add_constants(*[f"{varnames}_{i}" for i in range(order)] + [varnames])
+        # C_p = parent_c.constant_ring()
+        base_p = parent_c.base()
+
+        variables = [base_p(f"{varnames}_{i}") for i in range(order)]
+        # base_p.laurent_morphism(constant=C_p, set_default=True) # this should extend laurent_morph
+
+        try:
+            return self.power_series_solution(u, {i : variables[i] for i in range(len(variables))})
+        except AssertionError: # this means the term of highest order vanishes and we can not extend the solution
+            return [self, "Cannot-extend"]
+        
     def _indicial_low_order(self, u: DMonomialGen, varnames: str = "A", laurent_morph: MorphismToLaurent = None) -> Ideal_generic:
         from sage.rings.ideal import Ideal
+        
         order = self.order(u)
         # We are looking for conditions in the initial conditions for this equation to have a low-order solution.
         # This is always true in the case of a linear differential equation.
@@ -1088,30 +1118,29 @@ class DPolynomial(Element):
         ##         - increase the truncation until... when?
         ##         * there must be an order where, beyond it, all elements of order < self.order() do not affect any longer. If we conclude there that
         ##           the only solution is having all terms of lower order 0, then there is no solution of low order.
-        parent_c = self.parent().add_constants(*[f"{varnames}_{i}" for i in range(order)] + [varnames])
-        gen_c = parent_c.gen(u.variable_name())
-        C_p = parent_c.constant_ring()
-        base_p = parent_c.base()
+        gen_sols = self._generic_pseries_solution(u, varnames, laurent_morph=laurent_morph)
+        if not isinstance(gen_sols, tuple):
+            gen_sols = (gen_sols,)
 
-        variables, aux = [base_p(f"{varnames}_{i}") for i in range(order)], base_p(f"{varnames}")
-        base_p.laurent_morphism(constant=C_p) # this should extend laurent_morph
+        output = list()
+        for gen_sol in gen_sols:
+            if not isinstance(gen_sol, list):
+                mor = self.parent().laurent_morphism({u.variable_name(): gen_sol}, constant=gen_sol.parent().constant_ring())
+                self_eval = mor(self) # we evaluate the equation with the solution. Since this should be zero, we get conditions on the coefficients of the solution.
+                parent_c = self_eval.parent().base() # this include all the parameters necessary
+                aux = parent_c(varnames).numerator().wrapped # this is the auxiliary variable to check the order
 
-        gen_sol=self.power_series_solution(u, {i : variables[i] for i in range(len(variables))})
-        aux_var = aux.numerator().wrapped
-        ## We force the power series to have low order, hence one of the first variables must not vanish.
-        I_gens = [prod(1-aux*v for v in variables).numerator().wrapped]
-        I = [Ideal(I_gens).elimination_ideal(aux_var)]
+                I_gens = [prod(1-aux*gen_sol[i] for i in range(order)).numerator().wrapped] # conditions to have order at least given by "order"
+                I = [Ideal(I_gens).elimination_ideal(aux)] # ideal for candidates of order at least "order"
+                for _ in range(2*order): # This stop condition is a HEURISTIC
+                    I_gens.append(self_eval[len(I_gens)-1].numerator().wrapped) # we get the next condition from self_eval to be zero
+                    I.append(Ideal(I_gens).elimination_ideal(aux)) # we get the ideal for candidates of order at least len(I_gens)
+                
+                output.append((gen_sol, I[-1]))
+            else:
+                output.append(gen_sol)
 
-        ## We compute more initial conditions and we stop twice the order
-        for _ in range(2*order):
-            I_gens.append(gen_sol[len(I_gens)-1].numerator().wrapped)
-            I.append(Ideal(I_gens).elimination_ideal(aux_var))
-        
-        ## We print (for debugging purposes) all the ideals
-        print(I)
-
-        ## We return the last one (since the ideals are included one into the next)
-        return I[-1]
+        return tuple(output) if len(output) > 1 else output[0]
 
     @cached_method
     @LaurentMethod
@@ -1250,7 +1279,7 @@ class DPolynomial(Element):
         ##  - For low order candidates: an ideal of conditions for the first order terms to have a solution ## TODO: this may be refined later
         return tuple((tuple(zip(intervals, roots_all)), tuple(zip(candidates, roots_candidates)), conditions_low_order))
 
-    def power_series_solution(self, gen: DMonomialGen, initials: dict[int, Element]) -> Element:
+    def power_series_solution(self, gen: DMonomialGen, initials: dict[int, Element], *, lau_var: str = "t") -> Element:
         from ..pseries.laurent import LaurentSeries
         from sage.functions.other import factorial
         from functools import lru_cache
@@ -1261,7 +1290,7 @@ class DPolynomial(Element):
         from functools import reduce
         C = pushout(self.parent().constant_ring(), reduce(lambda p,q : pushout(p,q), (el.parent().constant_ring() for el in initials.values())))
         computed = {k : C(ini) for k, ini in initials.items()}
-        LR = LaurentSeries(C, 't')
+        LR = LaurentSeries(C, lau_var)
         mor = self.parent().base().laurent_morphism(constant=C)
         
         ## Checking the conditions for the generator
