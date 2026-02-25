@@ -1279,6 +1279,107 @@ class DPolynomial(Element):
         ##  - For low order candidates: an ideal of conditions for the first order terms to have a solution ## TODO: this may be refined later
         return tuple((tuple(zip(intervals, roots_all)), tuple(zip(candidates, roots_candidates)), conditions_low_order))
 
+    @staticmethod
+    def _monomial_max_required(coeff: Element, monomial: DMonomial, variable: DMonomialGen, k: Element, d: Element) -> Element:
+        r'''
+            Given a term `coeff*monomial`, if we plug for the variable `u` a formal Laurent series of order `d`, 
+            we can check which coefficient of the series can affect to this term at order `k`.
+
+            More precisely, we use the fact that if we multiply two Laurent series of orders `d_1` and `d_2`, 
+            the resulting series at order `k` will be affected by coefficients of order `k-d_2` from the first factor and 
+            `k-d_1` from the second factor.
+
+            If we now consider the iterative case where `monomial` is the product of several factors and we combine it 
+            with `coeff`, we can check the maximal order of the solution `u` that appears at order `k`.
+        '''
+        ## Generate the index of the maximum coefficient appearing at order `k` in the product
+        ## `coeff*monomial` when variable is a formal Laurent series of order `d`.
+        exponents = dict()
+        orders = dict()
+        for (_,(o,)),e in monomial._variables.items():
+            exponents[o] = e
+            orders[o] = (d - o if (not d in ZZ or ZZ(d) < 0) else max(0, ZZ(d) - o))
+        
+        max_order = dict()
+        for o in exponents:
+            max_order[o] = k - sum(
+                (orders[o2]*exponents[o2] 
+                 for o2 in exponents if o2 != o), 0
+            ) - orders[o]*(exponents[o]-1) - coeff.order()
+        
+        breakpoint()
+        return max(max_order.values()) ## TODO: this does not work since the elements are polynomials and not integers
+    
+    @staticmethod
+    def _monomial_max_coefficient(coeff: Element, monomial: DMonomial, variable: DMonomialGen, k: Element, d: Element, u_d: Element) -> Element:
+        ## Generate the coefficient of the maximum term appearing at order `k` in the product
+        ## `coeff*monomial` when variable is a formal Laurent series of order `d`.
+        return 0 ## TODO: Add computation
+
+    @cached_method
+    @LaurentMethod
+    def indicial_leading(self, u: DMonomialGen, d: Element,
+                         varname: str = "k", *, laurent_morph: MorphismToLaurent = None) -> tuple[Element, Element]:
+        r'''
+            Compute the leading recursive contribution for a Laurent expansion coefficient.
+
+            Let `U = L(y)` be the Laurent series obtained by substituting a formal Laurent solution
+            `y = \sum_{n\geq d} a_n t^n` into ``self`` (seen as an equation in ``u``). For each target
+            coefficient `U[k]`, this method computes the coefficient of `a_N` with maximal index `N` that
+            can affect `U[k]`.
+
+            The method returns:
+
+            * the detected leading index `N(k)` (or ``None`` when it cannot be uniquely selected),
+            * the corresponding multiplier
+
+            INPUT:
+
+            * ``u``: main infinite variable to analyze.
+            * ``d``: order of the Laurent ansatz. If ``None``, a symbolic parameter is used;
+                otherwise it must be a single element (e.g. an integer or a symbolic value).
+            * ``varname``: name of the symbolic index variable used for the target coefficient.
+            * ``laurent_morph``: Laurent morphism for coefficient expansion (handled by :func:`LaurentMethod`).
+
+            OUTPUT:
+
+            A tuple ``(leading_index, leading_multiplier)``.
+        '''
+        DO = self.parent()
+
+        if DO.noperators() > 1:
+            raise NotImplementedError("[indicial_leading] Method currently implemented only for one operator.")
+        if not DO.is_differential():
+            raise NotImplementedError("[indicial_leading] Method currently implemented only in the differential case.")
+
+        # Normalizing/validating the target generator.
+        if isinstance(u, str):
+            u = DO.gen(u)
+        if not isinstance(u, DMonomialGen) or u not in DO.gens():
+            raise TypeError(f"[indicial_leading] The variable must be one of the generators of {DO}.")
+
+        # We work in an auxiliary ring with symbolic variables for k and (optionally) d.
+        # This keeps compatibility with ring elements appearing in the coefficients.
+        aux = DO.add_constants(varname, "u_d").base()
+        k = aux(varname)
+        u_d = aux("u_d")
+        d = aux(d)
+
+        # Coefficients and monomials with respect to u, as in indicial_equation.
+        cs = [laurent_morph(c) for c in self.coefficients(u)]
+        ms = self.monomials(u)
+        # We compute the order of the highest term affecting each summand of the equation, to detect the leading contribution.
+        os = [self._monomial_max_required(c, m, u, k, d) for (c, m) in zip(cs, ms)]
+        diff = [order - k for order in os]
+        max_diff = max(diff)
+        # We compute the element multiplying the leading term
+        # We use u_d for the lowest term order of the generic solution since this will appear naturally
+        equation = sum(
+            self._monomial_max_coefficient(cs[i], ms[i], u, k, d, u_d) 
+            for i in range(len(cs)) if diff[i] == max_diff) # this is all the contribution for the leading coefficient
+
+        return (max_diff, equation)
+
     def power_series_solution(self, gen: DMonomialGen, initials: dict[int, Element], *, lau_var: str = "t") -> Element:
         from ..pseries.laurent import LaurentSeries
         from sage.functions.other import factorial
