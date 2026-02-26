@@ -47,7 +47,7 @@ import logging
 
 from itertools import product
 
-from sage.arith.misc import GCD
+from sage.arith.misc import GCD, falling_factorial
 from sage.calculus.functional import diff
 from sage.categories.category import Category
 from sage.categories.monoids import Monoids
@@ -1280,7 +1280,7 @@ class DPolynomial(Element):
         return tuple((tuple(zip(intervals, roots_all)), tuple(zip(candidates, roots_candidates)), conditions_low_order))
 
     @staticmethod
-    def _monomial_max_required(coeff: Element, monomial: DMonomial, variable: DMonomialGen, k: Element, d: Element) -> Element:
+    def _monomial_max_data(monomial: DMonomial, k: Element, d: Element, u_d: Element) -> Element:
         r'''
             Given a term `coeff*monomial`, if we plug for the variable `u` a formal Laurent series of order `d`, 
             we can check which coefficient of the series can affect to this term at order `k`.
@@ -1294,32 +1294,48 @@ class DPolynomial(Element):
         '''
         ## Generate the index of the maximum coefficient appearing at order `k` in the product
         ## `coeff*monomial` when variable is a formal Laurent series of order `d`.
+
+        ## FIRST: compute the orders of the solution for each factor (i.e., for each order of the variable `variable`)
+        ## This allows to know the value of the coefficient to be used for maximum order.
         exponents = dict()
         orders = dict()
         for (_,(o,)),e in monomial._variables.items():
             exponents[o] = e
             orders[o] = (d - o if (not d in ZZ or ZZ(d) < 0) else max(0, ZZ(d) - o))
-        
-        max_order = dict()
+
+        ## SECOND: we iterate over the orders. For each, we take the minimum possible for all but one (that will have the maximum possible order)
+        appear = dict()
+        coeff_appear = dict()
         for o in exponents:
-            max_order[o] = k - sum(
-                (orders[o2]*exponents[o2] 
-                 for o2 in exponents if o2 != o), 0
-            ) - orders[o]*(exponents[o]-1) - coeff.order()
+            appear[o] = k - sum(exponents[o2]*orders[o2] for o2 in exponents if o2 != o) - (exponents[o]-1)*orders[o] + o
+            coeff_appear[o] = (
+                exponents[o]*
+                falling_factorial(k - sum((exponents[o2]*orders[o2] for o2 in exponents if o2 != o), 0) - (exponents[o]-1)*orders[o] + o ,o)*
+                (falling_factorial(d,o)*u_d)**(exponents[o]-1)*
+                prod(((falling_factorial(d,o2)*u_d)**(exponents[o2]) for o2 in exponents if o2 != o), 1)
+            )
         
-        breakpoint()
-        return max(max_order.values()) ## TODO: this does not work since the elements are polynomials and not integers
+        ## THIRD: for see which orders provide the maximal coefficient (from `appear`)
+        if len(appear) > 0:
+            max_appear = max(appear.values())
+
+            ## FOURTH: we sum all the coefficients going with the maximal term
+            total_coeff = sum(coeff_appear[o] for o in exponents if appear[o] == max_appear)
+            
+            return max_appear, total_coeff
+        else:
+            return -oo, 0 ## No variable in the monomial means nothing affects this term. (d-1) is below the bound for it, and the coefficient gets a zero
     
     @staticmethod
-    def _monomial_max_coefficient(coeff: Element, monomial: DMonomial, variable: DMonomialGen, k: Element, d: Element, u_d: Element) -> Element:
-        ## Generate the coefficient of the maximum term appearing at order `k` in the product
-        ## `coeff*monomial` when variable is a formal Laurent series of order `d`.
-        return 0 ## TODO: Add computation
+    def _monomial_max_data_coeff(coeff: Element, monomial: DMonomial, k: Element, d: Element, u_d: Element) -> Element:
+        order_coeff = coeff.order()
+        order, factor = DPolynomial._monomial_max_data(monomial, k-order_coeff, d, u_d)
+        return order, coeff[order_coeff]*factor
 
     @cached_method
     @LaurentMethod
-    def indicial_leading(self, u: DMonomialGen, d: Element,
-                         varname: str = "k", *, laurent_morph: MorphismToLaurent = None) -> tuple[Element, Element]:
+    def indicial_leading(self, u: DMonomialGen, d: str = "d",
+                         varname: str = "n", *, laurent_morph: MorphismToLaurent) -> tuple[Element, Element]:
         r'''
             Compute the leading recursive contribution for a Laurent expansion coefficient.
 
@@ -1360,7 +1376,7 @@ class DPolynomial(Element):
 
         # We work in an auxiliary ring with symbolic variables for k and (optionally) d.
         # This keeps compatibility with ring elements appearing in the coefficients.
-        aux = DO.add_constants(varname, "u_d").base()
+        aux = DO.add_constants(*([varname, "u_d"] + [d] if isinstance(d, str) else [])).base()
         k = aux(varname)
         u_d = aux("u_d")
         d = aux(d)
@@ -1369,16 +1385,18 @@ class DPolynomial(Element):
         cs = [laurent_morph(c) for c in self.coefficients(u)]
         ms = self.monomials(u)
         # We compute the order of the highest term affecting each summand of the equation, to detect the leading contribution.
-        os = [self._monomial_max_required(c, m, u, k, d) for (c, m) in zip(cs, ms)]
-        diff = [order - k for order in os]
-        max_diff = max(diff)
-        # We compute the element multiplying the leading term
-        # We use u_d for the lowest term order of the generic solution since this will appear naturally
-        equation = sum(
-            self._monomial_max_coefficient(cs[i], ms[i], u, k, d, u_d) 
-            for i in range(len(cs)) if diff[i] == max_diff) # this is all the contribution for the leading coefficient
+        data = [self._monomial_max_data_coeff(c, m, k, d, u_d) for (c, m) in zip(cs, ms)]
+        os, coeffs = zip(*data)
+        try:
+            diff = [ZZ(order - k) if order is not -oo else -oo for order in os]
+            max_diff = max(diff)
+            # We compute the element multiplying the leading term
+            # We use u_d for the lowest term order of the generic solution since this will appear naturally
+            equation = sum(coeffs[i] for i in range(len(cs)) if diff[i] == max_diff) # this is all the contribution for the leading coefficient
 
-        return (max_diff, equation)
+            return (max_diff, equation)
+        except TypeError: # the data are not integers: we return the raw data, without considering the maximal part
+            return [order - k for order in os], coeffs
 
     def power_series_solution(self, gen: DMonomialGen, initials: dict[int, Element], *, lau_var: str = "t") -> Element:
         from ..pseries.laurent import LaurentSeries
