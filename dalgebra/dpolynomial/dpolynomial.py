@@ -944,6 +944,22 @@ class DPolynomial(Element):
 
         return self(**{name_gen: other})
 
+    def partial(self, variable: DPolynomial) -> DPolynomial:
+        r'''
+            Computes the partial derivative of self w.r.t. a variable.
+        '''
+        variable = self.parent()(variable)
+        if not variable.is_variable():
+            raise ValueError(f"Requested partial derivative w.r.t. something that is not a variable")
+        
+        parent_sage = self.parent().to_sage()
+        self_sage = self.to_sage().polynomial()
+        var_sage = variable.to_sage().polynomial()
+
+        return self.parent()(parent_sage(self_sage.derivative(var_sage)))
+    
+
+
     def reduce_algebraic(self, polynomials) -> DPolynomial:
         r'''
             Method that tries to reduce the coefficients of the polynomial using algebraic relations
