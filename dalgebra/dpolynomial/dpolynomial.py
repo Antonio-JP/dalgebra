@@ -956,7 +956,7 @@ class DPolynomial(Element):
         self_sage = self.to_sage().polynomial()
         var_sage = variable.to_sage().polynomial()
 
-        return self.parent()(parent_sage(self_sage.derivative(var_sage)))
+        return self.parent()(parent_sage(self_sage.derivative(self_sage.parent()(var_sage))))
     
 
 
