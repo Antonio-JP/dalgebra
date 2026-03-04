@@ -551,7 +551,7 @@ class PseudoDOperator(Element):
 
         def term_str(order, element):
             el_str = f"\\left({latex(element)}\\right)" if element != 1 else ""
-            op_str = f"{latex_variable_name(g)}^{{{order}}})" if order != 0 else g if order == 1 else ""
+            op_str = f"{latex_variable_name(g)}^{{{order}}}" if order != 0 else g if order == 1 else ""
 
             if len(el_str) == 0 and len(op_str) == 0:
                 return "1"
