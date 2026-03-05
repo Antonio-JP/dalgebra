@@ -39,6 +39,19 @@ jobs:
       run: |
         sage -tox -e pycodestyle-minimal -- dalgebra
 
+  release-audit:
+    runs-on: ubuntu-latest
+    container:
+        image: sagemath/sagemath-dev:latest
+        options: --user root
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Run release audit (warnings allowed)
+      run: |
+        python3 scripts/release_audit.py --warnings-as-ok
+
   # Job for running the automatic tests in Sagemath
   testing:
     runs-on: ubuntu-latest

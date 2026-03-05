@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+import argparse
+import ast
+import re
+import subprocess
+from pathlib import Path
+
+RE_HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
+
+
+def run(cmd):
+    return subprocess.check_output(cmd, text=True).strip()
+
+
+def try_run(cmd):
+    try:
+        return run(cmd)
+    except subprocess.CalledProcessError:
+        return ""
+
+
+def latest_tag():
+    return try_run(["git", "describe", "--tags", "--abbrev=0"])
+
+
+def changed_python_files(base, head):
+    out = try_run(["git", "diff", "--name-only", f"{base}..{head}", "--", "dalgebra"])
+    if not out:
+        return []
+    return [Path(line) for line in out.splitlines() if line.endswith(".py") and Path(line).exists()]
+
+
+def added_line_numbers(base, head, file_path):
+    out = try_run(["git", "diff", "-U0", f"{base}..{head}", "--", str(file_path)])
+    added = set()
+    new_line = 0
+    in_hunk = False
+
+    for line in out.splitlines():
+        hunk = RE_HUNK.match(line)
+        if hunk:
+            new_line = int(hunk.group(1))
+            in_hunk = True
+            continue
+
+        if not in_hunk:
+            continue
+
+        if line.startswith("+") and not line.startswith("+++"):
+            added.add(new_line)
+            new_line += 1
+        elif line.startswith("-") and not line.startswith("---"):
+            continue
+        elif line.startswith(" "):
+            new_line += 1
+
+    return added
+
+
+def is_magic_name(name):
+    return name.startswith("__") and name.endswith("__")
+
+
+def iter_symbols(tree):
+    items = []
+
+    class Visitor(ast.NodeVisitor):
+        def __init__(self):
+            self.stack = []
+
+        def visit_ClassDef(self, node):
+            qname = ".".join([name for _, name in (self.stack + [("class", node.name)])])
+            doc = ast.get_docstring(node) or ""
+            nested_in_class = any(kind == "class" for kind, _ in self.stack)
+            items.append(
+                {
+                    "lineno": node.lineno,
+                    "kind": "class",
+                    "name": node.name,
+                    "qname": qname,
+                    "docstring": bool(doc.strip()),
+                    "doctest": ("sage:" in doc) or (">>>" in doc),
+                    "nested_warning": nested_in_class,
+                    "magic_warning": False,
+                    "decorated_warning": bool(node.decorator_list),
+                    "skip": False,
+                }
+            )
+            self.stack.append(("class", node.name))
+            self.generic_visit(node)
+            self.stack.pop()
+
+        def visit_FunctionDef(self, node):
+            qname = ".".join([name for _, name in (self.stack + [("function", node.name)])])
+            doc = ast.get_docstring(node) or ""
+            nested_in_function = any(kind == "function" for kind, _ in self.stack)
+            is_init_method = node.name == "__init__" and any(kind == "class" for kind, _ in self.stack)
+            is_magic = is_magic_name(node.name) and node.name != "__init__"
+            items.append(
+                {
+                    "lineno": node.lineno,
+                    "kind": "function",
+                    "name": node.name,
+                    "qname": qname,
+                    "docstring": bool(doc.strip()),
+                    "doctest": ("sage:" in doc) or (">>>" in doc),
+                    "nested_warning": nested_in_function,
+                    "magic_warning": is_magic,
+                    "decorated_warning": bool(node.decorator_list),
+                    "skip": is_init_method,
+                }
+            )
+            self.stack.append(("function", node.name))
+            self.generic_visit(node)
+            self.stack.pop()
+
+        def visit_AsyncFunctionDef(self, node):
+            self.visit_FunctionDef(node)
+
+    Visitor().visit(tree)
+    return items
+
+
+def find_def_records(file_path):
+    text = file_path.read_text(encoding="utf-8")
+    tree = ast.parse(text)
+    return iter_symbols(tree)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Audit new classes/functions/methods since a reference for docstring/doctest coverage."
+    )
+    parser.add_argument("--base", default=None, help="Base revision/tag (default: latest tag)")
+    parser.add_argument("--head", default="HEAD", help="Head revision (default: HEAD)")
+    parser.add_argument(
+        "--ignore-decorated",
+        action="store_true",
+        help="Skip decorated symbols from the audit output.",
+    )
+    parser.add_argument(
+        "--ignore-magic",
+        action="store_true",
+        help="Skip magic methods (__***__) from the audit output.",
+    )
+    parser.add_argument(
+        "--warnings-as-ok",
+        action="store_true",
+        help="Return exit code 0 when there are only WARNING entries.",
+    )
+    args = parser.parse_args()
+
+    base = args.base or latest_tag()
+    if not base:
+        print("No tags found. Provide --base <revision> to compare against.")
+        return 1
+
+    files = changed_python_files(base, args.head)
+    if not files:
+        print(f"No changed Python files in dalgebra between {base}..{args.head}.")
+        return 0
+
+    rows = []
+    for file_path in files:
+        added_lines = added_line_numbers(base, args.head, file_path)
+        if not added_lines:
+            continue
+
+        try:
+            definitions = find_def_records(file_path)
+        except SyntaxError:
+            continue
+
+        for symbol in definitions:
+            if symbol["skip"]:
+                continue
+            if args.ignore_decorated and symbol["decorated_warning"]:
+                continue
+            if args.ignore_magic and symbol["magic_warning"]:
+                continue
+            if symbol["lineno"] in added_lines:
+                warning_reasons = []
+                if symbol["nested_warning"]:
+                    warning_reasons.append("nested")
+                if symbol["magic_warning"]:
+                    warning_reasons.append("magic")
+                if symbol["decorated_warning"]:
+                    warning_reasons.append("decorated")
+
+                missing_fields = []
+                if not symbol["docstring"]:
+                    missing_fields.append("docstring")
+                if not symbol["doctest"]:
+                    missing_fields.append("doctest")
+
+                if missing_fields:
+                    severity = "WARNING" if warning_reasons else "ERROR"
+                else:
+                    severity = "OK"
+
+                rows.append(
+                    {
+                        "file": str(file_path),
+                        "kind": symbol["kind"],
+                        "symbol": symbol["qname"],
+                        "docstring": symbol["docstring"],
+                        "doctest": symbol["doctest"],
+                        "missing": ",".join(missing_fields) if missing_fields else "-",
+                        "tag": severity,
+                        "warning_reasons": ",".join(warning_reasons) if warning_reasons else "-",
+                    }
+                )
+
+    print(f"Release audit for range: {base}..{args.head}")
+    if not rows:
+        print("No newly added class/function/method definitions detected in that range.")
+        return 0
+
+    print("\nSymbol checks:")
+    print("- docstring: symbol has inline docstring")
+    print("- doctest: docstring contains a doctest marker ('sage:' or '>>>')")
+    print("- tag: missing coverage severity (ERROR or WARNING)")
+    print("- warning_reasons: nested, magic, and/or decorated")
+    print(
+        "\n{:<45} {:<10} {:<30} {:<10} {:<8} {:<9} {:<18} {:<16}".format(
+            "file", "kind", "symbol", "docstring", "doctest", "tag", "missing", "warning_reasons"
+        )
+    )
+    print("-" * 160)
+
+    missing_errors = []
+    missing_warnings = []
+    for row in rows:
+        print(
+            "{:<45} {:<10} {:<30} {:<10} {:<8} {:<9} {:<18} {:<16}".format(
+                row["file"][:45],
+                row["kind"][:10],
+                row["symbol"][:30],
+                str(row["docstring"]),
+                str(row["doctest"]),
+                row["tag"],
+                row["missing"][:18],
+                row["warning_reasons"][:16],
+            )
+        )
+        if row["tag"] == "ERROR":
+            missing_errors.append(row)
+        elif row["tag"] == "WARNING":
+            missing_warnings.append(row)
+
+    if missing_errors:
+        print(
+            f"\n{len(missing_errors)} ERROR symbol(s) and {len(missing_warnings)} WARNING symbol(s) need manual review."
+        )
+        return 2
+
+    if missing_warnings:
+        print(f"\n{len(missing_warnings)} WARNING symbol(s) need manual review.")
+        if args.warnings_as_ok:
+            print("Returning success because --warnings-as-ok is enabled.")
+            return 0
+        return 1
+
+    print("\nAll added symbols have docstring and doctest markers.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
