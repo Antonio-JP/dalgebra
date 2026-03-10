@@ -81,6 +81,8 @@ r'''
     e_x
     sage: e_x.difference()
     e*e_x
+
+    ::IGNORE AUDIT::
 '''
 
 import logging

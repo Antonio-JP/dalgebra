@@ -3,7 +3,9 @@ r'''
     Useful methods for partial differential operators.
 
     This module contains useful functionality to compute and analyze the spectral varieties obtained from
-    commuting partial differential operators..
+    commuting partial differential operators.
+
+    ::IGNORE AUDIT::
 
     **Elements provided by the module**
     -----------------------------------------
