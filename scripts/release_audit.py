@@ -60,6 +60,9 @@ def added_line_numbers(base, head, file_path):
 def is_magic_name(name):
     return name.startswith("__") and name.endswith("__")
 
+def is_private_name(name):
+    return name.startswith("__")
+
 
 def iter_symbols(tree):
     items = []
@@ -79,9 +82,10 @@ def iter_symbols(tree):
                     "name": node.name,
                     "qname": qname,
                     "docstring": bool(doc.strip()),
-                    "doctest": ("sage:" in doc) or (">>>" in doc),
+                    "doctest": ("sage:" in doc) or (">>>" in doc) or ("::NO EXAMPLE::" in doc),
                     "nested_warning": nested_in_class,
                     "magic_warning": False,
+                    "private_warning": False,
                     "decorated_warning": bool(node.decorator_list),
                     "skip": False,
                 }
@@ -91,26 +95,28 @@ def iter_symbols(tree):
             self.stack.pop()
 
         def visit_FunctionDef(self, node):
-            qname = ".".join([name for _, name in (self.stack + [("function", node.name)])])
+            qname = ".".join([name for _, name in (self.stack + [("func", node.name)])])
             doc = ast.get_docstring(node) or ""
-            nested_in_function = any(kind == "function" for kind, _ in self.stack)
+            nested_in_function = any(kind == "func" for kind, _ in self.stack)
             is_init_method = node.name == "__init__" and any(kind == "class" for kind, _ in self.stack)
             is_magic = is_magic_name(node.name) and node.name != "__init__"
+            is_private = is_private_name(node.name)
             items.append(
                 {
                     "lineno": node.lineno,
-                    "kind": "function",
+                    "kind": "func",
                     "name": node.name,
                     "qname": qname,
                     "docstring": bool(doc.strip()),
                     "doctest": ("sage:" in doc) or (">>>" in doc),
                     "nested_warning": nested_in_function,
                     "magic_warning": is_magic,
+                    "private_warning": (not is_magic) and is_private,
                     "decorated_warning": bool(node.decorator_list),
                     "skip": is_init_method,
                 }
             )
-            self.stack.append(("function", node.name))
+            self.stack.append(("func", node.name))
             self.generic_visit(node)
             self.stack.pop()
 
@@ -123,6 +129,8 @@ def iter_symbols(tree):
 
 def find_def_records(file_path):
     text = file_path.read_text(encoding="utf-8")
+    if "::IGNORE AUDIT::" in text:
+        return []
     tree = ast.parse(text)
     return iter_symbols(tree)
 
@@ -134,6 +142,11 @@ def main():
     parser.add_argument("--base", default=None, help="Base revision/tag (default: latest tag)")
     parser.add_argument("--head", default="HEAD", help="Head revision (default: HEAD)")
     parser.add_argument(
+        "--no-ok",
+        action="store_true",
+        help="Skip all symbols that are OK.",
+    )
+    parser.add_argument(
         "--ignore-decorated",
         action="store_true",
         help="Skip decorated symbols from the audit output.",
@@ -142,6 +155,11 @@ def main():
         "--ignore-magic",
         action="store_true",
         help="Skip magic methods (__***__) from the audit output.",
+    )
+    parser.add_argument(
+        "--ignore-private",
+        action="store_true",
+        help="Skip private methods (__***) from the audit output.",
     )
     parser.add_argument(
         "--warnings-as-ok",
@@ -178,29 +196,36 @@ def main():
                 continue
             if args.ignore_magic and symbol["magic_warning"]:
                 continue
+            if args.ignore_private and symbol["private_warning"]:
+                continue
             if symbol["lineno"] in added_lines:
                 warning_reasons = []
                 if symbol["nested_warning"]:
                     warning_reasons.append("nested")
                 if symbol["magic_warning"]:
                     warning_reasons.append("magic")
+                if symbol["private_warning"]:
+                    warning_reasons.append("private")
                 if symbol["decorated_warning"]:
                     warning_reasons.append("decorated")
+                if not symbol["doctest"]:
+                    warning_reasons.append("doctest")
 
                 missing_fields = []
                 if not symbol["docstring"]:
                     missing_fields.append("docstring")
-                if not symbol["doctest"]:
-                    missing_fields.append("doctest")
 
-                if missing_fields:
-                    severity = "WARNING" if warning_reasons else "ERROR"
-                else:
-                    severity = "OK"
+                ## Computing the severity:
+                ## - If docstring is missing but it is magic or nested, we issue a warning, otherwise an error
+                ## - If doctest is missing, we issue a warning.
+                severity = "ERROR" if (missing_fields and all(el not in warning_reasons for el in ("magic", "nested", "private"))) else "WARNING" if warning_reasons else "OK"
+
+                if args.no_ok and (severity == "OK" or (severity == "WARNING" and args.warnings_as_ok)):
+                    continue
 
                 rows.append(
                     {
-                        "file": str(file_path),
+                        "file": str(file_path) + f":{symbol["lineno"]}",
                         "kind": symbol["kind"],
                         "symbol": symbol["qname"],
                         "docstring": symbol["docstring"],
@@ -213,8 +238,11 @@ def main():
 
     print(f"Release audit for range: {base}..{args.head}")
     if not rows:
-        print("No newly added class/function/method definitions detected in that range.")
+        print(f"No newly added class/function/method definitions detected in that range{' with errors or warnings' if args.no_ok else ''}.")
         return 0
+
+    size_file = max(len(row["file"]) for row in rows)
+    size_symbol = max(len(row["symbol"]) for row in rows) 
 
     print("\nSymbol checks:")
     print("- docstring: symbol has inline docstring")
@@ -222,25 +250,25 @@ def main():
     print("- tag: missing coverage severity (ERROR or WARNING)")
     print("- warning_reasons: nested, magic, and/or decorated")
     print(
-        "\n{:<45} {:<10} {:<30} {:<10} {:<8} {:<9} {:<18} {:<16}".format(
-            "file", "kind", "symbol", "docstring", "doctest", "tag", "missing", "warning_reasons"
+        "\n{:<{size_file}} {:<7} {:<{size_symbol}} {:<9} {:<18} {:<25}".format(
+            "file", "kind", "symbol", "tag", "missing", "warning_reasons",
+            size_file=size_file+3, size_symbol=size_symbol+3
         )
     )
-    print("-" * 160)
+    print("-" * ((size_file+3)+7+(size_symbol+3)+9+18+25))
 
     missing_errors = []
     missing_warnings = []
     for row in rows:
         print(
-            "{:<45} {:<10} {:<30} {:<10} {:<8} {:<9} {:<18} {:<16}".format(
-                row["file"][:45],
-                row["kind"][:10],
-                row["symbol"][:30],
-                str(row["docstring"]),
-                str(row["doctest"]),
+            "{:<{size_file}} {:<7} {:<{size_symbol}} {:<9} {:<18} {:<25}".format(
+                row["file"][:size_file],
+                row["kind"][:7],
+                row["symbol"][:size_symbol],
                 row["tag"],
                 row["missing"][:18],
-                row["warning_reasons"][:16],
+                row["warning_reasons"][:25],
+                size_file=size_file+3, size_symbol=size_symbol+3
             )
         )
         if row["tag"] == "ERROR":
