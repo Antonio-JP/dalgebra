@@ -57,6 +57,11 @@ LS_GLOBAL_BOUND = 20
 
 
 def LSChangeBound(bound: int):
+    r'''
+        Changes the global bound for computations in formal Laurent series.
+
+        ::NO EXAMPLE::
+    '''
     global LS_GLOBAL_BOUND
     if bound not in ZZ or bound < 3:
         raise ValueError(f"The bound must be a non-negative integer, got {bound}.")
@@ -64,6 +69,14 @@ def LSChangeBound(bound: int):
 
 
 def CheckBound(func):
+    r'''
+        Wrapper to check the bound argument.
+
+        This is a decorator to check that the method has a bound argument, that it is set and call properly. This 
+        simplifies and unifies the check of this type of argument which appears naturally throughout the module.
+
+        ::NO EXAMPLE::
+    '''
     from functools import wraps
 
     @wraps(func)
@@ -98,6 +111,11 @@ class LSeries_RingFactory(UniqueFactory):
         :class:`LSeries_Ring` for further information on this structure.
     '''
     def create_key(self, base, name: str = None, **kwds):
+        r'''
+            See :func:`UniqueFactory.create_key` for more information.
+
+            ::NO EXAMPLE::
+        '''
         if base not in _Fields:
             raise TypeError("The base ring must be a field")
         # We check now whether the base ring is valid or not
@@ -121,6 +139,11 @@ class LSeries_RingFactory(UniqueFactory):
         return (base, name)
 
     def create_object(self, _, key) -> LSeries_Ring:
+        r'''
+            See :func:`UniqueFactory.create_object` for more information.
+
+            ::NO EXAMPLE::
+        '''
         base, name = key
 
         return LSeries_Ring(base, name)
@@ -219,7 +242,12 @@ class LSeries_Element(Element):
             raise NotImplementedError("Zero checking for differential algebraic formal laurent series is not yet implemented.")
 
     @CheckBound
-    def is_one(self, *, bound: int | None = None) -> bool | int: #: Checker for the identity element
+    def is_one(self, *, bound: int | None = None) -> bool | int: 
+        r'''
+            Checker for the identity element.
+
+            See :func:`is_zero` for more information on the output of this type of methods.
+        '''
         return (self - self.parent().one()).is_zero(bound=bound)
     
     def is_unit(self) -> bool:
@@ -247,6 +275,11 @@ class LSeries_Element(Element):
             raise NotImplementedError("Order computation for differential algebraic formal laurent series is not yet implemented.")
         
     def degree(self) -> int:
+        r'''
+            Computes the degree of a polynomial in the Laurent series ring.
+
+            We define the degree of a Laurent series only for polynomials (i.e., finite series). For a polynomial, the degree is the maximum integer such that the coefficient of the generator to that power is non-zero. For non-polynomial series, this method raises an error.
+        '''
         if not self.__type == self.TYPES.polynomial:
             raise TypeError("Degree is only defined for finite formal laurent series.")
         return max(self.__poly) if len(self.__poly) > 0 else -oo
@@ -417,6 +450,11 @@ class LSeries_Element(Element):
     ### Arithmetic operations
     ###################################################################################
     def _add_(self, other: LSeries_Element) -> LSeries_Element:
+        r'''
+            See :func:`Element._add_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         ## Checking for trivial cases
         if self.is_zero() is True:
             return other
@@ -454,9 +492,19 @@ class LSeries_Element(Element):
             return self.parent().element_class(self.parent(), coefficient_map=neg_map, order=self.__order)
 
     def _sub_(self, other: LSeries_Element) -> LSeries_Element:
+        r'''
+            See :func:`Element._sub_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         return self + (-other)
 
     def _mul_(self, other: LSeries_Element) -> LSeries_Element:
+        r'''
+            See :func:`Element._mul` for further information.
+
+            ::NO EXAMPLE::
+        '''
         ## Multiplication with trivial/simpler cases
         if (self.is_zero() is True) or (other.is_zero() is True): # multiplication by a true zero
             return self.parent().zero()
@@ -501,10 +549,20 @@ class LSeries_Element(Element):
             raise NotImplementedError("Multiplication of differential algebraic formal laurent series is not yet implemented.")
 
     def _div_(self, other: LSeries_Element) -> LSeries_Element:
+        r'''
+            See :func:`Element._div_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         ## full division and floor division coincide in fields
         return self // other
 
     def _floordiv_(self, other: LSeries_Element) -> LSeries_Element:
+        r'''
+            See :func:`Element._floordiv_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         ## division is split into inversion and a multiplication
         return self * (~other)     
     
@@ -687,6 +745,11 @@ class LSeries_Element(Element):
 
     @CheckBound
     def _latex_(self, *, bound: int | None = None) -> str:
+        r'''
+            Computes a LaTeX string to represent the formal Laurent series.
+
+            ::NO EXAMPLE::
+        '''
         if self.is_zero() is True:
             return "0"
         elif self.is_one() is True:
@@ -767,7 +830,13 @@ class LSeries_Ring(Parent):
     '''
     Element = LSeries_Element
 
-    def _set_categories(self, base : Parent, category=None) -> list[Category]: return [_DRings, CommutativeAlgebras(base)] + ([category] if category is not None else [])
+    def _set_categories(self, base : Parent, category=None) -> list[Category]: 
+        r'''
+            Method to generate the appropriate list of categories for ``self``
+
+            ::NO EXAMPLE::    
+        '''
+        return [_DRings, CommutativeAlgebras(base)] + ([category] if category is not None else [])
 
     def __init__(self, base : Parent, name : str, category=None):
         if base not in _DRings:
@@ -808,6 +877,9 @@ class LSeries_Ring(Parent):
     ### GETTER METHODS
     ################################################################################
     def gen_name(self) -> str:
+        r'''
+            Return the string for representing the generator of the field of laurent series.
+        '''
         return self.__gens[0]
 
     def gen(self) -> LSeries_Element:
@@ -870,6 +942,11 @@ class LSeries_Ring(Parent):
     ### Coercion methods
     #################################################
     def _coerce_map_from_base_ring(self):
+        r'''
+            See :func:`Parent._coerce_map_from_base_ring` for further information.
+
+            ::NO EXAMPLE::
+        '''
         return LSCoerceFromBase(self)
 
     def construction(self) -> tuple[LaurentSeriesFunctor, Parent]:
@@ -883,9 +960,19 @@ class LSeries_Ring(Parent):
         return LaurentSeriesFunctor(self.__gens[0]), self.base()
 
     def fraction_field(self):
+        r'''
+            See :func:`Parent.fraction_field` for further information.
+
+            ::NO EXAMPLE::
+        '''
         return self
 
     def change_base(self, R: Parent) -> LSeries_Ring:
+        r'''
+            Method to change the base field for considering the series.
+
+            This method takes into consideration the coercions between the old and the new base to create the appropriate coercion maps between the old and new Laurent series rings.
+        '''
         new_ring = LaurentSeries(R, self.gen_name())
         ## Creating the coercion map if possible
         try:
@@ -903,6 +990,11 @@ class LSeries_Ring(Parent):
         return f"Formal Laurent Series Ring in {self.__gens[0]} over {self.base()}"
 
     def _latex_(self):
+        r'''
+            Computes a LaTeX representation for this field of Laurent series.
+
+            ::NO EXAMPLE::
+        '''
         return f"{latex(self.base())}\\left(\\left({self.__gens[0]}\\right)\\right)"
 
     #################################################
@@ -931,20 +1023,42 @@ class LSeries_Ring(Parent):
     ### Method from DRing category
     #################################################
     def operators(self) -> Collection[AdditiveMap]:
+        r'''
+            See :func:`DRings.ParentMethods.operators` for further information.
+
+            ::NO EXAMPLE::
+        '''
         return self.__operators
 
     def operator_types(self) -> tuple[str]:
+        r'''
+            See :func:`DRings.ParentMethods.operator_types` for further information.
+
+            ::NO EXAMPLE::
+        '''
         return self.base().operator_types()
 
     def constant_ring(self, _: int = 0) -> Parent:
+        r'''
+            See :func:`DRings.ParentMethods.constant_ring` for further information.
+
+            ::NO EXAMPLE::
+        '''
         return self.base()
 
     def add_constants(self, *new_constants: str) -> LSeries_Ring:
+        r'''
+            See :func:`DRings.ParentMethods.add_constants` for further information.
+
+            ::NO EXAMPLE::
+        '''
         return LaurentSeries(self.base().add_constants(*new_constants), self.__gens[0])
 
     def _laurent_morphism(self, imgs, constant=None, set_default=False) -> MorphismToLaurent:
         r'''
             Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
+
+            ::NO EXAMPLE::
         '''
         base_morph = self.base().laurent_morphism(imgs, constant=constant, set_default=set_default)
         return LSeriesLaurentMorphism(self, base_morph.codomain(), base_morph)
@@ -955,15 +1069,24 @@ class LSeries_Ring(Parent):
 
             This method builds the ring of linear operators on the base ring. It only works when the
             ring of operator polynomials only have one variable.
+
+            ::NO EXAMPLE::
         '''
         raise NotImplementedError("Linear operator ring over Formal Laurent Series not yet implemented")
 
     def inverse_operation(self, element: LSeries_Element, operation: int = 0) -> LSeries_Element:
+        r'''
+            See :func:`DRings.ParentMethods.inverse_operation` for further information.
+
+            ::NO EXAMPLE::
+        '''
         raise NotImplementedError("Integration over Laurent Series with non-constant coefficients not yet implemented")
 
     def __build_derivation(self) -> AdditiveMap:
         r'''
             Internal method to build the derivation of the field of laurent series.
+
+            ::NO EXAMPLE::
         '''
         def derivation_map(element: LSeries_Element) -> LSeries_Element:
             if element.type() == element.TYPES.polynomial:
@@ -1065,14 +1188,25 @@ class LaurentSeriesFunctor(ConstructionFunctor):
 
     ### Methods to implement
     def _apply_functor(self, x):
+        r'''
+            See :func:`ConstructionFunctor._apply_functor` for further information.
+
+            ::NO EXAMPLE::
+        '''
         return LaurentSeries(x,self.__gen_name)
 
     def _repr_(self):
+        r'''
+            Return a str representing the functor.
+
+            ::NO EXAMPLE::
+        '''
         return f"LaurentSeries(*,{self.__gen_name})"
 
     def __eq__(self, other):
         if other.__class__ == self.__class__:
             return self.__gen_name == other.__gen_name
+        return False
 
 
 class LSeriesLaurentMorphism(MorphismToLaurent):
@@ -1083,6 +1217,11 @@ class LSeriesLaurentMorphism(MorphismToLaurent):
         super().__init__(domain, codomain, base_map)
 
     def _call_(self, element: LSeries_Element) -> LSeries_Element:
+        r'''
+            See :func:`Morphism._call_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         # Here we assume the element is in self.domain()
         if element.type() == LSeries_Element.TYPES.polynomial:
             coeffs = {k: self.base_map(element[k]) for k in element._LSeries_Element__poly}
@@ -1095,6 +1234,9 @@ class LSeriesLaurentMorphism(MorphismToLaurent):
 
 
 class LSCoerceFromBase(Morphism):
+    r'''
+        Coercion morphism from the field of coefficients to the Laurent series ring.
+    '''
     def __init__(self, codomain: LSeries_Ring):
         if not isinstance(codomain, LSeries_Ring):
             raise TypeError("The codomain must be a formal Laurent series ring")
@@ -1102,10 +1244,18 @@ class LSCoerceFromBase(Morphism):
         super().__init__(codomain.base(), codomain)
 
     def _call_(self, element: Element) -> LSeries_Element:
+        r'''
+            See :func:`Morphism._call_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         return self.codomain().element_class(self.codomain(), coefficients={0:element})
 
 
 class LSConvertToBase(Morphism):
+    r'''
+        Conversion morphism from the Laurent series ring to its field of coefficients.
+    '''
     def __init__(self, domain: LSeries_Ring):
         if not isinstance(domain, LSeries_Ring):
             raise TypeError("The domain must be a formal Laurent series ring")
@@ -1113,6 +1263,11 @@ class LSConvertToBase(Morphism):
         super().__init__(domain, domain.base())
 
     def _call_(self, element: LSeries_Element) -> Element:
+        r'''
+            See :func:`Morphism._call_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         if (element - element[0]).is_zero() is True:
             return self.codomain()(element[0])
         else:
@@ -1120,6 +1275,9 @@ class LSConvertToBase(Morphism):
 
 
 class LSCoerceBetweenBases(Morphism):
+    r'''
+        Coercion morphism between Laurent series fields with different base ring.
+    '''
     def __init__(self, domain: LSeries_Ring, codomain: LSeries_Ring, map: Morphism):
         if not isinstance(domain, LSeries_Ring):
             raise TypeError("The domain must be a formal Laurent series ring")
@@ -1133,6 +1291,11 @@ class LSCoerceBetweenBases(Morphism):
         super().__init__(domain, codomain)
 
     def _call_(self, element: LSeries_Element) -> LSeries_Element:
+        r'''
+            See :func:`Morphism._call_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         if element.type() == LSeries_Element.TYPES.polynomial:
             return self.codomain().element_class(self.codomain(),
                                                  coefficients={k: self.base_map(element[k]) for k in element._LSeries_Element__poly})
@@ -1145,6 +1308,9 @@ class LSCoerceBetweenBases(Morphism):
 
 
 class LSCoerceFromPoly(Morphism):
+    r'''
+        Coercion morphism from the polynomial ring naturally embedded in the Laurent series ring to the Laurent series ring.
+    '''
     def __init__(self, codomain: LSeries_Ring):
         if not isinstance(codomain, LSeries_Ring):
             raise TypeError("The domain must be a formal power series ring")
@@ -1153,12 +1319,20 @@ class LSCoerceFromPoly(Morphism):
         super().__init__(domain, codomain)
 
     def _call_(self, element: Element) -> DPolynomial:
+        r'''
+            See :func:`Morphism._call_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         # element is a univariate polynomial
         return self.codomain().element_class(self.codomain(),
                                              coefficients={k: element[k] for k in range(element.degree()+1)})
 
 
 class LSConvertToPoly(Morphism):
+    r'''
+        Conversion morphism from the Laurent series ring to the polynomial ring that is naturally embedded into the Laurent series
+    '''
     def __init__(self, domain: LSeries_Ring):
         if not isinstance(domain, LSeries_Ring):
             raise TypeError("The domain must be a formal power series ring")
@@ -1167,6 +1341,11 @@ class LSConvertToPoly(Morphism):
         super().__init__(domain, codomain)
 
     def _call_(self, element: LSeries_Element) -> Element:
+        r'''
+            See :func:`Morphism._call_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         if element.type() != LSeries_Element.TYPES.polynomial:
             raise ValueError("The element must be finite to convert it to a polynomial")
         elif element.order() < 0:
@@ -1178,6 +1357,9 @@ class LSConvertToPoly(Morphism):
 
 
 class LSCoerceFromRational(Morphism):
+    r'''
+        Coercion morphism from the field of rational functions naturally embedded in the Laurent series ring to the Laurent series ring.
+    '''
     def __init__(self, codomain: LSeries_Ring):
         if not isinstance(codomain, LSeries_Ring):
             raise TypeError("The domain must be a formal power series ring")
@@ -1185,6 +1367,11 @@ class LSCoerceFromRational(Morphism):
         super().__init__(codomain.rat_field(), codomain)
 
     def _call_(self, element: Element) -> DPolynomial:
+        r'''
+            See :func:`Morphism._call_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         num = self.codomain().poly_ring()(element.numerator())
         den = self.codomain().poly_ring()(element.denominator())
 
@@ -1192,6 +1379,9 @@ class LSCoerceFromRational(Morphism):
     
 
 class LSConvertToRational(Morphism):
+    r'''
+        Conversion morphism from the Laurent series ring to the field of rational functions that is naturally embedded into the Laurent series.
+    '''
     def __init__(self, domain: LSeries_Ring):
         if not isinstance(domain, LSeries_Ring):
             raise TypeError("The domain must be a formal power series ring")
@@ -1199,6 +1389,11 @@ class LSConvertToRational(Morphism):
         super().__init__(domain, codomain)
 
     def _call_(self, element: LSeries_Element) -> Element:
+        r'''
+            See :func:`Morphism._call_` for further information.
+
+            ::NO EXAMPLE::
+        '''
         if element.type() != LSeries_Element.TYPES.polynomial:
             raise ValueError("The element must be finite to convert it to a rational function")
         

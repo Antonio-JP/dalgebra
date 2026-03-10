@@ -37,6 +37,7 @@ from sage.categories.morphism import Morphism
 from sage.categories.sets_cat import cartesian_product
 from sage.functions.other import binomial
 from sage.misc.cachefunc import cached_method
+from sage.misc.latex import latex_variable_name
 from sage.rings.integer_ring import ZZ
 from sage.rings.semirings.non_negative_integer_semiring import NN
 from sage.sets.family import LazyFamily
@@ -249,6 +250,15 @@ class DMonomial(Element):
         return self._parent.element_class(self._parent, new_dict)
 
     def gcd(self, other: DMonomial) -> DMonomial:
+        r'''
+            Compute the GCD of two monomials.
+
+            In a commutative monoid, where only the multiplication of elements is defined, we can compute the 
+            greatest common divisor between two monomials by taking the highest power of each element appearing in
+            all the monomials.
+
+            This is useful to detect _simple_ common factors in polynomials (when we start adding up the monomials).
+        '''
         if isinstance(other, (tuple, list)):
             if len(other) == 0:
                 return self
@@ -275,6 +285,9 @@ class DMonomial(Element):
         return True
     
     def _div_(self, other: DMonomial) -> DMonomial:
+        r'''
+            See :func:`Element._div_` for further information.
+        '''
         if not other.divides(self):
             raise ValueError(f"The d-monomial {other} does not divide {self}")
         new_dict = self._variables.copy()
@@ -460,10 +473,15 @@ class DMonomial(Element):
     def __str__(self) -> str: return repr(self)
 
     def _latex_(self) -> str:
+        r'''
+            Latex representation of monomials.
+
+            ::NO EXAMPLES::
+        '''
         if self.is_one():
             return "1"
 
-        variable_names = self._parent.variable_names()
+        variable_names = [latex_variable_name(name) for name in self._parent.variable_names()]
         elements = sorted(self._variables.items())
 
         def wo_exp(v,o):
@@ -612,7 +630,7 @@ class DMonomialGen:
         return repr(self)
 
     def _latex_(self) -> str:
-        return f"\u007b{self._name}\u007d_\u007b(*)\u007d"
+        return f"\u007b{latex_variable_name(self._name)}\u007d_\u007b(*)\u007d"
 
 
 RWOPolynomialGen = DMonomialGen #: alias for DMonomialGen (used for backward compatibility)
@@ -716,6 +734,11 @@ class DMonomialMonoid(Parent):
         return hash((self.__noperators, self.variable_names()))
 
     def _element_constructor_(self, input: Element) -> DMonomial:
+        r'''
+            Special constructor for Monomials, used when other coercions are not available.
+
+            ::NO EXAMPLES::
+        '''
         if input in self.gens():
             i = self.gens().index(input)
             return self.element_class(self, [(i, tuple(0 for _ in range(self.noperators())), 1)])

@@ -767,6 +767,9 @@ class DEllipticLaurentMorphism(MorphismToLaurent):
         super().__init__(domain, codomain, base_morph)
         
     def _call_(self, element: DElliptic_Element):
+        r'''
+            See :func:`Morphism._call_` for more information.
+        '''
         # element.coeffs are elements in F(eta)
         # self._base maps from F to the Laurent series
         numerators = [element.numerator() for element in element.coeffs]
