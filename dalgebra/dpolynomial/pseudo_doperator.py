@@ -563,14 +563,27 @@ class PseudoDOperator(Element):
                 return f"{el_str}{op_str}"
 
         if self.__finite:
-            ## We print everything
-            return " + ".join(term_str(o, self[o]) for o in range(self.order(), self.__min_coeff - 1, -1) if self[o] != 0)
+            ## We print everything in the differential and at most the bound in the pseudo part
+            diff_part = " + ".join(term_str(o, self[o]) for o in range(self.order(), -1, -1) if self[o] != 0)
+            pseudo_part = ""
+            count = 0
+            for i in range(-1, self.__min_coeff - 1, -1):
+                if self[i] != 0:
+                    if count == 0:
+                        pseudo_part += term_str(i, self[i])
+                    else:
+                        pseudo_part += " + " + term_str(i, self[i])
+                    count += 1
+                    if count >= bound:
+                        pseudo_part += f" + \\text{{o}}({latex_variable_name(g)}^{{{i-1}}})"
+                        break
+            return diff_part + (" + " if len(diff_part) > 0 and len(pseudo_part) > 0 else "") + pseudo_part
         else:
             ## We print at least 3 terms up to order -bound
             order = self.order()
             min_order = min(-bound, order - 3)
 
-            return " + ".join(term_str(o, self[o]) for o in range(order, min_order - 1, -1) if self[o] != 0) + f" + \\text{{o}}({g}^{min_order-1})"
+            return " + ".join(term_str(o, self[o]) for o in range(order, min_order - 1, -1) if self[o] != 0) + f" + \\text{{o}}({g}^{{{min_order-1}}})"
 
 
 class PseudoDOperator_Ring(Parent):

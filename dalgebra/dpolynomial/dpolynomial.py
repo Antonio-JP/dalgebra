@@ -2556,7 +2556,8 @@ class DPolynomialRing_Monoid(Parent):
         return f"Ring of operator polynomials in ({', '.join(self.variable_names())}) over {self.base()}"
 
     def _latex_(self):
-        return latex(self.base()) + r"\{" + ", ".join(self.variable_names()) + r"\}"
+        from sage.misc.latex import latex_variable_name
+        return latex(self.base()) + r"\{" + ", ".join([latex_variable_name(v) for v in self.variable_names()]) + r"\}"
 
     #################################################
     ### Element generation methods
