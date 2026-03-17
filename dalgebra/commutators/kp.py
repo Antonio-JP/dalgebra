@@ -30,7 +30,10 @@ r'''
 import logging
 logger = logging.getLogger(__name__)
 
+from functools import lru_cache
+
 from sage.rings.rational_field import QQ
+from sage.structure.unique_representation import UniqueRepresentation
 
 from ..dpolynomial.dpolynomial import DifferentialPolynomialRing, DPolynomial, DPolynomialRing_Monoid
 from ..dpolynomial.pseudo_doperator import PseudoDOperatorRing
@@ -43,18 +46,32 @@ from ..logging.logging import cache_in_file
 ## - There will be another method to be used as an interface when requiring a different
 ##   output field.
 ##################################################################################
-def kp_ring(n: int) -> DPolynomialRing_Monoid:
+def kp_ring(n: int, *, name_var:str = "u") -> DPolynomialRing_Monoid:
     r'''
         Computes the ring where the KP hierarchy is usually established.
 
         This is helpful to other methods to predict where elements will be so they can build the appropriate coercions
         without computing the hierarchy.
     '''
-    return DifferentialPolynomialRing(QQ, names=[f'u_{i}' for i in range(1, n)])
+    return DifferentialPolynomialRing(QQ, names=[f'{name_var}_{i}' for i in range(1, n)])
 
+@lru_cache(maxsize=64)
+def kp_generic(n: int, *, name_var:str = "u", name_partial:str = "D") -> tuple[DPolynomial]:
+    r'''
+        Method to compute the KP hierarchy with fully generic coefficients.
+
+        This method computes the conditions for the coefficients `u_1,...,u_{n-1}` so the corresponding 
+        pseudo operator `L` of order 1 can commute with `(L^n)_+`. The first value
+        force the infinite tail of `L` to take a specific form, and the second value gives us the KP hierarchy
+        of order `n` at level `n`.
+    '''
+    goal = kp_ring(n, name_var=name_var)
+    goal_op_ring = PseudoDOperatorRing(goal, name_partial)
+
+    return goal_op_ring.element_class(goal_op_ring, coefficient_map=GenericKPOperator(n, name_var=name_var), order_bound=1)
 
 @cache_in_file
-def kp_hierarchy_get(n: int, m: int) -> tuple[DPolynomial]:
+def kp_hierarchy(n: int, m: int, *, name_var:str = "u", name_partial:str = "D") -> tuple[DPolynomial]:
     r'''
         Method to compute the KP hierarchy with fully generic coefficients.
 
@@ -63,35 +80,59 @@ def kp_hierarchy_get(n: int, m: int) -> tuple[DPolynomial]:
         force the infinite tail of `L` to take a specific form, and the second value gives us the KP hierarchy
         of order `n` at level `m`.
     '''
-    # We create the ring of pseudo-differential operators with generic coefficients
-    # Since we can not create the infinite tail, we need to create the ring with a finite number of differential values
-    # We can bound the used coefficients by 2*n.
-    R = DifferentialPolynomialRing(QQ, names=[f'u_{i}' for i in range(1, 2*n+1)])
-    u = (0,) + R.gens()
-    DO = PseudoDOperatorRing(R, 'D')
-    D = DO.gen()
-    Di = DO.igen()
-
-    # We create the generic pseudo-differential operator of order 1
-    L = D + sum(u[i]*Di**(i) for i in range(1, n+m+2))
-
-    # We compute the nth power differential part
-    Ln = (L**n).differential_part()
-
-    # We compute the conditions for commuting with this differential part
-    lb = L*Ln - Ln*L # this has order -1
-    sols = dict()
-    for k in range(-1, -m-3, -1):
-        equ = lb[k](**sols)
-        sols[u[-n-k+1].variable_name()] = equ.solve(u[-n-k+1])
-
     # We compute the final truncated L operator
-    L = D + sum(sols.get(u[i].variable_name(), u[i][0])*Di**(i) for i in range(1, n+m+2))
+    L = kp_generic(n, name_var=name_var, name_partial=name_partial)
     Lm = (L**m).differential_part()
-
     lb = L*Lm - Lm*L
-    ## We collect the equations in the field that we are interested
-    B = R.remove_variables(*[u[n+i] for i in range(1,m+2)])
-    return tuple(B(lb[k]) for k in range(-1, -n, -1))
+    return tuple(lb[k] for k in range(-1, -n, -1))
 
 
+##################################################################################
+## AUXILIARY CLASSES
+##################################################################################
+class GenericKPOperator(UniqueRepresentation):
+    r'''
+        Class to represent the generic pseudo-differential operator of order 1 with coefficients `u_1,...,u_{n-1}` and the infinite tail determined by the commutation with `(L^n)_+`.
+    '''
+    def __init__(self, n: int, name_var:str = "u"):
+        self.n = n
+        self.name_var = name_var
+        self.ring = kp_ring(n, name_var=name_var)
+
+        self.__current = self.ring
+        self.__sols = dict()
+
+    def __extend_current(self):
+        m = self.__current.ngens() # we have u_1,...,u_m 
+        ## we want to double it
+        self.__current = self.__current.append_variables(*[f'{self.name_var}_{i}' for i in range(m+1, 2*m+1)]) # we add u_{m+1},...,u_{2m}
+        OpRing = PseudoDOperatorRing(self.__current, 'D')
+        D, Di = OpRing.gen(), OpRing.igen()
+        L = D + sum(self.__sols.get(f'{self.name_var}_{i}', self.__current.gen(f'{self.name_var}_{i}'))*Di**i for i in range(1, 2*m+1))
+        Ln = (L**self.n).differential_part()
+
+        lb = L*Ln - Ln*L # this has order -1
+
+        ## The length of sols gives the number of coefficients already computed, se we compute all the necessary intermediate steps
+        for k in range(-1-len(self.__sols), -1-len(self.__sols)-m, -1):
+            equ = lb[k](**self.__sols)
+            self.__sols[f'{self.name_var}_{self.n-k-1}'] = equ.solve(self.__current.gen(f'{self.name_var}_{self.n-k-1}'))
+        
+        return self.__current, self.__sols
+
+    def __call__(self, m: int) -> DPolynomial:
+        r'''
+            Returns the coefficient of the KP operator of order `n` at position `D^{m}` for `m` an integer
+        '''
+        if m > 1: # The order is 1 by definition
+            return self.ring.zero()
+        elif m == 1: # The leading coefficient is 1 by definition
+            return self.ring.one()
+        elif m == 0: # The operator is in normal form
+            return self.ring.zero()
+        elif m > -self.n: # The first coefficients are fully generic
+            return self.ring.gen(f'{self.name_var}_{-m}')[0]
+        else: # Other coefficients require computations
+            while f'{self.name_var}_{-m}' not in self.__sols:
+                self.__extend_current()
+            return self.ring(self.__sols[f'{self.name_var}_{-m}'])
