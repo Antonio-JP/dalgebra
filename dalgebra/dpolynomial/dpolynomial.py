@@ -953,6 +953,8 @@ class DPolynomial(Element):
             This method returns (when possible) a pair of `d`-polynomials `(Q,R)` such that `self = Q \circ other + R` where `ord(R) < ord(other)`.
 
             We require that the leading coefficient of `other` is a unit, so we can do the division properly.
+
+            WARNING: this needs to be checked in other cases and, more importantly, we need to compare the difference with a ranking pseudo division. Can we automatize this?
         '''
         ## Checking the parent
         R = pushout(self.parent(), other.parent())
@@ -988,6 +990,8 @@ class DPolynomial(Element):
             This method returns (when possible) a pair of `d`-polynomials `(Q,R)` such that `self = other \circ Q + R` where `ord(R) < ord(other)`.
 
             We require that the leading coefficient of `other` is a unit, so we can do the division properly.
+
+            WARNING: this needs to be checked in other cases and, more importantly, we need to compare the difference with a ranking pseudo division. Can we automatize this?
         '''
         ## Checking the parent
         R = pushout(self.parent(), other.parent())
