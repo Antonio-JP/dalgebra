@@ -122,8 +122,8 @@ def spectral_operators(*operators: DPolynomial, names: list[str] = None) -> tupl
         This method will then return the spectral operators `L_\lambda = L - \lambda` for each
         operator and constant.
     '''
-    if len(operators) < 2:
-        raise ValueError(f"[spectral_operators] This method requires ate least 2 operators")
+    if len(operators) < 1:
+        raise ValueError(f"[spectral_operators] This method requires at least 1 operator")
 
     DR = operators[0].parent()
     if not is_DPolynomialRing(DR):
