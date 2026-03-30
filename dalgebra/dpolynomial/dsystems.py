@@ -97,16 +97,20 @@ class DSystem:
     def __init__(self,
         equations : Collection[DPolynomial],
         parent : Parent = None,
-        variables : Collection[str | DMonomialGen] = None
+        variables : Collection[str | DMonomialGen] = None,
+        force_parent : bool = True
     ):
         # Building the common parent
-        parents = [el.parent() for el in equations]
-        if (parent is not None):
-            parents.insert(0,parent)
+        if not force_parent or parent is None:
+            parents = [el.parent() for el in equations]
+            if (parent is not None):
+                parents.insert(0,parent)
 
-        pushed = reduce(lambda p, q : pushout(p,q), parents)
-        if (not is_DPolynomialRing(pushed)):
-            raise TypeError("The common parent is not a ring of differential polynomials. Not valid for a DSystem")
+            pushed = reduce(lambda p, q : pushout(p,q), parents)
+            if (not is_DPolynomialRing(pushed)):
+                raise TypeError("The common parent is not a ring of differential polynomials. Not valid for a DSystem")
+        else:
+            pushed = parent
 
         self.__parent : Parent = pushed
         # Building the equations
@@ -429,6 +433,8 @@ class DSystem:
 
     ## magic methods
     def __getitem__(self, index) -> DSystem:
+        if index in ZZ: # just one equation required
+            return self.equation(index)
         return self.subsystem(index)
 
     def __repr__(self) -> str:
