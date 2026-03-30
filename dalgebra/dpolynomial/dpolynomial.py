@@ -944,6 +944,76 @@ class DPolynomial(Element):
 
         return self(**{name_gen: other})
 
+    def dot_div_right(self, other: DPolynomial, gen: DMonomialGen = None) -> tuple[DPolynomial, DPolynomial]:
+        r'''
+            Computes the right division of `self` by the operator `other` as operator.
+
+            NOTE: Only work for linear operators in `gen`.
+
+            This method returns (when possible) a pair of `d`-polynomials `(Q,R)` such that `self = Q \circ other + R` where `ord(R) < ord(other)`.
+
+            We require that the leading coefficient of `other` is a unit, so we can do the division properly.
+        '''
+        ## Checking the parent
+        R = pushout(self.parent(), other.parent())
+        if R != self.parent():
+            return R(self).dot_div_right(R(other), R.gen(gen.variable_name()))
+
+        ## We can assume now the same parent for both
+        other = self.parent()(other)
+
+        if any(not self.parent()(m).is_linear([gen]) for m in self.monomials(gen)):
+            raise ValueError("Non-linear dividend")
+        elif any(not other.parent()(m).is_linear([gen]) for m in other.monomials(gen)):
+            raise ValueError("Non-linear divisor")
+        elif not other.coefficient_full(gen[other.order(gen)]).is_unit():
+            raise ValueError("Not valid leading coefficient")
+
+        Q = self.parent().zero()
+        R = self
+        lc = ~other.coefficient_full(gen[other.order(gen)])
+        while R.order(gen) >= other.order(gen):
+            o = R.order(gen) - other.order(gen)
+            c = R.coefficient_full(gen[R.order(gen)])
+            Q += lc*c*gen[o]
+            R -= other.dot(lc*c*gen[o], gen) # this reduces the order
+        return Q, R
+
+    def dot_div_left(self, other: DPolynomial, gen: DMonomialGen = None) -> tuple[DPolynomial, DPolynomial]:
+        r'''
+            Computes the left division of `self` by the operator `other` as operator.
+
+            NOTE: Only work for linear operators in `gen`.
+
+            This method returns (when possible) a pair of `d`-polynomials `(Q,R)` such that `self = other \circ Q + R` where `ord(R) < ord(other)`.
+
+            We require that the leading coefficient of `other` is a unit, so we can do the division properly.
+        '''
+        ## Checking the parent
+        R = pushout(self.parent(), other.parent())
+        if R != self.parent():
+            return R(self).dot_div_left(R(other), R.gen(gen.variable_name()))
+
+        ## We can assume now the same parent for both
+        other = self.parent()(other)
+
+        if any(not self.parent()(m).is_linear([gen]) for m in self.monomials(gen)):
+            raise ValueError("Non-linear dividend")
+        elif any(not other.parent()(m).is_linear([gen]) for m in other.monomials(gen)):
+            raise ValueError("Non-linear divisor")
+        elif not other.coefficient_full(gen[other.order(gen)]).is_unit():
+            raise ValueError("Not valid leading coefficient")
+
+        Q = self.parent().zero()
+        R = self
+        lc = ~other.coefficient_full(gen[other.order(gen)])
+        while R.order(gen) >= other.order(gen):
+            o = R.order(gen) - other.order(gen)
+            c = R.coefficient_full(gen[R.order(gen)])
+            Q += lc*c*gen[o]
+            R -= (lc*c*gen[o]).dot(other, gen) # this reduces the order
+        return Q, R
+
     def partial(self, variable: DPolynomial) -> DPolynomial:
         r'''
             Computes the partial derivative of self w.r.t. a variable.
@@ -958,8 +1028,6 @@ class DPolynomial(Element):
 
         return self.parent()(parent_sage(self_sage.derivative(self_sage.parent()(var_sage))))
     
-
-
     def reduce_algebraic(self, polynomials) -> DPolynomial:
         r'''
             Method that tries to reduce the coefficients of the polynomial using algebraic relations
