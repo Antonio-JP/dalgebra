@@ -114,7 +114,7 @@ def iter_symbols(tree):
                     "name": node.name,
                     "qname": qname,
                     "docstring": bool(doc.strip()),
-                    "doctest": ("sage:" in doc) or (">>>" in doc),
+                    "doctest": ("sage:" in doc) or (">>>" in doc) or ("::NO EXAMPLE::" in doc),
                     "nested_warning": nested_in_function,
                     "magic_warning": is_magic,
                     "private_warning": (not is_magic) and is_private,
@@ -208,21 +208,21 @@ def main():
             if args.ignore_private and symbol["private_warning"]:
                 continue
             if symbol["lineno"] in added_lines:
-                warning_reasons = []
-                if symbol["nested_warning"]:
-                    warning_reasons.append("nested")
-                if symbol["magic_warning"]:
-                    warning_reasons.append("magic")
-                if symbol["private_warning"]:
-                    warning_reasons.append("private")
-                if symbol["decorated_warning"]:
-                    warning_reasons.append("decorated")
-                if not symbol["doctest"]:
-                    warning_reasons.append("doctest")
-
                 missing_fields = []
                 if not symbol["docstring"]:
                     missing_fields.append("docstring")
+
+                warning_reasons = []
+                if not symbol["doctest"]:
+                    warning_reasons.append("doctest")
+                if symbol["nested_warning"] and (len(missing_fields) > 0 or "doctest" in warning_reasons):
+                    warning_reasons.append("nested")
+                if symbol["magic_warning"] and (len(missing_fields) > 0 or "doctest" in warning_reasons):
+                    warning_reasons.append("magic")
+                if symbol["private_warning"]  and (len(missing_fields) > 0 or "doctest" in warning_reasons):
+                    warning_reasons.append("private")
+                if symbol["decorated_warning"] and (len(missing_fields) > 0 or "doctest" in warning_reasons): # decorated and something is still missing
+                    warning_reasons.append("decorated")
 
                 ## Computing the severity:
                 ## - If docstring is missing but it is magic or nested, we issue a warning, otherwise an error

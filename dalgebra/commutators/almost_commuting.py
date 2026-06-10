@@ -417,6 +417,37 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "direct", s
 
 @cache_in_file
 def almost_commuting_wilson(n: int, m: int, name_u: str | list[str] | tuple[str] = "u", name_z: str = "z"):
+    r'''
+        Method to compute the order `m` almost-commuting basis element for a generic operator of order `n`.
+
+        INPUT:
+
+        * ``n``: the order of the generic operator `L_n`.
+        * ``m``: the order of the almost-commuting operator `P_m`.
+        * ``name_u`` (optional): base name for the `u` variables that will appear as coefficients in `L_n`.
+        * ``name_z`` (optional): base name for the differential variable to represent `\partial`.
+
+        OUTPUT:
+
+        A tuple `(P_m, (T_0,\ldots,T_{n-2}))` such that `P_m` is the almost commutator for the generic `L_n` and the `T_i` are such
+        `[L_n, P_m] = T_0 + T_1\partial + \ldots + T_{n-2}\partial^{n-2}`.
+
+        EXAMPLES::
+
+            sage: from dalgebra.commutators.almost_commuting import almost_commuting_wilson
+            sage: Q, (c0,c1) = almost_commuting_wilson(3,5)
+            sage: u_2, u_3, z = Q.parent().gens()
+            sage: Q.coefficients(z)
+            (10/9*u_2_0*u_3_0 + 10/9*u_3_2,
+             5/9*u_2_0^2 + 10/9*u_2_2 + 5/3*u_3_1,
+             5/3*u_2_1 + 5/3*u_3_0,
+             5/3*u_2_0,
+             1)
+            sage: c0
+            10/9*u_2_0*u_2_1*u_3_0 + 5/9*u_2_0*u_3_3 + 5/9*u_2_0^2*u_3_1 + 5/3*u_2_1*u_3_2 + 20/9*u_2_2*u_3_1 + 10/9*u_2_3*u_3_0 - 5/3*u_3_0*u_3_2 - 5/3*u_3_1^2 + 1/9*u_3_5
+            sage: c1
+            5/9*u_2_0*u_2_3 + 5/9*u_2_0^2*u_2_1 + 5/9*u_2_1*u_2_2 + 5/3*u_2_1*u_3_1 + 5/3*u_2_2*u_3_0 + 1/9*u_2_5 - 10/3*u_3_0*u_3_1
+    '''
     import os
     from .. import dalgebra_folder
 
@@ -480,6 +511,8 @@ def __almost_commuting_direct(parent: DPolynomialRing_Monoid, order_L: int, orde
         * `R`: is the final ring of differential polynomials generated to represent the equations.
         * `eqs`: a list/tuple with the equations to be solved.
         * `T`: the remaining equations unnecessary for the almost-commuting that will define the hierarchies.
+
+        ::NO EXAMPLE::
     '''
     ## We add the variables of `p` into the ring ``parent``.
     R = parent.append_variables(*__names_variables(order_P, name_p, simplify_names=False))
@@ -566,6 +599,11 @@ def __almost_commuting_recursive(parent: DPolynomialRing_Monoid, order_L: int, o
         n, m = order_L, order_P-1 # for simplicity in the following formulas
 
         def gen_monomial(ind_p=-1, ord_p=-1, ind_u=-1, ord_u=-1) -> DMonomial:
+            r'''
+                Return a monomial given the approriate indices of `p` and `u`.
+            
+                ::NO EXAMPLE::
+            '''
             if ind_p == 1 or ind_u == n-1: # zero cases
                 return tuple()
             output = tuple()
@@ -636,6 +674,8 @@ def __almost_commuting_integral(parent: DPolynomialRing_Monoid, equations: list[
 
         Then, the output is in the usual format for these methods: it returns a dictionary `v \mapsto A` where `v` are
         the variables given in ``p`` and `A` are the values such that, plugged into ``equations``, make them all vanish.
+
+        ::NO EXAMPLE::
     '''
     S = DSystem(equations, parent=parent, variables=p)
     return S.solve_linear()
@@ -659,6 +699,8 @@ def __almost_commuting_linear(parent: DPolynomialRing_Monoid, equations: list[DP
 
         Then, the output is in the usual format for these methods: it returns a dictionary `v \mapsto A` where `v` are
         the variables given in ``p`` and `A` are the values such that, plugged into ``equations``, make them all vanish.
+
+        ::NO EXAMPLE::
     '''
     n, m = len(u) + 1, len(p) + 1
     # Creating the Weight function
@@ -703,6 +745,15 @@ def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = N
 
         This method computes all the equations in the hierarchy using the method :func:`almost_commuting_wilson`
         and then return the corresponding equations indicated by the argument `i`,
+
+        EXAMPLES::
+
+            sage: from dalgebra.commutators.almost_commuting import hierarchy
+            sage: c0, c1 = hierarchy(3,5)
+            sage: c0
+            10/9*u_2_0*u_2_1*u_3_0 + 5/9*u_2_0*u_3_3 + 5/9*u_2_0^2*u_3_1 + 5/3*u_2_1*u_3_2 + 20/9*u_2_2*u_3_1 + 10/9*u_2_3*u_3_0 - 5/3*u_3_0*u_3_2 - 5/3*u_3_1^2 + 1/9*u_3_5
+            sage: c1
+            5/9*u_2_0*u_2_3 + 5/9*u_2_0^2*u_2_1 + 5/9*u_2_1*u_2_2 + 5/3*u_2_1*u_3_1 + 5/3*u_2_2*u_3_0 + 1/9*u_2_5 - 10/3*u_3_0*u_3_1
     '''
     H = almost_commuting_wilson(n,m)[1]
     if isinstance(i, int):
@@ -717,13 +768,29 @@ def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = N
 def kdv(m: int):
     r'''
         KdV hierarchy (see :wiki:`KdV_hierarchy`) is the integrable hierarchy that appears from almost commutators of a generic operator of order 2.
+
+        EXAMPLES::
+
+            sage: from dalgebra.commutators.almost_commuting import kdv
+            sage: c0 = kdv(5)[0]
+            sage: c0
+            -5/8*u_0*u_3 - 15/8*u_0^2*u_1 - 5/4*u_1*u_2 - 1/16*u_5
     '''
     return hierarchy(2,m,0)
 
 
 def boussinesq(m: int, i: int | tuple[int] | list[int] | slice | None = None):
     r'''
-        Boussinesq hierarchy (TODO: add reference)
+        Return the Boussinesq hierarchy differential system (not reduced) that appears from almost commutators of a generic operator of order 3.
+
+        EXAMPLES::
+
+            sage: from dalgebra.commutators.almost_commuting import boussinesq
+            sage: c0, c1 = boussinesq(5)
+            sage: c0
+            10/9*u_2_0*u_2_1*u_3_0 + 5/9*u_2_0*u_3_3 + 5/9*u_2_0^2*u_3_1 + 5/3*u_2_1*u_3_2 + 20/9*u_2_2*u_3_1 + 10/9*u_2_3*u_3_0 - 5/3*u_3_0*u_3_2 - 5/3*u_3_1^2 + 1/9*u_3_5
+            sage: c1
+            5/9*u_2_0*u_2_3 + 5/9*u_2_0^2*u_2_1 + 5/9*u_2_1*u_2_2 + 5/3*u_2_1*u_3_1 + 5/3*u_2_2*u_3_0 + 1/9*u_2_5 - 10/3*u_3_0*u_3_1
     '''
     return hierarchy(3,m,i)
 
@@ -776,7 +843,11 @@ def recursion(n: int):
         matrix.
 
         NOTE: We need to check whether this always leads to a unique solution or not. The hope is that, yes.
+        ::NO EXAMPLE:: TODO
     '''
+    if n >= 0: ## Added to avoid linting errors while keeping the old code without commenting it
+        raise NotImplementedError("This is a tentative method, but no real theory is backing it currently. Hence we do not allow to use it")
+    
     from sage.rings.ideal import Ideal
     ## Some auxiliary functions
     logger.info(f"[recursion] ++ Defining the auxiliary function...")
