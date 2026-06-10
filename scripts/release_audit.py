@@ -9,10 +9,12 @@ RE_HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
 
 def run(cmd):
+    r'''Run a commend as a subpocress and reads its output'''
     return subprocess.check_output(cmd, text=True).strip()
 
 
 def try_run(cmd):
+    r'''Run a command as a subprocess and filters its Exception (in case an error occurs)'''
     try:
         return run(cmd)
     except subprocess.CalledProcessError:
@@ -20,17 +22,19 @@ def try_run(cmd):
 
 
 def latest_tag():
+    r'''Get the latest tag in the git repository'''
     return try_run(["git", "describe", "--tags", "--abbrev=0"])
 
 
 def changed_python_files(base, head):
+    r'''Get a list of changed python files between two git revisions'''
     out = try_run(["git", "diff", "--name-only", f"{base}..{head}", "--", "dalgebra"])
     if not out:
         return []
     return [Path(line) for line in out.splitlines() if line.endswith(".py") and Path(line).exists()]
 
-
 def added_line_numbers(base, head, file_path):
+    r'''Get the line numbers of added lines in a file between two git revisions'''
     out = try_run(["git", "diff", "-U0", f"{base}..{head}", "--", str(file_path)])
     added = set()
     new_line = 0
@@ -58,13 +62,15 @@ def added_line_numbers(base, head, file_path):
 
 
 def is_magic_name(name):
+    r'''Check if a name is a magic method (starts and ends with double underscores)'''
     return name.startswith("__") and name.endswith("__")
 
 def is_private_name(name):
-    return name.startswith("__")
-
+    r'''Check if a name is a private method (starts with a single underscore but doesn't end with an underscore)'''
+    return name.startswith("_") and not name.startswith("__") and not name.endswith("__")
 
 def iter_symbols(tree):
+    r'''Method to iterate over all the elements on a tree. It uses an inner Visitor class with the functionality when visiting the nodes.'''
     items = []
 
     class Visitor(ast.NodeVisitor):
@@ -128,6 +134,7 @@ def iter_symbols(tree):
 
 
 def find_def_records(file_path):
+    r''''''
     text = file_path.read_text(encoding="utf-8")
     if "::IGNORE AUDIT::" in text:
         return []
@@ -172,6 +179,8 @@ def main():
     if not base:
         print("No tags found. Provide --base <revision> to compare against.")
         return 1
+    elif base == "origin":
+        base = "8f15ae11bf1caac8e56aab49537ef3e9502bd3da"
 
     files = changed_python_files(base, args.head)
     if not files:
