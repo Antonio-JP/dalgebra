@@ -768,6 +768,7 @@ class DMonomialMonoid(Parent):
     def semigroup_generators(self) -> LazyFamily:
         r'''Monoid method to get the generators of the monoid as a family. (::NO EXAMPLE::)'''
         def _gen_from_index(tuple):
+            r'''Auxiliary function to get the generator from the index. (::NO EXAMPLE::)'''
             if tuple[0] == 0:
                 return self.one()
             return self.gens()[tuple[0]-1][tuple[1]]

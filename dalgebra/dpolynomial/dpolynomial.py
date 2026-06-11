@@ -91,8 +91,11 @@ class DPolynomialRingFactory(UniqueFactory):
 
         This allows to cache the same rings created from different objects. See
         :class:`DPolynomialRing_Monoid` for further information on this structure.
+
+        ::NO EXAMPLE::
     '''
     def create_key(self, base, *names : str, **kwds):
+        r'''Factory method to create a key to represent a DPolynomial Ring (::NO EXAMPLE::)'''
         if "names" in kwds and len(names) > 0:
             raise ValueError("Duplicated values for names")
         if len(names) == 1 and isinstance(names[0], (list, tuple)):
@@ -112,6 +115,7 @@ class DPolynomialRingFactory(UniqueFactory):
         ## Method to create sorting keys for variable names:
         ## We split the underscores and sort lexicographically transforming numbers when possible.
         def _name_sorting_criteria(name):
+            r'''Auxiliary function to sort names (::NO EXAMPLE::)'''
             el = name.split("_")
             for i,part in enumerate(el):
                 try:
@@ -130,6 +134,7 @@ class DPolynomialRingFactory(UniqueFactory):
         return (base, names)
 
     def create_object(self, _, key) -> DPolynomialRing_Monoid:
+        r'''Factory method to create a DPolynomial Ring (::NO EXAMPLE::)'''
         base, names = key
 
         return DPolynomialRing_Monoid(base, names)
@@ -140,6 +145,7 @@ RWOPolynomialRing = DPolynomialRing #: alias for DPolynomialRing (used for backw
 
 
 def DifferentialPolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_Monoid:
+    r'''Convenience function to create a differential polynomial ring over a given base ring. (::NO EXAMPLE::)'''
     if base not in _DRings:
         base = DifferentialRing(base, kwds.pop("derivation", diff))
     if not base.is_differential():
@@ -148,6 +154,7 @@ def DifferentialPolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_Mo
 
 
 def DifferencePolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_Monoid:
+    r'''Convenience function to create a difference polynomial ring over a given base ring. (::NO EXAMPLE::)'''
     if base not in _DRings:
         base = DifferenceRing(base, kwds.pop("difference", base.Hom(base).one()))
     if not base.is_difference():
@@ -156,10 +163,19 @@ def DifferencePolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_Mono
 
 
 def LaurentMethod(func):
+    r'''
+        Wrapper of a function to enforce some arguments and to define its default behavior.
+
+        This wrapper enforces the argument "laurent_morh" to be defined with a defailt value that must be a morphism
+        whose domain is the base of the parent. If not given, a default laurent morphism is created.
+
+        ::NO EXAMPLE::
+    '''
     from functools import wraps
 
     @wraps(func)
     def wrapper(self, *args, **kwds):
+        r'''Functional part of the wrapper (::NO EXAMPLE::)'''
         import inspect
         sig = inspect.signature(func)
         if "laurent_morph" not in sig.parameters:
@@ -182,6 +198,8 @@ class DPolynomial(Element):
 
         A DPolynomial is a sum of terms formed as a coefficient times a :class:`DMonomial`.
         This is a sparse representation of d-polynomials.
+
+        ::NO EXAMPLE::
     '''
     def __init__(self, parent: DPolynomialRing_Monoid, input : DPolynomial | list[tuple[DMonomial, Element]] | dict[DMonomial, Element]):
         if isinstance(input, DPolynomial):
@@ -201,19 +219,24 @@ class DPolynomial(Element):
     ###################################################################################
     ### Property methods
     ###################################################################################
-    def is_zero(self) -> bool: #: Checker for the zero element -> nothing on the _content.
+    def is_zero(self) -> bool: 
+        r'''Checker for the zero element -> nothing on the _content. (::NO EXAMPLE::)'''
         return len(self._content) == 0
 
-    def is_term(self) -> bool: #: Checker for terms -> elements with just one monomial
+    def is_term(self) -> bool: 
+        r'''Checker for terms -> elements with just one monomial. (::NO EXAMPLE::)'''
         return len(self._content) == 1
 
-    def is_monomial(self) -> bool: #: Checker for monomials -> just one monomial and coefficient 1
+    def is_monomial(self) -> bool: 
+        r'''Checker for monomials -> just one monomial and coefficient 1. (::NO EXAMPLE::)'''
         return self.is_term() and self.coefficients()[0] == self.parent().base().one()
 
-    def is_variable(self) -> bool: #: Checker for variable -> just one monomial that is a variable
+    def is_variable(self) -> bool: 
+        r'''Checker for variable -> just one monomial that is a variable. (::NO EXAMPLE::)'''
         return self.is_monomial() and next(iter(self._content)).is_variable()
 
-    def is_unit(self) -> bool: #: Checker for an element to be a unit (i.e., has degree 0)
+    def is_unit(self) -> bool: 
+        r'''Checker for an element to be a unit (i.e., has degree 0). (::NO EXAMPLE::)'''
         return (not self.is_zero()) and self.degree() == 0
 
     def is_linear(self, variables: Collection[DMonomialGen | DPolynomial] = None):
@@ -224,6 +247,8 @@ class DPolynomial(Element):
             or variables of the ring.
 
             A polynomial is linear w.r.t. a set of variables if no monomial has a combined degree higher than 1.
+
+            ::NO EXAMPLE::
         '''
         # processing the variables
         if variables is None:
@@ -237,17 +262,37 @@ class DPolynomial(Element):
         return max(sum(m.degree(next(iter(v._content))) for v in variables) for m in self.monomials()) <= 1
 
     def divides(self, other: DPolynomial) -> bool:
+        r'''Checker for divisibility of d-polynomials. (::NO EXAMPLE::)'''
         pself, pother = self.parent().as_polynomials(self, other)
         return pself.divides(pother)
 
     def factor(self) -> Factorization:
+        r'''
+            Factorization of a d-polynomial. 
+            
+            This method uses factorization of multivariate polynomials and, then, casts back the factorization to 
+            the d-structure of the d-polynomials.
+
+            ::NO EXAMPLE::
+        '''
         base_factorization: Factorization = self.to_sage().factor()
         return Factorization([(self.parent()(factor), exponent) for (factor, exponent) in base_factorization], self.parent()(base_factorization.unit()))
 
     def content(self) -> Element:
+        r'''Method to compute the content of a d-polynomial. (::NO EXAMPLE::)'''
         return self.parent().base()(GCD(self.coefficients()))
     
     def common_term(self) -> DPolynomial:
+        r'''
+            Method to compute the common term of all monomials appearing in a d-polynomial.
+
+            This method computes the gcd of all the monomials (as part of a monoid) appearing in the d-polynomial.
+            The case of the zero polynomial return the zero element again (as a special case).
+        
+            ::NO EXAMPLE::
+
+            TODO: Add examples to this method.
+        '''
         if self.is_zero():
             return self.parent().zero()
         
@@ -256,6 +301,7 @@ class DPolynomial(Element):
         return self.content()*basic_mon
 
     def gcd(self, other: DPolynomial) -> DPolynomial:
+        r'''GCD method for d-polynomials (::NO EXAMPLE::)'''
         if self == self.parent().zero():
             return other
         elif other == self.parent().zero():
@@ -285,6 +331,10 @@ class DPolynomial(Element):
             If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
             This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in
             `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
+
+            ::NO EXAMPLE::
+
+            TODO: Add examples to this method
         '''
         if len(gens) == 0:
             return tuple(self._content.keys())
@@ -316,6 +366,10 @@ class DPolynomial(Element):
             If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
             This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in
             `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
+
+            ::NO EXAMPLE::
+
+            TODO: Add examples to this method
         '''
         if len(gens) == 0:
             return tuple([self._content[m] for m in self.monomials()])
@@ -329,6 +383,10 @@ class DPolynomial(Element):
             If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
             This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in
             `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
+
+            ::NO EXAMPLE::
+
+            TODO: Add examples to this method
         '''
         return dict(zip(self.monomials(*gens), self.coefficients(*gens)))
 
@@ -339,6 +397,10 @@ class DPolynomial(Element):
             If any generator is provided, then we return the monomials of ``self`` considering the ``gens`` and the main variables.
             This means, if `S = R\{u_1,u_2,u_3\}` and ``gens = u_2, u_3``, then we consider ``self`` as an element in
             `R\{u_1\}\{u_2,u_3\}` and return the monomials in this case.
+
+            ::NO EXAMPLE::
+
+            TODO: Add examples to this method
         '''
         if not isinstance(monomial, DMonomial):
             monomial = self.parent().monoids()(monomial)
@@ -357,7 +419,13 @@ class DPolynomial(Element):
                 return self.parent().zero()
 
     def coefficient_full(self, monomial: DMonomial) -> DPolynomial:
-        r'''Getter for the polynomial of all the elements for which ``monomial`` is part of the monomial'''
+        r'''
+            Getter for the polynomial of all the elements for which ``monomial`` is part of the monomial 
+            
+            ::NO EXAMPLE::
+            
+            TODO: Improve documentation and add examples to this method
+        '''
         if isinstance(monomial, DPolynomial):
             if not monomial.is_monomial():
                 raise TypeError(f"If requested with d-polynomial, it must be a monomial")
@@ -674,6 +742,16 @@ class DPolynomial(Element):
         return self.lorders(operation)[gen._index]
 
     def degree(self, x=None) -> int:
+        r'''
+            Degree method for d-polynomials. 
+
+            This method computes the general degree of a d-polynomial or, in case a variable is given, the degree of this variable is 
+            returned. The variable given is not a :class:`DPolynomialGen` but a :class:`DPolynomial`.
+
+            ::NO EXAMPLE::
+
+            TODO: Add examples to this method        
+        '''
         if self.is_zero(): # Special case when the polynomial is zero
             return -oo
 
@@ -686,7 +764,14 @@ class DPolynomial(Element):
         return max(m.degree(next(iter(x._content))) for m in self._content)
 
     @cached_method
-    def variables(self) -> tuple[DPolynomial]: #: Get variables appearing in a polynomial (i.e., monomials of degree 1)
+    def variables(self) -> tuple[DPolynomial]: 
+        r'''
+            Get variables appearing in a polynomial (i.e., monomials of degree 1) 
+            
+            ::NO EXAMPLE::
+
+            TODO: Add examples to this method
+        '''
         union: set[DMonomial] = set()
         for m in self._content:
             union.update(m.variables())
@@ -702,6 +787,8 @@ class DPolynomial(Element):
     def infinite_variables(self) -> tuple[DPolynomialGen]:
         r'''
             Method to compute which generators of the parent appear in ``self``.
+
+            ::NO EXAMPLE::
         '''
         return tuple(g for g in self.parent().gens() if self.order(g) != -1)
 
@@ -710,34 +797,42 @@ class DPolynomial(Element):
     ###################################################################################
     @cached_method
     def as_polynomial(self) -> Element:
+        r'''Method to get a polynomial for this d-polynomial (i.e., removing the infinite variable and the d-structure) (::NO EXAMPLE::)'''
         return self.parent().as_polynomials(self)[0]
 
     def as_linear_operator(self) -> Element:
+        r'''Method to get a linear operator for this d-polynomial (::NO EXAMPLE::)'''
         return self.parent().as_linear_operator(self)
 
     ####################################################################################
     ### Algebra_With_Basis methods
     ####################################################################################
     def monomial_coefficients(self, copy: bool = True) -> dict[DMonomial, Element]:
+        r'''Overriden method from Algebra_With_Basis (::NO EXAMPLE::)'''
         return dict(zip(self.monomials(), self.coefficients())) if copy else self._content
 
     ###################################################################################
     ### Arithmetic operations
     ###################################################################################
     def _add_(self, other: DPolynomial) -> DPolynomial:
+        r'''Implementation of the addition for DPolynomials. (::NO EXAMPLE::)'''
         keys = set(self._content.keys()).union(other._content.keys())
         return self.parent().element_class(self.parent(), {m : self._content.get(m,self.parent().base().zero()) + other._content.get(m,self.parent().base().zero()) for m in keys})
     def __neg__(self) -> DPolynomial:
+        r'''Implementation of the negation for DPolynomials. (::NO EXAMPLE::)'''
         return self.parent().element_class(self.parent(), {m : -c for (m,c) in self._content.items()})
     def _sub_(self, other: DPolynomial) -> DPolynomial:
+        r'''Implementation of the subtraction for DPolynomials. (::NO EXAMPLE::)'''
         return self + (-other)
     def _mul_(self, other: DPolynomial) -> DPolynomial:
+        r'''Implementation of the multiplication for DPolynomials. (::NO EXAMPLE::)'''
         output = dict()
         for (ms, mo) in product(self.monomials(), other.monomials()):
             m = ms*mo
             output[m] = output.get(m, self.parent().base().zero()) + self._content[ms]*other._content[mo]
         return self.parent().element_class(self.parent(), output)
     def __invert__(self) -> DPolynomial:
+        r'''Implementation of the inversion for DPolynomials. If the element is not invertible, we go to the fraction field. (::NO EXAMPLE::)'''
         if self in self.parent().base():
             return self.parent()(~self.coefficients()[0])
         else:
@@ -747,6 +842,7 @@ class DPolynomial(Element):
                 return self.parent().fraction_field()(1, self)
 
     def __truediv__(self, other: Element) -> DPolynomial:
+        r'''Implementation of the true division for DPolynomials. (::NO EXAMPLE::)'''
         if other in self.parent().base():
             other = self.parent().base()(other)
             return self.parent().element_class(self.parent(), {m : c/other for (m,c) in self._content.items()})
@@ -757,6 +853,7 @@ class DPolynomial(Element):
                 return self.parent().fraction_field()(self, other)
 
     def _floordiv_(self, other: DPolynomial) -> DPolynomial:
+        r'''Implementation of the floor division for DPolynomials. (::NO EXAMPLE::)'''
         if other.is_term():
             mon = next(iter(other._content.keys()))
             coef = other._content[mon]
@@ -769,10 +866,12 @@ class DPolynomial(Element):
         return self.parent()(as_ipoly)
 
     def _mod_(self, other: DPolynomial) -> DPolynomial:
+        r'''Implementation of the modulo operation for DPolynomials. (::NO EXAMPLE::)'''
         return self - (self // other) * other
 
     @cached_method
     def __pow__(self, power: int) -> DPolynomial:
+        r'''Implementation of the power for DPolynomials. We use the square-and-multiply algorithm for integer powers. (::NO EXAMPLE::)'''
         if power == 0:
             return self.parent().one()
         elif power == 1:
@@ -786,6 +885,7 @@ class DPolynomial(Element):
             return a*A
 
     def __eq__(self, other) -> bool:
+        r'''Magic method for equality of DPolynomials. (::NO EXAMPLE::)'''
         if other is None:
             return False
         if isinstance(other, DMonomial):
@@ -796,9 +896,9 @@ class DPolynomial(Element):
                 return True
 
         return (self - other).is_zero()
-        # return super().__eq__(other)
 
     def __ne__(self, other) -> bool:
+        r'''Magic method for non-equality of DPolynomials. (::NO EXAMPLE::)'''
         return not self == other
 
     def __hash__(self) -> int:
@@ -807,11 +907,24 @@ class DPolynomial(Element):
 
             We use the sum of hash functions for each monomial appearing. This implies that the polynomial with only one monomial has the same hash as
             that monomial, meaning that having equality between polynomials and monomials implies same hash function.
+
+            ::NO EXAMPLE::
         '''
         return sum(hash(m) for m in self.monomials())
 
     ## Other methods for DRings.ElementMethods
     def denominator(self) -> DPolynomial:
+        r'''
+            Method to determine the `denominator` of a d-polynomial.
+
+            This method computes a common denominator for all the coefficients appearing in the d-polynomial. 
+            In this way, we can write ``self`` as the quotient between a "nice" element (usually in the original domain) 
+            and a common denominator.
+
+            ::NO EXAMPLE::
+
+            TODO: Add some examples to this method
+        '''
         coefficients = self.coefficients()
         if len(coefficients) == 0:
             return 0
@@ -819,6 +932,15 @@ class DPolynomial(Element):
             return coefficients[0].lcm_denominators(*coefficients[1:])
 
     def numerator(self) -> DPolynomial:
+        r'''
+            Computes the numerator of a d-polynomial.
+
+            See method :func:`denominator` for more details. This method returns the element such that dividing by the denominator retrieves ``self``.
+
+            ::NO EXAMPLE::
+
+            TODO: Add some examples to this method
+        '''
         return self*self.denominator()
 
     def conditions_to_zero(self) -> list[tuple[DPolynomial, Element]]:
@@ -834,6 +956,10 @@ class DPolynomial(Element):
 
             As the elements in the coefficients are in a D-Ring, we can compute the zero conditions for those
             elements as well.
+
+            ::NO EXAMPLE::
+
+            TODO: Add examples to this method.
         '''
         output = list()
         for (mon, coeff) in zip(self.monomials(), self.coefficients()):
@@ -846,6 +972,16 @@ class DPolynomial(Element):
     ### Operational operations
     ###################################################################################
     def eval_coefficients(self, *args, **kwds):
+        r'''
+            Method to evaluate the coefficients of a d-polynomial. 
+
+            Given a set of values in a usual __call__ format, this method evaluates _only_ the coefficients of the d-polynomial, generating a new 
+            d-polynomial whose coefficients live in the evaluated ring of coefficients.
+
+            ::NO EXAMPLE::
+
+            TODO: Add some examples to this method
+        '''
         return self.parent().element_class(self.parent(), {t : c(*args, **kwds) for (t,c) in self._content.items()})
 
     def eval(self, *args, dic : dict = None, **kwds):
@@ -854,6 +990,10 @@ class DPolynomial(Element):
 
             We rely on the variable names of the parent. There are no coercions in this method, it simply computes the corresponding product
             with the corresponding values.
+
+            ::NO EXAMPLE::
+
+            TODO: Add some examples to this method
         '''
         ## Processing the arguments
         if len(args) != 0:
@@ -887,6 +1027,8 @@ class DPolynomial(Element):
     def lie_bracket(self, other: DPolynomial, gen: DMonomialGen = None) -> DPolynomial:
         r'''
             Computes the Lie-bracket (or commutator) of ``self`` with other :Class:`DPolynomial`.
+
+            ::NO EXAMPLE::
         '''
         if other not in self.parent():
             raise ValueError(f"The two objects must be DPolynomials")
@@ -914,6 +1056,8 @@ class DPolynomial(Element):
 
             * ``power``: the power we want to compute.
             * ``gen``: the generator that will be substituted. If not given, we will take the first generator of the parent.
+
+            ::NO EXAMPLE::
         '''
         gen = gen if gen is not None else self.parent().gens()[0]
         power = int(power)
@@ -929,6 +1073,17 @@ class DPolynomial(Element):
             return H1(**{ngen: H2})
 
     def dot(self, other: DPolynomial, gen: DMonomialGen = None) -> DPolynomial:
+        r'''
+            Method that represents the functional composition with other d-polynomial.
+
+            A classical interpretation of a d-polynomial is the action of a d-operator over a certain function. This 
+            method computes the multiplication (as operator) of two d-polynomials when we interpret the same generator
+            (given by `gen`) as the variable of the function. In this way, we can compute the composition of two d-polynomials as operators.
+
+            ::NO EXAMPLE::
+
+            TODO: Add examples to this method
+        '''
         if other not in self.parent():
             raise ValueError(f"The two objects must be DPolynomials")
         other = self.parent()(other)
@@ -955,6 +1110,10 @@ class DPolynomial(Element):
             We require that the leading coefficient of `other` is a unit, so we can do the division properly.
 
             WARNING: this needs to be checked in other cases and, more importantly, we need to compare the difference with a ranking pseudo division. Can we automatize this?
+
+            ::NO EXAMPLE::
+
+            TODO: Fix this documentation and add some examples.
         '''
         ## Checking the parent
         R = pushout(self.parent(), other.parent())
@@ -992,6 +1151,10 @@ class DPolynomial(Element):
             We require that the leading coefficient of `other` is a unit, so we can do the division properly.
 
             WARNING: this needs to be checked in other cases and, more importantly, we need to compare the difference with a ranking pseudo division. Can we automatize this?
+
+            ::NO EXAMPLE::
+
+            TODO: Fix this documentation and add some examples.
         '''
         ## Checking the parent
         R = pushout(self.parent(), other.parent())
@@ -1021,6 +1184,14 @@ class DPolynomial(Element):
     def partial(self, variable: DPolynomial) -> DPolynomial:
         r'''
             Computes the partial derivative of self w.r.t. a variable.
+
+            This method computes the partial derivation w.r.t. a particular variable. This means that all other variables
+            are interpret as constants, as well as the coefficients of the d-polynomial. This derivation is usually not
+            related with the operations on the parent ring.
+
+            ::NO EXAMPLE::
+
+            TODO: Add some examples to this method.
         '''
         variable = self.parent()(variable)
         if not variable.is_variable():
@@ -1035,6 +1206,8 @@ class DPolynomial(Element):
     def reduce_algebraic(self, polynomials) -> DPolynomial:
         r'''
             Method that tries to reduce the coefficients of the polynomial using algebraic relations
+
+            ::NO EXAMPLE::
         '''
         output = {m : coeff.reduce_algebraic(polynomials) for (m, coeff) in zip(self.monomials(), self.coefficients())}
         return self.parent().element_class(self.parent(), output)
@@ -1047,6 +1220,8 @@ class DPolynomial(Element):
             Method on an element to compute (if possible) the Sylvester resultant.
 
             See :func:`~.dpolynomial.DPolynomialRing_Monoid.sylvester_resultant` for further information.
+
+            ::NO EXAMPLE::
         '''
         return self.parent().sylvester_resultant(self, other, gen)
 
@@ -1055,6 +1230,8 @@ class DPolynomial(Element):
             Method to compute the Sylvester `k`-matrix for two operator polynomials.
 
             See :func:`~.dpolynomial.DPolynomialRing_Monoid.sylvester_matrix` for further information.
+            
+            ::NO EXAMPLE::
         '''
         return self.parent().sylvester_matrix(self, other, gen, k)
 
@@ -1124,6 +1301,10 @@ class DPolynomial(Element):
             A d-polynomial `p` is D-finite with respect to a variable `u` it is a linear equation
             with polynomial coefficients. This if not trivial to decide, since we need an embedding into
             the ring of formal power series (or Laurent series).
+
+            ::NO EXAMPLE::
+
+            TODO: For Laurent
         '''
         from ..pseries.laurent import LSeries_Element
         
@@ -1131,6 +1312,11 @@ class DPolynomial(Element):
 
     @staticmethod
     def _monomial_order(m: DMonomial, k: Element) -> int:
+        r'''
+            Static method to compute the order (as a Laurent series) of a particular monomial. (::NO EXAMPLE::)
+
+            TODO: For Laurent            
+        '''
         order = k.parent().zero()
         for (_,o),e in m._variables.items():
             order += (k - o[0])*e
@@ -1138,6 +1324,11 @@ class DPolynomial(Element):
     
     @staticmethod
     def _monomial_min_value(m: DMonomial, gen: DMonomialGen, k: Element) -> int:
+        r'''
+            Static method to compute the minimum order (as a Laurent series) of a particular monomial. (::NO EXAMPLE::)
+
+            TODO: For Laurent            
+        '''
         from sage.arith.misc import falling_factorial
         R = pushout(gen[0].parent(), k.parent())
         u = R(gen[0])
@@ -1147,16 +1338,13 @@ class DPolynomial(Element):
             result *= (falling_factorial(k, o)*u)**e
         return result
 
-    def _check_candidate(self, candidate: int, variable: Element, orders: list[int], *, laurent_morph: MorphismToLaurent = None) -> bool:
-        orders_candidate = [order(**{str(variable): candidate}) for order in orders]
-        mo = min(orders_candidate)
-        if orders_candidate.count(mo) == 1:
-            pass
-                
-        return False
-
     @staticmethod
     def _sample_in_interval(lower: Element, upper: Element) -> int | str:
+        r'''
+            Static method to sample an integer in a given interval. The interval can be open or closed, and it can be unbounded. If the interval is empty, we return "Empty". (::NO EXAMPLE::)
+
+            TODO: For Laurent
+        '''
         from sage.functions.other import floor, ceil 
         if lower == -oo and upper == oo:
             return ZZ(0)
@@ -1171,6 +1359,13 @@ class DPolynomial(Element):
         return ceil(lower) if lower not in ZZ else ZZ(lower) + 1
          
     def _generic_pseries_solution(self, u: DMonomialGen, varnames: str = "A", laurent_morph: MorphismToLaurent = None) -> Element | tuple[Element]:
+        r'''
+            Compute a generic power series solution for the equation ``self(u) == 0``. (::NO EXAMPLE::)
+
+            TODO: Fix and complete this documentation.
+
+            TODO: For Laurent
+        '''
         order = self.order(u)
         if self.degree(u[order]) > 1: # equation is not linear -> we derivate
             return self.derivative()._generic_pseries_solution(u, varnames, laurent_morph=laurent_morph)
@@ -1195,6 +1390,11 @@ class DPolynomial(Element):
             return [self, "Cannot-extend"]
         
     def _indicial_low_order(self, u: DMonomialGen, varnames: str = "A", laurent_morph: MorphismToLaurent = None) -> Ideal_generic:
+        r'''
+            Auxiliary method to compute the indicial ideal for low order solutions of the equation ``self(u) == 0``. (::NO EXAMPLE::)
+
+            TODO: For Laurent
+        '''
         from sage.rings.ideal import Ideal
         
         order = self.order(u)
@@ -1233,6 +1433,11 @@ class DPolynomial(Element):
     @cached_method
     @LaurentMethod
     def indicial_equation(self, u: DMonomialGen, varname: str = "k", *, laurent_morph: MorphismToLaurent) -> tuple[tuple[tuple[Element, list[Element]]], tuple[Element, Element], None]:
+        r'''
+            Method to compute the indicial equation for the equation ``self(u) == 0``. (::NO EXAMPLE::)
+
+            TODO: For Laurent
+        '''
         ## Getting variables that may be useful - data of the ring of computation       
         DO = self.parent()
         F = DO.base()
@@ -1379,6 +1584,10 @@ class DPolynomial(Element):
 
             If we now consider the iterative case where `monomial` is the product of several factors and we combine it 
             with `coeff`, we can check the maximal order of the solution `u` that appears at order `k`.
+
+            ::NO EXAMPLE::
+
+            TODO: For Laurent
         '''
         ## Generate the index of the maximum coefficient appearing at order `k` in the product
         ## `coeff*monomial` when variable is a formal Laurent series of order `d`.
@@ -1416,6 +1625,13 @@ class DPolynomial(Element):
     
     @staticmethod
     def _monomial_max_data_coeff(coeff: Element, monomial: DMonomial, k: Element, d: Element, u_d: Element) -> Element:
+        r'''
+            Auxiliaryt method to getting the data for a monomial.
+
+            ::NO EXAMPLE::
+
+            TODO: For Laurent
+        '''
         order_coeff = coeff.order()
         order, factor = DPolynomial._monomial_max_data(monomial, k-order_coeff, d, u_d)
         return order, coeff[order_coeff]*factor
@@ -1448,6 +1664,10 @@ class DPolynomial(Element):
             OUTPUT:
 
             A tuple ``(leading_index, leading_multiplier)``.
+
+            ::NO EXAMPLE::
+            
+            TODO: For Laurent
         '''
         DO = self.parent()
 
@@ -1487,6 +1707,13 @@ class DPolynomial(Element):
             return [order - k for order in os], coeffs
 
     def power_series_solution(self, gen: DMonomialGen, initials: dict[int, Element], *, lau_var: str = "t") -> Element:
+        r'''
+            Computes the power series solution of the equation ``self(gen) == 0`` with given initial conditions.
+
+            ::NO EXAMPLE::
+
+            TODO: For Laurent
+        '''
         from ..pseries.laurent import LaurentSeries
         from sage.functions.other import factorial
         from functools import lru_cache
@@ -1555,6 +1782,8 @@ class DPolynomial(Element):
             This method computes the weight of a d-polynomial for a given weight function. These
             weight functions can be given as an actual :class:`~dalgebra.dpolynomial.dpolynomial.WeightFunction`
             or the same arguments as this class have.
+
+            :: NO EXAMPLE::
         '''
         if not isinstance(weight, WeightFunction):
             weight = self.parent().weight_func(*weight)
@@ -1564,6 +1793,8 @@ class DPolynomial(Element):
     def is_homogeneous(self, weight=None):
         r'''
             Checks whether a d-polynomial is homogeneous. If a weight is given, this will be used for homogeneous.
+
+            ::NO EXAMPLE::
         '''
         if weight is None:
             return self.as_polynomial().is_homogeneous()
@@ -1577,34 +1808,34 @@ class DPolynomial(Element):
     ### Ranking methods
     ###################################################################################
     def monic(self, ranking: RankingFunction = None):
-        r'''Method to get the monic polynomial w.r.t. a ranking'''
+        r'''Method to get the monic polynomial w.r.t. a ranking (::NO EXAMPLE::)'''
         ranking = self.parent().ranking() if ranking is None else ranking
         return ranking.monic(self)
 
     def leader(self, ranking: RankingFunction = None):
         r'''
-            Gets the leader of ``self`` w.r.t. a ranking.
+            Gets the leader of ``self`` w.r.t. a ranking (::NO EXAMPLE::).
         '''
         ranking = self.parent().ranking() if ranking is None else ranking
         return ranking.leader(self)
 
     def rank(self, ranking: RankingFunction = None):
         r'''
-            Gets the rank of ``self`` w.r.t. a ranking.
+            Gets the rank of ``self`` w.r.t. a ranking (::NO EXAMPLE::).
         '''
         ranking = self.parent().ranking() if ranking is None else ranking
         return ranking.rank(self)
 
     def initial(self, ranking: RankingFunction = None):
         r'''
-            Gets the leader of ``self`` w.r.t. a ranking.
+            Gets the leader of ``self`` w.r.t. a ranking (::NO EXAMPLE::).
         '''
         ranking = self.parent().ranking() if ranking is None else ranking
         return ranking.initial(self)
 
     def separant(self, ranking: RankingFunction = None):
         r'''
-            Gets the leader of ``self`` w.r.t. a ranking.
+            Gets the leader of ``self`` w.r.t. a ranking (::NO EXAMPLE::).
         '''
         ranking = self.parent().ranking() if ranking is None else ranking
         return ranking.separant(self)
@@ -1617,6 +1848,7 @@ class DPolynomial(Element):
     ###################################################################################
     @cached_method
     def __repr__(self) -> str:
+        r'''Magic method for the string representation of a d-polynomial.'''
         if self.is_zero():
             return "0"
         parts = []
@@ -1642,6 +1874,7 @@ class DPolynomial(Element):
         return output
 
     def _latex_(self) -> str:
+        r'''Magic method for the LaTeX representation of a d-polynomial.'''
         if self.is_zero():
             return "0"
         parts = []
@@ -1743,6 +1976,7 @@ class DPolynomial(Element):
         regex = r"(" + "|".join([el.variable_name() for el in self.infinite_variables()]) + r")_(\d+)"
 
         def subs_regex(M):
+            r'''Auxiliary function to substitute a regex (::NO EXAMPLE::)'''
             var, order = M.groups()
             if order == '0':
                 return var + f"({maple_var})"
@@ -1756,6 +1990,7 @@ class DPolynomial(Element):
 
         ## We put everything together
         def mix_coeff_mon(coeff, mon):
+            r'''Auxiliary function to mix the coefficient and the monomial in the correct way for Maple (::NO EXAMPLE::)'''
             if coeff == "1" and mon == "":
                 return "1"
             elif mon == "":
@@ -1854,6 +2089,7 @@ class DPolynomial(Element):
         regex = r"(" + "|".join([el.variable_name() for el in self.infinite_variables()]) + r")_(\d+)"
 
         def subs_regex(M):
+            r'''Auxiliary function to substitute a regex (::NO EXAMPLE::)'''
             var, order = M.groups()
             if order == '0':
                 return var + f"[{mathematica_var}]"
@@ -1867,6 +2103,7 @@ class DPolynomial(Element):
 
         ## We put everything together
         def mix_coeff_mon(coeff, mon):
+            r'''Auxiliary function to mix the coefficient and the monomial in the correct way for Maple (::NO EXAMPLE::)'''
             if coeff == "1" and mon == "":
                 return "1"
             elif mon == "":
@@ -1889,6 +2126,7 @@ class DPolynomial(Element):
         return result
 
     def __call__(self, *args, dic : dict = None, **kwds):
+        r'''Magic method to evaluate a d-polynomial at given values for the variables (::NO EXAMPLE::)'''
         return self.eval(*args, dic=dic, **kwds)
 
 
@@ -1898,73 +2136,92 @@ RWOPolynomial = DPolynomial #: alias for DPolynomial (used for backward compatib
 class DPolynomialGen(DMonomialGen):
     r'''
         :class:`DPolynomial` version of the generator object :class:`DMonomialGen`. It guarantees the output is a :class:`DPolynomial`.
+
+        ::NO EXAMPLE::
     '''
     def __init__(self, parent: DPolynomialRing_Monoid, name: str, *, index: int = -1):
         super().__init__(parent.monoids(), name, index=index)
         self._poly_parent = parent
 
     def __getitem__(self, i: int | tuple[int]) -> DPolynomial:
+        r'''Magic method to get the generator as a d-polynomial. (::NO EXAMPLE::)'''
         return self._poly_parent.element_class(self._poly_parent, {super().__getitem__(i): self._poly_parent.base().one()})
 
     def is_zero(self) -> bool:
+        r'''Checks whether the generator is zero. (::NO EXAMPLE::)'''
         return False  # Generators are never zero
 
     ## Special arithmetic for these generators
     def __add__(self, x):
+        r'''Implementation of the addition for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return self[0] + x
     def __radd__(self, x):
+        r'''Implementation of the reverse addition for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return x + self[0]
     def __neg__(self):
+        r'''Implementation of the negation for the generators. (::NO EXAMPLE::)'''
         return -self[0]
     def __sub__(self, x):
+        r'''Implementation of the subtraction for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return self[0] - x
     def __rsub__(self, x):
+        r'''Implementation of the reverse subtraction for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return x - self[0]
     def __mul__(self, x):
+        r'''Implementation of the multiplication for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return self[0] * x
     def __rmul__(self, x):
+        r'''Implementation of the reverse multiplication for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return x * self[0]
     def __lmul__(self, x):
+        r'''Implementation of the left multiplication for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return self[0] * x
     def __mod__(self, x):
+        r'''Implementation of the modulo for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return self[0] % x
     def __rmod__(self, x):
+        r'''Implementation of the reverse modulo for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return x % self[0]
     def __div__(self, x):
+        r'''Implementation of the division for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return self[0] / x
     def __rdiv__(self, x):
+        r'''Implementation of the reverse division for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return x / self[0]
     def __floordiv__(self, x):
+        r'''Implementation of the floor division for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return self[0] // x
     def __rfloordiv__(self, x):
+        r'''Implementation of the reverse floor division for the generators. (::NO EXAMPLE::)'''
         if isinstance(x, DPolynomialGen):
             x = x[0]
         return x // self[0]
     def __pow__(self, n):
+        r'''Implementation of the power for the generators. (::NO EXAMPLE::)'''
         return self[0]**n
 
 
@@ -2131,7 +2388,9 @@ class DPolynomialRing_Monoid(Parent):
     '''
     Element = DPolynomial
 
-    def _set_categories(self, base : Parent, category=None) -> list[Category]: return [_DRings, Monoids.Algebras(base)] + ([category] if category is not None else [])
+    def _set_categories(self, base : Parent, category=None) -> list[Category]: 
+        r'''Set the appropriate categories for a DPolynomialRing (::NO EXAMPLE::)'''
+        return [_DRings, Monoids.Algebras(base)] + ([category] if category is not None else [])
 
     def __init__(self, base : Parent, names : Collection[str], category=None):
         if base not in _DRings:
@@ -2181,12 +2440,15 @@ class DPolynomialRing_Monoid(Parent):
     ### GETTER METHODS
     ################################################################################
     def monoids(self) -> DMonomialMonoid:
+        r'''Get the monoid of monomials associated to ``self``. (::NO EXAMPLE::)'''
         return self.__monoids
 
     def variable_names(self) -> tuple[str]:
+        r'''Get the names of the variables of ``self``. (::NO EXAMPLE::)'''
         return self.monoids().variable_names()
 
     def gens(self) -> tuple[DPolynomialGen]:
+        r'''Get the generators of ``self``. (::NO EXAMPLE::)'''
         return self.__gens
 
     @cached_method
@@ -2247,28 +2509,34 @@ class DPolynomialRing_Monoid(Parent):
         return self.gens()[i]
 
     def ngens(self) -> int:
+        r'''Get the number of generators of ``self``. (::NO EXAMPLE::)'''
         return self.monoids().ngens()
 
     ################################################################################
     ### RINGS METHODS (from Rings.ParentMethods)
     ################################################################################
     def is_field(self) -> bool:
+        r'''Check if ``self`` is a field: that is never the case (::NO EXAMPLE::)'''
         return False
 
     def is_integral_domain(self, proof: bool = True) -> bool:
+        r'''Check if ``self`` is an integral domain. (::NO EXAMPLE::)'''
         return self.base().is_integral_domain(proof=proof)
 
     ################################################################################
     ### MONOIDS.ALGEBRAS METHODS (from Monoids.Algebras.ParentMethods)
     ################################################################################
     def basis(self) -> LazyFamily:
+        r'''Method for Monoids.Algebras to create the family of basis elements for ``self``. (::NO EXAMPLE::)'''
         return LazyFamily(self.monoids().semigroup_generators().set, lambda i : self(self.monoids().semigroup_generators()[i]))
 
     @cached_method
     def one_basis(self) -> DMonomial:
+        r'''Method for Monoids.Algebras to create the basis element corresponding to the unit of the monoid. (::NO EXAMPLE::)'''
         return (0, ())
 
     def term(self, index: DMonomial, coeff: Element = None):
+        r'''Method for Monoids.Algebras to create a term of ``self`` given an index and a coefficient. (::NO EXAMPLE::)'''
         if not isinstance(index, DMonomial):
             try:
                 index = self.monoids()(index)
@@ -2280,9 +2548,7 @@ class DPolynomialRing_Monoid(Parent):
     ### Coercion methods
     #################################################
     def _has_coerce_map_from(self, S: Parent) -> bool:
-        r'''
-            Standard implementation for ``_has_coerce_map_from``
-        '''
+        r'''Standard implementation for ``_has_coerce_map_from`` (::NO EXAMPLE::)'''
         if S == self.monoids():
             return True
 
@@ -2295,6 +2561,8 @@ class DPolynomialRing_Monoid(Parent):
 
             Uses the construction of the class :class:`~sage.rings.polynomial.infinite_polynomial_ring.InfinitePolynomialRing_sparse`
             and then transforms the output into the corresponding type for ``self``.
+
+            ::NO EXAMPLE::
         '''
         if x in self.gens():
             return x[0]
@@ -2341,6 +2609,7 @@ class DPolynomialRing_Monoid(Parent):
             })
 
     def _pushout_(self, other):
+        r'''Pushout method for DPolynomialRings when the coercion model fails. (::NO EXAMPLE::)'''
         if isinstance(other, DMonomialMonoid):
             if other.ngens() <= self.ngens():
                 return self
@@ -2368,6 +2637,8 @@ class DPolynomialRing_Monoid(Parent):
 
             For a :class:`DPolynomialRing_Monoid`, the associated functor class is :class:`DPolyRingFunctor`.
             See its documentation for further information.
+
+            ::NO EXAMPLE::
         '''
         return DPolyRingFunctor(self.variable_names()), self.base()
 
@@ -2439,32 +2710,6 @@ class DPolynomialRing_Monoid(Parent):
                 ...
                 NotImplementedError: This method is not yet implemented
         '''
-    #     # we check that the input is in ``self``
-    #     polynomial = self(polynomial)
-
-    #     # we compute the destination ring for the polynomial
-    #     variables = [*polynomial.polynomial().parent().gens()]
-    #     current = self.base()
-    #     while (
-    #         isinstance(current, DRing_Wrapper) or
-    #         is_PolynomialRing(current) or
-    #         is_MPolynomialRing(current) or
-    #         isinstance(current, InfinitePolynomialRing_dense) or
-    #         isinstance(current, InfinitePolynomialRing_sparse)
-    #     ):
-    #         if is_PolynomialRing(current) or is_MPolynomialRing(current):
-    #             variables.extend(current.gens())
-    #         elif isinstance(current, InfinitePolynomialRing_dense) or isinstance(current, InfinitePolynomialRing_sparse):
-    #             variables.extend(reduce(lambda p, q : pushout(p,q), [c.polynomial().parent() for c in polynomial.polynomial().coefficients()]).gens())
-
-    #         if isinstance(current, DRing_Wrapper):
-    #             current = current.wrapped
-    #         else:
-    #             current = current.base()
-
-    #     # at this state we have a "current" that can not be extracted further and a list of variables
-    #     destiny_ring = PolynomialRing(current, variables)
-    #     return destiny_ring(str(polynomial.polynomial()))
         raise NotImplementedError("This method is not yet implemented")
 
     @cached_method
@@ -2482,6 +2727,8 @@ class DPolynomialRing_Monoid(Parent):
             OUTPUT:
 
             A :class:`DPolynomialRing_Monoid` over ``R`` with the same variables as ``self``.
+
+            ::NO EXAMPLE::
         '''
         if self.base() == R:
             return self
@@ -2512,7 +2759,7 @@ class DPolynomialRing_Monoid(Parent):
         return output
 
     def append_variables(self, *variables) -> DPolynomialRing_Monoid:
-        r'''Add new d-variables to the current ring'''
+        r'''Add new d-variables to the current ring (::NO EXAMPLE::)'''
         F,B = self.construction()
         new_ring = F.append_variables(*variables)(B)
 
@@ -2572,9 +2819,12 @@ class DPolynomialRing_Monoid(Parent):
             return output
 
     def fraction_field(self):
+        r'''Generate the fraction field of ``self``. (::NO EXAMPLE::)'''
         try:
             if self.is_field():
                 return self
+            elif not self.is_integral_domain(proof=False):
+                raise ValueError("The fraction field is only defined for integral domains")
         except NotImplementedError:
             pass
 
@@ -2583,6 +2833,7 @@ class DPolynomialRing_Monoid(Parent):
         return self.__fraction_field
 
     def get_evaluation_morphism(self, images: dict) -> Morphism:
+        r'''Get an evaluation morphism for the d-variables with the given values. It ensures unicity on the structure and cached results. (::NO EXAMPLE::)'''
         if len(images) == 0:
             return self.hom(self) #identity morphism
 
@@ -2593,6 +2844,7 @@ class DPolynomialRing_Monoid(Parent):
         return self.__CACHED_EVALUATION_MORPHISM[key]
 
     def eval(self, element: DPolynomial, dic : dict[str, Element]) -> Element:
+        r'''Evaluate the given element at the values given in ``dic``. (::NO EXAMPLE::)'''
         key = (element, tuple(sorted(dic.items())))
         if key not in self.__CACHED_EVALUATIONS:
             ###########################################################
@@ -2619,15 +2871,18 @@ class DPolynomialRing_Monoid(Parent):
     ### Magic python methods
     #################################################
     def __contains__(self, x):
+        r'''Magic method to check if an object is in ``self``. (::NO EXAMPLE::)'''
         if x in self.monoids():
             return True
         return super().__contains__(x)
 
     ## Other magic methods
     def __repr__(self):
+        r'''Magic method to display ``self``. (::NO EXAMPLE::)'''
         return f"Ring of operator polynomials in ({', '.join(self.variable_names())}) over {self.base()}"
 
     def _latex_(self):
+        r'''Magic method to display ``self`` in LaTeX. (::NO EXAMPLE::)'''
         from sage.misc.latex import latex_variable_name
         return latex(self.base()) + r"\{" + ", ".join([latex_variable_name(v) for v in self.variable_names()]) + r"\}"
 
@@ -2650,6 +2905,8 @@ class DPolynomialRing_Monoid(Parent):
             * ``deg_bound``: total degree bound for the resulting polynomial.
             * ``order_bound``: order bound for the resulting polynomial.
             * ``sparsity``: probability of a coefficient to be zero.
+
+            ::NO EXAMPLE::
         '''
         deg_bound = 0 if ((deg_bound not in ZZ) or deg_bound < 0) else deg_bound
         order_bound = 0 if ((order_bound not in ZZ) or order_bound < 0) else order_bound
@@ -2712,9 +2969,11 @@ class DPolynomialRing_Monoid(Parent):
     ### Method from DRing category
     #################################################
     def operators(self) -> Collection[Morphism]:
+        r'''DRing method to get a list of operators (::NO EXAMPLE::)'''
         return self.__operators
 
     def operator_types(self) -> tuple[str]:
+        r'''DRing method to get a list of operator types (::NO EXAMPLE::)'''
         return self.base().operator_types()
 
     def _create_operator(self, operation: int, ttype: str) -> AdditiveMap:
@@ -2723,6 +2982,8 @@ class DPolynomialRing_Monoid(Parent):
 
             We create an :class:`AdditiveMap` from the given operator assuming the type given in ``ttype``.
             This type will determine how the multiplication behaves with respect to the different variables.
+
+            ::NO EXAMPLE::
         '''
         operator : AdditiveMap = self.base().operators()[operation]
         if ttype == "homomorphism":
@@ -2767,11 +3028,20 @@ class DPolynomialRing_Monoid(Parent):
         return AdditiveMap(self, func)
 
     def add_constants(self, *new_constants: str) -> DPolynomialRing_Monoid:
+        r'''
+            DRing method to add constants to the ring of d-polynomials. (::NO EXAMPLE::)
+
+            TODO: Add some examples to this method    
+        '''
         return self.change_ring(self.base().add_constants(*new_constants))
 
     def _laurent_morphism(self, imgs, constant=None, set_default=False) -> MorphismToLaurent:
         r'''
             Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
+
+            ::NO EXAMPLE::
+
+            TODO: For Laurent
         '''
         ## Images for each generator are provided in the input imgs in the format {name : image}
         ## Hence, for a morphism to exist we need images for ALL GENERATORS
@@ -2793,6 +3063,7 @@ class DPolynomialRing_Monoid(Parent):
         return DPolynomialLaurentMorphism(self, base_morph.codomain(), my_imgs, base_morph)
 
     def constant_ring(self):
+        r'''DRing method to compute the constant ring of the ring of d-polynomials. (::NO EXAMPLE::)'''
         return self.base().constant_ring()
 
     def linear_operator_ring(self) -> Ring:
@@ -2801,6 +3072,8 @@ class DPolynomialRing_Monoid(Parent):
 
             This method builds the ring of linear operators on the base ring. It only works when the
             ring of operator polynomials only have one variable.
+
+            ::NO EXAMPLE::
         '''
         if self.ngens() > 1:
             raise NotImplementedError(f"Impossible to generate ring of linear operators with {self.ngens()} variables")
@@ -2808,6 +3081,16 @@ class DPolynomialRing_Monoid(Parent):
         return self.base().linear_operator_ring()
 
     def inverse_operation(self, element: DPolynomial, operation: int = 0) -> DPolynomial:
+        r'''
+            Compute the inverse on an operation over a d-polynomial.
+
+            In particular, when the operation is a shift, it computes the inverse shift, while in the derivation case, this method computes
+            the symbolic integral of a d-polynomial.
+
+            ::NO EXAMPLE::
+
+            TODO: add examples for this method.
+        '''
         if element not in self:
             raise TypeError(f"[inverse_operation] Impossible to apply operation to {element}")
         element = self(element)
@@ -2822,6 +3105,7 @@ class DPolynomialRing_Monoid(Parent):
             raise NotImplementedError("[inverse_operation] Inverse for unknown operation not implemented")
 
     def __inverse_homomorphism(self, element: DPolynomial, operation: int):
+        r'''Private method for the inverse of homomorphism (::NO EXAMPLE::)'''
         # solution = self.zero()
         # for coeff, monomial in zip(element.coefficients(), element.monomials()):
         #     coeff = coeff.inverse_operation(operation) if not coeff.d_constant() else coeff
@@ -2847,6 +3131,10 @@ class DPolynomialRing_Monoid(Parent):
             Method ``INTEG`` splits a differential polynomial into three parts: an integrable part, a
             non-integrable part and a constant part. We ignore the constant part (we always assume it to
             be zero).
+
+            ::NO EXAMPLE::
+
+            TODO: add examples for this method.
         '''
         A,B = self.integral_decomposition(element, operation)
         if B != 0:
@@ -2855,6 +3143,7 @@ class DPolynomialRing_Monoid(Parent):
         return A
 
     def __inverse_skew(self, element: DPolynomial, operation: int):
+        r'''Private method for the inverse of skew-derivation (::NO EXAMPLE::)'''
         raise NotImplementedError("[inverse_skew] Skew-derivation operation not yet implemented")
 
     def integral_decomposition(self, element: DPolynomial, operation: int = 0) -> tuple[DPolynomial, DPolynomial]:
@@ -2871,6 +3160,10 @@ class DPolynomialRing_Monoid(Parent):
             `C` is integrable.
 
             This is the algorithm we are implementing here in the context of :class:`DPolynomial`, after the computation w.r.t. `C`.
+
+            ::NO EXAMPLE::
+
+            TODO: Add examples to this method.
         '''
         logger.debug(f"[inverse_derivation] Called with {element}")
         if self.operator_types()[operation] != "derivation":
@@ -2883,6 +3176,7 @@ class DPolynomialRing_Monoid(Parent):
         return self.__integral_decomposition(element, operation, self.zero(), self.zero())
 
     def __integral_decomposition(self, element: DPolynomial, operation: int, integral: DPolynomial, nintegral: DPolynomial) -> tuple[DPolynomial, DPolynomial]:
+        r'''Private method to do the integral decomposition recursively. (::NO EXAMPLE::)'''
         if element == 0:
             logger.debug(f"[integral_decomposition] Found a zero --> Easy (we do nothing)")
             return integral, nintegral
@@ -2959,11 +3253,13 @@ class DPolynomialRing_Monoid(Parent):
                 return self.__integral_decomposition(element, operation, integral, nintegral)
 
     def _lcm_denominators(self, *elements: DPolynomial):
+        r'''DRing method to compute the lcm for the denominators of a d-polynomial. (::NO EXAMPLE::)'''
         from sage.arith.functions import lcm
         return lcm(element.denominator() for element in elements)
 
     @cached_method
     def to_sage(self):
+        r'''DRing method to compute the SageMath equivalent of a d-polynomial. (::NO EXAMPLE::)'''
         result = InfinitePolynomialRing(self.base().to_sage(), [el.replace("_", "") for el in self.variable_names()])
         map_of_variables = dict(zip(self.gens(), result.gens()))
         inverse_map_of_variables = list(zip(result.gens(), self.gens()))
@@ -3282,7 +3578,7 @@ class DPolynomialRing_Monoid(Parent):
         )
 
     def __process_sylvester_arguments(self, P: DPolynomial, Q: DPolynomial, gen: DMonomialGen):
-        r'''Check the ring, the generator and the polynomials are correct'''
+        r'''Check the ring, the generator and the polynomials are correct (::NO EXAMPLE::)'''
         ## Checking the ring is appropriate
         if self.noperators() > 1:
             raise NotImplementedError(f"[sylvester_checking] Sylvester resultant with {self.noperators()} is not implemented")
@@ -3317,7 +3613,9 @@ class DPolynomialRing_Monoid(Parent):
     #################################################
     def weight_func(self, weight_vars, weight_operators) -> WeightFunction:
         r'''
-            TODO: add documentation to this method
+            Creates a weight function given the weight of each d-variable and the weight for each operation.
+
+            ::NO EXAMPLE::
         '''
         return WeightFunction(self, weight_vars, weight_operators)
 
@@ -3326,6 +3624,8 @@ class DPolynomialRing_Monoid(Parent):
             Method to create a ranking for this ring.
 
             This method creates a ranking for ``self`` using the arguments as in :class:`RankingFunction`.
+
+            ::NO EXAMPLE::
         '''
         if not self.is_differential():
             raise NotImplementedError(f"Rankings only implemented for differential polynomials")
@@ -3342,9 +3642,19 @@ class DPolynomialRing_Monoid(Parent):
         return self.__cache_ranking[(ordering, ttype)]
 
     def elimination_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None):
+        r'''
+            Build the elimination ranking for the given ordering between d-variables.
+
+            ::NO EXAMPLE::
+        '''
         return self.ranking(ordering, "elimination")
 
     def orderly_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None):
+        r'''
+            Build the orderly ranking for the given ordering between d-variables.
+
+            ::NO EXAMPLE::
+        '''
         return self.ranking(ordering, "orderly")
 
     #################################################
@@ -3431,22 +3741,12 @@ class DPolynomialRing_Monoid(Parent):
                 NotImplementedError: ...
 
         '''
-        # linear_operator_ring = self.linear_operator_ring() # it ensures the structure is alright for building this
-        # element = self(element) # making sure the element is in ``self``
-
-        # if not element.is_linear() or 1 in element.polynomial().monomials():
-        #     raise TypeError("Linear operator can only be built from an homogeneous linear operator polynomial.")
-
-        # coeffs = element.coefficients(); monoms = element.monomials(); y = self.gens()[0]
-        # base_ring = linear_operator_ring.base(); gens = linear_operator_ring.gens()
-
-        # return sum(base_ring(c)*prod(g**i for (g,i) in zip(gens, y.index(m,as_tuple=True))) for (c,m) in zip(coeffs, monoms))
         raise NotImplementedError(f"Method need a revision")
 
 
 def is_DPolynomialRing(element):
     r'''
-        Method to check whether an object is a ring of infinite polynomial with an operator.
+        Method to check whether an object is a ring of infinite polynomial with an operator. (::NO EXAMPLE::)
     '''
     return isinstance(element, DPolynomialRing_Monoid)
 
@@ -3470,6 +3770,8 @@ class DPolyRingFunctor (ConstructionFunctor):
 
         * ``variables``: names of the variables that the functor will add (see
           the input ``names`` in :class:`DPolynomialRing_Monoid`)
+        
+        ::NO EXAMPLE::
     '''
     def __init__(self, variables):
         self.__variables = set(variables)
@@ -3478,16 +3780,20 @@ class DPolyRingFunctor (ConstructionFunctor):
 
     ### Methods to implement
     def _apply_functor(self, x):
+        r'''Method to apply the functor to a ring. (::NO EXAMPLE::)'''
         return DPolynomialRing(x,list(self.variables()))
 
     def _repr_(self):
+        r'''Magic method for the representation of the functor. (::NO EXAMPLE::)'''
         return f"DPolynomialRing((*),{self.variables()})"
 
     def __eq__(self, other):
+        r'''Magic method for the equality of functors. We consider two functors equal if they have the same variables. (::NO EXAMPLE::)'''
         if (other.__class__ == self.__class__):
             return (other.variables() == self.variables())
 
     def merge(self, other):
+        r'''Merge method for a functor (::NO EXAMPLE::)'''
         if isinstance(other, DPolyRingFunctor):
             self_names = self.__variables
             other_names = other.__variables
@@ -3496,10 +3802,11 @@ class DPolyRingFunctor (ConstructionFunctor):
         return None
 
     def variables(self) -> set[str]:
+        r'''Getter for the attribute __variables of a functor. (::NO EXAMPLE::)'''
         return self.__variables
 
     def append_variables(self, *variables) -> DPolyRingFunctor:
-        r'''Returns the same functor with more variables attached. If repeated variables are provided, we raise an error'''
+        r'''Returns the same functor with more variables attached. If repeated variables are provided, we raise an error (::NO EXAMPLE::)'''
         new_vars = set(variables)
         if len(variables) > len(new_vars) or new_vars.intersection(self.variables()):
             raise ValueError(f"Repeated variables: impossible to extend the Functor")
@@ -3509,6 +3816,10 @@ class DPolyRingFunctor (ConstructionFunctor):
 class DPolynomialLaurentMorphism(MorphismToLaurent):
     r'''
         Laurent morphism class associated with :class:`DPolynomialRing_Monoid`.
+
+        ::NO EXAMPLE::
+
+        TODO: For Laurent
     '''
     from ..pseries.laurent import LSeries_Element
     def __init__(self, domain, codomain, images, base_morphism):
@@ -3516,9 +3827,11 @@ class DPolynomialLaurentMorphism(MorphismToLaurent):
         self._images = {i : images[gen.variable_name()] for (i,gen) in enumerate(domain.gens())} # images indexed by the index of the generator
 
     def _call_(self, poly: DPolynomial) -> LSeries_Element:
+        r'''Call method for a morphism (::NO EXAMPLE::)'''
         return sum((self._base(c)*self._call_monomial_(m) for (m,c) in zip(poly.monomials(), poly.coefficients())), self.codomain().zero())
 
     def _call_monomial_(self, monomial: DPolynomial) -> LSeries_Element:
+        r'''Private method to evaluate one particular monomial (::NO EXAMPLE::)'''
         output = self.codomain().one()
         for ((v,o),e) in monomial._variables.items():
             output *= self._images[v].derivative(times=o[0])**e
@@ -3531,12 +3844,15 @@ class DPolynomialToLinOperator (Morphism):
 
         This map allows the coercion system to detect that some elements in a
         :class:`DPolynomialRing_Monoid` are included in its ring of linear operators.
+
+        ::NO EXAMPLE::
     '''
     def __init__(self, dpoly_ring : DPolynomialRing_Monoid):
         linear_operator_ring = dpoly_ring.linear_operator_ring()
         super().__init__(dpoly_ring, linear_operator_ring)
 
     def _call_(self, p):
+        r'''Call method for a morphism (::NO EXAMPLE::)'''
         return self.codomain()(self.domain().as_linear_operator(p))
 
 
@@ -3551,6 +3867,7 @@ class DPolynomialVariableMorphism (Morphism):
         for (i,v) in enumerate(dom_vnames):
             self.__map_vars[i] = codom_vnames.index(v)
     def _call_(self, p):
+        r'''Call method for a morphism (::NO EXAMPLE::)'''
        ## We do a deep transformation mapping the variables
         return self.codomain().element_class(
             self.codomain(),
@@ -3578,6 +3895,7 @@ class DPolynomial_Base2BaseMorphism (Morphism):
         self.__morphism = morphism
 
     def _call_(self, p:DPolynomial) -> DPolynomial:
+        r'''Call method for a morphism (::NO EXAMPLE::)'''
         return self.codomain().element_class(
             self.codomain(),
             {
@@ -3603,6 +3921,7 @@ class DPolynomialSimpleMorphism (Morphism):
                 self.__map_vars[dom_vnames.index(v)] = i
 
     def _call_(self, p):
+        r'''Call method for a morphism (::NO EXAMPLE::)'''
         if self.codomain() == self.domain().monoids():
             if p.is_monomial():
                 return next(iter(p._content))
@@ -3648,6 +3967,7 @@ class DPolyToInfinite_Coercion(Morphism):
         self.__map = map_of_variables
 
     def _call_(self, element): ## TODO: Go on here
+        r'''Call method for a morphism (::NO EXAMPLE::)'''
         output = self.codomain().zero()
         for (m,c) in element.monomial_coefficients().items():
             mon = self._monom_(m)
@@ -3689,6 +4009,7 @@ class InfiniteToDPoly_Coercion(Morphism):
         self.__map = {v[0]._name : v[1] for v in map_of_variables}
 
     def _call_(self, element):
+        r'''Call method for a morphism (::NO EXAMPLE::)'''
         output = self.codomain().zero()
         for m,c in element.monomial_coefficients().items():
             # m is the list of exponents for some variables
@@ -3765,6 +4086,7 @@ class EvaluationMorphism_DPolynomial(Morphism):
         return P.apply_operations(value, order)
 
     def _call_(self, element: DPolynomial) -> Element:
+        r'''Call method for a morphism (::NO EXAMPLE::)'''
         result = self.codomain().zero()
         for (m, c) in element._content.items():
             ## Evaluating the monomial
