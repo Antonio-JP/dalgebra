@@ -102,18 +102,25 @@ def IndexBijection(size : int):
 
 
 class IndexBijection_Object (Morphism):
+    r'''
+        Index bijection between `NN` and `NN^d` for a given `d`.
+
+        This class represents the bijection between `NN` and `NN^d` for a given `d`. The order of the tuples is the one described in :func:`IndexBijection`.
+
+        ::NO EXAMPLE::
+    '''
     def __init__(self, size : int):
         Morphism.__init__(self, NN, cartesian_product(size*[NN]))
         self.dim = size
 
     @staticmethod
     def elements_summing(n: int, l: int) -> int:
-        r'''Number of elements summing `n` in `l` elements'''
+        r'''Number of elements summing `n` in `l` elements (::NO EXAMPLE::)'''
         return binomial(n+l-1, n)
 
     @staticmethod
     def tuple_summing(index: int, n: int, l: int) -> tuple[int]:
-        r'''Tuple in position ``index`` summing `n` in `l` elements'''
+        r'''Tuple in position ``index`` summing `n` in `l` elements (::NO EXAMPLE::)'''
         if index < 0 or index >= IndexBijection_Object.elements_summing(n,l):
             raise ValueError
         if l == 1:
@@ -129,7 +136,7 @@ class IndexBijection_Object (Morphism):
 
     @cached_method
     def _call_(self, index: int) -> Element:
-        r'''Computes the image of a natural number'''
+        r'''Computes the image of a natural number (::NO EXAMPLE::)'''
         if self.dim == 1:
             return index
         sum_of_elements = 0
@@ -140,7 +147,7 @@ class IndexBijection_Object (Morphism):
 
     @cached_method
     def inverse(self, image: Element) -> int:
-        r'''Computes the pre-image of a tuple of ``self.dim`` natural numbers'''
+        r'''Computes the pre-image of a tuple of ``self.dim`` natural numbers (::NO EXAMPLE::)'''
         if self.dim == 1:
             return image
         if not len(image) == self.dim:
@@ -153,11 +160,25 @@ class IndexBijection_Object (Morphism):
         return self.domain()(result)
 
     def iter(self, sum_bound : int):
+        r'''
+            Iterator for all the elements up to a bound given as the sum of the elements of the tuple. 
+            
+            It iterates in an increasing order
+            
+            (::NO EXAMPLE::) 
+        '''
         quantity = IndexBijection_Object.elements_summing(sum_bound, self.dim + 1)
         for i in range(quantity):
             yield self(i)
 
     def iter_sum(self, sum_value: int):
+        r'''
+            Iterator for all the elements with a given sum of the elements of the tuple. 
+            
+            It iterates in an increasing order.
+            
+            (::NO EXAMPLE::)
+        '''
         starting = sum(IndexBijection_Object.elements_summing(i, self.dim) for i in range(sum_value))
         quantity = IndexBijection_Object.elements_summing(sum_value, self.dim)
         for i in range(starting, starting + quantity):
@@ -242,6 +263,7 @@ class DMonomial(Element):
         super().__init__(parent)
 
     def _mul_(self, other: DMonomial) -> DMonomial:
+        r'''Implementation of the multiplication of two monomials. (::NO EXAMPLE::)'''
         # We assume the object is a DMonomial since it has passed the coercion system
         # We also assume same parent
         new_dict = self._variables.copy()
@@ -258,6 +280,8 @@ class DMonomial(Element):
             all the monomials.
 
             This is useful to detect _simple_ common factors in polynomials (when we start adding up the monomials).
+
+            ::NO EXAMPLE::
         '''
         if isinstance(other, (tuple, list)):
             if len(other) == 0:
@@ -274,9 +298,7 @@ class DMonomial(Element):
             return self._parent.element_class(self._parent, out)
     
     def divides(self, other: DMonomial) -> bool:
-        r'''
-            Method to check if ``self`` divides ``other``.
-        '''
+        r'''Method to check if ``self`` divides ``other``. (::NO EXAMPLE::)'''
         for k in self._variables:
             if k not in other._variables:
                 return False
@@ -285,9 +307,7 @@ class DMonomial(Element):
         return True
     
     def _div_(self, other: DMonomial) -> DMonomial:
-        r'''
-            See :func:`Element._div_` for further information.
-        '''
+        r'''Method to compute the division of two monomials. (::NO EXAMPLE::)'''
         if not other.divides(self):
             raise ValueError(f"The d-monomial {other} does not divide {self}")
         new_dict = self._variables.copy()
@@ -301,16 +321,19 @@ class DMonomial(Element):
     ##############################################################################
     ### PROPERTY METHODS
     ##############################################################################
-    def is_one(self) -> bool: #: Checker for the one (i.e., no variables in the dictionary)
+    def is_one(self) -> bool: 
+        r'''Checker for the one (i.e., no variables in the dictionary) (::NO EXAMPLE::)'''
         return len(self._variables) == 0
 
-    def is_variable(self) -> bool: #: Checker for a variable (i.e., only one element in the dictionary and degree 1)
+    def is_variable(self) -> bool: 
+        r'''Checker for a variable (i.e., only one element in the dictionary and degree 1) (::NO EXAMPLE::)'''
         return len(self._variables) == 1 and next(iter(self._variables.items()))[1] == 1
 
     ##############################################################################
     ### MONOID ELEMENT METHODS --> There are none
     ##############################################################################
     def __invert__(self) -> DMonomial:
+        r'''Computes the (multiplicative) inverse of a monomial. Since we are in a monoid, this only works for the one element. (::NO EXAMPLE::)'''
         if self.is_one():
             return self
         raise ValueError(f"The d-monomial {self} has no inverse as a monomial")
@@ -322,7 +345,9 @@ class DMonomial(Element):
     ##############################################################################
     ### MAGMA ELEMENT METHODS
     ##############################################################################
-    def is_idempotent(self) -> bool: return False
+    def is_idempotent(self) -> bool: 
+        r'''Checker for idempotent elements (i.e., only the one element) (::NO EXAMPLE::)'''
+        return False
 
     ##############################################################################
     ### COMPUTATIONAL METHODS
@@ -372,6 +397,8 @@ class DMonomial(Element):
             Method to compute the derivative of a monomial.
 
             Since shifts operations are homomorphisms, then the output is a DMonomial with shifted indices
+
+            ::NO EXAMPLE::
         '''
         copy = self._variables.copy()
         for (v, o) in self._variables:
@@ -389,6 +416,8 @@ class DMonomial(Element):
             Tries to get the previous element of an operation.
 
             It only works when we have a variable, otherwise,  we would need more information.
+
+            ::NO EXAMPLE::
         '''
         if not self.is_variable():
             raise TypeError("Impossible to invert an operation for a non-variable")
@@ -406,11 +435,14 @@ class DMonomial(Element):
     def variables(self) -> set[DMonomial]:
         r'''
             Return a set of variables (i.e., Monomials with only 1 element in the dictionary with degree 1)
+
+            ::NO EXAMPLE::
         '''
         return set(self._parent.gens()[v[0]][v[1]] for v in self._variables.keys())
 
     @cached_method
-    def orders(self, operation:int = -1) -> dict[int, int]: #: Compute the orders for each variable
+    def orders(self, operation:int = -1) -> dict[int, int]: 
+        r'''Compute the orders for each variable (::NO EXAMPLE::)'''
         output = dict()
         for (v,o) in self._variables:
             output[v] = max(output.get(v, -1), o[operation] if operation != -1 else sum(o))
@@ -418,11 +450,13 @@ class DMonomial(Element):
         return output
 
     @cached_method
-    def order(self, variable: int , operation: int = -1): #: Get the order for a particular variable
+    def order(self, variable: int , operation: int = -1):
+        r'''Get the order for a particular variable (::NO EXAMPLE::)'''
         return self.orders(operation).get(variable, -1)
 
     @cached_method
-    def lorders(self, operation: int = -1) -> dict[int, int]: #: Compute the lower orders for each variable
+    def lorders(self, operation: int = -1) -> dict[int, int]: 
+        r'''Compute the lower orders for each variable (::NO EXAMPLE::)'''
         output = dict()
         for (v,o) in self._variables:
             output[v] = min(output.get(v, self.order(v, operation)), o[operation] if operation != -1 else sum(o))
@@ -430,11 +464,13 @@ class DMonomial(Element):
         return output
 
     @cached_method
-    def lorder(self, variable: int , operation: int = -1): #: Get the lower order for a particular variable
+    def lorder(self, variable: int , operation: int = -1):
+        r'''Get the lower order for a particular variable (::NO EXAMPLE::)'''
         return self.lorders(operation).get(variable, -1)
 
     @cached_method
-    def degree(self, variable: DMonomial = None) -> int: #: Method to get the degree of a variable (0 if not present)
+    def degree(self, variable: DMonomial = None) -> int: 
+        r'''Method to get the degree of a variable (0 if not present) (::NO EXAMPLE::)'''
         if variable is not None:
             return self._variables.get(next(iter(variable._variables)), ZZ(0))
         else:
@@ -444,10 +480,12 @@ class DMonomial(Element):
     ### MAGIC METHODS
     ##############################################################################
     @cached_method
-    def __hash__(self) -> int: #: hashing the dictionary using the tuples of items
+    def __hash__(self) -> int: 
+        r'''Hash the dictionary using the tuples of items (::NO EXAMPLE::)'''
         return hash(tuple(sorted(self._variables.items())))
 
     def __eq__(self, other: DMonomial) -> bool:
+        r'''Magic method for equality (::NO EXAMPLE::)'''
         if other == 1:
             return self.is_one()
 
@@ -456,13 +494,17 @@ class DMonomial(Element):
         else:
             return NotImplemented
 
-    def __ne__(self, other: DMonomial) -> bool: return not (self == other)
+    def __ne__(self, other: DMonomial) -> bool: 
+        r'''Magic method for non-equality (::NO EXAMPLE::)'''
+        return not (self == other)
 
     def __lt__(self, other: DMonomial) -> bool:
+        r'''Magic method for less than. We sort the dictionary and compare the tuples (::NO EXAMPLE::)'''
         return sorted(self._variables.items()) < sorted(other._variables.items())
 
     @cached_method
     def __repr__(self) -> str:
+        r'''Magic method for the string representation of a monomial (::NO EXAMPLE::)'''
         if self.is_one():
             return "1"
 
@@ -470,14 +512,12 @@ class DMonomial(Element):
         elements = sorted(self._variables.items())
         return "*".join(f"{variable_names[v]}_{'_'.join(str(oo) for oo in o)}{f'^{e}' if e != 1 else ''}" for ((v,o),e) in elements)
 
-    def __str__(self) -> str: return repr(self)
+    def __str__(self) -> str: 
+        r'''Magic method for the string representation of a monomial (::NO EXAMPLE::)'''
+        return repr(self)
 
     def _latex_(self) -> str:
-        r'''
-            Latex representation of monomials.
-
-            ::NO EXAMPLES::
-        '''
+        r'''Magic method for the Latex representation of monomials. (::NO EXAMPLE::)'''
         if self.is_one():
             return "1"
 
@@ -485,6 +525,7 @@ class DMonomial(Element):
         elements = sorted(self._variables.items())
 
         def wo_exp(v,o):
+            r'''Method to create the string for a variable without exponent. (::NO EXAMPLE::)'''
             if all(oo == 0 for oo in o):
                 extra = ""
             elif len(o) == 1: # special case with one operation
@@ -498,6 +539,7 @@ class DMonomial(Element):
                 extra = r"^{" + f"({','.join(str(oo) for oo in o)})" + r"}"
             return f"\u007b{variable_names[v]}\u007d" + extra
         def with_exp(v,o,e):
+            r'''Method to create the string for a variable with exponent. (::NO EXAMPLE::)'''
             wo = wo_exp(v,o)
             if e != 1:
                 if any(oo != 0 for oo in o):
@@ -511,6 +553,14 @@ class DMonomial(Element):
 
 
 class DMonomialGen:
+    r'''
+        Class for the generator of a monomial.
+        
+        This class mimics the behavior of the generator of an infinite-variable polynomial ring, where we have a variable name 
+        and an index to generate all the possible variables within the polynomial ring. This is the same, but in the monoid scale.
+
+        ::NO EXAMPLE::
+    '''
     def __init__(self, parent: DMonomialMonoid, name: str, *, index: int = -1):
         if not isinstance(parent, DMonomialMonoid):
             raise TypeError("The DPolynomialGen must have a ring of polynomial with an operator as parent")
@@ -526,9 +576,7 @@ class DMonomialGen:
     ### GETTER METHODS
     #########################################################################
     def variable_name(self) -> str:
-        r'''
-            Method that returns the variable name of ``self``
-        '''
+        r'''Method that returns the variable name of ``self``. (::NO EXAMPLE::)'''
         return self._name
 
     #########################################################################
@@ -549,6 +597,8 @@ class DMonomialGen:
 
             ``True`` if the string of the element is of the shape ``X_Y`` where ``X`` is the
             value of ``self._name``.
+
+            ::NO EXAMPLE::
         '''
         try:
             element = self._parent(element) # Casting to DMonomial
@@ -580,6 +630,8 @@ class DMonomialGen:
 
             Assumed the string form of ``X_Y`` from :func:`contains`, this method returns
             the numerical value of ``Y`` or an error if not possible.
+
+            ::NO EXAMPLE::
         '''
         as_tuple = self._parent.noperators() > 1 if as_tuple is None else as_tuple # defaulting value for as_tuple
         if self.contains(element):
@@ -600,17 +652,21 @@ class DMonomialGen:
     ### MAGIC METHODS
     ###################################################################################
     def __eq__(self, other: DMonomialGen) -> bool:
+        r'''Magic method for equality. We check if the name and the parent are the same. (::NO EXAMPLE::)'''
         if not isinstance(other, DMonomialGen):
             return False
         return (self._index, self._parent) == (other._index, other._parent)
 
     def __ne__(self, other: DMonomialGen) -> bool:
+        r'''Magic method for inequality. We check if the name and the parent are different. (::NO EXAMPLE::)'''
         return not (self == other)
 
     def __hash__(self) -> int:
+        r'''Magic method for hashing. We hash the name and the parent. (::NO EXAMPLE::)'''
         return hash((self._index, self._parent))
 
     def __getitem__(self, i : int | tuple[int]) -> DMonomial:
+        r'''Magic method for getting an element. This returns the associated variable in the monoid associated with the given index. (::NO EXAMPLE::)'''
         if self._parent.noperators() > 1 and not isinstance(i, (list,tuple)):
             i = self.index_map(i)
         elif self._parent.noperators() > 1 and len(i) != self._parent.noperators():
@@ -621,15 +677,19 @@ class DMonomialGen:
         return self._parent.element_class(self._parent, [(self._index, tuple(i), 1)])
 
     def __contains__(self, other: DMonomial) -> bool:
+        r'''Magic method for containment. We check if ``other`` can be generated by ``self``. (::NO EXAMPLE::)'''
         return self.contains(other)
 
     def __repr__(self) -> str:
+        r'''Magic method for the string representation of a generator. (::NO EXAMPLE::)'''
         return self._name+'_*'
 
     def __str__(self) -> str:
+        r'''Magic method for the string representation of a generator. (::NO EXAMPLE::)'''
         return repr(self)
 
     def _latex_(self) -> str:
+        r'''Magic method for the Latex representation of a generator. (::NO EXAMPLE::)'''
         return f"\u007b{latex_variable_name(self._name)}\u007d_\u007b(*)\u007d"
 
 
@@ -687,20 +747,26 @@ class DMonomialMonoid(Parent):
     ### ATTRIBUTE METHODS
     ################################################################################
     def variable_names(self) -> tuple[str]:
+        r'''Method to get the names of the variables in the Monoid. (::NO EXAMPLE::)'''
         return self.__variable_names
 
     def noperators(self) -> int:
+        r'''Method to get the operations in the based DRing. (::NO EXAMPLE::)'''
         return self.__noperators
 
     def gens(self) -> DMonomialGen:
+        r'''Method to get the generators (i.e., :class:`DMonomialGen` objects) of the monoid. (::NO EXAMPLE::)'''
         return self.__gens
 
-    def ngens(self) -> int: return len(self.gens())
+    def ngens(self) -> int: 
+        r'''Method to get the number of generators of the monoid. (::NO EXAMPLE::)'''
+        return len(self.gens())
 
     ################################################################################
     ### MONOIDS METHODS (from Monoids.ParentMethods)
     ################################################################################
     def semigroup_generators(self) -> LazyFamily:
+        r'''Monoid method to get the generators of the monoid as a family. (::NO EXAMPLE::)'''
         def _gen_from_index(tuple):
             if tuple[0] == 0:
                 return self.one()
@@ -708,36 +774,44 @@ class DMonomialMonoid(Parent):
         return LazyFamily(cartesian_product([NN, cartesian_product(self.ngens()*[NN])]), _gen_from_index)
 
     def submonoid(self, generators: Collection[str | int], category=None) -> DMonomialMonoid:
+        r'''Monoid method to get the submonoid generated by a subset of the generators. (::NO EXAMPLE::)'''
         generators = list(set([g if isinstance(g, str) else self.__variable_names[g] for g in generators]))
         return DMonomialMonoid(self.__noperators, *generators, category=category)
 
     def one(self) -> DMonomial:
+        r'''Monoid method to get the one element of the monoid. (::NO EXAMPLE::)'''
         return self.element_class(self, tuple())
 
     def _an_element_(self) -> DMonomial:
+        r'''Private monoid method to get an element of the monoid. We return the one element. (::NO EXAMPLE::)'''
         return self.one()
 
     ################################################################################
     ### MAGIC METHODS
     ################################################################################
     def __repr__(self) -> str:
+        r'''Magic method for the string representation of the monoid. (::NO EXAMPLE::)'''
         return f"Monoid of d-monomials with {self.noperators()} operations with generators {self.gens()}"
     def __str__(self) -> str:
+        r'''Magic method for the string representation of the monoid. (::NO EXAMPLE::)'''
         return repr(self)
     def __eq__(self, other: DMonomialMonoid) -> bool:
+        r'''Magic method for equality. (::NO EXAMPLE::)'''
         if not isinstance(other, DMonomialMonoid):
             return False
         return (self.__noperators, self.variable_names()) == (other.__noperators, other.variable_names())
     def __ne__(self, other: DMonomialMonoid) -> bool:
+        r'''Magic method for inequality. (::NO EXAMPLE::)'''
         return not (self == other)
     def __hash__(self) -> int:
+        r'''Magic method for hashing. (::NO EXAMPLE::)'''
         return hash((self.__noperators, self.variable_names()))
 
     def _element_constructor_(self, input: Element) -> DMonomial:
         r'''
             Special constructor for Monomials, used when other coercions are not available.
 
-            ::NO EXAMPLES::
+            ::NO EXAMPLE::
         '''
         if input in self.gens():
             i = self.gens().index(input)

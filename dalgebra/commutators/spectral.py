@@ -34,6 +34,7 @@ from collections.abc import Sequence as ListType
 
 from sage.arith.misc import GCD as gcd
 from sage.rings.fraction_field import FractionField_generic
+from sage.rings.ideal import Ideal as ideal
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.polynomial_element_generic import Polynomial
 from sage.rings.polynomial.multi_polynomial_element import MPolynomial
@@ -50,6 +51,7 @@ from .ideals import SolutionBranch
 ### TYPES USED IN THIS MODULE
 ################################################################################################
 class SolutionBranch_SpectralData(TypedDict):
+    r'''Type to store the spectral data obtained from a solution branch. (::NO EXAMPLE::)'''
     time_res: float
     time_seq: float
     h: Polynomial | MPolynomial
@@ -65,8 +67,12 @@ class SolutionBranch_SpectralData(TypedDict):
 @loglevel(logger)
 def SpectralCurveOverIdeal(L: DPolynomial, P: DPolynomial, branches: ListType[SolutionBranch]) -> dict[SolutionBranch, SolutionBranch_SpectralData]:
     r'''
+        TODO: Adapt or remove this method
+
         Method that automatizes the computation of spectral curve and some extra data throughout the
         solution branches of an ideal.
+
+        ::NO EXAMPLE::
     '''
     final_output = dict()
     tot = len(branches)
@@ -94,7 +100,7 @@ def SpectralCurveOverIdeal(L: DPolynomial, P: DPolynomial, branches: ListType[So
         logger.debug(f"Computed: {data['time_seq']}")
         logger.debug(f"Checking the first non-zero subresultant over the curve...")
         for i, pseq in enumerate(seq):
-            coeffs = [__simplify(c.wrapped, h[0]) for c in pseq.coefficients()]
+            coeffs = [c.reduce_algebraic(ideal(h[0])).wrapped for c in pseq.coefficients()]
             if any(el != 0 for el in coeffs):
                 data["first_nonzero"] = (i, sum(c*m for m,c in zip(pseq.monomials(), coeffs)))
                 logger.debug(f"Found first non-zero subresultant: {i}")
@@ -121,6 +127,8 @@ def spectral_operators(*operators: DPolynomial, names: list[str] = None) -> tupl
 
         This method will then return the spectral operators `L_\lambda = L - \lambda` for each
         operator and constant.
+
+        ::NO EXAMPLE::
     '''
     if len(operators) < 1:
         raise ValueError(f"[spectral_operators] This method requires at least 1 operator")
@@ -147,21 +155,14 @@ def spectral_operators(*operators: DPolynomial, names: list[str] = None) -> tupl
     constants = [DR(DR.base()(name)) for name in names]
     return tuple(DR(op) - c*z[0] for (op, c) in zip(operators, constants))
 
-
-def __simplify(element, curve):
-    r'''Reduces the element with the generator of a curve'''
-    P = element.parent()
-    if isinstance(P, FractionField_generic): # element is a rational function
-        return __simplify(element.numerator(), curve) / __simplify(element.denominator(), curve)
-    return element % curve
-
-
 def BC_pair(L, P):
     r'''
         Algorithm BC_pair from :doi:`10.3842/sigma.2019.101` (Section 6).
 
         This method takes as input two operators that commute and computes a pair
         `(L,B)` that is a BC pair and its order.
+
+        ::NO EXAMPLE::
     '''
     assert L.order() == 4, "[BC_pair] Only working for order `4` operators."
     ## We first compute the spectral curve of L and P

@@ -70,6 +70,8 @@ __ProcessesPool = None
 def LoopInParallel(func, iterable, chunksize=1):
     r'''
         Method that tries to loop a function application in parallel. If no Pool is created, then we simply loop in the usual way.
+
+        ::NO EXAMPLE::
     '''
     if __ProcessesPool is not None:
         logger.debug(f"[LoopInParallel] Starting parallel computation of {len(iterable)} processes in {__ProcessesPool._processes}")
@@ -79,6 +81,7 @@ def LoopInParallel(func, iterable, chunksize=1):
 
 
 def StartPool(ncpus: int = None):
+    r'''Method to universally starting the pool (::NO EXAMPLE::)'''
     global __ProcessesPool
     if __ProcessesPool is None and ncpus not in (None, 1):
         __ProcessesPool = Pool(ncpus)
@@ -90,6 +93,17 @@ def StartPool(ncpus: int = None):
 ###
 #################################################################################################
 class SolutionBranch:
+    r'''
+        Class representing a branch of solutions for an algebraic problem.
+
+        This class essentially works with an independent component of an algebraic variety together with some information about how we got to this component (decisions taken, partial solution, etc.). It is the main output of the method :func:`analyze_ideal` and it is used in the main method :func:`analyze_ideals` to store the different branches of solutions.
+
+        It combines the classical analysis of an algebraic variety with some tweaks about how to properly analyze an ideal and reducing the number of variables as much as possible. It also provides some methods to combine branches, check whether a branch is a subsolution of another, etc.
+
+        ::NO EXAMPLE::
+
+        TODO: Add examples to this documentation.
+    '''
     def __init__(self, I: list | Ideal, solution: dict[str,Any], decisions: list[tuple[str,str,Any] | tuple[str,Any]], base_parent=None):
         ##################################################################
         ## Deciding the parent
@@ -135,20 +149,36 @@ class SolutionBranch:
 
     @staticmethod
     def AllSolution(parent):
+        r'''Static method to create a default solution: everything is a solution and there are no decisions taken. (::NO EXAMPLE::)'''
         return SolutionBranch([0], {}, [], base_parent=parent)
 
     ######################################################################################################
     ### PROPERTIES OF THE CLASS
     ######################################################################################################
     @property
-    def I(self) -> Ideal: return self.__I
+    def I(self) -> Ideal: 
+        r'''Property to get the ideal of the branch. (::NO EXAMPLE::)'''
+        return self.__I
     @property
-    def decisions(self) -> list: return self.__decisions
+    def decisions(self) -> list: 
+        r'''Property to get the list of decisions taken in the branch. (::NO EXAMPLE::)'''
+        return self.__decisions
 
-    def parent(self): return self.__parent
+    def parent(self): 
+        r'''Method to get the parent ring of the branch. (::NO EXAMPLE::)'''
+        return self.__parent
 
     @cached_method
     def final_parent(self, field=False):
+        r'''
+            Method to compute the parent that will be used for the algebraic variety. It includes the information of algebraic components for which we can not work any further.
+
+            This can be seen as creating the field of rational functions over the variety.
+
+            ::NO EXAMPLE::
+
+            TODO: Add more information about this method and maybe some examples.
+        '''
         if field:
             return self.final_parent(False).fraction_field()
 
@@ -175,7 +205,16 @@ class SolutionBranch:
 
     @cached_method
     def diff_parent(self, origin):
-        r'''Recreate the differential structure over the :func:`final_parent` for this solution branch.'''
+        r'''
+            Recreate the differential structure over the :func:`final_parent` for this solution branch.
+            
+            As a main difference with :func:`final_parent`, which only creates an algebraic structure (using classes on Sage), this method
+            creates the differential structure (following the concepts in :mod:`..dring`) so all the elements of the final parent have a derivative.
+
+            ::NO EXAMPLE::
+
+            TODO: Add a deeper information about this method and maybe some examples.
+        '''
         if is_DPolynomialRing(origin):
             output = DPolynomialRing(self.diff_parent(origin.base()), origin.variable_names())
         elif isinstance(origin, FractionField_generic) and origin in _DRings:
@@ -191,6 +230,7 @@ class SolutionBranch:
         return output
 
     def __getitem__(self, key):
+        r'''Magic method to get the value of a variable from a string or polynomial. ::NO EXAMPLE::'''
         if not isinstance(key, str):
             if key not in self.parent().gens():
                 raise KeyError(f"Only generators of {self.parent()} can be requested")
@@ -199,6 +239,12 @@ class SolutionBranch:
 
     @cached_method
     def full_ideal(self, groebner: bool = True) -> Ideal:
+        r'''
+            Creates the full ideal that represents this Solution Branch. 
+        
+            It includes all the decided variables as part of the ideal (instead of evaluating the variables)
+            ::NO EXAMPLE::
+        '''
         polynomials = tuple(self.parent()(k) - v for (k,v) in self.__solution.items()) + tuple(self.I.gens())
         full_ideal = ideal(polynomials)
 
@@ -210,6 +256,15 @@ class SolutionBranch:
     ### UTILITY METHODS
     ######################################################################################################
     def eval(self, element):
+        r'''
+            Evaluates an element of the polynomial ring within the solution branch.
+
+            It basically transforms any polynomial into the corresponding value in the final parent field (see :func:`final_parent`) by evaluating the variables according to the solution branch.
+
+            ::NO EXAMPLE::
+
+            TODO: Add some examples of this method
+        '''
         evaluating = (lambda p : p(**self.__solution)) if len(self.__solution) > 0 else (lambda p : p)
         if isinstance(element, DPolynomial): # case of differential polynomials
             # this should evaluate coefficients and monomials
@@ -231,15 +286,27 @@ class SolutionBranch:
                 return self.final_parent(True)(str(evaluating(element)))
 
     def remaining_variables(self):
+        r'''List the variables that are not evaluated in the solution branch (including those linked algebraically) (::NO EXAMPLE::)'''
         return [v for v in self.parent().gens() if str(v) not in self.__solution]
 
     def subsolution(self, **kwds):
+        r'''
+            Creates a subsolution branch using extra information about the variables.
+
+            It establish the value for new variables which are removed from the final parent accordingly to what is set on the current solution branch.
+            NOTE: this method checks whether the given values were already set or not. It returns an error if we try to **change** a value.
+
+            ::NO EXAMPLE::
+
+            TODO: add examples of this method
+        '''
         ## We check the input of new values
         new_values = dict()
         for (k,v) in kwds.items():
-            if k in self.__solution:
-                raise ValueError(f"The variable {k} was already assigned")
             v = self.parent()(v)
+
+            if k in self.__solution and v != self.__solution[k]:
+                raise ValueError(f"The variable {k} was already assigned")
             if any(g not in self.remaining_variables() for g in v.variables()):
                 raise ValueError(f"The value for a variable must only contain remaining variables")
             new_values[k] = v
@@ -259,9 +326,11 @@ class SolutionBranch:
         return SolutionBranch(I, solution, decisions, self.parent())
 
     def is_subsolution(self, other: SolutionBranch) -> bool:
+        r'''Checks whether ``other`` is a subsolution (i.e., its variety is a subset) of the current solution branch. (::NO EXAMPLE::)'''
         return all(self.full_ideal().reduce(g_other) == 0 for g_other in other.full_ideal(False).gens())
 
     def combine(self, other: SolutionBranch) -> list[SolutionBranch]:
+        r'''Combine two solutions branches into one if they are compatible (::NO EXAMPLE::)'''
         sol = SolutionBranch._dir_combine(self, other)
         if sol == []:
             sol = SolutionBranch._dir_combine(other, self)
@@ -269,6 +338,7 @@ class SolutionBranch:
 
     @staticmethod
     def _dir_combine(self, other):
+        r'''See :func:`combine` (::NO EXAMPLE::)'''
         ## We first check the common solutions are equal
         ots_values = dict()
         sto_values = dict()
@@ -314,6 +384,10 @@ class SolutionBranch:
         return analyze_ideal(I, new_dict, [])
 
     def matrix_solution(self):
+        r'''
+            ::NO EXAMPLE::
+            TODO: Add documentation about this method
+        '''
         if not self.is_linear():
             raise ValueError(f"Impossible to compute the matrix of solution with a non-linear solution branch.")
         coeff = lambda c,h : 0 if c == 0 else c.coefficient(h) if hasattr(c, "coefficient") else c.coefficients(True)[1]
@@ -323,6 +397,7 @@ class SolutionBranch:
             for i,g in enumerate(self.parent().gens())], base_ring=self.parent().base())
 
     def is_avoiding(self, to_avoid: list[dict[str, int]]) -> bool:
+        r'''Method to check whether a branch solution is avoiding some configurations (algebraic varieties) (::NO EXAMPLE::)'''
         return not _check_avoid(self.__solution, to_avoid)
 
     def is_linear(self) -> bool:
@@ -331,6 +406,10 @@ class SolutionBranch:
 
             Checks whether the solution is of linear fashion, i.e., all elements appearing in
             the r.h.s. of ``self.__solution`` is linear in the variables.
+
+            ::NO EXAMPLE::
+
+            TODO: Add examples to this method
         '''
         return all(
             value == 0 or (value.degree() == 1 and (value.ct if hasattr(value, "ct") else value.constant_coefficient()) == 0)
@@ -341,20 +420,21 @@ class SolutionBranch:
     ### Equality methods
     ######################################################################################################
     def __eq__(self, other: SolutionBranch) -> bool:
+        r'''Magic method to check equality (::NO EXAMPLE::)'''
         if not isinstance(other, SolutionBranch):
             return False
         return self.I == other.I and self.__solution == other.__solution
 
     def __ne__(self, other) -> bool:
+        r'''Magic method to check non-equality (::NO EXAMPLE::)'''
         return not (self == other)
 
     def __hash__(self) -> int:
+        r'''Magic method to compute the hash of a solution branch. (::NO EXAMPLE::)'''
         return hash((self.I, tuple(sorted(self.__solution.keys()))))
 
     def __repr__(self) -> str:
-        r'''
-            Method to print the Solution Branch
-        '''
+        r'''Magic method to represent the solution branch as a string. (::NO EXAMPLE::)'''
         parts = [f"Solution Branch"]
         if len(self.__solution) > 0:
             parts.append(f"[{','.join(f'{var}={val}' for (var, val) in self.__solution.items())}]")
@@ -367,6 +447,7 @@ class SolutionBranch:
         return f'{" ".join(parts)}.'
 
     def _latex_(self) -> str:
+        r'''Magic method to represent the solution branch in LaTeX. (::NO EXAMPLE::)'''
         from sage.misc.latex import latex_variable_name
         parts = [r"\texttt{Solution}",
                  f"\\left[{','.join(latex_variable_name(str(latex(v))) for v in self.remaining_variables())}\\right]",
@@ -381,6 +462,7 @@ class SolutionBranch:
     ######################################################################################################
     @staticmethod
     def __clean_solution(solution: dict, ideal, parent):
+        r'''Static method to remove iterated equalities throughout a dictionary with values for variables. (::NO EXAMPLE::)'''
         solution = {k: parent(v) for k,v in solution.items()}
         old_solution = None
 
@@ -398,7 +480,28 @@ class SolutionBranch:
 #################################################################################################
 @loglevel(logger)
 def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: list = [], final_parent=None, groebner: bool = True, parallel: int = None) -> list[SolutionBranch]:
-    r'''Method that applies simple steps for analyzing an ideal without human intervention'''
+    r'''
+        Method that applies simple steps for analyzing an ideal without human intervention
+
+        This method studies a particular ideal (given some specific information and avoiding certain configurations) and 
+        returns a list of solution branches that represent the different components of the algebraic variety defined by the ideal. 
+        Instead of working directly with Gröbner basis (which would be the theoretical tool to study the variety of an ideal, 
+        this method performs several simplifications, splitting the ideal into different simple components with the hope
+        that the Gröbner basis we end up computing are simpler and, hence, faster to compute.
+
+        The simplifications performed by this method are:
+        * Finding simple elements: for example, finding linear polynomials of the type `v - c` for a given constant, or `c*v^e` for a given constant and exponent.
+        * We split into factors. In particular, we consider `p(X) = p_1(X)p_2(X)...p_n(X)` and we change `p(X) = 0` into `p_i(X) = 0` for each factor.
+        * We try to find expressions of the form `v = q(w)` for a polynomial `q`. This allows to remove a variable `v` and substitute it by a polynomial in the remaining variables.
+        * We then compute a Gröbner basis.
+        * If we already have a Gröbner basis, we do a primary decomposition.
+
+        This method allows the use of Parallel computations to study subbranches.
+
+        This method also performs a post-processing to remove subsolutions and solutions to avoid.
+
+        ::NO EXAMPLE::
+    '''
     if I == ideal(I.ring()):
         return (SolutionBranch.AllSolution(I.ring()),)
 
@@ -465,7 +568,7 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: 
 
 @count_calls(logger)
 def _analyze_ideal(I, partial_solution: dict, to_avoid: dict, decisions: list = [], final_parent=None, groebner: bool = True) -> list[SolutionBranch]:
-    r'''Method that applies simple steps for analyzing an ideal without human intervention'''
+    r'''See :func:`analyze_ideal` (::NO EXAMPLE::)'''
     ## First we prune the solution
     logger.debug(f"[ideal] +++ Starting new execution of _analyze_ideal")
     if _check_avoid(partial_solution, to_avoid):
@@ -632,6 +735,8 @@ def _check_avoid(partial_solution: dict, to_avoid: list):
 
         * A dictionary `D` can be translated into `\bigwedge_{(k,v)\in D} k = v`.
         * A list `L` can be translated into `\bigvee_{l \in L} l`.
+
+        ::NO EXAMPLE::
     '''
     return any(all(partial_solution.get(v, None) == avoiding[v] for v in avoiding) for avoiding in to_avoid)
 
@@ -658,6 +763,8 @@ def eliminate_linear_variables(I: Ideal, variables):
         * Check this is exactly the elimination ideal
         * Perform a fast computation
         * Compute GB while computing equations or not?
+
+        ::NO EXAMPLE::
     '''
     logger.debug(f"[ELV] Eliminating linear variables {variables=} from ideal using minors")
     generators = I.gens()
@@ -711,6 +818,7 @@ def eliminate_linear_variables(I: Ideal, variables):
 
 
 def find_nonzero_minor(A, size):
+    r'''Method to find a non-zero minor of a given size in a matrix. (::NO EXAMPLE::)'''
     from itertools import product
     for rows in product(*[[i for i in range(A.nrows()) if A[i][c] != 0] for c in range(A.ncols())]):
         for cols in Combinations(range(A.ncols()), size):
