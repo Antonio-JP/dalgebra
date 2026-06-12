@@ -94,6 +94,8 @@ class DSystem:
         * ``variables``: list of names or infinite variables that will fix
           the variables of the system. If it is not given, we will consider all the
           differential variables as main variables.
+
+          ::NO EXAMPLE::
     '''
     def __init__(self,
         equations : Collection[DPolynomial],
@@ -139,29 +141,47 @@ class DSystem:
 
     ## Getters for some properties
     @property
-    def _equations(self): return self.__equations #: Tuple of d-polynomials defining the d-System
+    def _equations(self): 
+        r'''Property to get the equations of the system as a tuple of d-polynomials. (::NO EXAMPLE::)'''
+        return self.__equations
     @property
-    def variables(self): return self.__variables #: Tuple of d-variables considered as variables to be solved.
+    def variables(self):
+        r'''Property to get the variables of the system as a tuple of d-variables. (::NO EXAMPLE::)'''
+        return self.__variables
     @property
-    def parameters(self): return self.__parameters #: Tuple of variables considered as parameters (see :func:`rem_dring`)
+    def parameters(self): 
+        r'''Property to get the parameters of the system as a tuple of d-variables. (::NO EXAMPLE::)'''
+        return self.__parameters
     @property
-    def rem_dring(self): return self.__rem_dring #: Remaining d-Ring when we remove the variables of the system
+    def rem_dring(self): 
+        r'''Property to get the remaining d-Ring when we remove the variables of the system. (::NO EXAMPLE::)'''
+        return self.__rem_dring
 
-    def parent(self) -> Parent: #: Parent structure for the system, i.e., the d-ring where all equations belong.
+    def parent(self) -> Parent: 
+        r'''Method to get the parent structure for the system, i.e., the d-ring where all equations belong. (::NO EXAMPLE::)'''
         return self.__parent
 
-    def size(self) -> int: #: Get the number of equations
+    def size(self) -> int: 
+        r'''Method to get the number of equations in the system. (::NO EXAMPLE::)'''
         return len(self._equations)
 
     @cached_method
-    def is_DifferentialSystem(self) -> bool: #: Method to check if the system is differential
+    def is_DifferentialSystem(self) -> bool: 
+        r'''Method to check if the system is differential. (::NO EXAMPLE::)'''
         return self.parent().is_differential()
+    
     @cached_method
-    def is_DifferenceSystem(self) -> bool: #: Method to check if the system is of differences
+    def is_DifferenceSystem(self) -> bool: 
+        r'''Method to check if the system is of differences. (::NO EXAMPLE::)'''
         return self.parent().is_difference()
 
-    def is_differential(self) -> bool: return self.is_DifferentialSystem() #: alias of is_DifferentialSystem
-    def is_difference(self) -> bool: return self.is_DifferenceSystem() #: alias of is_DifferentialSystem
+    def is_differential(self) -> bool: 
+        r'''Method to check if the system is differential. (::NO EXAMPLE::)'''
+        return self.is_DifferentialSystem()
+    
+    def is_difference(self) -> bool: 
+        r'''Method to check if the system is of differences. (::NO EXAMPLE::)'''
+        return self.is_DifferenceSystem()
 
     def order(self, gen: DMonomialGen = None, operation: int = -1) -> int:
         r'''
@@ -171,6 +191,8 @@ class DSystem:
             method allows a generator to be given and then the order w.r.t. this variable will
             be computed. For further information, check
             :func:`~dalgebra.dpolynomial.dpolynomial.DPolynomial.order`.
+            
+            ::NO EXAMPLE::
         '''
         return max(equ.order(gen, operation) for equ in self.equations())
 
@@ -434,17 +456,27 @@ class DSystem:
 
     ## magic methods
     def __getitem__(self, index) -> DSystem:
+        r'''
+            Magic method for getting an equation from the system. 
+
+            If an integer is provided, the equation is returned. Otherwise, a subsystem is generated.
+
+            ::NO EXAMPLE::
+        '''
         if index in ZZ: # just one equation required
             return self.equation(index)
         return self.subsystem(index)
 
     def __repr__(self) -> str:
+        r'''Magic method to represent the system as a string. (::NO EXAMPLE::)'''
         return f"System over [{self.parent()}] with variables [{self.variables}]:\n\u007b\n\t" + "\n\t".join([f"{el} == 0" for el in self.equations()]) + "\n\u007d"
 
     def __str__(self) -> str:
+        r'''Magic method to represent the system as a string. (::NO EXAMPLE::)'''
         return repr(self)
 
     def _latex_(self) -> str:
+        r'''Magic method to represent the system in LaTeX. (::NO EXAMPLE::)'''
         result = r"\text{System over }" + latex(self.parent()) + r" \text{ with variables }" + ", ".join(latex(el) for el in self.variables) + ":\n\n"
         result += r"\left\{\begin{array}{ll}"
         result += "\n".join(latex(el) + r" & = 0 \\" for el in self.equations())
@@ -652,6 +684,8 @@ class DSystem:
 
             This method relies on the method :func:`algebraic_equations` and the method :func:`is_homogeneous`
             from the polynomial class in Sage.
+
+            ::NO EXAMPLE::
         '''
         return all(equ.is_homogeneous() for equ in self.algebraic_equations())
 
@@ -661,6 +695,8 @@ class DSystem:
 
             See method :func:`~dalgebra.diff_polynomial.diff_polynomial_element.DPolynomial.is_linear` for further
             information on how this is computed.
+
+            ::NO EXAMPLE::
         '''
         variables = self.variables if variables is None else variables
 
@@ -668,6 +704,13 @@ class DSystem:
 
     @cached_method
     def maximal_linear_variables(self) -> Collection[tuple[DMonomialGen]]:
+        r'''
+            Method to compute the maximal set of linear variables in the system.
+
+            ::NO EXAMPLE::
+
+            TODO: fix documentation and add examples.
+        '''
         rejected = []
         allowed = []
 
@@ -800,6 +843,8 @@ class DSystem:
     def __decide_resultant_algorithm(self, operation: int = None, alg_res: str = "auto") -> Callable[[int,int], DPolynomial]:
         r'''
             Method to decide the (hopefully) most optimal algorithm to compute the resultant.
+
+            ::NO EXAMPLE::
         '''
         operation = 0 if operation is None else operation
         if alg_res == "iterative":
@@ -829,11 +874,13 @@ class DSystem:
             raise ValueError("The algorithm for the algebraic resultant must be 'auto', 'dixon', 'macaulay' or 'iterative'")
 
     def __get_extension(self, bound: int, operation: int, halt=lambda S : S.is_sp2()) -> tuple[int]:
+        r'''Private method to get the extension of the system that satisfies SP2 with a bound for the extension. (::NO EXAMPLE::)'''
         if (bound not in ZZ or bound < 0):
             raise ValueError("The bound for the extension must be a non-negative integer")
 
         ## auxiliary generator to iterate in a "balanced way"
         def gen_cartesian(size, bound):
+            r'''Auxiliary iterator to generate the cartesian product of ``size`` elements with values between 0 and ``bound`` (::NO EXAMPLE::)'''
             for i in range(bound*size):
                 for c in Compositions(i+size, length=size, max_part=bound): #pylint: disable=unexpected-keyword-arg
                     yield tuple([el-1 for el in c])
@@ -854,6 +901,8 @@ class DSystem:
             INPUT:
 
             * ``bound``: bound the the extension to look for a system to get a resultant.
+
+            ::NO EXAMPLE::
         '''
         raise NotImplementedError("Dixon resultant not yet implemented")
 
@@ -870,6 +919,8 @@ class DSystem:
 
             This matrix of coefficients is a Sylvester matrix, and the determinant is the Sylvester resultant. This method
             should always return a product of the Macaulay resultant (see :func:`__macaulay`).
+
+            ::NO EXAMPLE::
         '''
         # Checking the conditions
 
@@ -893,6 +944,8 @@ class DSystem:
             INPUT:
 
             * ``bound``: bound the the extension to look for a system to get a resultant.
+
+            ::NO EXAMPLE::
         '''
         logger.info("Getting the appropriate extension for having a SP2 system...")
         L = self.__get_extension(bound, operation)
@@ -913,6 +966,8 @@ class DSystem:
             INPUT:
 
             * ``bound``: bound the the extension to look for a system to get a resultant.
+
+            ::NO EXAMPLE::
         '''
         variables = [el for el in self.variables]
         ## This method first eliminate the linear variables
@@ -1047,10 +1102,13 @@ class DSystem:
     def __iterative_best_variable(self) -> DMonomialGen:
         r'''
             Method to choose the best variable to do univariate elimination.
+
+            ::NO EXAMPLE::
         '''
         v = self.variables[0]
 
         def measure(v):
+            r'''Auxiliary method measuring a variable. (::NO EXAMPLE::)'''
             c = 0
             for equ in self.equations():
                 for t in equ.variables():
@@ -1068,6 +1126,7 @@ class DSystem:
         return v
 
     def __iterative_to_univariate(self, polynomial : Element, variable: Element) -> Element:
+        r'''Private method to cast a polynomial to a univariate polynomial in the given variable. (::NO EXAMPLE::)'''
         try:
             return polynomial.polynomial(variable)
         except Exception:
@@ -1082,9 +1141,13 @@ class DSystem:
 
             This method works on a linear system and tries to find a change of variables (i.e., an invertible linear transformation of the variables) that decouples the system into several subsystems that can be solved independently. 
 
-            TODO
+            TODO Implement the method, generate documentation and add examples.
+
+            TODO: for linear systems
+
+            ::NO EXAMPLE::
         '''
-        pass
+        raise NotImplementedError("Decoupling method not yet implemented")
 
     def order_1_system(self) -> DSystem:
         r'''
@@ -1109,6 +1172,10 @@ class DSystem:
             WARNING: This method only works for linear systems. If the system is not linear, an error is raised.
 
             WARNING 2: this method only work when 1 operator is defined. For several operators, an error is raised.
+
+            ::NO EXAMPLE::
+
+            TODO: for linear systems
         '''
         if not self.is_linear():
             raise ValueError("The system is not linear. Cannot transform to order 1.")
@@ -1137,6 +1204,10 @@ class DSystem:
             This method will return the dictionary mapping the orders of each operator (`\rho`) to the corresponding matrix `A_\rho`.
 
             WARNING: This method only works for linear systems. If the system is not linear, an error is raised.
+
+            ::NO EXAMPLE::
+
+            TODO: for linear systems
         '''
         from itertools import product
         if not self.is_linear():
@@ -1179,6 +1250,10 @@ class DSystem:
 
             A :class:`DSystem` whose equations do not contain the d-variables in ``variables`` that holds true from ``self``. If no
             equation is found, an empty system is created.
+
+            ::NO EXAMPLE::
+
+            TODO: add examples
         '''
         if len(variables) == 0:
             variables = self.variables
@@ -1198,6 +1273,7 @@ class DSystem:
             return DSystem(output, self.parent(), [v for v in self.variables if v not in variables])
 
     def __decide_elimination_algorithm(self, alg_res):
+        r'''Private method to decide the algorithm for elimination. (::NO EXAMPLE::)'''
         if alg_res == "iterative":
             logger.info(f"We compute elimination ideal iteratively")
             return self.__elimination_iterative
@@ -1214,6 +1290,7 @@ class DSystem:
             raise NotImplementedError(f"Method {alg_res} for elimination ideal not recognized")
 
     def __elimination_iterative(self, *variables, bound_L: int = 10):
+        r'''Private method to compute the elimination ideal iteratively. (::NO EXAMPLE::)'''
         ## We first select the "best" variable to eliminate
         logger.info("[eliminate-iterative] Looking for best variable...")
         points = [max(equ.order(v) for equ in self.equations()) for v in variables]
@@ -1230,6 +1307,7 @@ class DSystem:
             return S
 
     def __elimination_algebraic(self, *variables, bound_L: int = 10):
+        r'''Private method to compute the elimination ideal using algebraic methods. (::NO EXAMPLE::)'''
         if bound_L in ZZ:
             bound_L = self.size()*[bound_L]
         elif not len(bound_L) == self.size():
@@ -1241,6 +1319,7 @@ class DSystem:
         S = self.equations()
 
         def eliminate_from_system(system: DSystem, *variables: DMonomialGen):
+            r'''Auxiliary method to compute the elimination ideal from a system that is valid for elimination. (::NO EXAMPLE::)'''
             alg_equations = system.algebraic_equations()
             R = alg_equations[0].parent()
             flatten = R.flattening_morphism()
@@ -1281,6 +1360,7 @@ class DSystem:
         return 0
 
     def __elimination_autoreduced(self, *variables, bound_L: int = 10):
+        r'''Private method to compute the elimination ideal using autoreduced systems. (::NO EXAMPLE::)'''
         if bound_L in ZZ:
             bound_L = self.size()*[bound_L]
         rem_vars = tuple(v for v in self.parent().gens() if v not in variables)
@@ -1370,6 +1450,8 @@ RWOSystem = DSystem #: alias for DSystem (used for backward compatibility)
 class DifferentialSystem (DSystem):
     r'''
         Class representing a differential system.
+
+        ::NO EXAMPLE::
     '''
     def __init__(self,
         equations : Collection[DPolynomial],
@@ -1387,6 +1469,8 @@ class DifferentialSystem (DSystem):
 class DifferenceSystem (DSystem):
     r'''
         Class representing a difference system.
+
+        ::NO EXAMPLE::
     '''
     def __init__(self,
         equations : Collection[DPolynomial],

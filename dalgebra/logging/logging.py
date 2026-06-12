@@ -32,6 +32,7 @@ COUNTING_CALLS : dict[str, int] = dict()
 
 
 def cut_string(string, size):
+    r'''Method to cut a string if it is too long, adding "..." at the end. (::NO EXAMPLE::)'''
     if not isinstance(string, str):
         string = str(string)
     if len(string) <= size:
@@ -40,6 +41,7 @@ def cut_string(string, size):
 
 
 def print_args(size, *args, **kwds):
+    r'''Generic method to print the arguments of a function, cutting them if they are too long. (::NO EXAMPLE::)'''
     output = ""
     if len(args):
         output += f"\n\t* args: {[cut_string(el, size) for el in args]}"
@@ -49,9 +51,12 @@ def print_args(size, *args, **kwds):
 
 
 def count_calls(logger : logging.Logger):
+    r'''Wrapper for a function so the logger counts the number of open calls to that function, and logs it at the end of the execution. (::NO EXAMPLE::)'''
     def inner(func):
+        r'''Inner function for a wrapper (::NO EXAMPLE::)'''
         @functools.wraps(func)
         def wrap(*args, **kwds):
+            r'''Wrapper function for the decorator (see :func:`count_calls`) (::NO EXAMPLE::)'''
             COUNTING_CALLS[func.__name__] = COUNTING_CALLS.get(func.__name__, 0) + 1
             try:
                 output = func(*args, **kwds)
@@ -65,9 +70,19 @@ def count_calls(logger : logging.Logger):
 
 
 def loglevel(logger : logging.Logger):
+    r'''
+        Wrapper for a function to set up the logger for a function. 
+
+        Any function wrapped with this decorator, will include automatically the extra arguments loglevel and logfile,
+        which can be used to configure the logger behavior for this method.
+
+        ::NO EXAMPLE::
+    '''
     def inner(func):
+        r'''Inner function for a wrapper (::NO EXAMPLE::)'''
         @functools.wraps(func)
         def wrap(*args, loglevel=False, logfile=None, **kwds):
+            r'''Wrapper function for the decorator (see :func:`loglevel`) (::NO EXAMPLE::)'''
             loglevel = logging.INFO if (loglevel is True) else loglevel
             file_handler = None
             if loglevel:
@@ -104,9 +119,12 @@ def loglevel(logger : logging.Logger):
 
 
 def verbose(logger):
+    r'''Verbose decorator for a functions, which adds an extra argument verbose to the function. (::NO EXAMPLE::)'''
     def inner(func):
+        r'''Inner function for a wrapper (::NO EXAMPLE::)'''
         @functools.wraps(func)
         def wrap(*args, verbose=False, **kwds):
+            r'''Wrapper function for the decorator (see :func:`verbose`) (::NO EXAMPLE::)'''
             if verbose:
                 if STDOUT_HANDLER in logger.handlers:
                     # another function must has set this up, no need to remove at the end
@@ -137,9 +155,12 @@ def cache_in_file(func):
         Decorator for a function to cache its result on a file that detects when the
         result can be reused directly. It includes an automatic detection of the
         version of the module allowing to easily repeat computations when needed.
+
+        ::NO EXAMPLE::
     '''
     @functools.wraps(func)
     def wrapped(*args, to_cache:bool = True, path_to_folder:str = None, extension:str = "dmp", **kwds):
+        r'''Wrapper function for the decorator (see :func:`cache_in_file`) (::NO EXAMPLE::)'''
         if not to_cache:
             return func(*args, **kwds)
         else:
@@ -194,7 +215,9 @@ logger.propagate = False
 
 
 #### METHODS TO MANIPULATE THE LEVELS FOR DEFAULT HANDLERS
-def logging_stderr_level(new_level: int): GENERAL_STDERR_HANDLER.setLevel(new_level)
+def logging_stderr_level(new_level: int): 
+    r'''Global setter for the stderr handler level. (::NO EXAMPLE::)'''    
+    GENERAL_STDERR_HANDLER.setLevel(new_level)
 
 
 __all__ = ["cache_in_file", "loglevel", "verbose"]

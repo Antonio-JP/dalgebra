@@ -15,6 +15,8 @@ r'''
     **WARNING (Not yet implemented)** A key feature of this module is that we will take into consideration the possibility that the domain is non commutative, which is the case for instance when we are working with matrix pseudo-differential operators. 
 
     ::NO EXAMPLES::
+
+    TODO: for kp -> depends on pseudo
 '''
 
 # ****************************************************************************
@@ -52,6 +54,8 @@ def kp_ring(n: int, *, name_var:str = "u") -> DPolynomialRing_Monoid:
 
         This is helpful to other methods to predict where elements will be so they can build the appropriate coercions
         without computing the hierarchy.
+
+        ::NO EXAMPLE::
     '''
     return DifferentialPolynomialRing(QQ, names=[f'{name_var}_{i}' for i in range(1, n)])
 
@@ -64,6 +68,8 @@ def kp_generic(n: int, *, name_var:str = "u", name_partial:str = "D") -> tuple[D
         pseudo operator `L` of order 1 can commute with `(L^n)_+`. The first value
         force the infinite tail of `L` to take a specific form, and the second value gives us the KP hierarchy
         of order `n` at level `n`.
+
+        ::NO EXAMPLE::
     '''
     goal = kp_ring(n, name_var=name_var)
     goal_op_ring = PseudoDOperatorRing(goal, name_partial)
@@ -79,6 +85,8 @@ def kp_hierarchy(n: int, m: int, *, name_var:str = "u", name_partial:str = "D") 
         pseudo operator `L` of order 1 can commute both with `(L^n)_+` and `(L^m)_+`. The first value
         force the infinite tail of `L` to take a specific form, and the second value gives us the KP hierarchy
         of order `n` at level `m`.
+
+        ::NO EXAMPLE::
     '''
     # We compute the final truncated L operator
     L = kp_generic(n, name_var=name_var, name_partial=name_partial)
@@ -93,6 +101,10 @@ def kp_hierarchy(n: int, m: int, *, name_var:str = "u", name_partial:str = "D") 
 class GenericKPOperator(UniqueRepresentation):
     r'''
         Class to represent the generic pseudo-differential operator of order 1 with coefficients `u_1,...,u_{n-1}` and the infinite tail determined by the commutation with `(L^n)_+`.
+
+        This class is created because this computation is universal and it make sense to store it as a unique element.
+
+        ::NO EXAMPLE::
     '''
     def __init__(self, n: int, name_var:str = "u"):
         self.n = n
@@ -103,6 +115,7 @@ class GenericKPOperator(UniqueRepresentation):
         self.__sols = dict()
 
     def __extend_current(self):
+        r'''Private method to extend the current computations one further iteration (::NO EXAMPLE::)'''
         m = self.__current.ngens() # we have u_1,...,u_m 
         ## we want to double it
         self.__current = self.__current.append_variables(*[f'{self.name_var}_{i}' for i in range(m+1, 2*m+1)]) # we add u_{m+1},...,u_{2m}
@@ -122,7 +135,7 @@ class GenericKPOperator(UniqueRepresentation):
 
     def __call__(self, m: int) -> DPolynomial:
         r'''
-            Returns the coefficient of the KP operator of order `n` at position `D^{m}` for `m` an integer
+            Returns the coefficient of the KP operator of order `n` at position `D^{m}` for `m` an integer (::NO EXAMPLE::)
         '''
         if m > 1: # The order is 1 by definition
             return self.ring.zero()
