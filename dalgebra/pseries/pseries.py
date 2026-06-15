@@ -16,7 +16,8 @@ r'''
         sage: (1/(1-x)).derivative()
         1 + 2*x + 3*x^2 + 4*x^3 + 5*x^4 + 6*x^5 + 7*x^6 + 8*x^7 + 9*x^8 + 10*x^9 + O(x^10)
         
-
+    TODO: for laurent
+        
     ::IGNORE AUDIT::
 '''
 

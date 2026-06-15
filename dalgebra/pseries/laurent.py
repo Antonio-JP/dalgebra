@@ -4,6 +4,10 @@ r'''
     Module to create univariate formal Laurent power series over a given differential field.
 
     TODO: Add examples and more detailed explanation of the structure.        
+
+    TODO: For laurent
+
+    ::IGNORE AUDIT::
 '''
 
 # ****************************************************************************

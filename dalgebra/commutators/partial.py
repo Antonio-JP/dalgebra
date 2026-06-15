@@ -7,6 +7,8 @@ r'''
 
     ::IGNORE AUDIT::
 
+    TODO: For partial commutation
+
     **Elements provided by the module**
     -----------------------------------------
 '''
