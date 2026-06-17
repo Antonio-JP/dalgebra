@@ -6,6 +6,10 @@ r'''
     TODO (laurent): Add examples and more detailed explanation of the structure.        
 
     TODO (laurent): ensure that all DRings implemented in this branch has the _laurent_morphism method implemented (if possible).
+
+    TODO (laurent): implement Laurent series not only for a differential field but also for a difference field.
+
+    TODO (laurent): check if it is possible to implement Laurent series with different derivations and homomorphisms.
 '''
 
 # ****************************************************************************
