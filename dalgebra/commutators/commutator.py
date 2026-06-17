@@ -857,7 +857,7 @@ def module_quo_rem(P: DPolynomial, L: DPolynomial, basis: tuple[DPolynomial], ge
         ::NO EXAMPLE::
     '''
     ## Congruences of the orders of the element in the basis. All must be different (otherwise it is not a basis)
-    orders_cong = [el.order() % L.order(gen) for el in basis]
+    orders_cong = [el.order(gen) % L.order(gen) for el in basis]
 
     assert len(orders_cong) == len(set(orders_cong)), "The basis is not a `C[L]`-module basis"
 
