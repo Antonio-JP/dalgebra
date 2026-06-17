@@ -7,11 +7,11 @@ r'''
     This software has been used in the presentation in ISSAC'23 "Computing almost-commuting basis of Ordinary Differential
     Operators", by A. Jiménez-Pastor, S.L. Rueda and M.A. Zurro in Tromsø, Norway.
 
-    **Things remaining TODO**
+    **Things remaining to do**
     -----------------------------------------
 
-    1. CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
-    2. Extend this documentation
+    1. TODO (unassigned) CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
+    2. TODO (unassigned) Extend this documentation
 
     **Elements provided by the module**
     -----------------------------------------
@@ -102,7 +102,7 @@ class SolutionBranch:
 
         ::NO EXAMPLE::
 
-        TODO: Add examples to this documentation.
+        TODO (unassigned): Add examples to this documentation.
     '''
     def __init__(self, I: list | Ideal, solution: dict[str,Any], decisions: list[tuple[str,str,Any] | tuple[str,Any]], base_parent=None):
         ##################################################################
@@ -177,7 +177,7 @@ class SolutionBranch:
 
             ::NO EXAMPLE::
 
-            TODO: Add more information about this method and maybe some examples.
+            TODO (unassigned): Add more information about this method and maybe some examples.
         '''
         if field:
             return self.final_parent(False).fraction_field()
@@ -213,7 +213,7 @@ class SolutionBranch:
 
             ::NO EXAMPLE::
 
-            TODO: Add a deeper information about this method and maybe some examples.
+            TODO (unassigned): Add a deeper information about this method and maybe some examples.
         '''
         if is_DPolynomialRing(origin):
             output = DPolynomialRing(self.diff_parent(origin.base()), origin.variable_names())
@@ -263,7 +263,7 @@ class SolutionBranch:
 
             ::NO EXAMPLE::
 
-            TODO: Add some examples of this method
+            TODO (unassigned): Add some examples of this method
         '''
         evaluating = (lambda p : p(**self.__solution)) if len(self.__solution) > 0 else (lambda p : p)
         if isinstance(element, DPolynomial): # case of differential polynomials
@@ -298,7 +298,7 @@ class SolutionBranch:
 
             ::NO EXAMPLE::
 
-            TODO: add examples of this method
+            TODO (unassigned): add examples of this method
         '''
         ## We check the input of new values
         new_values = dict()
@@ -386,7 +386,8 @@ class SolutionBranch:
     def matrix_solution(self):
         r'''
             ::NO EXAMPLE::
-            TODO: Add documentation about this method
+
+            TODO (unassigned): Add documentation about this method
         '''
         if not self.is_linear():
             raise ValueError(f"Impossible to compute the matrix of solution with a non-linear solution branch.")
@@ -409,7 +410,7 @@ class SolutionBranch:
 
             ::NO EXAMPLE::
 
-            TODO: Add examples to this method
+            TODO (unassigned): Add examples to this method
         '''
         return all(
             value == 0 or (value.degree() == 1 and (value.ct if hasattr(value, "ct") else value.constant_coefficient()) == 0)

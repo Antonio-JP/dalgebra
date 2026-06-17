@@ -4,12 +4,12 @@ r'''
     This module contains the main functionality to compute and analyze the spectral curves obtained from a pair
     of commuting linear differential operators.
 
-    **Things remaining TODO**
+    **Things remaining to do**
     -----------------------------------------
 
-    1. CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
-    2. Extend this documentation
-    3. Add references to notation, definitions, etc.
+    1. TODO (unassigned) CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
+    2. TODO (unassigned) Extend this documentation
+    3. TODO (unassigned) Add references to notation, definitions, etc.
 
     **Elements provided by the module**
     -----------------------------------------
@@ -67,7 +67,7 @@ class SolutionBranch_SpectralData(TypedDict):
 @loglevel(logger)
 def SpectralCurveOverIdeal(L: DPolynomial, P: DPolynomial, branches: ListType[SolutionBranch]) -> dict[SolutionBranch, SolutionBranch_SpectralData]:
     r'''
-        TODO: Adapt or remove this method
+        TODO (unassigned): Adapt or remove this method
 
         Method that automatizes the computation of spectral curve and some extra data throughout the
         solution branches of an ideal.

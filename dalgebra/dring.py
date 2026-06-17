@@ -1931,8 +1931,6 @@ class DRing_Wrapper(Parent):
 
                 sage: U = DifferenceRing(B, ns); U.linear_operator_ring()
                 Univariate Ore algebra in S over Multivariate Polynomial Ring in x, y over Rational Field
-
-            TODO: fix with pseudo
         '''
         from ore_algebra.ore_algebra import OreAlgebra
         if self.__linear_operator_ring is None:
@@ -2065,7 +2063,7 @@ class DRing_Wrapper(Parent):
     def _coerce_map_from_(self, S):
         r'''Implementation of coercion map for another parent (::NO EXAMPLE::)'''
         if isinstance(S, DRing_Wrapper):
-            return self._coerce_map_from_(S.wrapped) ## TODO: WARNING: THIS DOES NOT CHECK FOR CORRECTNESS IN OPERATIONS
+            return self._coerce_map_from_(S.wrapped) ## TODO (unassigned): WARNING: THIS DOES NOT CHECK FOR CORRECTNESS IN OPERATIONS
         return self.wrapped == S or self.wrapped._coerce_map_from_(S) is not None
 
     def _element_constructor_(self, x) -> DRing_WrapperElement:

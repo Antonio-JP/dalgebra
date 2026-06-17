@@ -142,10 +142,10 @@ r'''
         10/9*u_2_0*u_2_1*u_3_0 + 5/9*u_2_0*u_3_3 + 5/9*u_2_0^2*u_3_1 + 5/3*u_2_1*u_3_2 + 20/9*u_2_2*u_3_1 + 10/9*u_2_3*u_3_0 - 5/3*u_3_0*u_3_2 - 5/3*u_3_1^2 + 1/9*u_3_5
         5/9*u_2_0*u_2_3 + 5/9*u_2_0^2*u_2_1 + 5/9*u_2_1*u_2_2 + 5/3*u_2_1*u_3_1 + 5/3*u_2_2*u_3_0 + 1/9*u_2_5 - 10/3*u_3_0*u_3_1
 
-    **Things remaining TODO**
+    **Things remaining to do**
     -----------------------------------------
 
-    1. (Unassigned) Incorporate methods to reduce the equations for higher hierarchies.
+    1. TODO (unassigned): Incorporate methods to reduce the equations for higher hierarchies.
 
     **Elements provided by the module**
     -----------------------------------------

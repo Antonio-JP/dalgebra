@@ -260,7 +260,7 @@ class DPolynomial(Element):
         
             ::NO EXAMPLE::
 
-            TODO: Add examples to this method.
+            TODO (unassigned): Add examples to this method.
         '''
         if self.is_zero():
             return self.parent().zero()
@@ -303,7 +303,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add examples to this method
+            TODO (unassigned): Add examples to this method
         '''
         if len(gens) == 0:
             return tuple(self._content.keys())
@@ -338,7 +338,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add examples to this method
+            TODO (unassigned): Add examples to this method
         '''
         if len(gens) == 0:
             return tuple([self._content[m] for m in self.monomials()])
@@ -355,7 +355,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add examples to this method
+            TODO (unassigned): Add examples to this method
         '''
         return dict(zip(self.monomials(*gens), self.coefficients(*gens)))
 
@@ -369,7 +369,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add examples to this method
+            TODO (unassigned): Add examples to this method
         '''
         if not isinstance(monomial, DMonomial):
             monomial = self.parent().monoids()(monomial)
@@ -393,7 +393,7 @@ class DPolynomial(Element):
             
             ::NO EXAMPLE::
             
-            TODO: Improve documentation and add examples to this method
+            TODO (unassigned): Improve documentation and add examples to this method
         '''
         if isinstance(monomial, DPolynomial):
             if not monomial.is_monomial():
@@ -719,7 +719,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add examples to this method        
+            TODO (unassigned): Add examples to this method        
         '''
         if self.is_zero(): # Special case when the polynomial is zero
             return -oo
@@ -739,7 +739,7 @@ class DPolynomial(Element):
             
             ::NO EXAMPLE::
 
-            TODO: Add examples to this method
+            TODO (unassigned): Add examples to this method
         '''
         union: set[DMonomial] = set()
         for m in self._content:
@@ -892,7 +892,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add some examples to this method
+            TODO (unassigned): Add some examples to this method
         '''
         coefficients = self.coefficients()
         if len(coefficients) == 0:
@@ -908,7 +908,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add some examples to this method
+            TODO (unassigned): Add some examples to this method
         '''
         return self*self.denominator()
 
@@ -928,7 +928,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add examples to this method.
+            TODO (unassigned): Add examples to this method.
         '''
         output = list()
         for (mon, coeff) in zip(self.monomials(), self.coefficients()):
@@ -949,7 +949,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add some examples to this method
+            TODO (unassigned): Add some examples to this method
         '''
         return self.parent().element_class(self.parent(), {t : c(*args, **kwds) for (t,c) in self._content.items()})
 
@@ -962,7 +962,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add some examples to this method
+            TODO (unassigned): Add some examples to this method
         '''
         ## Processing the arguments
         if len(args) != 0:
@@ -1051,7 +1051,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add examples to this method
+            TODO (unassigned): Add examples to this method
         '''
         if other not in self.parent():
             raise ValueError(f"The two objects must be DPolynomials")
@@ -1082,7 +1082,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Fix this documentation and add some examples.
+            TODO (unassigned): Fix this documentation and add some examples.
         '''
         ## Checking the parent
         R = pushout(self.parent(), other.parent())
@@ -1123,7 +1123,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Fix this documentation and add some examples.
+            TODO (unassigned): Fix this documentation and add some examples.
         '''
         ## Checking the parent
         R = pushout(self.parent(), other.parent())
@@ -1160,7 +1160,7 @@ class DPolynomial(Element):
 
             ::NO EXAMPLE::
 
-            TODO: Add some examples to this method.
+            TODO (unassigned): Add some examples to this method.
         '''
         variable = self.parent()(variable)
         if not variable.is_variable():
@@ -2447,7 +2447,7 @@ class DPolynomialRing_Monoid(Parent):
             self.register_coercion(PR.hom(variables, self))
         except AssertionError:
             pass # coercion already registered
-        result = [PR(str(element)) for element in elements] # TODO: This may be improved?
+        result = [PR(str(element)) for element in elements] # TODO (unassigned): This may be improved?
 
         return result
 
@@ -2519,7 +2519,7 @@ class DPolynomialRing_Monoid(Parent):
         r'''
             DRing method to add constants to the ring of d-polynomials. (::NO EXAMPLE::)
 
-            TODO: Add some examples to this method    
+            TODO (unassigned): Add some examples to this method    
         '''
         return self.change_ring(self.base().add_constants(*new_constants))
 
@@ -2550,7 +2550,7 @@ class DPolynomialRing_Monoid(Parent):
 
             ::NO EXAMPLE::
 
-            TODO: add examples for this method.
+            TODO (unassigned): add examples for this method.
         '''
         if element not in self:
             raise TypeError(f"[inverse_operation] Impossible to apply operation to {element}")
@@ -2595,7 +2595,7 @@ class DPolynomialRing_Monoid(Parent):
 
             ::NO EXAMPLE::
 
-            TODO: add examples for this method.
+            TODO (unassigned): add examples for this method.
         '''
         A,B = self.integral_decomposition(element, operation)
         if B != 0:
@@ -2624,7 +2624,7 @@ class DPolynomialRing_Monoid(Parent):
 
             ::NO EXAMPLE::
 
-            TODO: Add examples to this method.
+            TODO (unassigned): Add examples to this method.
         '''
         logger.debug(f"[inverse_derivation] Called with {element}")
         if self.operator_types()[operation] != "derivation":
@@ -3421,7 +3421,7 @@ class DPolyToInfinite_Coercion(Morphism):
         super().__init__(domain, codomain)
         self.__map = map_of_variables
 
-    def _call_(self, element): ## TODO: Go on here
+    def _call_(self, element): ## TODO (unassigned): Go on here
         r'''Call method for a morphism (::NO EXAMPLE::)'''
         output = self.codomain().zero()
         for (m,c) in element.monomial_coefficients().items():
@@ -3614,7 +3614,7 @@ class WeightFunction(SetMorphism):
         * ``base_weights``: a list, tuple or dictionary indicating the base weights. If a variable is not provided, we consider it with weight 0.
         * ``operator_weights``: a list or tuple indicating how each operation extends the weights (i.e., a list with the `W_i`).
 
-        TODO:
+        TODO (unassigned):
 
         * Add reference to weight functions in differential setting.
         * Add reference to weight functions in difference setting.
@@ -3666,9 +3666,7 @@ class WeightFunction(SetMorphism):
 
             The weight of the element following the usual definitions.
 
-            TODO:
-
-            * Add examples
+            TODO (unassigned): Add examples
 
             ::NO EXAMPLE::
         '''
@@ -3802,7 +3800,7 @@ class WeightFunction(SetMorphism):
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         if weight < 0:
             return tuple()
@@ -3889,7 +3887,7 @@ class WeightFunction(SetMorphism):
 
             ::NO EXAMPLE::
             
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         mons = self.homogeneous_monomials(weight)
         if len(vector) != len(mons):
@@ -3936,7 +3934,7 @@ class RankingFunction:
 
         ::NO EXAMPLE::
           
-        TODO: add examples
+        TODO (unassigned): add examples
     '''
     def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int] = None):
         ## Checking the argument ``parent``
@@ -4080,7 +4078,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         u, v = self.leader(p), self.leader(q)
         # special cases when the leader are 1
@@ -4126,7 +4124,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         element = self.parent()(element)
 
@@ -4160,7 +4158,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         element = self.parent()(element)
 
@@ -4189,7 +4187,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         element = self.parent()(element)
 
@@ -4214,7 +4212,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         element = self.parent()(element)
 
@@ -4242,7 +4240,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         if not isinstance(A, (list, tuple, set)):
             A = [A]
@@ -4272,7 +4270,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         if not isinstance(A, (list, tuple, set)):
             A = [A]
@@ -4298,7 +4296,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         if A is None:
             raise TypeError(f"None is not a valid input for 'is_autoreduced'")
@@ -4320,7 +4318,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         return self.is_autoreduced(A) and all(self.remainder(self.separant(a), A)[0] != 0 for a in A)
     ################################################################################
@@ -4334,7 +4332,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         if isinstance(A, DPolynomial):
             return self.initial(A)*self.separant(A)
@@ -4356,7 +4354,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         if self.compare(p, q) < 0: # base case: we are done
             return (1, dict(), p)
@@ -4419,7 +4417,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         if not all(prev == 1 for (_,prev) in b.values()):
             raise ValueError(f"Impossible to convert to an operator")
@@ -4436,7 +4434,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         if not isinstance(A, set):
             A = set(A) if isinstance(A, (list, tuple)) else set([A])
@@ -4497,7 +4495,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         logger.info(f"[partial_remainder] ++ STARTING A REMAINDER COMPUTATION")
         if not isinstance(A, set):
@@ -4644,7 +4642,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         if self.compare(p, q) > 0: # we return the inverse call to this function
             return tuple(list(self.smallest(q,p))[::-1])
@@ -4746,7 +4744,7 @@ class RankingFunction:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         # Base case when the list is empty or with just 1 element
         if len(elements) <= 1:
@@ -4786,7 +4784,7 @@ class EliminationRanking(RankingFunction):
 
         ::NO EXAMPLE::
 
-        TODO: add examples
+        TODO (unassigned): add examples
     '''
     def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int] = None):
         super().__init__(parent, ordering, order_operators)
@@ -4833,7 +4831,7 @@ class OrderlyRanking(RankingFunction):
 
         ::NO EXAMPLE::
 
-        TODO: add examples
+        TODO (unassigned): add examples
     '''
     def __init__(self, parent: DPolynomialRing_Monoid, ordering: (list | tuple)[DMonomialGen | str], order_operators: (list | tuple)[int] = None):
         super().__init__(parent, ordering, order_operators)
