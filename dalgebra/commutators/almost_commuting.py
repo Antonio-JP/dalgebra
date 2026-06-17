@@ -145,7 +145,7 @@ r'''
     **Things remaining TODO**
     -----------------------------------------
 
-    1. Incorporate methods to reduce the equations for higher hierarchies.
+    1. TODO (unassigned): Incorporate methods to reduce the equations for higher hierarchies.
 
     **Elements provided by the module**
     -----------------------------------------
@@ -316,7 +316,7 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "direct", s
         * Let `W(L)` the set of almost commuting linear operators. Then `W(L)` is a `C`-vector space
           where `C` is the field of constants of the differential ring `R` where `L` and `A` are built over.
 
-        It was shown by Wilson (TODO: add reference), that for an operator `L` of order `n` in normal form
+        It was shown by Wilson (TODO (unassigned): add reference), that for an operator `L` of order `n` in normal form
 
         .. MATH::
 

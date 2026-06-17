@@ -1,7 +1,7 @@
 r'''
     Computing non-trivial centralizers.
 
-    TODO: CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
+    TODO (unassigned): CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
 
     This module contains the main functionality used for computing non-trivial centralizers of linear differential operators.
 
@@ -48,12 +48,12 @@ r'''
     **Examples of usage**
     -----------------------------------------
 
-    TODO: Add examples of usage of the module that will serve as tests
+    TODO (unassigned): Add examples of usage of the module that will serve as tests
 
     **Things remaining TODO**
     -----------------------------------------
 
-    1. Fill the Examples on the documentation
+    1. TODO (unassigned): Fill the Examples on the documentation
 
     **Elements provided by the module**
     -----------------------------------------
@@ -803,7 +803,7 @@ def generate_polynomial_equations(H: DPolynomial, var_name: str = "x") -> list[P
     r'''
         Method to extract equations assuming a polynomial ansatz
 
-        TODO: Check the validity of this method. Does it make sense to keep this while having the methods to check if something is zero?
+        TODO (unassigned): Check the validity of this method. Does it make sense to keep this while having the methods to check if something is zero?
 
         ::NO EXAMPLE::    
     '''
