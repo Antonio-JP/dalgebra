@@ -1141,9 +1141,7 @@ class DSystem:
 
             This method works on a linear system and tries to find a change of variables (i.e., an invertible linear transformation of the variables) that decouples the system into several subsystems that can be solved independently. 
 
-            TODO Implement the method, generate documentation and add examples.
-
-            TODO: for linear systems
+            TODO (linear): Implement the method, generate documentation and add examples.
 
             ::NO EXAMPLE::
         '''
@@ -1174,8 +1172,6 @@ class DSystem:
             WARNING 2: this method only work when 1 operator is defined. For several operators, an error is raised.
 
             ::NO EXAMPLE::
-
-            TODO: for linear systems
         '''
         if not self.is_linear():
             raise ValueError("The system is not linear. Cannot transform to order 1.")
@@ -1183,12 +1179,11 @@ class DSystem:
             raise ValueError("The system has several operators. Cannot transform to order 1.")
 
         ## In order to be able to do this transformation, we need a system which is triangular in its highest order
-        
-        
         # We compute the order for each element in the system so we know where we can find the expression for its highest derivative
         ## NOTE: We need to check if the coefficient is invertible
         # In order to make this work, we first need to "triangularize" the system in the following sense:
         ## -> The highest derivative of each variable appears in only one equation and, hence, they depend on linear combination of other variables with lower order.
+        ## TODO (linear): implement this function
 
     @cached_method
     def linear_matrices(self) -> dict[tuple[int]|int, Matrix]:
@@ -1207,7 +1202,7 @@ class DSystem:
 
             ::NO EXAMPLE::
 
-            TODO: for linear systems
+            TODO (linear): add examples for this method.
         '''
         from itertools import product
         if not self.is_linear():
