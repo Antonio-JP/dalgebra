@@ -7,7 +7,7 @@ r'''
     This software has been used in the presentation in ISSAC'23 "Computing almost-commuting basis of Ordinary Differential
     Operators", by A. Jiménez-Pastor, S.L. Rueda and M.A. Zurro in Tromsø, Norway.
 
-    **Things remaining TODO**
+    **Things remaining to do**
     -----------------------------------------
 
     1. TODO (unassigned) CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK

@@ -4,7 +4,7 @@ r'''
     This module contains the main functionality to compute and analyze the spectral curves obtained from a pair
     of commuting linear differential operators.
 
-    **Things remaining TODO**
+    **Things remaining to do**
     -----------------------------------------
 
     1. TODO (unassigned) CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK

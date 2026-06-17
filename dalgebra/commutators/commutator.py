@@ -50,7 +50,7 @@ r'''
 
     TODO (unassigned): Add examples of usage of the module that will serve as tests
 
-    **Things remaining TODO**
+    **Things remaining to do**
     -----------------------------------------
 
     1. TODO (unassigned): Fill the Examples on the documentation
