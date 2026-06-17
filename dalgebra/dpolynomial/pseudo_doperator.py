@@ -14,7 +14,11 @@ r'''
         sage: S.Di^2 * v[1] * S.D^2 * u[0] == u[0]*v[1] - 2*S.Di*(u[0]*v[2]) + S.Di^2*(u[0]*v[3])
         10
 
-    TODO: to pseudo
+    TODO (pseudo): Currently, this implementation works for differential rings with just one derivation. It could be interesting
+    to enhance this implementation to work in different directions:
+    * Allowing difference operators (i.e., shift operators) in the same way as differential operators.
+    * Allowing multiple operations (i.e., multiple derivations) in the same ring. 
+    * Implement the ring of linear operators throughout the DRings catergory.
 '''
 
 # ****************************************************************************
@@ -681,7 +685,7 @@ class PseudoDOperator_Ring(Parent):
         * ``base``: a differential ring with just one operation.
         * ``name``: name that the differential operator will receive (use mostly for cosmetic reasons).
 
-        TODO: add examples
+        TODO (pseudo): add examples
 
         ::NO EXAMPLE::
     '''
@@ -823,7 +827,7 @@ class PseudoDOperator_Ring(Parent):
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (pseudo): add examples
         '''
         new_ring = PseudoDOperatorRing(R, self.gen_name())
         ## Creating the coercion map if possible

@@ -316,7 +316,7 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "direct", s
         * Let `W(L)` the set of almost commuting linear operators. Then `W(L)` is a `C`-vector space
           where `C` is the field of constants of the differential ring `R` where `L` and `A` are built over.
 
-        It was shown by Wilson (TODO: add reference), that for an operator `L` of order `n` in normal form
+        It was shown by Wilson (TODO (unassigned): add reference), that for an operator `L` of order `n` in normal form
 
         .. MATH::
 
@@ -843,7 +843,11 @@ def recursion(n: int):
         matrix.
 
         NOTE: We need to check whether this always leads to a unique solution or not. The hope is that, yes.
-        ::NO EXAMPLE:: TODO
+
+        TODO (pseudo): this method has an implementation that is not following any type of theory nor a paper. We need to make good use of 
+        the package funcitonality pseudo_doperator.py to complete this implementation.
+        
+        ::NO EXAMPLE::
     '''
     if n >= 0: ## Added to avoid linting errors while keeping the old code without commenting it
         raise NotImplementedError("This is a tentative method, but no real theory is backing it currently. Hence we do not allow to use it")
