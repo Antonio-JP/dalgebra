@@ -1133,6 +1133,95 @@ class DSystem:
             return polynomial.parent().univariate_ring(variable)(str(polynomial))
 
     ###################################################################################################
+    ### Decoupling methods
+    ###################################################################################################
+    def decouple(self) -> Collection[DSystem]:
+        r'''
+            Method that decouples the system into several subsystems that can be solved independently.
+
+            This method works on a linear system and tries to find a change of variables (i.e., an invertible linear transformation of the variables) that decouples the system into several subsystems that can be solved independently. 
+
+            TODO Implement the method, generate documentation and add examples.
+
+            TODO: for linear systems
+
+            ::NO EXAMPLE::
+        '''
+        raise NotImplementedError("Decoupling method not yet implemented")
+
+    def order_1_system(self) -> DSystem:
+        r'''
+            Method to transform a linear system of arbitrary order into a linear system of order 1.
+
+            Let us consider a linear system in arbitrary differential variables `u_1,...,u_n` of orders `o_1,...,o_n`. We can introduce recursively new variables `v_{i,j}` for `i=1,...,n` and `j=0,...,o_i-1` such that `v_{i,0} = u_i` and `v_{i,j} = u_i^{(j)}`.
+
+            Then we can transform the original system
+
+            .. MATH::
+
+                (A_o\partial^o + A_{o-1}\partial^{o-1} + \ldots + A_0) \cdot (u_1,\ldots,u_n)^t = 0
+
+            to a bigger system of order 1 such that
+
+            .. MATH::
+
+                B \cdot (v_{1,0},\ldots,v_{1,o_1-1}, v_{2,0},\ldots,v_{2,o_2-1}, \ldots, v_{n,0},\ldots,v_{n,o_n-1})^t = 0.
+
+            This method computes this transformation and returns the new system of order 1.
+
+            WARNING: This method only works for linear systems. If the system is not linear, an error is raised.
+
+            WARNING 2: this method only work when 1 operator is defined. For several operators, an error is raised.
+
+            ::NO EXAMPLE::
+
+            TODO: for linear systems
+        '''
+        if not self.is_linear():
+            raise ValueError("The system is not linear. Cannot transform to order 1.")
+        if self.parent().noperators() != 1:
+            raise ValueError("The system has several operators. Cannot transform to order 1.")
+
+        ## In order to be able to do this transformation, we need a system which is triangular in its highest order
+        
+        
+        # We compute the order for each element in the system so we know where we can find the expression for its highest derivative
+        ## NOTE: We need to check if the coefficient is invertible
+        # In order to make this work, we first need to "triangularize" the system in the following sense:
+        ## -> The highest derivative of each variable appears in only one equation and, hence, they depend on linear combination of other variables with lower order.
+
+    @cached_method
+    def linear_matrices(self) -> dict[tuple[int]|int, Matrix]:
+        r'''
+            Computes the matrices for a linear system.
+
+            Whenever we have a linear system with several operators over a set of d-variables, we can write it as a linear combination of some matrices over the ground field/ring of coefficients and an operation D_\rho. Hence, we can write
+
+            .. MATH::
+
+                S(u_1,...,u_n) = 0 \equiv \left(\sum_{\rho} A_\rho D_\rho\right) (u_1,\ldots,u_n)^t = 0.
+
+            This method will return the dictionary mapping the orders of each operator (`\rho`) to the corresponding matrix `A_\rho`.
+
+            WARNING: This method only works for linear systems. If the system is not linear, an error is raised.
+
+            ::NO EXAMPLE::
+
+            TODO: for linear systems
+        '''
+        from itertools import product
+        if not self.is_linear():
+            raise ValueError("The system is not linear. Cannot compute the linear matrices.")
+        
+        output = dict()
+        orders = [max([max(equ.orders(i)) for equ in self.equations()]) for i in range(self.parent().noperators())]
+        for order in product(*[range(o+1) for o in orders]):
+            M = matrix([[equ.coefficient_full(v[order]) for v in self.variables] for equ in self.equations()])
+            if M != 0:
+                output[order if len(order) > 1 else order[0]] = M
+        return output
+
+    ###################################################################################################
     ### Elimination methods
     ###################################################################################################
     def eliminate_variables(self, *variables: str | DMonomialGen, bound_L: int = 10, alg_res: str = "auto"):
