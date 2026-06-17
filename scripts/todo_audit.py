@@ -4,6 +4,7 @@ from __future__ import annotations
 import ast
 import argparse
 import io
+import json
 import re
 import subprocess
 import tokenize
@@ -22,6 +23,7 @@ class Finding:
 	path: Path
 	line_number: int
 	label: str | None
+	context: str | None = None
 
 
 def run(cmd: list[str]) -> str:
@@ -52,6 +54,29 @@ def python_files(root: Path) -> list[Path]:
 		for file_path in (root / folder_name).rglob("*.py")
 		if file_path.is_file() and not is_hidden_path(file_path.relative_to(root))
 	)
+
+
+def notebook_files(root: Path) -> list[Path]:
+	r'''Collect all notebook files in the folders under audit.'''
+	return sorted(
+		file_path
+		for folder_name in TARGET_FOLDERS
+		for file_path in (root / folder_name).rglob("*.ipynb")
+		if file_path.is_file() and not is_hidden_path(file_path.relative_to(root))
+	)
+
+
+def classify_todo(path: Path, line_number: int, branch: str, label: str | None, context: str | None = None) -> Finding | None:
+	r'''Classify one task marker according to its label and the current branch.'''
+	if label is None:
+		return Finding("WARNING", path, line_number, None, context)
+
+	normalized_label = label.strip()
+	if normalized_label.lower() == "unassigned":
+		return Finding("WARNING", path, line_number, "unassigned", context)
+	if normalized_label == branch:
+		return Finding("ERROR", path, line_number, normalized_label, context)
+	return None
 
 
 def docstring_lines(source: str) -> set[int]:
@@ -94,11 +119,9 @@ def comment_lines(source: str) -> dict[int, list[str]]:
 	return comments
 
 
-def analyze_file(root: Path, file_path: Path, branch: str) -> list[Finding]:
-	r'''Inspect one Python file and report warnings and errors.'''
+def analyze_python_source(relative_path: Path, source: str, branch: str, context: str | None = None) -> list[Finding]:
+	r'''Inspect Python source text and report warnings and errors.'''
 	findings: list[Finding] = []
-	relative_path = file_path.relative_to(root)
-	source = file_path.read_text(encoding="utf-8", errors="replace")
 	lines = source.splitlines()
 	docstring_line_numbers = docstring_lines(source)
 	comment_line_map = comment_lines(source)
@@ -106,20 +129,58 @@ def analyze_file(root: Path, file_path: Path, branch: str) -> list[Finding]:
 	for line_number in sorted(docstring_line_numbers):
 		line = lines[line_number - 1]
 		for match in TODO_PATTERN.finditer(line):
-			label = match.group("label")
-			if label is None or label.strip().lower() == "unassigned":
-				findings.append(Finding("WARNING", relative_path, line_number, label is not None))
-			elif label.strip() == branch:
-				findings.append(Finding("ERROR", relative_path, line_number, label.strip()))
+			finding = classify_todo(relative_path, line_number, branch, match.group("label"), context)
+			if finding is not None:
+				findings.append(finding)
 
 	for line_number, comments in sorted(comment_line_map.items()):
 		for comment in comments:
 			for match in TODO_PATTERN.finditer(comment):
-				label = match.group("label")
-				if label is None or label.strip().lower() == "unassigned":
-					findings.append(Finding("WARNING", relative_path, line_number, not label is None))
-				elif label.strip() == branch:
-					findings.append(Finding("ERROR", relative_path, line_number, label.strip()))
+				finding = classify_todo(relative_path, line_number, branch, match.group("label"), context)
+				if finding is not None:
+					findings.append(finding)
+
+	return findings
+
+
+def analyze_file(root: Path, file_path: Path, branch: str) -> list[Finding]:
+	r'''Inspect one Python file and report warnings and errors.'''
+	relative_path = file_path.relative_to(root)
+	source = file_path.read_text(encoding="utf-8", errors="replace")
+	return analyze_python_source(relative_path, source, branch)
+
+
+def analyze_notebook_file(root: Path, file_path: Path, branch: str) -> list[Finding]:
+	r'''Inspect one notebook file and report findings from cell source.'''
+	relative_path = file_path.relative_to(root)
+	try:
+		notebook = json.loads(file_path.read_text(encoding="utf-8", errors="replace"))
+	except json.JSONDecodeError:
+		return []
+
+	findings: list[Finding] = []
+	for cell_number, cell in enumerate(notebook.get("cells", []), start=1):
+		source = cell.get("source", [])
+		if isinstance(source, list):
+			source_text = "".join(source)
+		elif isinstance(source, str):
+			source_text = source
+		else:
+			continue
+
+		if not source_text:
+			continue
+
+		context = f"cell {cell_number}"
+		if cell.get("cell_type") == "code":
+			findings.extend(analyze_python_source(relative_path, source_text, branch, context))
+			continue
+
+		for line_number, line in enumerate(source_text.splitlines(), start=1):
+			for match in TODO_PATTERN.finditer(line):
+				finding = classify_todo(relative_path, line_number, branch, match.group("label"), context)
+				if finding is not None:
+					findings.append(finding)
 
 	return findings
 
@@ -129,6 +190,8 @@ def audit_todos(root: Path, branch: str) -> list[Finding]:
 	findings: list[Finding] = []
 	for file_path in python_files(root):
 		findings.extend(analyze_file(root, file_path, branch))
+	for file_path in notebook_files(root):
+		findings.extend(analyze_notebook_file(root, file_path, branch))
 	return findings
 
 
@@ -139,11 +202,14 @@ def print_findings(findings: list[Finding], branch: str) -> None:
 		return
 
 	for finding in findings:
+		location = f"{finding.path}:{finding.line_number}"
+		if finding.context is not None:
+			location = f"{location} ({finding.context})"
 		if finding.severity == "WARNING":
-			print(f"WARNING {finding.path}:{finding.line_number} {'unassigned' if finding.label is True else f'unlabelled'} TODO")
+			print(f"WARNING {location} {'unassigned' if finding.label == 'unassigned' else 'unlabelled'} TODO")
 		else:
 			print(
-				f"ERROR {finding.path}:{finding.line_number} "
+				f"ERROR {location} "
 				f"TODO label '{finding.label}' matches current branch '{branch}'"
 			)
 
@@ -154,7 +220,7 @@ def print_findings(findings: list[Finding], branch: str) -> None:
 
 def main() -> int:
 	parser = argparse.ArgumentParser(
-		description="Audit TODO labels in Python files against the current Git branch."
+		description="Audit TODO labels in Python files and notebooks against the current Git branch."
 	)
 	parser.parse_args()
 
