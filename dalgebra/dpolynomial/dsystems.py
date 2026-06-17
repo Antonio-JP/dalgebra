@@ -709,7 +709,7 @@ class DSystem:
 
             ::NO EXAMPLE::
 
-            TODO: fix documentation and add examples.
+            TODO (unassigned): fix documentation and add examples.
         '''
         rejected = []
         allowed = []
@@ -783,7 +783,7 @@ class DSystem:
         r'''
             Method to compute the operator resultant of this system.
 
-            TODO: add explanation of resultant.
+            TODO (unassigned): add explanation of resultant.
 
             This method has the optional argument ``verbose`` which, when given,
             will print the logging output in the console (``sys.stdout``)
@@ -1253,7 +1253,7 @@ class DSystem:
 
             ::NO EXAMPLE::
 
-            TODO: add examples
+            TODO (unassigned): add examples
         '''
         if len(variables) == 0:
             variables = self.variables

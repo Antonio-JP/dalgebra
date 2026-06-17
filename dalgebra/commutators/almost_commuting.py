@@ -142,10 +142,10 @@ r'''
         10/9*u_2_0*u_2_1*u_3_0 + 5/9*u_2_0*u_3_3 + 5/9*u_2_0^2*u_3_1 + 5/3*u_2_1*u_3_2 + 20/9*u_2_2*u_3_1 + 10/9*u_2_3*u_3_0 - 5/3*u_3_0*u_3_2 - 5/3*u_3_1^2 + 1/9*u_3_5
         5/9*u_2_0*u_2_3 + 5/9*u_2_0^2*u_2_1 + 5/9*u_2_1*u_2_2 + 5/3*u_2_1*u_3_1 + 5/3*u_2_2*u_3_0 + 1/9*u_2_5 - 10/3*u_3_0*u_3_1
 
-    **Things remaining TODO**
+    **Things remaining to do**
     -----------------------------------------
 
-    1. Incorporate methods to reduce the equations for higher hierarchies.
+    1. TODO (unassigned): Incorporate methods to reduce the equations for higher hierarchies.
 
     **Elements provided by the module**
     -----------------------------------------
@@ -316,7 +316,7 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "direct", s
         * Let `W(L)` the set of almost commuting linear operators. Then `W(L)` is a `C`-vector space
           where `C` is the field of constants of the differential ring `R` where `L` and `A` are built over.
 
-        It was shown by Wilson (TODO: add reference), that for an operator `L` of order `n` in normal form
+        It was shown by Wilson (TODO (unassigned): add reference), that for an operator `L` of order `n` in normal form
 
         .. MATH::
 
