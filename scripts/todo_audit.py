@@ -88,17 +88,40 @@ def docstring_lines(source: str) -> set[int]:
 
     lines: set[int] = set()
 
-    def register(body: list[ast.stmt]) -> None:
-        if not body or not isinstance(body[0], ast.Expr):
+    def register_statement(statement: ast.stmt) -> None:
+        if not isinstance(statement, ast.Expr):
             return
 
-        value = body[0].value
+        value = statement.value
         if isinstance(value, ast.Constant) and isinstance(value.value, str):
-            start = body[0].lineno
-            end = getattr(body[0], "end_lineno", start)
+            start = statement.lineno
+            end = getattr(statement, "end_lineno", start)
             lines.update(range(start, end + 1))
 
-    register(tree.body)
+    def register(body: list[ast.stmt]) -> None:
+        if body:
+            register_statement(body[0])
+
+    def register_module_preamble(body: list[ast.stmt]) -> None:
+        if not body:
+            return
+
+        register_statement(body[0])
+        if lines:
+            return
+
+        index = 0
+        while index < len(body):
+            statement = body[index]
+            if isinstance(statement, ast.ImportFrom) and statement.module == "__future__":
+                index += 1
+                continue
+            break
+
+        if index < len(body):
+            register_statement(body[index])
+
+    register_module_preamble(tree.body)
     for node in ast.walk(tree):
         if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
             register(node.body)
