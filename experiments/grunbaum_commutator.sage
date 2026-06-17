@@ -15,7 +15,7 @@ from dalgebra.logging.logging import logging_file_level, logging_stderr_level
 import logging
 from time import time
 
-# TODO: CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
+# TODO (unassigned): CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
 
 def print_help():
     PAD_SIZE = os.get_terminal_size()[0]

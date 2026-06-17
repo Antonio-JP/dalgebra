@@ -75,7 +75,7 @@ from sage.symbolic.ring import SR
 
 from typing import Collection
 
-from ..dring import DRings, DFractionField, AdditiveMap, DifferentialRing, DifferenceRing
+from ..dring import DRings, DFractionField, AdditiveMap, DifferentialRing, DifferenceRing, MorphismToLaurent
 from .dmonoids import DMonomialMonoid, DMonomialGen, DMonomial, IndexBijection
 
 
@@ -160,6 +160,39 @@ def DifferencePolynomialRing(base, *names : str, **kwds) -> DPolynomialRing_Mono
     if not base.is_difference():
         raise TypeError("The base ring must be a difference ring")
     return DPolynomialRing(base, *names, **kwds)
+
+
+def LaurentMethod(func):
+    r'''
+        Wrapper of a function to enforce some arguments and to define its default behavior.
+
+        This wrapper enforces the argument "laurent_morh" to be defined with a defailt value that must be a morphism
+        whose domain is the base of the parent. If not given, a default laurent morphism is created.
+
+        ::NO EXAMPLE::
+
+        TODO (laurent): check the correct behavior or necessity of this wrapper. (May be better to have it in another file?)
+    '''
+    from functools import wraps
+
+    @wraps(func)
+    def wrapper(self, *args, **kwds):
+        r'''Functional part of the wrapper (::NO EXAMPLE::)'''
+        import inspect
+        sig = inspect.signature(func)
+        if "laurent_morph" not in sig.parameters:
+            raise TypeError(f"The method {func.__name__} does not accept a 'laurent_morph' argument.")
+        elif sig.parameters["laurent_morph"].default is None:
+            raise TypeError(f"The method {func.__name__} does not accept a default value for 'laurent_morph'.")
+        morph = kwds.pop("laurent_morph") if "laurent_morph" in kwds else self.parent().laurent_morphism()
+
+        if morph.domain() != self.parent().base():
+            raise ValueError(f"The morphism to Laurent series must be defined on the base ring of the D-polynomial: got {morph.domain()}, expected {self.parent().base()}")
+
+        kwds["laurent_morph"] = morph
+
+        return func(self, *args, **kwds)
+    return wrapper
 
 class DPolynomial(Element):
     r'''
@@ -1257,6 +1290,474 @@ class DPolynomial(Element):
         coeff = self.coefficient(gen[self.order(gen)])
         rem = -self + coeff*gen[self.order(gen)] # we know ``gen`` do not show up in rem
         return (rem/coeff).inverse_operation(0, times=self.order(gen)) # the division is with coefficient only
+
+    ###################################################################################
+    ### Solving - Laurent Series methods
+    ### TODO (laurent): these methods can be considered complete when we can compute (only for the 1-differential case) the following:
+    ### 1. The indicial polynomial for a DPolynomial.
+    ### 2. The power series solutions to a D-algebraic equation.
+    ### 3. The Laurent series solutions to a D-algebraic equation.
+    ### In order to do so, we need to recheck all the implementation we did here.
+    ###################################################################################
+    @LaurentMethod
+    def is_DFinite(self, gen: DMonomialGen, *, laurent_morph: MorphismToLaurent = None) -> bool:
+        r'''
+            Method to check if a d-polynomial is D-finite with respect to a variable.
+
+            A d-polynomial `p` is D-finite with respect to a variable `u` it is a linear equation
+            with polynomial coefficients. This if not trivial to decide, since we need an embedding into
+            the ring of formal power series (or Laurent series).
+
+            ::NO EXAMPLE::
+        '''
+        from ..pseries.laurent import LSeries_Element
+        
+        return all(laurent_morph(coeff).type() is LSeries_Element.TYPES.polynomial for coeff in self.coefficients(gen))
+
+    @staticmethod
+    def _monomial_order(m: DMonomial, k: Element) -> int:
+        r'''
+            Static method to compute the order (as a Laurent series) of a particular monomial. (::NO EXAMPLE::)     
+        '''
+        order = k.parent().zero()
+        for (_,o),e in m._variables.items():
+            order += (k - o[0])*e
+        return order
+    
+    @staticmethod
+    def _monomial_min_value(m: DMonomial, gen: DMonomialGen, k: Element) -> int:
+        r'''
+            Static method to compute the minimum order (as a Laurent series) of a particular monomial. (::NO EXAMPLE::)
+        '''
+        from sage.arith.misc import falling_factorial
+        R = pushout(gen[0].parent(), k.parent())
+        u = R(gen[0])
+        k = R(k)
+        result = R.one()
+        for (_,(o,)),e in m._variables.items():
+            result *= (falling_factorial(k, o)*u)**e
+        return result
+
+    @staticmethod
+    def _sample_in_interval(lower: Element, upper: Element) -> int | str:
+        r'''
+            Static method to sample an integer in a given interval. The interval can be open or closed, and it can be unbounded. If the interval is empty, we return "Empty". (::NO EXAMPLE::)
+        '''
+        from sage.functions.other import floor, ceil 
+        if lower == -oo and upper == oo:
+            return ZZ(0)
+        elif lower == -oo:
+            return floor(upper) if upper not in ZZ else ZZ(upper) - 1
+        elif upper == oo:
+            return ceil(lower) if lower not in ZZ else ZZ(lower) + 1
+        elif upper - lower < 1:
+            if lower in ZZ: # no space in the interval
+                return "Empty"
+        
+        return ceil(lower) if lower not in ZZ else ZZ(lower) + 1
+         
+    def _generic_pseries_solution(self, u: DMonomialGen, varnames: str = "A", laurent_morph: MorphismToLaurent = None) -> Element | tuple[Element]:
+        r'''
+            Compute a generic power series solution for the equation ``self(u) == 0``. (::NO EXAMPLE::)
+
+            TODO (laurent): Fix and complete this documentation.
+        '''
+        order = self.order(u)
+        if self.degree(u[order]) > 1: # equation is not linear -> we derivate
+            return self.derivative()._generic_pseries_solution(u, varnames, laurent_morph=laurent_morph)
+        
+        ## We split the computation factoring the polynomial
+        ## In case only one factor exists, we do the computations
+        factors = self.factor()
+        if len(factors) > 1:
+            return tuple(factor[0]._generic_pseries_solution(u, varnames, laurent_morph=laurent_morph) for factor in factors)
+        
+        ## In the case of only one factor, we do the computations
+        parent_c = self.parent().add_constants(*[f"{varnames}_{i}" for i in range(order)] + [varnames])
+        # C_p = parent_c.constant_ring()
+        base_p = parent_c.base()
+
+        variables = [base_p(f"{varnames}_{i}") for i in range(order)]
+        # base_p.laurent_morphism(constant=C_p, set_default=True) # this should extend laurent_morph
+
+        try:
+            return self.power_series_solution(u, {i : variables[i] for i in range(len(variables))})
+        except AssertionError: # this means the term of highest order vanishes and we can not extend the solution
+            return [self, "Cannot-extend"]
+        
+    def _indicial_low_order(self, u: DMonomialGen, varnames: str = "A", laurent_morph: MorphismToLaurent = None) -> Ideal_generic:
+        r'''
+            Auxiliary method to compute the indicial ideal for low order solutions of the equation ``self(u) == 0``. (::NO EXAMPLE::)
+        '''
+        from sage.rings.ideal import Ideal
+        
+        order = self.order(u)
+        # We are looking for conditions in the initial conditions for this equation to have a low-order solution.
+        # This is always true in the case of a linear differential equation.
+        # The out can be the ideal (1) for no solutions, or the ideal (0) for any combination is solution.
+        # TODO (laurent): Go on here
+        ## Idea 1: create truncated Laurent Series "sum_{i=0}^n a_it^i", plug it into the equation and check if it can get to zero.
+        ##         - increase the truncation until... when?
+        ##         * there must be an order where, beyond it, all elements of order < self.order() do not affect any longer. If we conclude there that
+        ##           the only solution is having all terms of lower order 0, then there is no solution of low order.
+        gen_sols = self._generic_pseries_solution(u, varnames, laurent_morph=laurent_morph)
+        if not isinstance(gen_sols, tuple):
+            gen_sols = (gen_sols,)
+
+        output = list()
+        for gen_sol in gen_sols:
+            if not isinstance(gen_sol, list):
+                mor = self.parent().laurent_morphism({u.variable_name(): gen_sol}, constant=gen_sol.parent().constant_ring())
+                self_eval = mor(self) # we evaluate the equation with the solution. Since this should be zero, we get conditions on the coefficients of the solution.
+                parent_c = self_eval.parent().base() # this include all the parameters necessary
+                aux = parent_c(varnames).numerator().wrapped # this is the auxiliary variable to check the order
+
+                I_gens = [prod(1-aux*gen_sol[i] for i in range(order)).numerator().wrapped] # conditions to have order at least given by "order"
+                I = [Ideal(I_gens).elimination_ideal(aux)] # ideal for candidates of order at least "order"
+                for _ in range(2*order): # This stop condition is a HEURISTIC
+                    I_gens.append(self_eval[len(I_gens)-1].numerator().wrapped) # we get the next condition from self_eval to be zero
+                    I.append(Ideal(I_gens).elimination_ideal(aux)) # we get the ideal for candidates of order at least len(I_gens)
+                
+                output.append((gen_sol, I[-1]))
+            else:
+                output.append(gen_sol)
+
+        return tuple(output) if len(output) > 1 else output[0]
+
+    @cached_method
+    @LaurentMethod
+    def indicial_equation(self, u: DMonomialGen, varname: str = "k", *, laurent_morph: MorphismToLaurent) -> tuple[tuple[tuple[Element, list[Element]]], tuple[Element, Element], None]:
+        r'''
+            Method to compute the indicial equation for the equation ``self(u) == 0``. (::NO EXAMPLE::)
+        '''
+        ## Getting variables that may be useful - data of the ring of computation       
+        DO = self.parent()
+        F = DO.base()
+        LS = laurent_morph.codomain()
+        C = LS.constant_ring()
+        t = LS.gen()
+
+        ## Generating variables that may be useful - extra data for indicial computations
+        P = DO.add_constants(varname); k = P.base()(varname); P = P.constant_ring()
+        ## P is a fraction field with (maybe) more variables
+        PP = P.base().polynomial_ring(varname) # we push other variables to the bottom
+
+        ## Getting variables that may be useful - data of the polynomial
+        cs =[laurent_morph(c) for c in self.coefficients(u)]
+        ms = self.monomials(u)
+        ord_self = self.order(u)
+        os =[c.order() for c in cs]
+        mc =[c[o] for (c,o) in zip(cs,os)]
+        mo = [self._monomial_order(m,k) for m in ms]
+        mco = [mo[i]+os[i] for i in range(len(mo))]
+        ev_os = dict() # maps order of `u` to the orders of the monomials
+        m_ev_os = dict() # maps order of `u` to the minimum order of the monomials
+
+        ## Computing the candidates (critical values for the indicial variable)
+        ## REMARK: we keep the rational candidates in case we need to consider intervals due to the existence of an "all" term.
+        diff = ["all" if mco[i]-mco[j] == 0 else [QQ(el[0]) for el in PP(P(mco[i]-mco[j]).numerator()).roots() if el[0] in QQ] for i in range(len(mo)) for j in range(i+1,len(mo))]
+        candidates = sorted(set(sum((el for el in diff if el != "all"), []))) # contains the critical points
+        have_all = "all" in diff
+
+        ## Filtering candidates:
+        ##  - Valid if integer and not in the range (0, 1, ..., order(u)-1)
+        ##  - Valid if several terms get to the same order
+        to_eval_candidates = list()
+        for c in candidates:
+            ev_os[c] = [QQ(mco[i](**{str(k): c})) for i in range(len(mo))] # this evaluation work since c is already in QQ
+            m_ev_os[c] = min(ev_os[c])
+            if (c in ZZ) and (c >= 0 and c < ord_self):
+                to_eval_candidates.append("Small")
+            elif c in ZZ and ev_os[c].count(m_ev_os[c]) == 1:
+                to_eval_candidates.append("No-cancellation")
+            elif c not in ZZ:
+                to_eval_candidates.append("No-integer")
+            else:
+                to_eval_candidates.append(c)
+
+        ## Evaluating the candidates:
+        ##  - If valid, we compute the minimal term on the terms with minimal order. This will vanish
+        equ_candidates = list()
+        for c in to_eval_candidates:
+            if isinstance(c, str):
+                equ_candidates.append(c)
+            else:
+                filtered = [False if ev_os[c][i] != m_ev_os[c] else True for i in range(len(mo))]
+                equ_candidates.append(sum((mc[i]*self._monomial_min_value(ms[i],u,k) for i in range(len(mo)) if filtered[i]), 0))
+
+        ## Filtering intervals:
+        ##   - we evaluate in a random point of the interval and check if several terms are at minimum. 
+        ### generating the intervals: the first and last goes from/to -oo/oo
+        if have_all:
+            if len(candidates) > 0: # there are several intervals
+                intervals = ([(-oo,candidates[0])] + [(candidates[i],candidates[i+1]) for i in range(len(candidates)-1)] + [(candidates[-1], oo)]) 
+            else:
+                intervals = [(-oo, oo)]
+        else:
+            intervals = list()
+        ### generating values in the intervals. If there is no integer in between, we store "Empty"
+        all_candidates = [self._sample_in_interval(*interval) for interval in intervals]
+        to_eval_all = list()
+        for c in all_candidates:
+            if c == "Empty":
+                to_eval_all.append(c)
+            else:
+                ev_os[c] = [ZZ(mco[i](**{str(k): c})) for i in range(len(mo))]
+                m_ev_os[c] = min(ev_os[c])
+                if ev_os[c].count(m_ev_os[c]) > 1:
+                    to_eval_all.append(c)
+                else:
+                    to_eval_all.append("No-cancellation")
+
+        ## Evaluating the all_candidates:
+        ##  - If valid, we compute the minimal term on the terms with minimal order. This will vanish
+        equ_all = list()
+        for c in to_eval_all:
+            if isinstance(c, str):
+                equ_all.append(c)
+            else:
+                filtered = [False if ev_os[c][i] != m_ev_os[c] else True for i in range(len(mo))]
+                equ_all.append(sum((mc[i]*self._monomial_min_value(ms[i],u,k) for i in range(len(mo)) if filtered[i]), 0))
+        
+        ## We solve the indicial equations in each place
+        ### - Creating the ring where the evaluation will belong
+        PP = P.base().add_constants(f"{u.variable_name()}_0").polynomial_ring(varname).wrapped
+        ### - Getting the roots for the critical candidates
+        roots_candidates = list()
+        for i in range(len(equ_candidates)):
+            if isinstance(equ_candidates[i], str):
+                roots_candidates.append(equ_candidates[i])
+            else:
+                equ = PP(str(equ_candidates[i]))(**{varname: candidates[i]}) ## cast work because name is set on purpose
+                ## The evaluation may be constant, so no value of "u_0" will vanish this term -> no solution
+                ## Otherwise, the zeroes of the equation remaining are initial conditions valid for the solution
+                roots_candidates.append(("No-generic", equ) if equ in QQ and equ != 0 else equ)
+        ### - Getting the roots for the intervals
+        ###   Correct values are integer roots on "k" of the values in the interval that are not in the range (0, 1, ..., order(u)-1)
+        ###   that annihilate the polynomial independently of the value of "u_0".
+        ###   TODO (laurent): Refine this idea to consider integer values for "k" and decide when there is "u_0" that makes this polynomial vanish
+        ###         "for all" values of "k" in the interval.
+        roots_all = list()
+        for i in range(len(equ_all)):
+            if isinstance(equ_all[i], str):
+                roots_all.append([])
+            else:
+                equ = PP(str(equ_all[i])) ## cast work because name is set on purpose
+                roots = [el[0] for el in equ.roots()]
+                interval = intervals[i]
+                roots_all.append([
+                    root for root in roots if (
+                        (not root in ZZ) or 
+                        (
+                            root in ZZ and 
+                            (ZZ(root) > interval[0] and ZZ(root) < interval[1]) and 
+                            (ZZ(root) < 0 or ZZ(root) >= ord_self)
+                        )
+                    )])
+        
+        ## TODO (laurent): Perform the analysis for the case when the order of the solution is in (0,1,...,ord(L)-1)
+        conditions_low_order = self._indicial_low_order(u, laurent_morph=laurent_morph)
+
+        ## Returning the results:
+        ##  - For critical candidates: a map "order" -> "condition"
+        ##  - For intervals: a map "interval" -> "orders with solution" ## TODO (laurent): this may be refined later
+        ##  - For low order candidates: an ideal of conditions for the first order terms to have a solution ## TODO (laurent): this may be refined later
+        return tuple((tuple(zip(intervals, roots_all)), tuple(zip(candidates, roots_candidates)), conditions_low_order))
+
+    @staticmethod
+    def _monomial_max_data(monomial: DMonomial, k: Element, d: Element, u_d: Element) -> Element:
+        r'''
+            Given a term `coeff*monomial`, if we plug for the variable `u` a formal Laurent series of order `d`, 
+            we can check which coefficient of the series can affect to this term at order `k`.
+
+            More precisely, we use the fact that if we multiply two Laurent series of orders `d_1` and `d_2`, 
+            the resulting series at order `k` will be affected by coefficients of order `k-d_2` from the first factor and 
+            `k-d_1` from the second factor.
+
+            If we now consider the iterative case where `monomial` is the product of several factors and we combine it 
+            with `coeff`, we can check the maximal order of the solution `u` that appears at order `k`.
+
+            ::NO EXAMPLE::
+        '''
+        ## Generate the index of the maximum coefficient appearing at order `k` in the product
+        ## `coeff*monomial` when variable is a formal Laurent series of order `d`.
+
+        ## FIRST: compute the orders of the solution for each factor (i.e., for each order of the variable `variable`)
+        ## This allows to know the value of the coefficient to be used for maximum order.
+        exponents = dict()
+        orders = dict()
+        for (_,(o,)),e in monomial._variables.items():
+            exponents[o] = e
+            orders[o] = (d - o if (not d in ZZ or ZZ(d) < 0) else max(0, ZZ(d) - o))
+
+        ## SECOND: we iterate over the orders. For each, we take the minimum possible for all but one (that will have the maximum possible order)
+        appear = dict()
+        coeff_appear = dict()
+        for o in exponents:
+            appear[o] = k - sum(exponents[o2]*orders[o2] for o2 in exponents if o2 != o) - (exponents[o]-1)*orders[o] + o
+            coeff_appear[o] = (
+                exponents[o]*
+                falling_factorial(k - sum((exponents[o2]*orders[o2] for o2 in exponents if o2 != o), 0) - (exponents[o]-1)*orders[o] + o ,o)*
+                (falling_factorial(d,o)*u_d)**(exponents[o]-1)*
+                prod(((falling_factorial(d,o2)*u_d)**(exponents[o2]) for o2 in exponents if o2 != o), 1)
+            )
+        
+        ## THIRD: for see which orders provide the maximal coefficient (from `appear`)
+        if len(appear) > 0:
+            max_appear = max(appear.values())
+
+            ## FOURTH: we sum all the coefficients going with the maximal term
+            total_coeff = sum(coeff_appear[o] for o in exponents if appear[o] == max_appear)
+            
+            return max_appear, total_coeff
+        else:
+            return -oo, 0 ## No variable in the monomial means nothing affects this term. (d-1) is below the bound for it, and the coefficient gets a zero
+    
+    @staticmethod
+    def _monomial_max_data_coeff(coeff: Element, monomial: DMonomial, k: Element, d: Element, u_d: Element) -> Element:
+        r'''
+            Auxiliaryt method to getting the data for a monomial.
+
+            ::NO EXAMPLE::
+        '''
+        order_coeff = coeff.order()
+        order, factor = DPolynomial._monomial_max_data(monomial, k-order_coeff, d, u_d)
+        return order, coeff[order_coeff]*factor
+
+    @cached_method
+    @LaurentMethod
+    def indicial_leading(self, u: DMonomialGen, d: str = "d",
+                         varname: str = "n", *, laurent_morph: MorphismToLaurent) -> tuple[Element, Element]:
+        r'''
+            Compute the leading recursive contribution for a Laurent expansion coefficient.
+
+            Let `U = L(y)` be the Laurent series obtained by substituting a formal Laurent solution
+            `y = \sum_{n\geq d} a_n t^n` into ``self`` (seen as an equation in ``u``). For each target
+            coefficient `U[k]`, this method computes the coefficient of `a_N` with maximal index `N` that
+            can affect `U[k]`.
+
+            The method returns:
+
+            * the detected leading index `N(k)` (or ``None`` when it cannot be uniquely selected),
+            * the corresponding multiplier
+
+            INPUT:
+
+            * ``u``: main infinite variable to analyze.
+            * ``d``: order of the Laurent ansatz. If ``None``, a symbolic parameter is used;
+                otherwise it must be a single element (e.g. an integer or a symbolic value).
+            * ``varname``: name of the symbolic index variable used for the target coefficient.
+            * ``laurent_morph``: Laurent morphism for coefficient expansion (handled by :func:`LaurentMethod`).
+
+            OUTPUT:
+
+            A tuple ``(leading_index, leading_multiplier)``.
+
+            ::NO EXAMPLE::
+        '''
+        DO = self.parent()
+
+        if DO.noperators() > 1:
+            raise NotImplementedError("[indicial_leading] Method currently implemented only for one operator.")
+        if not DO.is_differential():
+            raise NotImplementedError("[indicial_leading] Method currently implemented only in the differential case.")
+
+        # Normalizing/validating the target generator.
+        if isinstance(u, str):
+            u = DO.gen(u)
+        if not isinstance(u, DMonomialGen) or u not in DO.gens():
+            raise TypeError(f"[indicial_leading] The variable must be one of the generators of {DO}.")
+
+        # We work in an auxiliary ring with symbolic variables for k and (optionally) d.
+        # This keeps compatibility with ring elements appearing in the coefficients.
+        aux = DO.add_constants(*([varname, "u_d"] + [d] if isinstance(d, str) else [])).base()
+        k = aux(varname)
+        u_d = aux("u_d")
+        d = aux(d)
+
+        # Coefficients and monomials with respect to u, as in indicial_equation.
+        cs = [laurent_morph(c) for c in self.coefficients(u)]
+        ms = self.monomials(u)
+        # We compute the order of the highest term affecting each summand of the equation, to detect the leading contribution.
+        data = [self._monomial_max_data_coeff(c, m, k, d, u_d) for (c, m) in zip(cs, ms)]
+        os, coeffs = zip(*data)
+        try:
+            diff = [ZZ(order - k) if order is not -oo else -oo for order in os]
+            max_diff = max(diff)
+            # We compute the element multiplying the leading term
+            # We use u_d for the lowest term order of the generic solution since this will appear naturally
+            equation = sum(coeffs[i] for i in range(len(cs)) if diff[i] == max_diff) # this is all the contribution for the leading coefficient
+
+            return (max_diff, equation)
+        except TypeError: # the data are not integers: we return the raw data, without considering the maximal part
+            return [order - k for order in os], coeffs
+
+    def power_series_solution(self, gen: DMonomialGen, initials: dict[int, Element], *, lau_var: str = "t") -> Element:
+        r'''
+            Computes the power series solution of the equation ``self(gen) == 0`` with given initial conditions.
+
+            ::NO EXAMPLE::
+        '''
+        from ..pseries.laurent import LaurentSeries
+        from sage.functions.other import factorial
+        from functools import lru_cache
+
+        ## We check the initials:
+        if any(ini.derivative() != 0 for ini in initials.values()):
+            raise TypeError(f"Initial conditions must be all constants")
+        from functools import reduce
+        C = pushout(self.parent().constant_ring(), reduce(lambda p,q : pushout(p,q), (el.parent().constant_ring() for el in initials.values())))
+        computed = {k : C(ini) for k, ini in initials.items()}
+        LR = LaurentSeries(C, lau_var)
+        mor = self.parent().base().laurent_morphism(constant=C)
+        
+        ## Checking the conditions for the generator
+        if self.parent().noperators() > 1:
+            raise NotImplementedError("[laurent_series_solution] Method implemented only for 1 operator.")
+        elif self.parent().ngens() > 1:
+            raise NotImplementedError("[laurent_series_solution] Method implemented only for 1 variable.")
+        
+        order = self.order(gen)
+        if self.degree(gen[order]) != 1:
+            raise NotImplementedError("[laurent_series_solution] Method implemented only for linear polynomials in the main variable.")
+        
+        lc = self.coefficient_full(gen[order]) # since degree is one and the coefficients are constants, this is a constant
+        rem = lc*gen[order] - self 
+
+        def eval_monomial(m: DMonomial) -> Element:
+            r'''Auxiliary method to evaluate a monomial in the initial values (::NO EXAMPLE::)'''
+            output = C.one()
+            for (_,o),e in m._variables.items():
+                output*=init_values(o[0])**e
+            return output
+        
+        @lru_cache(maxsize=None)
+        def eval_polynomial(p: DPolynomial) -> Element:
+            r'''Auxiliary method to evaluate a polynomial in the initial values (::NO EXAMPLE::)'''
+            return sum(mor(self.parent().base()(c))[0]*eval_monomial(m) for (m,c) in zip(p.monomials(gen), p.coefficients(gen)))
+        
+        ## We check that the leading coefficient does not vanish
+        assert eval_polynomial(lc) != 0, "The leading coefficient must not vanish for the method to work"
+
+        def init_values(n: int) -> Element:
+            r'''Method to compute the n-th initial value of the power series solution to ``self(gen) == 0``. (::NO EXAMPLE::)'''
+            if n < 0: return C.zero() # power series has zero negative exponents
+            elif not n in computed: 
+                ## Case with 0 <= n < order must be given with initials
+                if n < order:
+                    raise ValueError(f"Initial condition for order {n} not given (not enough data)")
+
+                k = n-order # k >= 0
+                num_der = eval_polynomial(rem.derivative(times=k)) # recursion if needed up to order n-1
+                den_ders = [eval_polynomial(lc.derivative(times=k)) for k in range(k+1)] # recursion if needed up to order n-1
+
+                computed[n] = (num_der - sum(init_values(order+l)*den_ders[k-l] for l in range(k))) / den_ders[0] # recursion if needed up to order n-1
+            return computed[n]
+        
+        return LR.element_class(LR, 
+                                coefficient_map=lambda k: 
+                                    (init_values(k) / factorial(k)) if k > 0 else init_values(k), 
+                                order=0)
 
     ###################################################################################
     ### Weight methods
@@ -2522,6 +3023,34 @@ class DPolynomialRing_Monoid(Parent):
             TODO (unassigned): Add some examples to this method    
         '''
         return self.change_ring(self.base().add_constants(*new_constants))
+    
+    def _laurent_morphism(self, imgs, constant=None, set_default=False) -> MorphismToLaurent:
+        r'''
+            Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
+
+            ::NO EXAMPLE::
+
+            TODO (laurent): Check the correct implementation of this method. Probably not possible while we can not 
+            get the solutions of a d-algebraic equation.
+        '''
+        ## Images for each generator are provided in the input imgs in the format {name : image}
+        ## Hence, for a morphism to exist we need images for ALL GENERATORS
+        if any(name not in imgs for name in self.variable_names()):
+            raise ValueError("Impossible to create a Laurent morphism without images for all generators")
+        my_imgs = {name : img for name, img in imgs.items() if name in self.variable_names()}
+        rem_imgs = {name : img for name, img in imgs.items() if name not in self.variable_names()}
+
+        ## First, we build the base morphism 
+        try:
+            base_morph = self.base().laurent_morphism(rem_imgs, constant=constant, set_default=set_default)
+        except ValueError: # we try to check for a default morphism
+            base_morph = self.base().laurent_morphism(None, constant=constant, set_default=set_default)
+
+        ## We cast the images to the obtained codomain
+        my_imgs = {name : base_morph.codomain()(img) for name, img in my_imgs.items()}
+
+        ## We build now the morphism for the whole ring
+        return DPolynomialLaurentMorphism(self, base_morph.codomain(), my_imgs, base_morph)
 
     def constant_ring(self):
         r'''DRing method to compute the constant ring of the ring of d-polynomials. (::NO EXAMPLE::)'''
@@ -3272,6 +3801,29 @@ class DPolyRingFunctor (ConstructionFunctor):
         if len(variables) > len(new_vars) or new_vars.intersection(self.variables()):
             raise ValueError(f"Repeated variables: impossible to extend the Functor")
         return self.__class__(self.variables().union(new_vars))
+
+
+class DPolynomialLaurentMorphism(MorphismToLaurent):
+    r'''
+        Laurent morphism class associated with :class:`DPolynomialRing_Monoid`.
+
+        ::NO EXAMPLE::
+    '''
+    from ..pseries.laurent import LSeries_Element
+    def __init__(self, domain, codomain, images, base_morphism):
+        super().__init__(domain, codomain, base_morphism)
+        self._images = {i : images[gen.variable_name()] for (i,gen) in enumerate(domain.gens())} # images indexed by the index of the generator
+
+    def _call_(self, poly: DPolynomial) -> LSeries_Element:
+        r'''Call method for a morphism (::NO EXAMPLE::)'''
+        return sum((self._base(c)*self._call_monomial_(m) for (m,c) in zip(poly.monomials(), poly.coefficients())), self.codomain().zero())
+
+    def _call_monomial_(self, monomial: DPolynomial) -> LSeries_Element:
+        r'''Private method to evaluate one particular monomial (::NO EXAMPLE::)'''
+        output = self.codomain().one()
+        for ((v,o),e) in monomial._variables.items():
+            output *= self._images[v].derivative(times=o[0])**e
+        return output
 
 
 class DPolynomialToLinOperator (Morphism):
