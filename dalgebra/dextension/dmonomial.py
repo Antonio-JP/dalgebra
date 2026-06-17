@@ -82,8 +82,6 @@ r'''
     sage: e_x.difference()
     e*e_x
 
-    ::IGNORE AUDIT::
-
     TODO (monomial): this is a very dense module with many tasks to be done. In particular, we could merge into the main branch when:
     * The implementation covers all the algorithms on Bronstein's book.
     * The implementation is integrated with the basic factory for DRings.
