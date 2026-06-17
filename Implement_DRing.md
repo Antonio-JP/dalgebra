@@ -66,20 +66,6 @@ def add_constants(self, *new_constants: str) -> Parent:
 - **Purpose**: extend ring by new transcendental constants (constant for all operators).
 - **Return**: new `DRing`-compatible parent with extended base.
 
-### `_laurent_morphism`
-
-```python
-def _laurent_morphism(
-    self,
-    imgs: dict[str | Element, Element],
-    constant: Parent = None
-) -> MorphismToLaurent:
-    ...
-```
-
-- **Purpose**: internal constructor used by public `laurent_morphism(...)`.
-- **Return**: `MorphismToLaurent` from `self` to a Laurent-series codomain.
-
 ---
 
 ## 2) `DRings.ElementMethods` required implementation point

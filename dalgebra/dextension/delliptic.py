@@ -146,8 +146,7 @@ from sage.structure.parent import Parent
 
 from typing import Collection
 
-from ..dring import AdditiveMap, DRings, MorphismToLaurent
-from ..pseries.laurent import LSeries_Ring
+from ..dring import AdditiveMap, DRings
 
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
@@ -757,19 +756,6 @@ class DElliptic_Field(Parent):
         r'''DRing method to add constants to the DElliptic extension. (::NO EXAMPLE::)'''
         return self.change_base(self.base().add_constants(*new_constants))
 
-    def _laurent_morphism(self, imgs, constant=None, set_default=False) -> MorphismToLaurent:
-        r'''Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`. (::NO EXAMPLE::)'''
-        img_gen = imgs.pop(str(self.gen())) # if this is not provided, then this is an error
-        base_morph = self.base().laurent_morphism(imgs, constant=constant, set_default=set_default) # we compute the morphism for the base ring
-
-        ## We check that the image of self satisfies the corresponding algebraic relation
-        I, I_p = img_gen, img_gen.derivative()
-        poly_img = self.__min_poly(**{self.varname(): I, self.variable_p(): I_p})
-        if poly_img.is_zero() is False:
-            raise ValueError(f"The image of the generator does not satisfy the algebraic relation")
-        
-        return DEllipticLaurentMorphism(self, base_morph, img_gen)
-
     def constant_ring(self) -> Parent:
         r'''
             Overridden method from :func:`~DRings.ParentMethods.constant_ring`.
@@ -845,39 +831,6 @@ class DEllipticFunctor(ConstructionFunctor):
         if (other.__class__ == self.__class__):
             return str(self.__min_poly) == str(other.__min_poly) and self.__varname == other.__varname
         return False
-
-
-class DEllipticLaurentMorphism(MorphismToLaurent):
-    r'''
-        Laurent morphism class associated with :class:`DElliptic_Field`.
-
-        ::NO EXAMPLE::
-    '''
-    def __init__(self, domain: DElliptic_Field, codomain: LSeries_Ring, base_morph: Morphism, img_gen: DElliptic_Element):
-        if not isinstance(domain, DElliptic_Field):
-            raise TypeError(f"Domain must be a DElliptic_Field")
-        self._img = self.codomain()(img_gen)
-        self._img_p = self.codomain()(self._img.derivative())
-        super().__init__(domain, codomain, base_morph)
-        
-    def _call_(self, element: DElliptic_Element):
-        r'''
-            See :func:`Morphism._call_` for more information.
-
-            ::NO EXAMPLE::
-        '''
-        # element.coeffs are elements in F(eta)
-        # self._base maps from F to the Laurent series
-        numerators = [element.numerator() for element in element.coeffs]
-        denominators = [element.denominator() for element in element.coeffs]
-
-        ## We compute the image of each element above
-        num_imgs = [sum(self._base(c)*self._img**i for (i,c) in enumerate(num.coefficients(False))) for num in numerators]
-        den_imgs = [sum(self._base(c)*self._img**i for (i,c) in enumerate(den.coefficients(False))) for den in denominators]
-        ## den_imgs has no zero since we are working already in the field
-
-        new_coeffs = [num_img/den_img for (num_img,den_img) in zip(num_imgs,den_imgs)]
-        return sum(new_coeff*self._img_p**i for (i,new_coeff) in enumerate(new_coeffs))
 
 #########################################################################
 ### COERCIONS AND CONVERSION MORPHISMS FOR ELLIPTIC EXTENSIONS

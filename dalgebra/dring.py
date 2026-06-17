@@ -978,104 +978,6 @@ class DRings(Category):
             '''
             raise NotImplementedError("Method 'add_constants' not implemented")
 
-        def laurent_morphism(self, imgs: dict[str|Element, Element] = None, constant: Parent = None, set_default: bool = False) -> MorphismToLaurent:
-            r'''
-                Method to build a morphism from ``self`` to a Laurent series ring.
-
-                This method is a public wrapper around :func:`_laurent_morphism` and can
-                optionally store a default morphism for later reuse.
-
-                INPUT:
-
-                * ``imgs``: images for the generators of ``self`` in the Laurent series ring.
-                    This argument is required to create a new morphism.
-                * ``constant`` (``None`` by default): field/ring of constants to enforce in the
-                    Laurent series codomain.
-                * ``set_default`` (``False`` by default): if ``True``, the morphism created by
-                    :func:`_laurent_morphism` is stored and returned in later calls where no input
-                    data is provided.
-
-                OUTPUT:
-
-                A :class:`MorphismToLaurent` from ``self`` to a Laurent series ring.
-
-                BEHAVIOR:
-
-                * If ``imgs`` and ``constant`` are both ``None``, this method returns the default
-                    Laurent morphism previously stored.
-                * Otherwise, this method calls :func:`_laurent_morphism(imgs, constant)`.
-                * If ``set_default`` is ``True``, the computed morphism is stored as default,
-                    replacing the previous one if present.
-
-                ::NO EXAMPLE::
-
-                TODO: for laurent
-            '''
-            if imgs is None:
-                if hasattr(self, "_default_laurent_morphism"):
-                    constant = constant if constant is not None else "default"
-                    if not constant in self._default_laurent_morphism:
-                        ## We try to build it from other default morphism
-                        try:
-                            mor = self._default_laurent_morphism["default"]
-                        except KeyError:
-                            mor = list(self._default_laurent_morphism.values())[0]
-                        codomain = mor.codomain().change_base(constant) # Laurent series with new constants
-                        self._default_laurent_morphism[constant] = ExtendedLaurentMorphism(mor.domain(), codomain, mor)
-                    return self._default_laurent_morphism[constant]
-                elif all(gen.d_constant() for gen in self.gens()):
-                    ## We can build a default morphism from the generators
-                    imgs = {gen: gen for gen in self.gens()}
-                    return self.laurent_morphism(imgs, constant, set_default=True)
-                else:
-                    raise ValueError("No default Laurent morphism has been set")
-            
-            if imgs is None:
-                raise ValueError("Argument 'imgs' is required to create a Laurent morphism")
-            elif self.noperators() != 1 or not self.is_differential():
-                raise ValueError("This method is only available for differential rings with exactly one operator")
-
-            output = self._laurent_morphism(imgs, constant)
-
-            if set_default:
-                self._default_laurent_morphism = {constant if constant is not None else "default": output}
-                try:
-                    output.codomain().register_coercion(output)
-                except AssertionError:
-                    ## We remove the previous coercion
-                    dom, codom = output.domain(), output.codomain()
-                    codom._remove_from_coerce_cache(dom)
-                    codom._introspect_coerce()['_coerce_from_list'].remove([mor for mor in codom._introspect_coerce()['_coerce_from_list'] if mor.domain() == dom][0])
-                    ## We register the new coercion
-                    codom.register_coercion(output)
-
-            return output
-
-        @abstract_method
-        def _laurent_morphism(self, imgs: dict[str|Element, Element], constant: Parent = None, set_default: bool = False) -> MorphismToLaurent:
-            r'''
-                Internal method to build a morphism to a Laurent series ring.
-
-                Concrete parent classes in :class:`DRings` must implement this method.
-
-                INPUT:
-
-                * ``imgs``: images for the generators of ``self`` in the Laurent series ring.
-                * ``constant`` (``None`` by default): field/ring of constants to enforce in the
-                    Laurent series codomain.
-                * ``set_default`` (``False`` by default): if ``True``, the morphism created by
-                    this method is stored and returned in later calls where no input data is provided.
-
-                OUTPUT:
-
-                A :class:`MorphismToLaurent` from ``self`` to a Laurent series ring.
-
-                ::NO EXAMPLE::
-
-                TODO: for laurent
-            '''
-            raise NotImplementedError("Method '_laurent_morphism' not implemented")
-
     ## Defining methods for the Element structures of this category
     class ElementMethods: #pylint: disable=no-member
         r'''
@@ -1968,44 +1870,6 @@ class DRing_Wrapper(Parent):
         '''
         self.__constant[operation] = ring
 
-    def _laurent_morphism(self, imgs, constant=None, _: bool = False) -> MorphismToLaurent:
-        r'''
-            Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
-
-            TODO: for laurent
-
-            ::NO EXAMPLE::
-        '''
-        ## TODO: Check this implementation when the wrapped ring is a quotient ring.
-        given_imgs = {str(gen): imgs[str(gen)] for gen in self.wrapped.gens() if str(gen) in imgs}
-        rem_gens = [gen for gen in self.wrapped.gens() if str(gen) not in imgs]
-
-        ## It is necessary that all remaining variables are constants
-        if any(not self(gen).d_constant() for gen in rem_gens):
-            raise ValueError(f"Unable to create Laurent morphism because not all variables have an image and some of the remaining variables are not constant. Remaining variables: {rem_gens}")
-        
-        ## We build the codomain: if constant is given, we use it
-        if constant is None:
-            base_wo_gens = self.wrapped.base() # we remove the gens
-            new_base = PolynomialRing(base_wo_gens, rem_gens) if len(rem_gens) > 0 else base_wo_gens
-            constant = DifferentialRing(new_base) # the derivative is the zero derivative
-        if not constant.is_field():
-            constant = constant.fraction_field()
-
-        from .pseries.laurent import LaurentSeries
-        codomain = LaurentSeries(constant, "t")
-        given_imgs = {str(gen): codomain(img) for gen, img in given_imgs.items()}
-        given_imgs.update({str(gen): constant(gen) for gen in rem_gens})
-        output = DRingWrapperLaurentMorphism(self, codomain, given_imgs)
-
-        ## We check the validity of the morphism by testing it on the generators
-        for gen in self.gens():
-            if str(gen) in given_imgs:
-                if (output(gen.derivative()) - output(gen).derivative()).is_zero() is False:
-                    raise ValueError(f"Laurent morphism does not commute with the derivative for {gen}. Got {output(gen.derivative())} and {output(gen).derivative()} instead.")
-                
-        return output
-
     def _lcm_denominators(self, *_: DRing_WrapperElement) -> DRing_WrapperElement:
         r'''Auxiliry implementation of the method for computing the LCM of a set of elements. (::NO EXAMPLE::)'''
         return self.one()
@@ -2576,17 +2440,6 @@ class DFractionField(FractionField_generic):
         r'''Method to add constants to this field of fractions. (::NO EXAMPLE::)'''
         return self.base().add_constants(*new_constants).fraction_field()
 
-    def _laurent_morphism(self, imgs, constant=None, set_default=False) -> MorphismToLaurent:
-        r'''
-            Internal implementation for :func:`DRings.ParentMethods.laurent_morphism`.
-
-            ::NO EXAMPLE::
-
-            TODO: for laurent
-        '''
-        base = self.base().laurent_morphism(imgs, constant, set_default=set_default)
-        return DFractionFieldLaurentMorphism(self, base.codomain(), base)
-
     def _lcm_denominators(self, *elements: DFractionFieldElement):
         r'''Auxiliary method to compute the LCM of the denominators of fractions. (::NO EXAMPLE::)'''
         from sage.arith.functions import lcm
@@ -2821,92 +2674,6 @@ class DRing_Wrapper_FromPolyRingMorphism(Morphism):
         dict_to_codomain = {str(g): wrapped_codomain(str(g)) for g in self.codomain().gens()}
 
         return self.codomain()(element.wrapped(**dict_to_codomain))
-
-class MorphismToLaurent(Morphism):
-    r'''
-        Base class for morphisms from d-rings to Laurent series rings.
-
-        INPUT:
-
-        * ``domain``: source parent of the morphism.
-        * ``codomain``: target parent of the morphism. It must be a Laurent
-          series ring.
-        * ``base_morph`` (``None`` by default): optional morphism on the base
-          ring, stored in ``self._base`` for later use.
-
-        ::NO EXAMPLE::
-
-        TODO: for laurent
-    '''
-    def __init__(self, domain: Parent, codomain: Parent, base_morph: Morphism = None):
-        from .pseries.laurent import LSeries_Ring
-
-        if base_morph is None:
-            raise NotImplementedError("The base morphism must be provided for the moment. This is the morphism on the base ring that will be used to compute the image of the generators of the base ring in the Laurent series ring. This is necessary to be able to compute the image of any element in the d-ring, but it can not be automatically computed for now.")
-        if not base_morph.domain() == domain.base() or not base_morph.codomain() == codomain:
-            raise ValueError("Error in the format for the morphism")
-        if not isinstance(codomain, LSeries_Ring):
-            raise TypeError(f"The codomain must be a Laurent series ring. Got {codomain}")
-
-        self._base = base_morph
-        super().__init__(domain, codomain)
-
-
-class DRingWrapperLaurentMorphism(MorphismToLaurent):
-    r'''
-        Laurent morphism class associated with :class:`DRing_Wrapper`.
-
-        ::NO EXAMPLE::
-
-        TODO: for laurent
-    '''
-    def __init__(self, domain, codomain, given_imgs: dict[str,Element]):
-        super().__init__(domain, codomain, domain.base().hom(codomain))
-        self._given_imgs = {key: codomain(val) for key, val in given_imgs.items()}
-
-    def _call_(self, element: Element) -> DRing_WrapperElement:
-        r'''Method to apply the morphism (::NO EXAMPLE::)'''
-        return self.codomain()(element.wrapped(**self._given_imgs))
-    
-
-class DFractionFieldLaurentMorphism(MorphismToLaurent):
-    r'''
-        Laurent morphism class associated with :class:`DFractionField`.
-
-        ::NO EXAMPLE::
-
-        TODO: for laurent
-    '''
-    def __init__(self, domain, codomain, base_morph = None):
-        super().__init__(domain, codomain, base_morph)
-
-    def _call_(self, frac: DFractionFieldElement):
-        r'''Method to apply the morphism (::NO EXAMPLE::)'''
-        num, den = frac.numerator(), frac.denominator()
-        return self._base(num) / self._base(den)
-
-class ExtendedLaurentMorphism(Morphism):
-    r'''
-        Class for morphisms from d-rings to Laurent series rings that are extended from a base morphism.
-
-        ::NO EXAMPLE::
-
-        TODO: for laurent
-    '''
-    def __init__(self, domain, codomain, base_morph):
-        from .pseries.laurent import LSeries_Ring
-        if base_morph.domain() != domain:
-            raise ValueError("The base morphism must have the same domain as the morphism to be extended.")
-        elif not isinstance(codomain, LSeries_Ring):
-            raise TypeError("The codomain must be a Laurent series ring.")
-        
-        super().__init__(domain, codomain)
-        self._base = base_morph
-
-    def _call_(self, element):
-        r'''Method to apply the morphism (::NO EXAMPLE::)'''
-        return self.codomain()(self._base(element))
-
 
 ####################################################################################################
 ###
