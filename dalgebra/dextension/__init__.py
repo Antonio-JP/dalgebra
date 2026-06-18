@@ -21,4 +21,3 @@ AUTHORS:
 # ****************************************************************************
 
 from .delliptic import *
-from .dmonomial import *
