@@ -146,7 +146,7 @@ from sage.structure.parent import Parent
 
 from typing import Collection
 
-from ..dring import AdditiveMap, DRings
+from ..dring import DerivationMap, DRings
 
 _DRings = DRings.__classcall__(DRings)
 _Fields = Fields.__classcall__(Fields)
@@ -664,7 +664,7 @@ class DElliptic_Field(Parent):
         # d^2(\eta) = -\kappa_d(p(d(\eta)))/\partial_y(p(d(\eta)))
         return -kappa_P * (~dP)
 
-    def extend_derivation(self, derivation: AdditiveMap) -> AdditiveMap:
+    def extend_derivation(self, derivation: DerivationMap) -> DerivationMap:
         r'''Method to extend a derivation from the base field to the whole extension. (::NO EXAMPLE::)'''
         variable_pp = self.variable_pp()
 
@@ -675,7 +675,7 @@ class DElliptic_Field(Parent):
 
             return self(kappa_element + partial_element * variable_pp)
 
-        return AdditiveMap(self, __derivation)
+        return DerivationMap(self, __derivation, base=derivation)
 
     #################################################
     ### Coercion methods
@@ -744,7 +744,7 @@ class DElliptic_Field(Parent):
     # #################################################
     # ### Method from DRing category
     # #################################################
-    def operators(self) -> Collection[AdditiveMap]:
+    def operators(self) -> Collection[DerivationMap]:
         r'''DRing method for getting a list of operations (::NO EXAMPLE::)'''
         return self.__operators
 

@@ -141,6 +141,7 @@ from __future__ import annotations
 import logging
 
 from collections.abc import Sequence
+from functools import lru_cache
 from sage.categories.category import Category
 from sage.categories.commutative_additive_groups import CommutativeAdditiveGroups
 from sage.categories.commutative_rings import CommutativeRings
@@ -153,23 +154,24 @@ from sage.matrix.matrix0 import Matrix
 from sage.misc.abstract_method import abstract_method
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
+from sage.rings.derivation import RingDerivationModule
 from sage.rings.fraction_field import FractionField_generic
 from sage.rings.fraction_field_element import FractionFieldElement
+from sage.rings.homset import RingHomset_generic
 from sage.rings.infinity import UnsignedInfinityRing
 from sage.rings.integer_ring import ZZ
 from sage.rings.rational_field import QQ
-from sage.rings.morphism import RingHomomorphism_im_gens
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.polynomial_ring import PolynomialRing_generic
 from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_base
 from sage.rings.quotient_ring import QuotientRing_generic
 from sage.rings.ring import Ring, CommutativeRing
-from sage.rings.derivation import RingDerivationModule
 from sage.structure.element import parent, Element
 from sage.structure.factory import UniqueFactory
 from sage.structure.parent import Parent
 from sage.symbolic.ring import SR
 from typing import Callable
+
 
 logger = logging.getLogger(__name__)
 
@@ -215,6 +217,17 @@ class DRings(Category):
         ### METHODS RELATED WITH THE OPERATORS
         ##########################################################
         ### 'generic'
+        @cached_method
+        def operators_module(self) -> RingHomset_generic:
+            r''''
+                Method to return the module of valid operations over the ring.
+
+                The operations that are valid are all additive morphisms over ``self``. This can be shown to be a ``self``-module,
+                meaning we can always add two additive morphisms and get an additive morphism, and also we can multiply
+                an additive morphism by an element of ``self`` to obtain a new additive morphism.
+            '''
+            return self.Hom(self, category=_CommutativeAdditiveGroups)
+
         @abstract_method
         def operators(self) -> Sequence[Morphism]:
             r'''
@@ -1240,10 +1253,10 @@ class DRingFactory(UniqueFactory):
         operators = list(operators)
         types = list(kwds.pop("types", len(operators)*["none"]))
 
-        if isinstance(base, DRing_Wrapper):
-            operators = list(base.construction()[0].operators) + operators
-            types = list(base.construction()[0].types) + types
-            base = base.wrapped
+        if isinstance(base, DRing_Wrapper): # we can extend a DRing_Wrapper by concatenating the new operators to the previous ones
+            operators = [el.to_sage() for el in base.operators()] + operators
+            types = list(base.operator_types()) + types
+            base = base.to_sage()
 
         # we convert the input into a common standard to create an appropriate key
         for (i, (operator, ttype)) in enumerate(zip(operators, types)):
@@ -1254,31 +1267,11 @@ class DRingFactory(UniqueFactory):
                 operator = lambda v : _operator[base.gens().index(base(v))]
 
             if ttype == "none":
-                ## We decide the structure depending on the type of object
-                if operator in base.Hom(base): # it is an homomorphism - we do nothing
-                    types[i] = "homomorphism"
-                    new_operator = operator
-                elif isinstance(parent(operator), RingDerivationModule):
-                    if operator.parent().twisting_morphism() is None: # derivation without twist
-                        new_operator = DerivationMap(
-                            base,
-                            operator
-                        )
-                        types[i] = "derivation"
-                    else:
-                        new_operator = SkewMap(
-                            base,
-                            operator.parent().twisting_morphism(),
-                            operator
-                        )
-                        types[i] = "skew"
-                elif isinstance(operator, Callable):
-                    new_operator = AdditiveMap(
-                        base,
-                        operator
-                    )
-                else:
-                    raise TypeError(f"All operators must be callables. Found {operator}")
+                ## If no type is given, we can not do more to guess
+                ## We check the operator is not just a callable
+                if not operator in base.Hom(base) or not isinstance(operator, RingDerivationModule.element_class):
+                    raise ValueError(f"Type for {operator} can not be obtained from its structure")
+                new_operator = operator
             elif ttype == "homomorphism":
                 def hom_from_callable(base, func):
                     r'''Auxiliary method for the wrapping of a homomorphism from a callable element (::NO EXAMPLE::)'''
@@ -1301,16 +1294,12 @@ class DRingFactory(UniqueFactory):
                 else:
                     der_module = base.derivation_module()
                     to_sum = tuple((base(operator(base_gen)), der_gen) for (base_gen, der_gen) in zip(base.gens(),der_module.gens()))
-                new_operator = DerivationMap(
-                    base,
-                    sum((im_gen*der_gen for (im_gen, der_gen) in to_sum if im_gen != 0), der_module.zero())
-                )
+                new_operator = sum((im_gen*der_gen for (im_gen, der_gen) in to_sum if im_gen != 0), der_module.zero())
             elif ttype == "skew":
+                ## In this case we only allow a twisted-derivation as input. We check for that
                 if not isinstance(parent(operator), RingDerivationModule):
                     raise NotImplementedError("Building skew-derivation from callable not implemented")
-                twist = operator.parent().twisting_morphism()
-                twist = base.Hom(base).one() if twist is None else twist
-                new_operator = SkewMap(base, twist, operator)
+                new_operator = operator
 
             if new_operator != operator:
                 operators[i] = new_operator
@@ -1683,52 +1672,11 @@ class DRing_Wrapper(Parent):
         category=None
     ):
         #########################################################################################################
-        ### CHECKING THE ARGUMENTS
+        ### CHECKING THE ARGUMENT 'base'
         ### 'base'
         if base not in _CommutativeRings:
             raise TypeError("Only commutative rings can be wrapped as DRing")
-
-        ### 'operators'
-        if len(operators) == 1 and isinstance(operators[0], (list,tuple)):
-            operators = operators[0]
-        if any(not isinstance(operator, Morphism) for operator in operators):
-            raise TypeError("All the given operators must be Maps")
-        if any(operator.domain() != operator.codomain() or operator.domain() != base for operator in operators):
-            raise TypeError("The operators must bu maps from and to the commutative ring given by 'base'")
-
-        ### 'types'
-        if types is None: # we compute the types using the maps
-            types = []
-            for operator in operators:
-                if isinstance(operator, DerivationMap):
-                    types.append("derivation")
-                elif isinstance(operator, SkewMap):
-                    types.append("skew")
-                elif operator.category_for().is_subcategory(_CommutativeRings):
-                    types.append("homomorphism")
-                else:
-                    types.append("none")
-        else: # we check the operators behave as requested
-            if not isinstance(types, (list, tuple)) or len(types) != len(operators):
-                raise TypeError("The types must be a list of the same length of the operators")
-            for operator, ttype in zip(operators, types):
-                if ttype == "none":
-                    if not operator.category_for().is_subcategory(_CommutativeAdditiveGroups):
-                        raise ValueError(f"An operator invalid for type 'none' -> {operator}")
-                elif ttype == "homomorphism":
-                    if not operator.category_for().is_subcategory(_CommutativeRings):
-                        raise ValueError(f"An operator invalid for type 'homomorphism' -> {operator}")
-                elif ttype == "derivation":
-                    if not isinstance(operator, DerivationMap):
-                        raise ValueError(f"An operator invalid for type 'derivation' -> {operator}")
-                elif ttype == "skew":
-                    if not isinstance(operator, SkewMap):
-                        raise ValueError(f"An operator invalid for type 'skew' -> {operator}")
-                else:
-                    raise ValueError(f"Invalid type provided -> {ttype}")
-
-        self.__types = tuple(types)
-        self.__cached_pushouts = dict()
+        self.__wrapped = base
 
         #########################################################################################################
         # CREATING CATEGORIES
@@ -1737,12 +1685,45 @@ class DRing_Wrapper(Parent):
             categories += list(category)
         elif (category is not None):
             categories.append(category)
-
-        #########################################################################################################
-        ### CALLING THE SUPER AND ARRANGING SOME CONVERSIONS
-        self.__wrapped = base
         super().__init__(base.base(), category=tuple(categories))
 
+        #########################################################################################################
+        ### CHECKING THE ARGUMENT 'operators'
+        if len(operators) == 1 and isinstance(operators[0], (list,tuple)):
+            operators = operators[0]
+        
+        operators : tuple[AdditiveMap] = tuple([WrappedMap(self, operator) for operator in operators])
+
+        #########################################################################################################
+        ### CHECKING THE ARGUMENT 'types'
+        ## We ensure the list of types is created
+        types = types if types is not None else len(operators)*["none"]
+        ## We fill the information for the "none" cases
+        types = [
+            t if t != "none" else "homomorphism" if op.is_homomorphism() else "derivation" if op.is_derivation() else "skew" if op.is_skew() else "none" 
+            for (op, t) in zip(operators, types)
+        ]
+        for (op, t) in zip(operators, types):
+            if t == "homomorphism" and not op.is_homomorphism():
+                raise ValueError(f"Type 'homomorphism' is not compatible with operator {op}")
+            elif t == "derivation" and not op.is_derivation():
+                raise ValueError(f"Type 'derivation' is not compatible with operator {op}")
+            elif t == "skew" and not op.is_skew():
+                raise ValueError(f"Type 'skew' is not compatible with operator {op}")
+            elif t not in ("none", "homomorphism", "derivation", "skew"):
+                raise ValueError(f"Invalid type {t} for operator {op}")
+        self.__operators = operators
+        self.__types = tuple(types)
+
+        #########################################################################################################
+        ### OTHER ATTRIBUTES
+        self.__cached_pushouts = dict()
+        self.__linear_operator_ring = None
+        self.__fraction_field : DFractionField = None
+        self.__constant = [None] * len(self.__operators)
+
+        #########################################################################################################
+        ### COERCION AND CONVERSION MORPHISMS
         # registering conversion to simpler structures
         current = self.__wrapped
         morph = DRing_Wrapper_SimpleMorphism(self, current)
@@ -1760,22 +1741,12 @@ class DRing_Wrapper(Parent):
         except Exception:
             pass
 
-        #########################################################################################################
-        ### CREATING THE NEW OPERATORS FOR THE CORRECT STRUCTURE
-        self.__operators : tuple[WrappedMap] = tuple([WrappedMap(self, operator) for operator in operators])
-
-        #########################################################################################################
-        ### CREATING CACHED VARIABLES
-        self.__linear_operator_ring = None
-        self.__fraction_field : DFractionField = None
-        self.__constant = [None] * len(self.__operators)
-
     @property
     def wrapped(self) -> CommutativeRing: 
         r'''Property to get the wrapped ring. (::NO EXAMPLE::)'''
         return self.__wrapped
 
-    def operators(self) -> tuple[WrappedMap]: 
+    def operators(self) -> tuple[AdditiveMap]: 
         r'''Method to get the list of operations in the wrapped ring. (::NO EXAMPLE::)'''
         return self.__operators
 
@@ -2212,6 +2183,10 @@ class DRing_Wrapper(Parent):
         raise AttributeError(f"{self.__class__} object has no attribute {attr}")
 
     ## Representation methods
+    def __hash__(self) -> int:
+        r'''Magic method to compute the hash of the wrapped ring. (::NO EXAMPLE::)'''
+        return hash(self.wrapped)
+
     def __repr__(self) -> str:
         r'''Magic method to represent the wrapped ring. (::NO EXAMPLE::)'''
         begin = "Differential " if self.is_differential() else "Difference " if self.is_difference() else ""
@@ -2389,16 +2364,7 @@ class DFractionField(FractionField_generic):
         super().__init__(R, element_class, category)
 
         ## We extend the operators from the base ring
-        self.__operators = []
-        for operator, ttype in zip(R.operators(), R.operator_types()):
-            if ttype == "homomorphism":
-                func = DFractionField_Homomorphism(self, operator)
-            elif ttype == "derivation":
-                func = DFractionField_Derivation(self, operator)
-            elif ttype == "skew":
-                twist = operator.twist # this is necessary to know
-                func = AdditiveMap(self, lambda p : (operator(p.numerator())*p.denominator() - p.numerator()*operator(p.denominator())) / (p.denominator() * twist(p.denominator())))
-            self.__operators.append(func)
+        self.__operators = [DFractionFieldMap(self, operator) for operator in R.operators()]
 
     @staticmethod
     def flatten_fraction_field(field) -> tuple[Parent, bool]:
@@ -2684,11 +2650,31 @@ class AdditiveMap(SetMorphism):
 
         ::NO EXAMPLE::
     '''
-    def __init__(self, domain : Parent, function : Callable):
+    def __init__(self, domain : Parent, function : Callable, check: bool = True, **kwds):
         # We create the appropriate Hom set
         hom = domain.Hom(domain, category=_CommutativeAdditiveGroups)
         self.function = function
+        self._as_sage = None
+        self.__data = kwds
+
         super().__init__(hom, function)
+
+        if check: # only check when necessary
+            assert self._check_property(), "The function provided is not additive."
+
+    def _check_property(self, n: int = 10) -> bool:
+        r'''Method to check the additivity property of the map. (::NO EXAMPLE::)'''
+        for _ in range(n):
+            a, b = self.domain().random_element(), self.domain().random_element()
+            if self(a + b) != self(a) + self(b):
+                return False
+        return True
+
+    def __getattr__(self, attr):
+        r'''Generic wrapping method for methods not by default in the category of ``self`` (::NO EXAMPLE::)'''
+        if attr in self.__data:
+            return self.__data[attr]
+        raise AttributeError(f"{self.__class__} object has no attribute {attr}")
 
     def __str__(self) -> str:
         r'''Magic method to represent the additive map. (::NO EXAMPLE::)'''
@@ -2696,15 +2682,31 @@ class AdditiveMap(SetMorphism):
 
     def __repr__(self) -> str:
         r'''Magic method to represent the additive map. (::NO EXAMPLE::)'''
-        return f"{repr(self.function)}"
+        try:
+            sage = self.to_sage()
+            if sage is None:
+                raise ValueError("The method to_sage returned None")
+            return repr(sage)
+        except ValueError:
+            try:
+                return repr(self.base)
+            except AttributeError:
+                return repr(self.function)
 
     def _latex_(self) -> str:
         r'''Magic method to represent the additive map in LaTeX. (::NO EXAMPLE::)'''
-        return latex(self.function)
+        try:
+            return latex(self.to_sage())
+        except ValueError:
+            try:
+                return latex(self.base)
+            except AttributeError:
+                return latex(self.function)
 
     def __eq__(self, other) -> bool:
         r'''Magic method to compare two additive maps. (::NO EXAMPLE::)'''
         return isinstance(other, AdditiveMap) and self.domain() == other.domain() and self.function == other.function
+    
     def __ne__(self, other) -> bool: 
         r'''Magic method to check inequality two additive maps. (::NO EXAMPLE::)'''
         return not (self == other)
@@ -2712,7 +2714,73 @@ class AdditiveMap(SetMorphism):
     def __hash__(self) -> int:
         r'''Magic method to compute the hash of an additive map. (::NO EXAMPLE::)'''
         return self.function.__hash__()
+    
+    def to_sage(self):
+        r'''Method to convert the additive map to a SageMath morphism. (::NO EXAMPLE::)'''
+        if self._as_sage is None:
+            self._as_sage = self._to_sage()
+        return self._as_sage
+    
+    def _to_sage(self):
+        r'''Auxiliary method to convert the additive map to a SageMath morphism. (::NO EXAMPLE::)'''
+        return None # by default, we return None
 
+    def is_homomorphism(self) -> bool:
+        r'''Method to check if the additive map is a homomorphism. (::NO EXAMPLE::)'''
+        return False
+    
+    def is_skew(self) -> bool:
+        r'''Method to check if the additive map is a skew derivation. (::NO EXAMPLE::)'''
+        return False
+    
+    def is_derivation(self) -> bool:
+        r'''Method to check if the additive map is a derivation. (::NO EXAMPLE::)'''
+        return False
+
+class RingHomomorphism(AdditiveMap):
+    r'''
+        Class representing a ring homomorphism.
+
+        This is a particular case of additive map where the morphism is multiplicative and sends one to one.
+
+        ::NO EXAMPLE::
+    '''
+    def __init__(self, domain : Parent, function : Callable, check: bool = True, **kwds):
+        super().__init__(domain, function, check=check, **kwds)
+
+    @lru_cache
+    @staticmethod
+    def one(domain: Parent) -> RingHomomorphism:
+        r'''Static method to create the identity homomorphism for a ring. (::NO EXAMPLE::)'''
+        output = RingHomomorphism(domain, lambda x : x, check=False)
+        output._as_sage = domain.to_sage().hom(domain.to_sage()) # this is the identity morphism in sage
+        return output
+
+    def _check_property(self, n: int = 10) -> bool:
+        r'''Method to check the properties of a ring homomorphism. (::NO EXAMPLE::)'''
+        if not super()._check_property(n):
+            return False
+
+        if self(self.domain().one()) != self.codomain().one():
+            return False
+
+        for _ in range(n):
+            a, b = self.domain().random_element(), self.domain().random_element()
+            if self(a * b) != self(a) * self(b):
+                return False
+        return True
+
+    def is_homomorphism(self) -> bool:
+        r'''Method to check if the additive map is a homomorphism. (::NO EXAMPLE::)'''
+        return True
+
+    def _to_sage(self):
+        r'''Method to convert the ring homomorphism to a SageMath morphism. (::NO EXAMPLE::)'''
+        domain = self.domain().to_sage()
+
+        func = lambda p : domain(self(self.domain()(p))) # maps up to self.domain(), then apply self and then goes down to the sage domain
+
+        return domain.hom(domain)(func)
 
 class SkewMap(AdditiveMap):
     r'''
@@ -2727,29 +2795,72 @@ class SkewMap(AdditiveMap):
 
         ::NO EXAMPLE::
     '''
-    def __init__(self, domain : Parent, twist : Morphism, function : Callable):
-        if isinstance(domain, QuotientRing_generic): # this do not have derivation modules
-            if twist != domain.Hom(domain).one():
-                raise TypeError("The twist for a skew derivation must be the identity homomorphism in a quotient ring.")
+    def __init__(self, domain : Parent, function : Callable, twist : RingHomomorphism = None, check: bool = True, **kwds):
+        if not domain in _DRings:
+            raise TypeError("The domain of a skew derivation must be a d-ring.")
+        if twist is None:
+            twist = RingHomomorphism.one(domain)
+        if twist not in domain.operators_module() or not twist.is_homomorphism():
+            raise TypeError("The twist for a skew derivation must be a homomorphism in the operations module of the domain.")
+        
+        self.twist = twist
+        
+        super().__init__(domain, function, check=check, **kwds)
 
-            I = domain.defining_ideal()
-            der_module = domain.ambient().derivation_module()
-            if function not in der_module:
-                raise TypeError("The function for a skew derivation must be in the corresponding module")
-            elif any(function(p) not in I for p in I.basis):
-                raise TypeError("The function for a skew derivation must be in the ideal generated by the basis of the ideal.")
+    def _check_property(self, n: int = 10) -> bool:
+        r'''Method to check the properties of a skew derivation. (::NO EXAMPLE::)'''
+        if not super()._check_property(n):
+            return False
+        
+        if self(1) != 0:
+            return False
+        
+        for _ in range(n):
+            a, b = self.domain().random_element(), self.domain().random_element()
+            if self(a * b) != self(a) * b + self.twist(a) * self(b):
+                return False
+        return True
+    
+    def _to_sage(self):
+        domain = self.domain().to_sage()
+        twist = self.twist.to_sage()
+        function = lambda p : domain(self(self.domain()(p))) # maps up to self.domain(), then apply self and then goes down to the sage domain
 
-            new_function = lambda p : domain(function(p.lift()))
-        else:
-            # we check the input
-            if twist not in domain.Hom(domain):
-                raise TypeError("The twist for a skew derivation must be an homomorphism.")
-            tw_der_module = domain.derivation_module(twist=twist)
-            if function not in tw_der_module:
-                raise TypeError("The function for a skew derivation must be in the corresponding module")
-            self.twist = twist
-            new_function = function
-        super().__init__(domain, new_function)
+        try:
+            return domain.derivation_module(twist=twist)(function)
+        except NotImplementedError:
+            return None
+
+        # if isinstance(domain, QuotientRing_generic): # this do not have derivation modules
+        #     if twist != domain.Hom(domain).one():
+        #         raise TypeError("The twist for a skew derivation must be the identity homomorphism in a quotient ring.")
+
+        #     I = domain.defining_ideal()
+        #     der_module = domain.ambient().derivation_module()
+        #     if function not in der_module:
+        #         raise TypeError("The function for a skew derivation must be in the corresponding module")
+        #     elif any(function(p) not in I for p in I.basis):
+        #         raise TypeError("The function for a skew derivation must be in the ideal generated by the basis of the ideal.")
+
+        #     new_function = lambda p : domain(function(p.lift()))
+        # else:
+        #     # we check the input
+        #     if twist not in domain.Hom(domain):
+        #         raise TypeError("The twist for a skew derivation must be an homomorphism.")
+        #     tw_der_module = domain.derivation_module(twist=twist)
+        #     if function not in tw_der_module:
+        #         raise TypeError("The function for a skew derivation must be in the corresponding module")
+        #     self.twist = twist
+        #     new_function = function
+        # super().__init__(domain, new_function)
+
+    def is_skew(self) -> bool:
+        r'''Method to check if the additive map is a skew derivation. (::NO EXAMPLE::)'''
+        return True
+    
+    def is_derivation(self) -> bool:
+        r'''Method to check if the additive map is a derivation. (::NO EXAMPLE::)'''
+        return self.twist == RingHomomorphism.one(self.domain())
 
     def __str__(self) -> str:
         r'''Magic method to represent the skew derivation. (::NO EXAMPLE::)'''
@@ -2769,100 +2880,67 @@ class DerivationMap(SkewMap):
 
         ::NO EXAMPLE::
     '''
-    def __init__(self, domain, function : Callable):
-        super().__init__(domain, domain.Hom(domain).one(), function)
+    def __init__(self, domain, function : Callable, check: bool = True, **kwds):
+        if "twist" in kwds:
+            raise TypeError("A derivation can not have a twist. Use a SkewMap instead.")
+        super().__init__(domain, function, check=check, **kwds)
 
     def __str__(self) -> str:
         r'''Magic method to represent the derivation. (::NO EXAMPLE::)'''
         return f"Derivation [{repr(self)}] over (({self.domain()}))"
 
 
-class WrappedMap(AdditiveMap):
-    r'''
-        Class that wraps a map over a wrapped ring. (::NO EXAMPLE::)
-    '''
-    def __init__(self, domain : DRing_Wrapper, function : Morphism):
-        if not isinstance(domain, DRing_Wrapper):
-            raise TypeError("A WrappedMap can only be created for a 'DRing_Wrapper'")
-
-        if function.domain() != domain.wrapped:
-            raise ValueError(f"The map to be wrapped must have appropriate domain: ({domain.wrapped}) instead of ({function.domain()})")
-
-        super().__init__(domain, lambda p : domain(function(domain(p).wrapped)))
-        self.function = function
-
-    def __repr__(self) -> str:
-        r'''Magic method to represent the wrapped map. (::NO EXAMPLE::)'''
-        if isinstance(self.function, RingHomomorphism_im_gens):
-            im_gens = {v: im for (v,im) in zip(self.function.domain().gens(), self.function.im_gens())}
-            return f"Hom({im_gens})"
-        elif isinstance(self.function, IdentityMorphism):
-            return "Id"
+def WrappedMap(domain : DRing_Wrapper, function : Morphism) -> AdditiveMap:
+    r'''Factory function to create a wrapped map over a wrapped ring. (::NO EXAMPLE::)'''
+    if not isinstance(domain, DRing_Wrapper):
+        raise TypeError("A WrappedMap can only be created for a 'DRing_Wrapper'")
+    
+    wrapped_callable = lambda p : domain(function(domain(p).wrapped))
+    
+    # We check for the type of morphism, namely "ring homomorphism", "skew derivation" or "derivation"
+    if function in domain.wrapped.Hom(domain.wrapped):
+        output = RingHomomorphism(domain, wrapped_callable, check=False)
+    elif isinstance(function.parent(), RingDerivationModule):
+        if function.parent().twisting_morphism() in (domain.wrapped.Hom(domain.wrapped).one(),None):
+            output = DerivationMap(domain, wrapped_callable, check=False)
         else:
-            return super().__repr__()
+            output = SkewMap(domain, wrapped_callable, twist=WrappedMap(domain, function.parent().twisting_morphism()), check=False)
+    
+    output._as_sage = function # we keep the original function for the conversion to sage
+    return output
 
-    def __str__(self) -> str:
-        r'''Magic method to represent the wrapped map. (::NO EXAMPLE::)'''
-        return f"Wrapped [{repr(self)}] over (({self.domain()}))"
+def DFractionFieldMap(domain : DFractionField, operator : AdditiveMap) -> AdditiveMap:
+    r'''Factory function to create a map over a field of fractions. (::NO EXAMPLE::)'''
+    if not isinstance(domain, DFractionField):
+        raise TypeError("A DFractionFieldMap can only be created for a 'DFractionField'")
 
-    def _latex_(self) -> str:
-        r'''Magic method to represent the wrapped map in LaTeX format. (::NO EXAMPLE::)'''
-        if isinstance(self.function, RingHomomorphism_im_gens):
-            im_gens = {v: im for (v,im) in zip(self.function.domain().gens(), self.function.im_gens())}
-            return r"\sigma\left(" + r", ".join(f"{latex(v)} \\mapsto {latex(im)}" for (v,im) in im_gens.items()) + r"\right)"
-        elif isinstance(self.function, IdentityMorphism):
-            return r"\text{id}"
-        return super()._latex_()
+    if operator.domain() != domain.base():  # we check the domain of the operator
+        raise ValueError(f"The map to be wrapped must have appropriate domain: ({domain.base()}) instead of ({operator.domain()})")
 
-
-### SPECIAL MORPHISM FOR DFractionField
-class DFractionField_Derivation(AdditiveMap):
-    r'''Special derivation map for fields of fractions (see :class:`DerivationMap`) (::NO EXAMPLE::)'''
-    def __init__(self, domain: DFractionField, operator: AdditiveMap):
-        if not isinstance(domain, DFractionField):
-            raise TypeError("A DFractionFieldMap can only be created for a 'DFractionField'")
-
-        if operator.domain() != domain.base():  # we check the domain of the operator
-            raise ValueError(f"The map to be wrapped must have appropriate domain: ({domain.base()}) instead of ({operator.domain()})")
-
-        def __extended_method(element):
-            r'''Auxiliary method that extends the derivation into the field of fractions (::NO EXAMPLE::)'''
+    if operator.is_skew():
+        twist = operator.twist
+        def __dfraction_field_skew(element: DFractionFieldElement):
             num, den = element.numerator(), element.denominator()
-            assert all(el.parent() is domain.base() for el in (num, den)), "The elements must be in the base ring"
-            dnum, dden = operator(num), operator(den)
-            return (dnum*den - num*dden) / den**2
-
-        super().__init__(domain, __extended_method)
-        self.__operator = operator
-
-    def __str__(self) -> str:
-        r'''Magic method to represent the derivation map. (::NO EXAMPLE::)'''
-        return f"Der. Extension to DFractionField for {self.__operator}"
-
-
-class DFractionField_Homomorphism(AdditiveMap):
-    r'''Special homomorphism map for fields of fractions (see :class:`AdditiveMap`) (::NO EXAMPLE::)'''
-    def __init__(self, domain: DFractionField, operator: AdditiveMap):
-        if not isinstance(domain, DFractionField):
-            raise TypeError("A DFractionFieldMap can only be created for a 'DFractionField'")
-
-        if operator.domain() != domain.base():  # we check the domain of the operator
-            raise ValueError(f"The map to be wrapped must have appropriate domain: ({domain.base()}) instead of ({operator.domain()})")
-
-        def __extended_method(element):
-            r'''Auxiliary method that extends the homomorphism into the field of fractions (::NO EXAMPLE::)'''
-            num, den = element.numerator(), element.denominator()
-            assert all(el.parent() is domain.base() for el in (num, den)), "The elements must be in the base ring"
-            dnum, dden = operator(num), operator(den)
+            dnum = operator(num)*den - operator(den)*num
+            dden = twist(den)*den
+            
             return dnum / dden
-
-        super().__init__(domain, __extended_method)
-        self.__operator = operator
-
-    def __str__(self) -> str:
-        r'''Magic method to represent the homomorphism map. (::NO EXAMPLE::)'''
-        return f"Hom. Extension to DFractionField for {self.__operator}"
-
+        
+        if operator.is_derivation():
+            return DerivationMap(domain, __dfraction_field_skew, base=operator, check=False)
+        else:
+            return SkewMap(domain, __dfraction_field_skew, twist=WrappedMap(domain, twist), base=operator, check=False)
+        
+    elif operator.is_homomorphism():
+        def __dfraction_field_hom(element: DFractionFieldElement):
+            num, den = element.numerator(), element.denominator()
+            dnum = operator(num)
+            dden = operator(den)
+            
+            return dnum / dden
+        return RingHomomorphism(domain, __dfraction_field_hom, base=operator, check=False)
+    else:
+        raise TypeError("The map to be wrapped must be a derivation, homomorphism or skew derivation.")
 
 ### SPECIAL ERRORS FOR THIS MODULE
 class IntegrationError(Exception):

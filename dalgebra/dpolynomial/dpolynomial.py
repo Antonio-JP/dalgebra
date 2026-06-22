@@ -75,7 +75,7 @@ from sage.symbolic.ring import SR
 
 from typing import Collection
 
-from ..dring import DRings, DFractionField, AdditiveMap, DifferentialRing, DifferenceRing
+from ..dring import DRings, DFractionField, AdditiveMap, RingHomomorphism, DerivationMap, SkewMap, DifferentialRing, DifferenceRing
 from .dmonoids import DMonomialMonoid, DMonomialGen, DMonomial, IndexBijection
 
 
@@ -1890,12 +1890,12 @@ class DPolynomialRing_Monoid(Parent):
         ## Setting the inner variables of the ring
         super().__init__(base, category=tuple(self._set_categories(base, category)))
 
+        self.__monoids = DMonomialMonoid(base.noperators(), *names)
+        self.__gens = tuple(DPolynomialGen(self, name, index=i) for (i,name) in enumerate(names))
         self.__operators : tuple[AdditiveMap] = tuple([
             self._create_operator(operation, ttype)
             for operation, ttype in enumerate(self.base().operator_types())
         ])
-        self.__monoids = DMonomialMonoid(len(self.__operators), *names)
-        self.__gens = tuple(DPolynomialGen(self, name, index=i) for (i,name) in enumerate(names))
         self.__cache : list[dict[DPolynomial, DPolynomial]] = [dict() for _ in range(len(self.__operators))]
         self.__cache_ranking : dict[tuple[tuple[DPolynomial], str], RankingFunction] = dict()
         self.__fraction_field : DFractionField = None
@@ -2361,8 +2361,11 @@ class DPolynomialRing_Monoid(Parent):
         if x in self.monoids():
             return True
         return super().__contains__(x)
+    
+    def __hash__(self) -> int:
+        r'''Magic method to hash ``self``. (::NO EXAMPLE::)'''
+        return hash((self.base(), self.variable_names()))
 
-    ## Other magic methods
     def __repr__(self):
         r'''Magic method to display ``self``. (::NO EXAMPLE::)'''
         return f"Ring of operator polynomials in ({', '.join(self.variable_names())}) over {self.base()}"
@@ -2487,7 +2490,7 @@ class DPolynomialRing_Monoid(Parent):
                     )
 
                 return self.__cache[operation][element]
-            func = __extended_homomorphism
+            new_operator = RingHomomorphism(self, __extended_homomorphism, check=False, base=operator)
         elif ttype == "derivation":
             def __extended_derivation(element : DPolynomial) -> DPolynomial:
                 r'''Auxiliary method for the extended derivation from the base ring to the whole ring of polynomials. (::NO EXAMPLE::)'''
@@ -2506,14 +2509,14 @@ class DPolynomialRing_Monoid(Parent):
                     self.__cache[operation][element] = self.element_class(self, final_dict)
 
                 return self.__cache[operation][element]
-            func = __extended_derivation
+            new_operator = DerivationMap(self, __extended_derivation, check=False, base=operator)
         elif ttype == "skew":
             raise NotImplementedError("The 'skew' case is not yet implemented")
             # func = None
         else:
             raise ValueError(f"The type {ttype} is not recognized as a valid operator.")
 
-        return AdditiveMap(self, func)
+        return new_operator
 
     def add_constants(self, *new_constants: str) -> DPolynomialRing_Monoid:
         r'''
