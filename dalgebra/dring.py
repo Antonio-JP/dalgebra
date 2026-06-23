@@ -141,7 +141,7 @@ from __future__ import annotations
 import logging
 
 from collections.abc import Sequence
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from sage.categories.category import Category
 from sage.categories.commutative_additive_groups import CommutativeAdditiveGroups
 from sage.categories.commutative_rings import CommutativeRings
@@ -1242,6 +1242,19 @@ class DRingFactory(UniqueFactory):
 
         ::NO EXAMPLE::
     '''
+    @staticmethod
+    def hom_from_callable(base, func):
+        r'''Auxiliary method for the wrapping of a homomorphism from a callable element (::NO EXAMPLE::)'''
+        if base.ngens() > 0 and (1 not in base.gens()):
+            try:
+                base_map = DRingFactory.hom_from_callable(base.base(), func)
+            except ValueError:
+                base_map = None
+        else:
+            base_map = None
+        hom_set = base.Hom(base)
+        return hom_set([base(func(gen)) for gen in base.gens()], base_map=base_map)
+
     def create_key(self, base : CommutativeRing, *operators : Callable, **kwds):
         r'''Method to create a key for the factory of D-rings with operators. (::NO EXAMPLE::)'''
         # checking the arguments
@@ -1273,18 +1286,7 @@ class DRingFactory(UniqueFactory):
                     raise ValueError(f"Type for {operator} can not be obtained from its structure")
                 new_operator = operator
             elif ttype == "homomorphism":
-                def hom_from_callable(base, func):
-                    r'''Auxiliary method for the wrapping of a homomorphism from a callable element (::NO EXAMPLE::)'''
-                    if base.ngens() > 0 and (1 not in base.gens()):
-                        try:
-                            base_map = hom_from_callable(base.base(), func)
-                        except ValueError:
-                            base_map = None
-                    else:
-                        base_map = None
-                    hom_set = base.Hom(base)
-                    return hom_set([base(func(gen)) for gen in base.gens()], base_map=base_map)
-                new_operator = hom_from_callable(base, operator)
+                new_operator = DRingFactory.hom_from_callable(base, operator)
             elif ttype == "derivation":
                 ## We distinguish two cases:a quotient ring or a normal ring
                 if isinstance(base, QuotientRing_generic): # derivation module not implemented, we do a lifting
@@ -1296,9 +1298,18 @@ class DRingFactory(UniqueFactory):
                     to_sum = tuple((base(operator(base_gen)), der_gen) for (base_gen, der_gen) in zip(base.gens(),der_module.gens()))
                 new_operator = sum((im_gen*der_gen for (im_gen, der_gen) in to_sum if im_gen != 0), der_module.zero())
             elif ttype == "skew":
-                ## In this case we only allow a twisted-derivation as input. We check for that
-                if not isinstance(parent(operator), RingDerivationModule):
-                    raise NotImplementedError("Building skew-derivation from callable not implemented")
+                if isinstance(parent(operator), RingDerivationModule):
+                    new_operator = operator
+                else: # we try to get the operator from the list-type input
+                    imgs_gens = [operator(g) for g in base.gens()]
+                    imgs_gens = [(g, imgs_gens[i]) if not isinstance(imgs_gens[i], (tuple, list)) else imgs_gens[i] for (i,g) in enumerate(base.gens())]
+                    twists_imgs = [img[0] for img in imgs_gens]
+                    der_imgs = [img[1] for img in imgs_gens]
+                    ## We have here a list with the image of each generator by its twist and the image of the generator by the operator
+                    twist = DRingFactory.hom_from_callable(base, lambda v : twists_imgs[base.gens().index(base(v))])
+                    der_module = base.derivation_module(twist)
+                    
+
                 new_operator = operator
 
             if new_operator != operator:
@@ -2780,7 +2791,7 @@ class RingHomomorphism(AdditiveMap):
 
         func = lambda p : domain(self(self.domain()(p))) # maps up to self.domain(), then apply self and then goes down to the sage domain
 
-        return domain.hom(domain)(func)
+        return domain.Hom(domain)(func)
 
 class SkewMap(AdditiveMap):
     r'''
@@ -2831,29 +2842,6 @@ class SkewMap(AdditiveMap):
         except NotImplementedError:
             return None
 
-        # if isinstance(domain, QuotientRing_generic): # this do not have derivation modules
-        #     if twist != domain.Hom(domain).one():
-        #         raise TypeError("The twist for a skew derivation must be the identity homomorphism in a quotient ring.")
-
-        #     I = domain.defining_ideal()
-        #     der_module = domain.ambient().derivation_module()
-        #     if function not in der_module:
-        #         raise TypeError("The function for a skew derivation must be in the corresponding module")
-        #     elif any(function(p) not in I for p in I.basis):
-        #         raise TypeError("The function for a skew derivation must be in the ideal generated by the basis of the ideal.")
-
-        #     new_function = lambda p : domain(function(p.lift()))
-        # else:
-        #     # we check the input
-        #     if twist not in domain.Hom(domain):
-        #         raise TypeError("The twist for a skew derivation must be an homomorphism.")
-        #     tw_der_module = domain.derivation_module(twist=twist)
-        #     if function not in tw_der_module:
-        #         raise TypeError("The function for a skew derivation must be in the corresponding module")
-        #     self.twist = twist
-        #     new_function = function
-        # super().__init__(domain, new_function)
-
     def is_skew(self) -> bool:
         r'''Method to check if the additive map is a skew derivation. (::NO EXAMPLE::)'''
         return True
@@ -2865,6 +2853,62 @@ class SkewMap(AdditiveMap):
     def __str__(self) -> str:
         r'''Magic method to represent the skew derivation. (::NO EXAMPLE::)'''
         return f"Skew Derivation [{repr(self)}] over (({self.domain()}))"
+    
+    @cached_property
+    def factor(self) -> Element:
+        r'''
+            Property to compute the factor of a skew derivation. 
+
+            Given a skew derivation `\delta` with twist `\sigma`, the factor is defined as the element `c` such that:
+
+            .. MATH::
+
+                \delta(a) = c(a - \sigma(a))
+
+            The factor is an element in the domain of the skew derivation and it is unique if it exists. In general, 
+            for any skew derivation over a commutative ring, it holds that
+
+            .. MATH::
+
+                \delta(a)(\sigma(b) - b) = \delta(b)(\sigma(a) - a),
+
+            so the factor can be computed from an element `b` such that `\sigma(b) - b` is a unit in the ring. In this case, the factor is given by:
+
+            .. MATH::
+
+                c = \delta(b)(\sigma(b) - b)^{-1}.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R = DifferentialRing(QQ['x'], diff)
+                sage: d = R.operators()[0]
+                sage: d.factor
+                Traceback (most recent call last):
+                ...
+                ValueError: The factor of a derivation is undefined, since the twist is the identity
+                sage: R = DRing(QQ['x'], ('x+1', diff), types=('skew',))
+                sage: d = R.operators()[0]
+                sage: d.factor
+                1
+                sage: R = DRing(QQ['x'], ('-x', diff), types=('skew',))
+        '''
+        if self.is_derivation():
+            raise ValueError("The factor of a derivation is undefined, since the twist is the identity.")
+        
+        ## Main strategy: check the generators. 
+        ## We look for "base" operators, in order to avoid late constructions
+        ## We do not care if this computation is expensive, since it is only computed once and cached.
+        if "base" in self.__data:
+            base = self.__data["base"]
+            
+            if base.is_derivation(): # we need to look to this domain
+                for g in self.domain().gens():
+                    diff = self.twist(g) - g
+                    if diff.is_unit():
+                        return self(g) * (~diff)
+            else: # we can work recursively on the base
+                return base.factor
 
 
 class DerivationMap(SkewMap):
@@ -2888,6 +2932,18 @@ class DerivationMap(SkewMap):
     def __str__(self) -> str:
         r'''Magic method to represent the derivation. (::NO EXAMPLE::)'''
         return f"Derivation [{repr(self)}] over (({self.domain()}))"
+    
+    @cached_property
+    def factor(self) -> Element:
+        r'''
+            Property to compute the factor of a derivation. 
+            
+            See :func:`SkewMap.factor`for more details in the definition of a factor for a Skew derivation.
+            For a derivation map, the factor is undefined, since the twist is the identity.
+
+            ::NO EXAMPLE::
+        '''
+        raise ValueError("A derivation map does not have a factor, since the twist is the identity.")
 
 
 def WrappedMap(domain : DRing_Wrapper, function : Morphism) -> AdditiveMap:
