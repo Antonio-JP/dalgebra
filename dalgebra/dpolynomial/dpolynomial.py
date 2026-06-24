@@ -1890,7 +1890,7 @@ class DPolynomialRing_Monoid(Parent):
         ## Setting the inner variables of the ring
         super().__init__(base, category=tuple(self._set_categories(base, category)))
 
-        self.__monoids = DMonomialMonoid(base.noperators(), *names)
+        self.__monoids = DMonomialMonoid(base.operators(), *names)
         self.__gens = tuple(DPolynomialGen(self, name, index=i) for (i,name) in enumerate(names))
         self.__operators : tuple[AdditiveMap] = tuple([
             self._create_operator(operation, ttype)
@@ -2465,7 +2465,7 @@ class DPolynomialRing_Monoid(Parent):
         r'''DRing method to get a list of operator types (::NO EXAMPLE::)'''
         return self.base().operator_types()
 
-    def _create_operator(self, operation: int, ttype: str) -> AdditiveMap:
+    def _create_operator(self, operation: int | AdditiveMap, ttype: str) -> AdditiveMap:
         r'''
             Method to create a map on the ring of polynomials from an operator on the base ring.
 
@@ -2474,7 +2474,7 @@ class DPolynomialRing_Monoid(Parent):
 
             ::NO EXAMPLE::
         '''
-        operator : AdditiveMap = self.base().operators()[operation]
+        operator : AdditiveMap = self.base().operators()[operation] if not isinstance(operation, AdditiveMap) else operation
         if ttype == "homomorphism":
             def __extended_homomorphism(element : DPolynomial) -> DPolynomial:
                 r'''Auxiliary method for the extended homomorphism from the base ring to the whole ring of polynomials. (::NO EXAMPLE::)'''
@@ -2511,8 +2511,22 @@ class DPolynomialRing_Monoid(Parent):
                 return self.__cache[operation][element]
             new_operator = DerivationMap(self, __extended_derivation, check=False, base=operator)
         elif ttype == "skew":
-            raise NotImplementedError("The 'skew' case is not yet implemented")
-            # func = None
+            ext_twist = self._create_operator(operator.twist, "homomorphism") # twist must always exist, otherwise this is a derivation
+            def __extended_skew(element : DPolynomial) -> DPolynomial:
+                r'''Auxiliary method for the extended skew-derivation from the base ring to the whole ring of polynomials. (::NO EXAMPLE::)'''
+                element = self(element)
+
+                if element in self.base():
+                    return self(operator(self.base()(element)))
+                
+                if element not in self.__cache[operation]:
+                    op_monom = [DMonomial._scale_dict(dict(m._skew_(operation)), c) for (m,c) in element._content.items()]
+                    from functools import reduce
+                    final_dict = reduce(lambda d1,d2 : DMonomial._add_dict(d1,d2), op_monom[1:], op_monom[0]) # always more than 1, since we are not in base
+                    self.__cache[operation][element] = self.element_class(self, final_dict)
+                
+                return self.__cache[operation][element]
+            new_operator = SkewMap(self, __extended_skew, twist=ext_twist, check=False, base=operator)
         else:
             raise ValueError(f"The type {ttype} is not recognized as a valid operator.")
 

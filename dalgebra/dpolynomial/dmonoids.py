@@ -46,6 +46,8 @@ from sage.structure.parent import Parent
 
 from typing import Collection
 
+from ..dring import AdditiveMap
+
 logger = logging.getLogger(__name__)
 _CommutativeMonoids = Monoids.Commutative.__classcall__(Monoids.Commutative)
 __BIJECTIONS = {}
@@ -411,6 +413,86 @@ class DMonomial(Element):
         return self._parent.element_class(self._parent, copy)
 
     @cached_method
+    def _skew_(self, operation: int = 0) -> tuple[tuple[DMonomial,Element]]:
+        r'''
+            Method to compute the derivative of a monomial.
+
+            Due to the skewed Leibniz rule, this is a sum, so we return a tuple of monomials that appear in the skew-derivative with the coefficient.
+            This is valid for any derivation, since the differential variables do not concrete into any further operation.
+
+            ::NO EXAMPLE::
+        '''
+        if self._parent.operators() is None or operation < 0 or operation >= self._parent.noperators():
+            raise ValueError(f"Invalid data for a skew operation with {self._parent.noperators()} operations")
+        
+        delta = self._parent.operators()[operation]
+        assert delta.is_skew() and not delta.is_derivation(), "The operation is not a skew derivation"
+        factor = delta.factor() # is not None
+
+        parts = tuple(self._variables.items())
+        if len(parts) == 1: # base case
+            (v, o), e = parts[0]
+            do = o[:operation] + (o[operation] + 1,) + o[operation + 1:]
+            ## delta(u^n) = sum_{i=1}^{n} binomial(n,i)/factor^{i-1} delta(u)^i u^{n-i}
+            return tuple((self._parent.element_class(self._parent, {(v, do): i, (v, o): e-i}), binomial(e,i)/factor**(i-1)) for i in range(1, e+1))
+        else: # recursive case
+            t = self._parent.element_class(self._parent, {parts[0][0]: parts[0][1]}) 
+            s = self._parent.element_class(self._parent, dict(parts[1:])) 
+            dt = dict(t._skew_(operation)) # easy case, always base case
+            ds = dict(s._skew_(operation)) # may fall into further recursion - as many as parts have self minus 1
+            t = dict(((t, 1),))
+            s = dict(((s, 1),))
+
+            ## We merge now the two resulting operations with the usual skew derivation formula that only uses the skew derivation
+            ## delta(t*s) = (delta(t)/factor + t)*delta(s) + s*delta(t)
+            return tuple(DMonomial._add_dict(
+                DMonomial._mult_dict( ## delta(t)/factor + t)*delta(s)
+                    DMonomial._add_dict( ## delta(t)/factor + t
+                        DMonomial._scale_dict(dt, 1/factor), t 
+                    ), ds
+                ), DMonomial._mult_dict(s, dt)
+            ).items())
+
+    @staticmethod
+    def _mult_dict(t: dict[DMonomial, Element], s: dict[DMonomial, Element]) -> dict[DMonomial, Element]:
+        r'''Private method to multiply two dictionaries of monomials with coefficients. (::NO EXAMPLE::)'''
+        output = dict()
+
+        for (kt,vt) in t.items():
+            for (ks, vs) in s.items():
+                k = kt*ks
+                v = vt*vs
+                if k in output:
+                    output[k] = output[k] + v
+                output[k] = output.get(k, 0) + v
+        
+        return {k: v for (k,v) in output.items() if v != 0} # we clean zero terms to keep it sparse
+
+    @staticmethod
+    def _add_dict(t: dict[DMonomial, Element], s: dict[DMonomial, Element]) -> dict[DMonomial, Element]:
+        r'''Private method to add two dictionaries of monomials with coefficients. (::NO EXAMPLE::)'''
+        if len(t) > len(s): # we copy the big, iterate the small
+            t, s = s, t
+
+        output = t.copy()
+
+        for (k,v) in s.items():
+            if k in output:
+                if v == - output[k]:
+                    output.pop(k)
+                else:
+                    output[k] = output[k] + v
+            else:
+                output[k] = v
+        return output
+
+    @staticmethod
+    def _scale_dict(t: dict[DMonomial, Element], factor: Element) -> dict[DMonomial, Element]:
+        r'''Private method to scale a dictionary of monomials with coefficients. (::NO EXAMPLE::)'''
+        return {k: factor*v for (k,v) in t.items()}
+    
+
+    @cached_method
     def _inverse_(self, operation: int = 0) -> DMonomial:
         r'''
             Tries to get the previous element of an operation.
@@ -731,10 +813,16 @@ class DMonomialMonoid(Parent):
     '''
     Element = DMonomial
 
-    def __init__(self, noperators: int, *names: str, category=None):
+    def __init__(self, noperators: int | Collection[AdditiveMap], *names: str, category=None):
         if len(names) == 0:
             raise ValueError("Monoid with 0 generators is not allowed")
-        if (noperators not in ZZ) or noperators <= 0:
+        
+        self.__operators = None # we store the operations in case of a skew derivation is needed
+
+        if isinstance(noperators, (list, tuple)):
+            self.__operators = noperators
+            noperators = len(noperators)
+        elif (noperators not in ZZ) or noperators <= 0:
             raise ValueError("Number of operations (i.e., indices) must be a positive integer")
         self.__noperators = ZZ(noperators)
         self.__variable_names = tuple(names)
@@ -749,6 +837,10 @@ class DMonomialMonoid(Parent):
     def variable_names(self) -> tuple[str]:
         r'''Method to get the names of the variables in the Monoid. (::NO EXAMPLE::)'''
         return self.__variable_names
+
+    def operators(self) -> Collection[AdditiveMap] | None:
+        r'''Method to get the operations in the based DRing. (::NO EXAMPLE::)'''
+        return self.__operators
 
     def noperators(self) -> int:
         r'''Method to get the operations in the based DRing. (::NO EXAMPLE::)'''
@@ -777,7 +869,9 @@ class DMonomialMonoid(Parent):
     def submonoid(self, generators: Collection[str | int], category=None) -> DMonomialMonoid:
         r'''Monoid method to get the submonoid generated by a subset of the generators. (::NO EXAMPLE::)'''
         generators = list(set([g if isinstance(g, str) else self.__variable_names[g] for g in generators]))
-        return DMonomialMonoid(self.__noperators, *generators, category=category)
+        return DMonomialMonoid(
+            self.__operators if self.__operators is not None else self.__noperators, 
+            *generators, category=category)
 
     def one(self) -> DMonomial:
         r'''Monoid method to get the one element of the monoid. (::NO EXAMPLE::)'''

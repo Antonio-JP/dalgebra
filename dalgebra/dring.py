@@ -2016,7 +2016,7 @@ class DRing_Wrapper(Parent):
                 elif ttype == "derivation":
                     operators.append((f"D{f'_{self.derivations().index(operator)}' if self.nderivations() > 1 else ''}", base_ring.Hom(base_ring).one(), operator.function))
                 elif ttype == "skew":
-                    operators.append((f"K{f'_{self.skews().index(operator)}' if self.nskews() > 1 else ''}", operator.function.twist, operator.function))
+                    operators.append((f"K{f'_{self.skews().index(operator)}' if self.nskews() > 1 else ''}", operator.twist.to_sage(), operator.to_sage()))
 
             self.__linear_operator_ring = OreAlgebra(self.wrapped, *operators)
         return self.__linear_operator_ring
@@ -3093,8 +3093,7 @@ def DFractionFieldMap(domain : DFractionField, operator : AdditiveMap) -> Additi
         if operator.is_derivation():
             return DerivationMap(domain, __dfraction_field_skew, base=operator, check=False)
         else:
-            return SkewMap(domain, __dfraction_field_skew, twist=WrappedMap(domain, twist), base=operator, check=False)
-        
+            return SkewMap(domain, __dfraction_field_skew, twist=DFractionFieldMap(domain, twist), base=operator, check=False)
     elif operator.is_homomorphism():
         def __dfraction_field_hom(element: DFractionFieldElement):
             num, den = element.numerator(), element.denominator()
