@@ -1240,7 +1240,68 @@ class DRingFactory(UniqueFactory):
 
         A :class:`DRing_Wrapper` with the new d-ring.
 
-        ::NO EXAMPLE::
+        EXAMPLES FOR DIFFERENCE RINGS::
+
+            sage: from dalgebra import *
+            sage: R.<x,y> = QQ[] # multivariate polynomial
+            sage: h = R.Hom(R)([x, y+x]) # a homomorphism
+            sage: DR = DRing(R, h, types=["homomorphism"]) # we create a wrapped ring with a homomorphism
+            sage: DR
+            Difference Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (Ring endomorphism of Multivariate Polynomial Ring in x, y over Rational Field
+              Defn: x |--> x
+                    y |--> x + y
+                    with map of base ring,)]
+            sage: DR2 = DRing(R, [x, y+x], types=["homomorphism"]) # we create the same object providing the list of images
+            sage: DR is DR2
+            True
+            
+        EXAMPLES FOR DIFFERENTIAL RINGS::
+
+            sage: dx, dy = R.derivation_module().gens() # we get the derivations
+            sage: DR = DRing(R, dx + x*dy, types=["derivation"]) # we create a wrapped ring with a derivation
+            sage: DR
+            Differential Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (d/dx + x*d/dy,)]
+            sage: DR2 = DRing(R, [1, x], types=["derivation"]) # we create the same object providing the list of images
+            sage: DR is DR2
+            True
+
+        EXAMPLES FOR SKEW-DIFFERENTIAL RINGS::
+
+            sage: mod = R.derivation_module(twist=h) # we create a wrapped ring with a skew-derivation
+            sage: DR = DRing(R, mod(3), types=["skew"]) # we create a wrapped ring with a skew-derivation
+            sage: DR
+            Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (3*([x |--> x, y |--> x + y] - id),)]
+            sage: DR.operators()[0].factor()
+            3
+            sage: DR2 = DRing(R, [(x, 0), (x+y, 3*x)], types=["skew"]) # we create the same object providing the list of images
+            sage: DR is DR2
+            True
+            sage: DR3 = DRing(R, [(x, x), (x+y, x)], types=["skew"]) # we create the same object providing the list of images
+            Traceback (most recent call last):
+            ...
+            ValueError: Inconsistent images for the skew-derivation: we want x -> x, but got 0
+            sage: DR4 = DRing(R, [(x, 1), (y, x)], types=["skew"]) # we create a derivation as a skew-operation
+            sage: DR4.is_differential()
+            True
+            sage: from dalgebra.dring import DerivationMap
+            sage: isinstance(DR4.operators()[0], DerivationMap)
+            True
+            sage: print(DR4.operators()[0].factor())
+            None
+
+        EXAMPLES FOR MULTIPLE OPERATIONS::
+
+            sage: DR = DRing(R, h, dx + x*dy, types=["homomorphism", "derivation"]) # we create a wrapped ring with a homomorphism and a derivation
+            sage: DR
+            Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (Ring endomorphism of Multivariate Polynomial Ring in x, y over Rational Field
+              Defn: x |--> x
+                    y |--> x + y, d/dx + x*d/dy)]
+            sage: DR2 = DRing(R, [x, y+x], [1, x], types=["homomorphism", "derivation"]) # we create the same object providing the list of images
+            sage: DR is DR2
+            True
+            sage: DR3 = DRing(DRing(R, h, types=["homomorphism"]), [1,x], types=["derivation"]) # we create the same object providing the list of images
+            sage: DR is DR3
+            True
     '''
     @staticmethod
     def hom_from_callable(base, func):
@@ -1252,6 +1313,10 @@ class DRingFactory(UniqueFactory):
                 base_map = None
         else:
             base_map = None
+
+        if base_map is not None and base_map == base.base().hom(base.base()): # if identity, we remove extra information
+            base_map = None
+
         hom_set = base.Hom(base)
         return hom_set([base(func(gen)) for gen in base.gens()], base_map=base_map)
 
@@ -1307,10 +1372,25 @@ class DRingFactory(UniqueFactory):
                     der_imgs = [img[1] for img in imgs_gens]
                     ## We have here a list with the image of each generator by its twist and the image of the generator by the operator
                     twist = DRingFactory.hom_from_callable(base, lambda v : twists_imgs[base.gens().index(base(v))])
-                    der_module = base.derivation_module(twist)
-                    
 
-                new_operator = operator
+                    if twist == base.hom(base): # this is a simple derivation
+                        new_operator = sum((im_gen*der_gen for (im_gen, der_gen) in zip(der_imgs, base.derivation_module().gens()) if im_gen != 0), base.derivation_module().zero())
+                        types[i] = "derivation" # we change the type
+                    else:
+                        module = base.derivation_module(twist=twist) # module of skewed derivations
+                        for g, dg in zip(base.gens(), der_imgs):
+                            diff = twist(g) - g
+                            if diff != 0:
+                                factor = dg / diff
+                                if factor in base:
+                                    new_operator = module(base(factor))
+                                    break
+                        else:
+                            raise ValueError("Impossible error: the twist seems to be the identity")
+                        ## We check all gens satisfies the skew-derivation property
+                        for g, dg in zip(base.gens(), der_imgs):
+                            if new_operator(g) != dg:
+                                raise ValueError(f"Inconsistent images for the skew-derivation: we want {g} -> {dg}, but got {new_operator(g)}")
 
             if new_operator != operator:
                 operators[i] = new_operator
@@ -1699,11 +1779,12 @@ class DRing_Wrapper(Parent):
         super().__init__(base.base(), category=tuple(categories))
 
         #########################################################################################################
-        ### CHECKING THE ARGUMENT 'operators'
+        ### CHECKING THE ARGUMENT 'operators'  
         if len(operators) == 1 and isinstance(operators[0], (list,tuple)):
             operators = operators[0]
-        
+             
         operators : tuple[AdditiveMap] = tuple([WrappedMap(self, operator) for operator in operators])
+
 
         #########################################################################################################
         ### CHECKING THE ARGUMENT 'types'
@@ -1738,11 +1819,14 @@ class DRing_Wrapper(Parent):
         # registering conversion to simpler structures
         current = self.__wrapped
         morph = DRing_Wrapper_SimpleMorphism(self, current)
-        current.register_conversion(morph)
-        while current.base() != current:
-            current = current.base()
-            morph = DRing_Wrapper_SimpleMorphism(self, current)
+        try:
             current.register_conversion(morph)
+            while current.base() != current:
+                current = current.base()
+                morph = DRing_Wrapper_SimpleMorphism(self, current)
+                current.register_conversion(morph)
+        except AssertionError:
+            pass # conversion already registered
 
         # registering coercion into its ring of linear operators
         try:
@@ -2200,8 +2284,15 @@ class DRing_Wrapper(Parent):
 
     def __repr__(self) -> str:
         r'''Magic method to represent the wrapped ring. (::NO EXAMPLE::)'''
-        begin = "Differential " if self.is_differential() else "Difference " if self.is_difference() else ""
-        return f"{begin}Ring [[{self.wrapped}], {repr(self.operators())}]"
+        try:
+            begin = "Differential " if self.is_differential() else "Difference " if self.is_difference() else ""
+        
+            operators = repr(self.operators())
+        except AttributeError:
+            begin = "D-"
+            operators = "with operations"
+
+        return f"{begin}Ring [[{self.wrapped}], {operators}]"
 
     def __str__(self) -> str:
         r'''Magic method to represent the wrapped ring. (::NO EXAMPLE::)'''
@@ -2209,13 +2300,20 @@ class DRing_Wrapper(Parent):
 
     def _latex_(self) -> str:
         r'''Magic method to represent the wrapped ring in LaTeX. (::NO EXAMPLE::)'''
-        return "".join((
-            r"\left(",
-            latex(self.wrapped),
-            ", ",
-            latex(self.operators()) if self.noperators() > 1 else latex(self.operators()[0]),
-            r"\right)"
-        ))
+        try:
+            return "".join((
+                r"\left(",
+                latex(self.wrapped),
+                ", ",
+                latex(self.operators()) if self.noperators() > 1 else latex(self.operators()[0]),
+                r"\right)"
+            ))
+        except AttributeError:
+            return "".join((
+                r"\left(",
+                latex(self.wrapped),
+                r", \text{with operations}\right)"
+            )) 
 
     ## Element generation
     def one(self) -> DRing_WrapperElement:
@@ -2685,11 +2783,12 @@ class AdditiveMap(SetMorphism):
         r'''Generic wrapping method for methods not by default in the category of ``self`` (::NO EXAMPLE::)'''
         if attr in self.__data:
             return self.__data[attr]
+        
         raise AttributeError(f"{self.__class__} object has no attribute {attr}")
 
     def __str__(self) -> str:
         r'''Magic method to represent the additive map. (::NO EXAMPLE::)'''
-        return f"Additive Map [{repr(self)}]\n\t- From: {self.domain()}\n\t- To  : {self.codomain()}"
+        return repr(self)
 
     def __repr__(self) -> str:
         r'''Magic method to represent the additive map. (::NO EXAMPLE::)'''
@@ -2854,7 +2953,7 @@ class SkewMap(AdditiveMap):
         r'''Magic method to represent the skew derivation. (::NO EXAMPLE::)'''
         return f"Skew Derivation [{repr(self)}] over (({self.domain()}))"
     
-    @cached_property
+    @cached_method
     def factor(self) -> Element:
         r'''
             Property to compute the factor of a skew derivation. 
@@ -2883,32 +2982,38 @@ class SkewMap(AdditiveMap):
                 sage: from dalgebra import *
                 sage: R = DifferentialRing(QQ['x'], diff)
                 sage: d = R.operators()[0]
-                sage: d.factor
+                sage: d.factor()
                 Traceback (most recent call last):
                 ...
                 ValueError: The factor of a derivation is undefined, since the twist is the identity
                 sage: R = DRing(QQ['x'], ('x+1', diff), types=('skew',))
                 sage: d = R.operators()[0]
-                sage: d.factor
+                sage: d.factor()
                 1
                 sage: R = DRing(QQ['x'], ('-x', diff), types=('skew',))
         '''
         if self.is_derivation():
-            raise ValueError("The factor of a derivation is undefined, since the twist is the identity.")
+            return None
         
         ## Main strategy: check the generators. 
         ## We look for "base" operators, in order to avoid late constructions
         ## We do not care if this computation is expensive, since it is only computed once and cached.
-        if "base" in self.__data:
-            base = self.__data["base"]
+        try:
+            base = self.base
+        except AttributeError:
+            base = None
             
-            if base.is_derivation(): # we need to look to this domain
-                for g in self.domain().gens():
-                    diff = self.twist(g) - g
-                    if diff.is_unit():
-                        return self(g) * (~diff)
-            else: # we can work recursively on the base
-                return base.factor
+        if base is None or base.is_derivation() or base.factor() is None: # we need to look to this domain
+            for g in self.domain().gens():
+                diff = self.twist(g) - g
+                if diff != 0:
+                    f = self(g) / diff
+                    if f in self.domain():
+                        return self.domain()(f)
+            # If we reached this position, we can not compute the factor: we return None
+            return None
+        else: # we can work recursively on the base
+            return base.factor()
 
 
 class DerivationMap(SkewMap):
@@ -2933,7 +3038,7 @@ class DerivationMap(SkewMap):
         r'''Magic method to represent the derivation. (::NO EXAMPLE::)'''
         return f"Derivation [{repr(self)}] over (({self.domain()}))"
     
-    @cached_property
+    @cached_method
     def factor(self) -> Element:
         r'''
             Property to compute the factor of a derivation. 
@@ -2943,7 +3048,7 @@ class DerivationMap(SkewMap):
 
             ::NO EXAMPLE::
         '''
-        raise ValueError("A derivation map does not have a factor, since the twist is the identity.")
+        return None
 
 
 def WrappedMap(domain : DRing_Wrapper, function : Morphism) -> AdditiveMap:
@@ -2961,8 +3066,11 @@ def WrappedMap(domain : DRing_Wrapper, function : Morphism) -> AdditiveMap:
             output = DerivationMap(domain, wrapped_callable, check=False)
         else:
             output = SkewMap(domain, wrapped_callable, twist=WrappedMap(domain, function.parent().twisting_morphism()), check=False)
+    else:
+        raise TypeError("The map to be wrapped must be a derivation, homomorphism or skew derivation.")
     
     output._as_sage = function # we keep the original function for the conversion to sage
+
     return output
 
 def DFractionFieldMap(domain : DFractionField, operator : AdditiveMap) -> AdditiveMap:
