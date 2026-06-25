@@ -1825,6 +1825,41 @@ class DPolynomialRing_Monoid(Parent):
             sage: T.difference(x^2*z[1]^2 - z[2]*z[1])
             -z_2*z_3 + (x^2 + 2*x + 1)*z_2^2
 
+        The final type of operators that are allowed in this class are skew-derivations. These operators satisfy a 
+        skew-Leibniz rule, where `\delta(ab) = \delta(a)b + \sigma(a)\delta(b)` for a given homomorphism `\sigma`. 
+        When `\sigma` is the identity, we recover the usual derivation. Otherwise, the skew derivation is always 
+        an operator of the form `\delta = \alpha(\sigma - \Id)` for a given `\alpha` in the base ring. So, in particular,
+        we can rewrite the skew-Leibniz rule as follows:
+
+        .. MATH::
+
+            \delta(ab) = \left(\frac{\delta(a)}{\alpha} + a\right)\delta(b) + \delta(a)b = \frac{\delta(a)\delta(b)}{\alpha} + a\delta(b) + \delta(a)b.
+
+        This type of operators can also be inherited by :class:`DPolynomialRing_Monoid` and we can create d-variables w.r.t. 
+        these operations::
+
+            sage: R.<x,y> = QQ[] # base ring
+            sage: DR = DRing(R, [(x,0), (x, x^2 - y^2)], types=["skew"]) # we create a base skew-derivation ring
+            sage: DR.operators()[0].factor() # shows the value of `\alpha` in the skew-derivation
+            x + y
+            sage: S.<u,v> = DPolynomialRing(DR.fraction_field()) # we allow fractions
+            sage: S
+            Ring of operator polynomials in (u, v) over Fraction Field of Ring [[Multivariate Polynomial Ring in x, y over Rational Field], ((x + y)*([x |--> x, y |--> x] - id),)]
+            sage: u[0].skew()
+            u_1
+            sage: u[0].skew(times=10)
+            u_10
+            sage: (u[0]*v[0]).skew() == u[0]*v[1] + u[1]*v[0] + (1/(x + y))*u[1]*v[1]
+            True
+            sage: L = x*u[2] + v[0]*u[1] - y*u[0]
+            sage: P = (x-y)*u[1] + v[0]*u[0]
+            sage: P.skew() == (y^2 - x^2 + v[1]/(x+y) + v[0])*u[1] + v[1]*u[0]
+            True
+            sage: P.skew(times=2) == v[2]*u[0] + ((x^3 + x^2*y - x*y^2 - y^3) + (3*x+y)/(2*x*(x+y))*v[2] + (3*x+y)/(2*x)*v[1])*u[1] + (v[2]/(2*x*(x+y)) + v[1]*(3*x+y)/(2*x*(x+y)) + v[0])*u[2]
+            True
+            sage: L.dot(P, u) == x*P.skew(times=2) + v[0]*P.skew() - y*P
+            True
+
         One of the main features of the category :class:`dalgebra.dring.DRings` is that
         several operators can be included in the ring. This class of operator rings also have such feature,
         extending all operators at once.
@@ -2520,7 +2555,7 @@ class DPolynomialRing_Monoid(Parent):
                     return self(operator(self.base()(element)))
                 
                 if element not in self.__cache[operation]:
-                    op_monom = [DMonomial._scale_dict(dict(m._skew_(operation)), c) for (m,c) in element._content.items()]
+                    op_monom = [DMonomial._scale_dict(dict(m._skew_(operation)), operator.twist(c)) for (m,c) in element._content.items()] + [{m : operator(c) for (m,c) in element._content.items()}]
                     from functools import reduce
                     final_dict = reduce(lambda d1,d2 : DMonomial._add_dict(d1,d2), op_monom[1:], op_monom[0]) # always more than 1, since we are not in base
                     self.__cache[operation][element] = self.element_class(self, final_dict)
