@@ -778,6 +778,47 @@ class DRings(Category):
                 raise IndexError("An index for the skew must be provided when having several skews")
             return self.skews()[skew](element)
 
+        ### 'shifts' vs 'skews'
+        def skew_to_shift(self, operation: int = 0) -> DRings.ParentMethods:
+            r'''Method to change a skew-derivation into a shift (::NO EXAMPLE::)'''
+            if self.operator_types()[operation] != "skew":
+                raise TypeError(f"Operator {operation} is not a skew-derivation.")
+            elif self.operators()[operation].factor() is None:
+                raise TypeError(f"Operator {operation} is not a skew-derivation with a constant factor.")
+            
+            output = self._skew_to_shift(operation)
+            self._register_skew_to_shift(operation, output)
+            output._register_shift_to_skew(operation, self)
+
+            return output
+        
+        def _skew_to_shift(self, operation: int) -> DRings.ParentMethods:
+            r'''Auxiliary method for :func:`skew_to_shift` that actually computes the new ring (::NO EXAMPLE::)'''
+            raise NotImplementedError(f"Method _skew_to_shift not yet implemented for {self.__class__}")
+        
+        def _register_skew_to_shift(self, operation: int, output: DRings.ParentMethods):
+            r'''Auxiliary method that register the coercion between the ring and the equivalent with a shift. (::NO EXAMPLE::)'''
+            raise NotImplementedError(f"Method _register_skew_to_shift not yet implemented for {self.__class__}")
+        
+        def shift_to_skew(self, operation: int = 0, factor: Element = 1) -> DRings.ParentMethods:
+            r'''Method to change a shift into a skew-derivation (::NO EXAMPLE::)'''
+            if self.operator_types()[operation] != "homomorphism":
+                raise TypeError(f"Operator {operation} is not a shift.")
+            
+            output = self._shift_to_skew(operation, factor)
+            self._register_shift_to_skew(operation, output)
+            output._register_skew_to_shift(operation, self)
+
+            return output
+
+        def _shift_to_skew(self, operation: int, factor: Element = 1) -> DRings.ParentMethods:
+            r'''Auxiliary method for :func:`shift_to_skew` that actually computes the new ring (::NO EXAMPLE::)'''
+            raise NotImplementedError(f"Method _shift_to_skew not yet implemented for {self.__class__}")
+
+        def _register_shift_to_skew(self, operation: int, output: DRings.ParentMethods):
+            r'''Auxiliary method that register the coercion between the ring and the equivalent with a skew-derivation. (::NO EXAMPLE::)'''
+            raise NotImplementedError(f"Method _register_shift_to_skew not yet implemented for {self.__class__}")
+        
         ##########################################################
         ### LINEAR ALGEBRA METHODS
         ##########################################################
@@ -1347,7 +1388,10 @@ class DRingFactory(UniqueFactory):
             if ttype == "none":
                 ## If no type is given, we can not do more to guess
                 ## We check the operator is not just a callable
-                if not operator in base.Hom(base) or not isinstance(operator, RingDerivationModule.element_class):
+                if operator == "forward": # special case for the forward difference operator
+                    logging.warning("The use of the forward derivation is only necessary when we want to treat the zero morphism as a skew-derivation.")
+                    types[i] = "skew" # we force it to be skew-derivation
+                elif not operator in base.Hom(base) or not isinstance(operator, RingDerivationModule.element_class):
                     raise ValueError(f"Type for {operator} can not be obtained from its structure")
                 new_operator = operator
             elif ttype == "homomorphism":
@@ -1364,6 +1408,9 @@ class DRingFactory(UniqueFactory):
                 new_operator = sum((im_gen*der_gen for (im_gen, der_gen) in to_sum if im_gen != 0), der_module.zero())
             elif ttype == "skew":
                 if isinstance(parent(operator), RingDerivationModule):
+                    new_operator = operator
+                elif operator == "forward": # special case for the forward difference operator
+                    logging.warning("The use of the forward derivation is only necessary when we want to treat the zero morphism as a skew-derivation.")
                     new_operator = operator
                 else: # we try to get the operator from the list-type input
                     imgs_gens = [operator(g) for g in base.gens()]
@@ -1848,6 +1895,29 @@ class DRing_Wrapper(Parent):
     def operator_types(self) -> tuple[str]: 
         r'''Method to get the types of the operations in the wrapped ring. (::NO EXAMPLE::)'''
         return self.__types
+
+    def _skew_to_shift(self, operation: int = 0) -> DRing_Wrapper:
+        r'''Auxiliary method to convert a skew derivation into a shift operator. (::NO EXAMPLE::)'''
+        operators = [el.to_sage() if i != operation else el.twist.to_sage() for i, el in enumerate(self.operators())]
+        types = [el if i != operation else "homomorphism" for i, el in enumerate(self.operator_types())]
+        return DRing(self.wrapped, *operators, types=types) # coercion is inherent because of the wrapped ring being the same
+    
+    def _register_skew_to_shift(self, _: int, __: DRing_Wrapper) -> None:
+        r'''Auxiliary method to register the conversion of a skew derivation into a shift operator. (::NO EXAMPLE::)'''
+        pass # There is nothing to do - everything works automatically
+    
+    def _shift_to_skew(self, operation: int = 0, factor: Element = 1) -> DRing_Wrapper:
+        r'''Auxiliary method to convert a shift operator into a skew derivation. (::NO EXAMPLE::)'''
+        if factor != 1:
+            raise NotImplementedError("The factor for the skew derivation must be 1.")
+        
+        operators = [el.to_sage() if i != operation else "forward" for i, el in enumerate(self.operators())]
+        types = [el if i != operation else "skew" for i, el in enumerate(self.operator_types())]
+        return DRing(self.wrapped, *operators, types=types) # coercion is inherent because of the wrapped ring being the same
+
+    def _register_shift_to_skew(self, _: int, __: DRing_Wrapper) -> None:
+        r'''Auxiliary method to register the conversion of a shift operator into a skew derivation. (::NO EXAMPLE::)'''
+        pass # There is nothing to do - everything works automatically
 
     def add_constants(self, *new_constants: str) -> DRing_Wrapper:
         r'''
@@ -2764,6 +2834,8 @@ class AdditiveMap(SetMorphism):
         hom = domain.Hom(domain, category=_CommutativeAdditiveGroups)
         self.function = function
         self._as_sage = None
+        self._as_repr = None
+        self._as_latex = None
         self.__data = kwds
 
         super().__init__(hom, function)
@@ -2792,26 +2864,30 @@ class AdditiveMap(SetMorphism):
 
     def __repr__(self) -> str:
         r'''Magic method to represent the additive map. (::NO EXAMPLE::)'''
-        try:
-            sage = self.to_sage()
-            if sage is None:
-                raise ValueError("The method to_sage returned None")
-            return repr(sage)
-        except ValueError:
+        if self._as_repr is None:
             try:
-                return repr(self.base)
-            except AttributeError:
-                return repr(self.function)
+                sage = self.to_sage()
+                if sage is None:
+                    raise ValueError("The method to_sage returned None")
+                self._as_repr = repr(sage)
+            except ValueError:
+                try:
+                    self._as_repr = repr(self.base)
+                except AttributeError:
+                    self._as_repr = repr(self.function)
+        return self._as_repr
 
     def _latex_(self) -> str:
         r'''Magic method to represent the additive map in LaTeX. (::NO EXAMPLE::)'''
-        try:
-            return latex(self.to_sage())
-        except ValueError:
+        if self._as_latex is None:
             try:
-                return latex(self.base)
-            except AttributeError:
-                return latex(self.function)
+                self._as_latex = latex(self.to_sage())
+            except ValueError:
+                try:
+                    self._as_latex = latex(self.base)
+                except AttributeError:
+                    self._as_latex = latex(self.function)
+        return self._as_latex
 
     def __eq__(self, other) -> bool:
         r'''Magic method to compare two additive maps. (::NO EXAMPLE::)'''
@@ -2892,6 +2968,19 @@ class RingHomomorphism(AdditiveMap):
 
         return domain.Hom(domain)(func)
 
+    def forward_derivation(self) -> SkewMap:
+        r'''Method to create a skew derivation from a ring homomorphism. (::NO EXAMPLE::)'''
+        output = SkewMap(self.domain(), lambda x : self(x) - x, twist=self)
+
+        ## We set up several variables so the user understands this object
+        try:
+            output._as_sage = output.domain().to_sage().derivation_module(twist=output.twist.to_sage())(1)
+        except:
+            output._as_repr = f"{repr(self)} - id"
+            output._as_latex = f"{latex(self)} - \\id"
+        output._SkewMap__factor = self.domain().one() # the factor is one even when this is a derivation
+        return output
+
 class SkewMap(AdditiveMap):
     r'''
         Class representing a type of additive morphism: a skew-derivation.
@@ -2914,6 +3003,7 @@ class SkewMap(AdditiveMap):
             raise TypeError("The twist for a skew derivation must be a homomorphism in the operations module of the domain.")
         
         self.twist = twist
+        self.__factor = None
         
         super().__init__(domain, function, check=check, **kwds)
 
@@ -2953,7 +3043,6 @@ class SkewMap(AdditiveMap):
         r'''Magic method to represent the skew derivation. (::NO EXAMPLE::)'''
         return f"Skew Derivation [{repr(self)}] over (({self.domain()}))"
     
-    @cached_method
     def factor(self) -> Element:
         r'''
             Property to compute the factor of a skew derivation. 
@@ -2992,28 +3081,31 @@ class SkewMap(AdditiveMap):
                 1
                 sage: R = DRing(QQ['x'], ('-x', diff), types=('skew',))
         '''
-        if self.is_derivation():
-            return None
-        
-        ## Main strategy: check the generators. 
-        ## We look for "base" operators, in order to avoid late constructions
-        ## We do not care if this computation is expensive, since it is only computed once and cached.
-        try:
-            base = self.base
-        except AttributeError:
-            base = None
+        if self.__factor is None:
+            if self.is_derivation():
+                self.__factor = None
             
-        if base is None or base.is_derivation() or base.factor() is None: # we need to look to this domain
-            for g in self.domain().gens():
-                diff = self.twist(g) - g
-                if diff != 0:
-                    f = self(g) / diff
-                    if f in self.domain():
-                        return self.domain()(f)
-            # If we reached this position, we can not compute the factor: we return None
-            return None
-        else: # we can work recursively on the base
-            return base.factor()
+            ## Main strategy: check the generators. 
+            ## We look for "base" operators, in order to avoid late constructions
+            ## We do not care if this computation is expensive, since it is only computed once and cached.
+            try:
+                base = self.base
+            except AttributeError:
+                base = None
+                
+            if base is None or base.is_derivation() or base.factor() is None: # we need to look to this domain
+                for g in self.domain().gens():
+                    diff = self.twist(g) - g
+                    if diff != 0:
+                        f = self(g) / diff
+                        if f in self.domain():
+                            self.__factor = self.domain()(f)
+                            break
+                else: # If we reached this position, we can not compute the factor: we return None
+                    return None
+            else: # we can work recursively on the base
+                self.__factor = base.factor()
+        return self.__factor
 
 
 class DerivationMap(SkewMap):
@@ -3055,6 +3147,11 @@ def WrappedMap(domain : DRing_Wrapper, function : Morphism) -> AdditiveMap:
     r'''Factory function to create a wrapped map over a wrapped ring. (::NO EXAMPLE::)'''
     if not isinstance(domain, DRing_Wrapper):
         raise TypeError("A WrappedMap can only be created for a 'DRing_Wrapper'")
+    
+    if isinstance(function, str): # this is the case for a forward derivation. 
+        if function != "forward":
+            raise ValueError("The only string accepted for a wrapped map is 'forward' to create a forward derivation.")
+        return RingHomomorphism.one(domain).forward_derivation()
     
     wrapped_callable = lambda p : domain(function(domain(p).wrapped))
     

@@ -1039,7 +1039,7 @@ class DPolynomial(Element):
             H2 = self.sym_power(power//2, gen)
 
             ngen = gen.variable_name()
-            return H1(**{ngen: H2})
+            return H1.dot(H2, gen=gen)
 
     def dot(self, other: DPolynomial, gen: DMonomialGen = None) -> DPolynomial:
         r'''
@@ -1066,7 +1066,7 @@ class DPolynomial(Element):
         else:
             raise TypeError("Incorrect generator for Lie bracket")
 
-        return self(**{name_gen: other})
+        return self.parent().eval(self, {name_gen: other}, inner=True)
 
     def dot_div_right(self, other: DPolynomial, gen: DMonomialGen = None) -> tuple[DPolynomial, DPolynomial]:
         r'''
@@ -1927,11 +1927,11 @@ class DPolynomialRing_Monoid(Parent):
 
         self.__monoids = DMonomialMonoid(base.operators(), *names)
         self.__gens = tuple(DPolynomialGen(self, name, index=i) for (i,name) in enumerate(names))
+        self.__cache : dict[dict[DPolynomial, DPolynomial]] = dict()
         self.__operators : tuple[AdditiveMap] = tuple([
             self._create_operator(operation, ttype)
             for operation, ttype in enumerate(self.base().operator_types())
         ])
-        self.__cache : list[dict[DPolynomial, DPolynomial]] = [dict() for _ in range(len(self.__operators))]
         self.__cache_ranking : dict[tuple[tuple[DPolynomial], str], RankingFunction] = dict()
         self.__fraction_field : DFractionField = None
         self.__CACHED_EVALUATION_MORPHISM = dict()
@@ -2353,20 +2353,20 @@ class DPolynomialRing_Monoid(Parent):
             self.__fraction_field = DFractionField(self)
         return self.__fraction_field
 
-    def get_evaluation_morphism(self, images: dict) -> Morphism:
+    def get_evaluation_morphism(self, images: dict, inner: bool = False) -> Morphism:
         r'''Get an evaluation morphism for the d-variables with the given values. It ensures unicity on the structure and cached results. (::NO EXAMPLE::)'''
         if len(images) == 0:
             return self.hom(self) #identity morphism
 
-        key = tuple(sorted(images.items()))
+        key = tuple(sorted(images.items())) + (inner,)
         if key not in self.__CACHED_EVALUATION_MORPHISM:
-            codomain, morphism = EvaluationMorphism_DPolynomial.decide_codomain(self, images)
+            codomain, morphism = (self, self.coerce_map_from(self)) if inner else EvaluationMorphism_DPolynomial.decide_codomain(self, images)
             self.__CACHED_EVALUATION_MORPHISM[key] = EvaluationMorphism_DPolynomial(self, codomain, images, domain_to_codomain=morphism)
         return self.__CACHED_EVALUATION_MORPHISM[key]
 
-    def eval(self, element: DPolynomial, dic : dict[str, Element]) -> Element:
+    def eval(self, element: DPolynomial, dic : dict[str, Element], inner: bool = False) -> Element:
         r'''Evaluate the given element at the values given in ``dic``. (::NO EXAMPLE::)'''
-        key = (element, tuple(sorted(dic.items())))
+        key = (element, tuple(sorted(dic.items())), inner)
         if key not in self.__CACHED_EVALUATIONS:
             ###########################################################
             ## Evaluating coefficients first
@@ -2383,8 +2383,8 @@ class DPolynomialRing_Monoid(Parent):
             if len(inner_kwds) > 0: # Evaluating coefficients -> this forces everything to remain in the same base ring
                 return element.eval_coefficients(**inner_kwds)(**dic)
 
-            ev_morph = self.get_evaluation_morphism(dic)
-            self.__CACHED_EVALUATION_MORPHISM[key] = ev_morph(self)
+            ev_morph = self.get_evaluation_morphism(dic, inner=inner)
+            self.__CACHED_EVALUATION_MORPHISM[key] = ev_morph(element)
 
         return self.__CACHED_EVALUATION_MORPHISM[key]
 
@@ -2510,6 +2510,10 @@ class DPolynomialRing_Monoid(Parent):
             ::NO EXAMPLE::
         '''
         operator : AdditiveMap = self.base().operators()[operation] if not isinstance(operation, AdditiveMap) else operation
+        if operation not in self.__cache:
+            logger.warning(f"Creating new cache for operator {operation} of type {ttype}")
+            self.__cache[operation] = dict()
+        
         if ttype == "homomorphism":
             def __extended_homomorphism(element : DPolynomial) -> DPolynomial:
                 r'''Auxiliary method for the extended homomorphism from the base ring to the whole ring of polynomials. (::NO EXAMPLE::)'''
@@ -2546,7 +2550,6 @@ class DPolynomialRing_Monoid(Parent):
                 return self.__cache[operation][element]
             new_operator = DerivationMap(self, __extended_derivation, check=False, base=operator)
         elif ttype == "skew":
-            ext_twist = self._create_operator(operator.twist, "homomorphism") # twist must always exist, otherwise this is a derivation
             def __extended_skew(element : DPolynomial) -> DPolynomial:
                 r'''Auxiliary method for the extended skew-derivation from the base ring to the whole ring of polynomials. (::NO EXAMPLE::)'''
                 element = self(element)
@@ -2561,12 +2564,81 @@ class DPolynomialRing_Monoid(Parent):
                     self.__cache[operation][element] = self.element_class(self, final_dict)
                 
                 return self.__cache[operation][element]
+
+            ext_twist = RingHomomorphism(self, lambda v: __extended_skew(v)/operator.factor() + v, check=False, base=operator.twist)
             new_operator = SkewMap(self, __extended_skew, twist=ext_twist, check=False, base=operator)
+            new_operator._SkewMap__factor = operator.factor()
         else:
             raise ValueError(f"The type {ttype} is not recognized as a valid operator.")
 
         return new_operator
 
+    def _skew_to_shift(self, operation: int) -> DPolynomialRing_Monoid:
+        r'''
+            Auxiliary method to convert a skew-derivation into a shift
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R = DRing(QQ, "forward")
+                sage: T.<u,v> = DPolynomialRing(R)
+                sage: S = T.skew_to_shift()            
+                sage: S
+                WARNING:root:The use of the forward derivation is only necessary when we want to treat the zero morphism as a skew-derivation.
+                Ring of operator polynomials in (u, v) over Difference Ring [[Rational Field], (Identity endomorphism of Rational Field,)]
+                
+            In this case, we have that `\delta = \sigma - \id`, so we can convert easily from `\delta` to `\sigma` and viceversa::
+
+                sage: S(u[1] + v[0]) # u_1 + v_0
+                -u_0 + u_1 + v_0
+                sage: S(u[1]*v[1])
+                u_0*v_0 - u_0*v_1 - u_1*v_0 + u_1*v_1
+            
+            This also works for more complex skew-derivations::
+
+                sage: R = DRing(QQ['x', 'y'], [(x+1,1), ('x+y', x)], types=["skew"])
+                sage: T.<u,v> = DPolynomialRing(R)
+                sage: T
+                Ring of operator polynomials in (u, v) over Ring [[Multivariate Polynomial Ring in x, y over Rational Field], ([x |--> x + 1, y |--> x + y] - id,)]
+                sage: S = T.skew_to_shift()
+                sage: S
+                Ring of operator polynomials in (u, v) over Difference Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (Ring endomorphism of Multivariate Polynomial Ring in x, y over Rational Field
+                  Defn: x |--> x + 1
+                        y |--> x + y,)]
+                sage: x,y = R.gens()
+                sage: (x*u[1] - y*v[0]).skew()
+                u_1 + (x + 1)*u_2 - x*v_0 - (x + y)*v_1
+                sage: S(x*u[1] - y*v[0])
+                -x*u_0 + x*u_1 - y*v_0
+                sage: T(S(x*u[1] - y*v[0])) == x*u[1] - y*v[0]
+                True
+        '''
+        base = self.base().skew_to_shift(operation)
+        return DPolynomialRing(base, *self.variable_names())
+    
+    def _register_skew_to_shift(self, operation: int, output: DPolynomialRing_Monoid):
+        r'''Auxiliary method that register the coercion between the ring and the equivalent with a shift. (::NO EXAMPLE::)'''
+        try:
+            output.register_coercion(DPolynomial_Skew2ShiftMorphism(self, output, operation))
+        except AssertionError:
+            pass # already registered
+
+        return output
+        
+    def _shift_to_skew(self, operation: int, factor: Element = 1) -> DPolynomialRing_Monoid:
+        r'''Auxiliary method to convert a shift operator into a skew derivation. (::NO EXAMPLE::)'''
+        base = self.base().shift_to_skew(operation, factor)
+        return DPolynomialRing(base, *self.variable_names())
+
+    def _register_shift_to_skew(self, operation: int, output: DPolynomialRing_Monoid):
+        r'''Auxiliary method that register the coercion between the ring and the equivalent with a skew-derivation. (::NO EXAMPLE::)'''
+        try:
+            output.register_coercion(DPolynomial_Shift2SkewMorphism(self, output, operation))
+        except AssertionError:
+            pass # already registered
+
+        return output
+        
     def add_constants(self, *new_constants: str) -> DPolynomialRing_Monoid:
         r'''
             DRing method to add constants to the ring of d-polynomials. (::NO EXAMPLE::)
@@ -3552,6 +3624,112 @@ class InfiniteToDPoly_Coercion(Morphism):
 
         return output
 
+
+class DPolynomial_Shift2SkewMorphism(Morphism):
+    r'''
+        Class representing the map between the "same" ring of d-polynomials where we are changing a shift operator into a skew operator.
+
+        ::NO EXAMPLE::
+    '''
+    def __init__(self, shift_ring : DPolynomialRing_Monoid, skew_ring : DPolynomialRing_Monoid, operation: int = 0):
+        if not isinstance(shift_ring, DPolynomialRing_Monoid) or not isinstance(skew_ring, DPolynomialRing_Monoid):
+            raise TypeError(f"Domain and codomain must be DPolynomialRing_Monoid")
+        
+        if shift_ring.operator_types()[operation] != "homomorphism" or skew_ring.operator_types()[operation] != "skew":
+            raise ValueError(f"Operation {operation} must be a shift operator in the domain and a skew operator in the codomain")
+        
+        self.operation = operation
+        self.factor = skew_ring.operators()[operation].factor()
+
+        super().__init__(shift_ring, skew_ring)
+    
+    def _call_(self, element: DPolynomial) -> DPolynomial:
+        r'''Call method for a morphism (::NO EXAMPLE::)'''
+        output = self.codomain().zero()
+        for (m,c) in element.monomial_coefficients().items():
+            new_monomial = self._monom_(m)
+            new_coefficient = self.codomain().base()(c)
+            output += new_coefficient * new_monomial
+        return output
+
+    def _monom_(self, monomial: DMonomial) -> DMonomial:
+        r'''Method to convert a DMonomial from the shift ring to the skew ring (::NO EXAMPLE::)'''
+        gens = self.codomain().gens()
+
+        output = self.codomain().one()
+        
+        for ((v,o),e) in monomial._variables.items():
+            if o[self.operation] > 0: # we appl the operation over the given variable as many times as necessary
+                el = self._var_pow_(v, o[self.operation])
+                for i,order in enumerate(o):
+                    if i != self.operation and order > 0:
+                        el = el.operation(i, times=order)
+                
+                output *= el**e
+            else:
+                output *= gens[v][o]**e
+            
+        return output
+
+    @cached_method
+    def _var_pow_(self, variable: int, order: int) -> DPolynomial:
+        v = self.codomain().gens()[variable][0]
+        dv = v.operation(self.operation)
+        return (dv/self.factor + v).sym_power(order, self.codomain().gens()[variable])
+
+
+class DPolynomial_Skew2ShiftMorphism(Morphism):
+    r'''
+        Class representing the map between the "same" ring of d-polynomials where we are changing a skew operator into a shift operator.
+
+        ::NO EXAMPLE::
+    '''
+    def __init__(self, skew_ring : DPolynomialRing_Monoid, shift_ring: DPolynomialRing_Monoid, operation: int = 0):
+        if not isinstance(shift_ring, DPolynomialRing_Monoid) or not isinstance(skew_ring, DPolynomialRing_Monoid):
+            raise TypeError(f"Domain and codomain must be DPolynomialRing_Monoid")
+        
+        if shift_ring.operator_types()[operation] != "homomorphism" or skew_ring.operator_types()[operation] != "skew":
+            raise ValueError(f"Operation {operation} must be a shift operator in the domain and a skew operator in the codomain")
+        
+        self.operation = operation
+        self.factor = skew_ring.operators()[operation].factor()
+
+        super().__init__(skew_ring, shift_ring)
+    
+    def _call_(self, element: DPolynomial) -> DPolynomial:
+        r'''Call method for a morphism (::NO EXAMPLE::)'''
+        output = self.codomain().zero()
+        for (m,c) in element.monomial_coefficients().items():
+            new_monomial = self._monom_(m)
+            new_coefficient = self.codomain().base()(c)
+            output += new_coefficient * new_monomial
+        return output
+
+    def _monom_(self, monomial: DMonomial) -> DMonomial:
+        r'''Method to convert a DMonomial from the shift ring to the skew ring (::NO EXAMPLE::)'''
+        gens = self.codomain().gens()
+
+        output = self.codomain().one()
+        
+        for ((v,o),e) in monomial._variables.items():
+            if o[self.operation] > 0: # we appl the operation over the given variable as many times as necessary
+                el = self._var_pow_(v, o[self.operation])
+                for i,order in enumerate(o):
+                    if i != self.operation and order > 0:
+                        el = el.operation(i, times=order) # this works because operators always commute
+                
+                output *= el**e
+            else:
+                output *= gens[v][o]**e
+            
+        return output
+
+    @cached_method
+    def _var_pow_(self, variable: int, order: int) -> DPolynomial:
+        v = self.codomain().gens()[variable][0]
+        dv = v.operation(self.operation)
+        return (self.factor*(dv - v)).sym_power(order, self.codomain().gens()[variable])
+    
 
 class EvaluationMorphism_DPolynomial(Morphism):
     r'''

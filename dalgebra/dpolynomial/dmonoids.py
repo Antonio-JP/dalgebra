@@ -426,7 +426,7 @@ class DMonomial(Element):
             raise ValueError(f"Invalid data for a skew operation with {self._parent.noperators()} operations")
         
         delta = self._parent.operators()[operation]
-        assert delta.is_skew() and not delta.is_derivation(), "The operation is not a skew derivation"
+        assert delta.factor() is not None, "The factor for the given skew-derivation can not be computed"
         factor = delta.factor() # is not None
 
         parts = tuple(self._variables.items())
