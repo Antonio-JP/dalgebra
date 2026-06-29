@@ -1355,7 +1355,7 @@ class DRingFactory(UniqueFactory):
             except ValueError:
                 base_map = None
         elif 1 in base.gens():
-            return base.hom(base)    
+            return base.hom(base)
         else:
             base_map = None
 
@@ -1401,7 +1401,7 @@ class DRingFactory(UniqueFactory):
                     types[i] = "derivation" if operator.parent().twisting_morphism() in (None, operator.parent().hom(operator.parent())) else "skew"
                 else:
                     raise ValueError(f"Type for {operator} can not be obtained from its structure")
-                
+
                 new_operator = operator
             elif ttype == "homomorphism":
                 new_operator = DRingFactory.hom_from_callable(base, operator)
@@ -1629,7 +1629,7 @@ class DRing_WrapperElement(Element):
             return destiny.element_class(destiny, numer)
         except Exception as e:
             raise AttributeError(f"'numerator' not an attribute for {self.__class__}. Reason: {e}")
-        
+
     def denominator(self):
         r'''Method to get the denominator of an element. (::NO EXAMPLE::)'''
         try:
@@ -1639,7 +1639,7 @@ class DRing_WrapperElement(Element):
             else:
                 try:
                     destiny = DRing(denom.parent(), *[operator.function for operator in self.parent().operators()], types=self.parent().operator_types())
-                except:
+                except Exception:
                     destiny = self.parent()
             return destiny.element_class(destiny, denom)
         except Exception as e:
@@ -2712,7 +2712,7 @@ class DRingFunctor(ConstructionFunctor):
             MS = Mf
         else:
             raise AssertionError("We can only extend to one parent, no mix between them")
-        
+
         tR, tS = MR.twisting_morphism(), MS.twisting_morphism()
         tR = MR.domain().hom(MR.codomain()) if tR is None else tR
         tS = MS.domain().hom(MS.codomain()) if tS is None else tS
@@ -3123,7 +3123,7 @@ class SkewMap(AdditiveMap):
                 sage: d = R.operators()[0]
                 sage: d.factor()
                 -1/2/x
-                
+
         '''
         if self.__factor is None:
             if self.is_derivation():
