@@ -251,7 +251,7 @@ def main():
         return 0
 
     size_file = max(len(row["file"]) for row in rows)
-    size_symbol = max(len(row["symbol"]) for row in rows) 
+    size_symbol = max(len(row["symbol"]) for row in rows)
 
     print("\nSymbol checks:")
     print("- docstring: symbol has inline docstring")
