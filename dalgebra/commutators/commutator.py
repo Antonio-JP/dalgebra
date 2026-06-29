@@ -167,7 +167,7 @@ def Jset(bound: int, congruence:int, *to_remove: int):
 
             sage: from dalgebra.commutators.commutator import Jset
             sage: Jset(20, 5, 3, 9)
-            [0, 1, 2, 4, 6, 7, 11, 12, 16, 17] 
+            [0, 1, 2, 4, 6, 7, 11, 12, 16, 17]
     '''
     result = []
     for el in range(bound+1):
@@ -386,7 +386,7 @@ def __compute_bounds(n, *K, global_bound, ignore_bound=False):
     r'''
         Compute bounds for the orders of the generators when we have information about elements in the centralizer.
 
-        If we are looking for the centralizer of an operator `L` of order `n` and we know operators `G_1,...,G_k` of orders `m_1,...,m_k` are elements in its Goodearl's basis, then all monomial combinations are in the centraler of `L`. Namely, for any tuple `(e_0,...,e_k)`, we know 
+        If we are looking for the centralizer of an operator `L` of order `n` and we know operators `G_1,...,G_k` of orders `m_1,...,m_k` are elements in its Goodearl's basis, then all monomial combinations are in the centraler of `L`. Namely, for any tuple `(e_0,...,e_k)`, we know
 
         .. MATH::
 
@@ -805,7 +805,7 @@ def generate_polynomial_equations(H: DPolynomial, var_name: str = "x") -> list[P
 
         TODO (unassigned): Check the validity of this method. Does it make sense to keep this while having the methods to check if something is zero?
 
-        ::NO EXAMPLE::    
+        ::NO EXAMPLE::
     '''
     logger.debug(f"[GenPolyEqus] Getting equations (w.r.t. {var_name}) from: H={repr(H)[:20]}...")
     B = H.parent().base()
@@ -1017,7 +1017,7 @@ class GDH_Solution:
         r'''
             Static method to generate a :class:`GDH_Solution` representing an error case.
 
-            ::NO EXAMPLE::        
+            ::NO EXAMPLE::
         '''
         gen = L.parent().gen("z")
         centr = L.order(gen)*[None]

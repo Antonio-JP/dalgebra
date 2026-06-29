@@ -141,7 +141,7 @@ class DSystem:
 
     ## Getters for some properties
     @property
-    def _equations(self): 
+    def _equations(self):
         r'''Property to get the equations of the system as a tuple of d-polynomials. (::NO EXAMPLE::)'''
         return self.__equations
     @property
@@ -149,37 +149,37 @@ class DSystem:
         r'''Property to get the variables of the system as a tuple of d-variables. (::NO EXAMPLE::)'''
         return self.__variables
     @property
-    def parameters(self): 
+    def parameters(self):
         r'''Property to get the parameters of the system as a tuple of d-variables. (::NO EXAMPLE::)'''
         return self.__parameters
     @property
-    def rem_dring(self): 
+    def rem_dring(self):
         r'''Property to get the remaining d-Ring when we remove the variables of the system. (::NO EXAMPLE::)'''
         return self.__rem_dring
 
-    def parent(self) -> Parent: 
+    def parent(self) -> Parent:
         r'''Method to get the parent structure for the system, i.e., the d-ring where all equations belong. (::NO EXAMPLE::)'''
         return self.__parent
 
-    def size(self) -> int: 
+    def size(self) -> int:
         r'''Method to get the number of equations in the system. (::NO EXAMPLE::)'''
         return len(self._equations)
 
     @cached_method
-    def is_DifferentialSystem(self) -> bool: 
+    def is_DifferentialSystem(self) -> bool:
         r'''Method to check if the system is differential. (::NO EXAMPLE::)'''
         return self.parent().is_differential()
-    
+
     @cached_method
-    def is_DifferenceSystem(self) -> bool: 
+    def is_DifferenceSystem(self) -> bool:
         r'''Method to check if the system is of differences. (::NO EXAMPLE::)'''
         return self.parent().is_difference()
 
-    def is_differential(self) -> bool: 
+    def is_differential(self) -> bool:
         r'''Method to check if the system is differential. (::NO EXAMPLE::)'''
         return self.is_DifferentialSystem()
-    
-    def is_difference(self) -> bool: 
+
+    def is_difference(self) -> bool:
         r'''Method to check if the system is of differences. (::NO EXAMPLE::)'''
         return self.is_DifferenceSystem()
 
@@ -191,7 +191,7 @@ class DSystem:
             method allows a generator to be given and then the order w.r.t. this variable will
             be computed. For further information, check
             :func:`~dalgebra.dpolynomial.dpolynomial.DPolynomial.order`.
-            
+
             ::NO EXAMPLE::
         '''
         return max(equ.order(gen, operation) for equ in self.equations())
@@ -457,7 +457,7 @@ class DSystem:
     ## magic methods
     def __getitem__(self, index) -> DSystem:
         r'''
-            Magic method for getting an equation from the system. 
+            Magic method for getting an equation from the system.
 
             If an integer is provided, the equation is returned. Otherwise, a subsystem is generated.
 

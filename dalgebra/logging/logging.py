@@ -71,7 +71,7 @@ def count_calls(logger : logging.Logger):
 
 def loglevel(logger : logging.Logger):
     r'''
-        Wrapper for a function to set up the logger for a function. 
+        Wrapper for a function to set up the logger for a function.
 
         Any function wrapped with this decorator, will include automatically the extra arguments loglevel and logfile,
         which can be used to configure the logger behavior for this method.
@@ -215,8 +215,8 @@ logger.propagate = False
 
 
 #### METHODS TO MANIPULATE THE LEVELS FOR DEFAULT HANDLERS
-def logging_stderr_level(new_level: int): 
-    r'''Global setter for the stderr handler level. (::NO EXAMPLE::)'''    
+def logging_stderr_level(new_level: int):
+    r'''Global setter for the stderr handler level. (::NO EXAMPLE::)'''
     GENERAL_STDERR_HANDLER.setLevel(new_level)
 
 

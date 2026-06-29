@@ -155,6 +155,7 @@ def spectral_operators(*operators: DPolynomial, names: list[str] = None) -> tupl
     constants = [DR(DR.base()(name)) for name in names]
     return tuple(DR(op) - c*z[0] for (op, c) in zip(operators, constants))
 
+
 def BC_pair(L, P):
     r'''
         Algorithm BC_pair from :doi:`10.3842/sigma.2019.101` (Section 6).

@@ -44,7 +44,7 @@ class QuotientRingElement_extended(QuotientRingElement):
 class QuotientRing_extended(QuotientRing_generic):
     r"""
         A class to extend the behavior of the QuotientRing_generic class.
-        
+
         ::NO EXAMPLE::
     """
     Element = QuotientRingElement_extended

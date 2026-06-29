@@ -1,4 +1,4 @@
-# **Difference and Differential Algebra** 
+# **Difference and Differential Algebra**
 
 ``dalgebra`` is a [SageMath](https://www.sagemath.org) package that allow to create, manipulate, and study *differential* and *difference* structures.
 

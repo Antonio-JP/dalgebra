@@ -179,7 +179,7 @@ def dalgebra_version():
 def dalgebra_folder():
     r'''
         Method to get the path of the package.
-        
+
         ::NO EXAMPLE::
     '''
     import os

@@ -205,8 +205,8 @@ class DElliptic_Element(Element):
     r'''
         :class:`Element` class for elements in a DElliptic extension.
 
-        This implementation is based on the simple idea that an algebraic extension is isomorphic to a vector space over the base field. 
-        Hence, we can represent the elements as vectors of coefficients corresponding to the powers of the algebraic variable, which in a 
+        This implementation is based on the simple idea that an algebraic extension is isomorphic to a vector space over the base field.
+        Hence, we can represent the elements as vectors of coefficients corresponding to the powers of the algebraic variable, which in a
         DElliptic extension, it is the derivative of the added element.
 
         ::NO EXAMPLE::
@@ -322,7 +322,7 @@ class DElliptic_Element(Element):
     @cached_method
     def algebraic(self) -> Element:
         r'''
-            Method to get the algebraic version of this element. 
+            Method to get the algebraic version of this element.
 
             In `dalgebra` we have algebraic structures for which we have set up a difference-differential structure. This method
             returns the corresponding algebraic element as a SageMath element. (See methods :func:`to_sage`).
@@ -384,7 +384,7 @@ class DElliptic_Element(Element):
                 conditions.append((self.parent()(mon)*self.parent()(str(mon2)), c))
 
         return tuple(conditions)
-    
+
     def reduce_algebraic(self, ideal) -> DElliptic_Element:
         r'''
             Reduces the coefficients of ``self`` with respect to the ideal of conditions given by ``ideal``.
@@ -400,7 +400,7 @@ class DElliptic_Element(Element):
                 raise ZeroDivisionError(f"Impossible to reduce the element since the denominator is reduced to zero")
             result.append(num/den)
         return self.parent().element_class(self.parent(), *result)
-    
+
     def __reduce_algebraic_poly_eta(self, element, ideal: tuple[Element]) -> Element:
         r'''Auxiliary method for performing algebraic relations to DElliptic elements (::NO EXAMPLE::)'''
         output = []
@@ -485,11 +485,11 @@ class DElliptic_Element(Element):
 
     def __call__(self, *args, **kwds):
         r'''
-            Method to evaluate the element at some point. 
-            
-            It is important to remark that the only variables that are evalauted are inside the coefficients of the 
+            Method to evaluate the element at some point.
+
+            It is important to remark that the only variables that are evalauted are inside the coefficients of the
             element. The main variable `\eta` and `\eta'` are NOT evaluated.
-            
+
             ::NO EXAMPLE::
         '''
         if self.parent().varname() in kwds:
@@ -506,7 +506,7 @@ class DElliptic_Field(Parent):
         ::NO EXAMPLE::
     '''
     Element = DElliptic_Element
-    def _set_categories(self, base : Parent, category=None) -> list[Category]: 
+    def _set_categories(self, base : Parent, category=None) -> list[Category]:
         r'''Private method to set appropriate categories for the field (::NO EXAMPLE::)'''
         return [_DRings, Algebras(base), _Fields] + ([category] if category is not None else [])
 
@@ -548,11 +548,11 @@ class DElliptic_Field(Parent):
     ################################################################################
     ### GETTER METHODS
     ################################################################################
-    def varname(self) -> str: 
+    def varname(self) -> str:
         r'''Method to obtain the name (string) of the variable `\eta` (::NO EXAMPLE::)'''
         return self.__varname
 
-    def var_p_name(self) -> str: 
+    def var_p_name(self) -> str:
         r'''Method to obtain the name (string) of the variable `\eta'` (::NO EXAMPLE::)'''
         return self.__variable_prime
 
@@ -702,7 +702,7 @@ class DElliptic_Field(Parent):
 
     def change_base(self, R) -> DElliptic_Field:
         r'''
-            Method to change the base of the DElliptic extension. 
+            Method to change the base of the DElliptic extension.
 
             This method guarantees the existence of a coercion map from ``self`` to the new extension with base `R`.
 
@@ -831,6 +831,7 @@ class DEllipticFunctor(ConstructionFunctor):
         if (other.__class__ == self.__class__):
             return str(self.__min_poly) == str(other.__min_poly) and self.__varname == other.__varname
         return False
+
 
 #########################################################################
 ### COERCIONS AND CONVERSION MORPHISMS FOR ELLIPTIC EXTENSIONS

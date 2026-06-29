@@ -316,7 +316,8 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "direct", s
         * Let `W(L)` the set of almost commuting linear operators. Then `W(L)` is a `C`-vector space
           where `C` is the field of constants of the differential ring `R` where `L` and `A` are built over.
 
-        It was shown by Wilson (TODO (unassigned): add reference), that for an operator `L` of order `n` in normal form
+        It was shown by Wilson (:doi:`10.1007/bf02698802` and `here <https://scholar.google.com/scholar_lookup?title=Algebraic%20curves%20and%20soliton%20equations&pages=303-329&publication_year=1985&author=Wilson%2CG>`),
+        that for an operator `L` of order `n` in normal form
 
         .. MATH::
 
@@ -600,8 +601,8 @@ def __almost_commuting_recursive(parent: DPolynomialRing_Monoid, order_L: int, o
 
         def gen_monomial(ind_p=-1, ord_p=-1, ind_u=-1, ord_u=-1) -> DMonomial:
             r'''
-                Return a monomial given the approriate indices of `p` and `u`.
-            
+                Return a monomial given the appropriate indices of `p` and `u`.
+
                 ::NO EXAMPLE::
             '''
             if ind_p == 1 or ind_u == n-1: # zero cases
@@ -739,7 +740,7 @@ def __almost_commuting_linear(parent: DPolynomialRing_Monoid, equations: list[DP
 #################################################################################################
 
 
-def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = None):
+def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = None) -> tuple[DPolynomial, DPolynomial] | DPolynomial | list[DPolynomial]:
     r'''
         Return equations of the `m`-th step of the integrable hierarchy induced by `n`.
 
@@ -765,21 +766,21 @@ def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = N
     return H
 
 
-def kdv(m: int):
+def kdv(m: int) -> DPolynomial:
     r'''
         KdV hierarchy (see :wiki:`KdV_hierarchy`) is the integrable hierarchy that appears from almost commutators of a generic operator of order 2.
 
         EXAMPLES::
 
             sage: from dalgebra.commutators.almost_commuting import kdv
-            sage: c0 = kdv(5)[0]
+            sage: c0 = kdv(5)
             sage: c0
             -5/8*u_0*u_3 - 15/8*u_0^2*u_1 - 5/4*u_1*u_2 - 1/16*u_5
     '''
     return hierarchy(2,m,0)
 
 
-def boussinesq(m: int, i: int | tuple[int] | list[int] | slice | None = None):
+def boussinesq(m: int, i: int | tuple[int] | list[int] | slice | None = None) -> tuple[DPolynomial, DPolynomial] | DPolynomial | list[DPolynomial]:
     r'''
         Return the Boussinesq hierarchy differential system (not reduced) that appears from almost commutators of a generic operator of order 3.
 

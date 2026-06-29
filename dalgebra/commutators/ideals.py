@@ -156,15 +156,15 @@ class SolutionBranch:
     ### PROPERTIES OF THE CLASS
     ######################################################################################################
     @property
-    def I(self) -> Ideal: 
+    def I(self) -> Ideal:
         r'''Property to get the ideal of the branch. (::NO EXAMPLE::)'''
         return self.__I
     @property
-    def decisions(self) -> list: 
+    def decisions(self) -> list:
         r'''Property to get the list of decisions taken in the branch. (::NO EXAMPLE::)'''
         return self.__decisions
 
-    def parent(self): 
+    def parent(self):
         r'''Method to get the parent ring of the branch. (::NO EXAMPLE::)'''
         return self.__parent
 
@@ -207,7 +207,7 @@ class SolutionBranch:
     def diff_parent(self, origin):
         r'''
             Recreate the differential structure over the :func:`final_parent` for this solution branch.
-            
+
             As a main difference with :func:`final_parent`, which only creates an algebraic structure (using classes on Sage), this method
             creates the differential structure (following the concepts in :mod:`..dring`) so all the elements of the final parent have a derivative.
 
@@ -240,8 +240,8 @@ class SolutionBranch:
     @cached_method
     def full_ideal(self, groebner: bool = True) -> Ideal:
         r'''
-            Creates the full ideal that represents this Solution Branch. 
-        
+            Creates the full ideal that represents this Solution Branch.
+
             It includes all the decided variables as part of the ideal (instead of evaluating the variables)
             ::NO EXAMPLE::
         '''
@@ -484,9 +484,9 @@ def analyze_ideal(I, partial_solution: dict, to_avoid: list | dict , decisions: 
     r'''
         Method that applies simple steps for analyzing an ideal without human intervention
 
-        This method studies a particular ideal (given some specific information and avoiding certain configurations) and 
-        returns a list of solution branches that represent the different components of the algebraic variety defined by the ideal. 
-        Instead of working directly with Gröbner basis (which would be the theoretical tool to study the variety of an ideal, 
+        This method studies a particular ideal (given some specific information and avoiding certain configurations) and
+        returns a list of solution branches that represent the different components of the algebraic variety defined by the ideal.
+        Instead of working directly with Gröbner basis (which would be the theoretical tool to study the variety of an ideal,
         this method performs several simplifications, splitting the ideal into different simple components with the hope
         that the Gröbner basis we end up computing are simpler and, hence, faster to compute.
 

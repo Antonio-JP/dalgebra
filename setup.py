@@ -39,4 +39,4 @@ setup(
     include_package_data=True,
     package_data={'dalgebra': ['results/almost_commuting/*.out']}
 )
-    
+
