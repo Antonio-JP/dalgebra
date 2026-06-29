@@ -18,8 +18,9 @@ r'''
     following code::
 
         sage: from dalgebra import *
-        sage: dQx = DRing(QQ[x], lambda p : p.derivative())
-        sage: sQx = DRing(QQ[x], lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1))
+        sage: Qx = QQ[x]
+        sage: dQx = DRing(QQ[x], lambda p : p.derivative(), types=["derivation"])
+        sage: sQx = DRing(QQ[x], [x+1], types=["homomorphism"])
 
     Once the rings are created, we can create elements within the ring and apply the corresponding operator::
 
@@ -32,7 +33,7 @@ r'''
 
     We can also create the same ring with both operators together::
 
-        sage: dsQx = DRing(QQ[x], lambda p : p.derivative(), lambda p : QQ[x](p)(x=QQ[x].gens()[0] + 1))
+        sage: dsQx = DRing(QQ[x], [1], [x+1], types=["derivation", "homomorphism"])
         sage: x = dsQx(x)
         sage: x.operation(operation=0)
         1
@@ -40,11 +41,11 @@ r'''
         x + 1
 
     However, these operators have no structure by themselves: `SageMath`_ is not able to distinguish the type
-    of the operators if they are defined using lambda expressions or callables. This can be seen by the fact that
-    the factory can not detect the equality on two identical rings::
+    of the operators if they are defined using lambda expressions or callables. However, sometimes the factory
+    will detect the equality on two identical rings::
 
-        sage: dQx is DRing(QQ[x], lambda p : p.derivative())
-        False
+        sage: dQx is DRing(QQ[x], Qx.derivation_module().gen())
+        True
 
     To avoid this behavior, we can set the types by providing an optional list called ``types`` whose elements are
     strings with values:
@@ -271,9 +272,9 @@ class DRings(Category):
                 EXAMPLES::
 
                     sage: from dalgebra import *
-                    sage: dQx = DRing(QQ[x], lambda p : p.derivative())
-                    sage: sQx = DRing(QQ[x], lambda p : p(x=QQ[x].gens()[0] + 1))
-                    sage: sdQx = DRing(QQ[x], lambda p : p(x=QQ[x].gens()[0] + 1), lambda p : p.derivative())
+                    sage: dQx = DRing(QQ[x], lambda p : p.derivative(), types=("derivation",))
+                    sage: sQx = DRing(QQ[x], lambda p : p(x=QQ[x].gens()[0] + 1), types=("homomorphism",))
+                    sage: sdQx = DRing(QQ[x], lambda p : p(x=QQ[x].gens()[0] + 1), lambda p : p.derivative(), types=("homomorphism", "derivation"))
                     sage: p = QQ[x](x^3 - 3*x^2 + 3*x - 1)
                     sage: dQx.operation(p)
                     3*x^2 - 6*x + 3
@@ -1292,8 +1293,7 @@ class DRingFactory(UniqueFactory):
             sage: DR
             Difference Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (Ring endomorphism of Multivariate Polynomial Ring in x, y over Rational Field
               Defn: x |--> x
-                    y |--> x + y
-                    with map of base ring,)]
+                    y |--> x + y,)]
             sage: DR2 = DRing(R, [x, y+x], types=["homomorphism"]) # we create the same object providing the list of images
             sage: DR is DR2
             True
@@ -1354,6 +1354,8 @@ class DRingFactory(UniqueFactory):
                 base_map = DRingFactory.hom_from_callable(base.base(), func)
             except ValueError:
                 base_map = None
+        elif 1 in base.gens():
+            return base.hom(base)    
         else:
             base_map = None
 
@@ -1393,8 +1395,13 @@ class DRingFactory(UniqueFactory):
                 if operator == "forward": # special case for the forward difference operator
                     logging.warning("The use of the forward derivation is only necessary when we want to treat the zero morphism as a skew-derivation.")
                     types[i] = "skew" # we force it to be skew-derivation
-                elif operator not in base.Hom(base) or not isinstance(operator, RingDerivationModule.element_class):
+                elif operator in base.Hom(base):
+                    types[i] = "homomorphism"
+                elif isinstance(operator.parent(), RingDerivationModule):
+                    types[i] = "derivation" if operator.parent().twisting_morphism() in (None, operator.parent().hom(operator.parent())) else "skew"
+                else:
                     raise ValueError(f"Type for {operator} can not be obtained from its structure")
+                
                 new_operator = operator
             elif ttype == "homomorphism":
                 new_operator = DRingFactory.hom_from_callable(base, operator)
@@ -1435,7 +1442,7 @@ class DRingFactory(UniqueFactory):
                                     new_operator = module(base(factor))
                                     break
                         else:
-                            raise ValueError("Impossible error: the twist seems to be the identity")
+                            raise ValueError("Impossible error: the twist seems to be the identity or the factor is outside the base ring.")
                         ## We check all gens satisfies the skew-derivation property
                         for g, dg in zip(base.gens(), der_imgs):
                             if new_operator(g) != dg:
@@ -1449,8 +1456,11 @@ class DRingFactory(UniqueFactory):
         r'''Method to create an element from a key (::NO EXAMPLE::)'''
         base, operators, types = key
 
-        if isinstance(base, FractionField_generic):
-            return DRing(base.base(), *operators, types=types).fraction_field()
+        try:
+            if isinstance(base, FractionField_generic):
+                return DRing(base.base(), *operators, types=types).fraction_field()
+        except TypeError: # can not be done from the base ring
+            pass
 
         return DRing_Wrapper(base, *operators, types=types)
 
@@ -1612,10 +1622,14 @@ class DRing_WrapperElement(Element):
             if numer.parent() == self.parent().wrapped:
                 destiny = self.parent()
             else:
-                destiny = DRing(numer.parent(), *[operator.function for operator in self.parent().operators()], types=self.parent().operator_types())
+                try:
+                    destiny = DRing(numer.parent(), *[operator.function for operator in self.parent().operators()], types=self.parent().operator_types())
+                except Exception:
+                    destiny = self.parent()
             return destiny.element_class(destiny, numer)
         except Exception as e:
             raise AttributeError(f"'numerator' not an attribute for {self.__class__}. Reason: {e}")
+        
     def denominator(self):
         r'''Method to get the denominator of an element. (::NO EXAMPLE::)'''
         try:
@@ -1623,7 +1637,10 @@ class DRing_WrapperElement(Element):
             if denom.parent() == self.parent().wrapped:
                 destiny = self.parent()
             else:
-                destiny = DRing(denom.parent(), *[operator.function for operator in self.parent().operators()], types=self.parent().operator_types())
+                try:
+                    destiny = DRing(denom.parent(), *[operator.function for operator in self.parent().operators()], types=self.parent().operator_types())
+                except:
+                    destiny = self.parent()
             return destiny.element_class(destiny, denom)
         except Exception as e:
             raise AttributeError(f"'denominator' not an attribute for {self.__class__}. Reason: {e}")
@@ -2036,7 +2053,9 @@ class DRing_Wrapper(Parent):
                 sage: B.<x,y> = QQ[]; dx,dy = B.derivation_module().gens()
                 sage: s = B.Hom(B)([x+1,y-1])
                 sage: R = DifferenceRing(DifferentialRing(B, dx, dy), s); R
-                Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (d/dx, d/dy, Hom({x: x + 1, y: y - 1}))]
+                Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (d/dx, d/dy, Ring endomorphism of Multivariate Polynomial Ring in x, y over Rational Field
+                  Defn: x |--> x + 1
+                        y |--> y - 1)]
                 sage: R.linear_operator_ring()
                 Multivariate Ore algebra in D_0, D_1, S over Multivariate Polynomial Ring in x, y over Rational Field
 
@@ -2055,7 +2074,9 @@ class DRing_Wrapper(Parent):
 
                 sage: ns = B.Hom(B)([x^2, y^2])
                 sage: T = DifferenceRing(DifferentialRing(B, dx, y*dy), ns); T
-                Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (d/dx, y*d/dy, Hom({x: x^2, y: y^2}))]
+                Ring [[Multivariate Polynomial Ring in x, y over Rational Field], (d/dx, y*d/dy, Ring endomorphism of Multivariate Polynomial Ring in x, y over Rational Field
+                  Defn: x |--> x^2
+                        y |--> y^2)]
                 sage: T.all_operators_commute()
                 False
                 sage: T.linear_operator_ring()
@@ -2220,7 +2241,7 @@ class DRing_Wrapper(Parent):
 
     def construction(self) -> DRingFunctor:
         r'''Returns the construction functor to build this wrapped ring (::NO EXAMPLE::)'''
-        return DRingFunctor([operator.function for operator in self.operators()], self.operator_types()), self.wrapped
+        return DRingFunctor(self.operators(), self.operator_types()), self.wrapped
 
     def _pushout_(self, other):
         r'''Auxiliary implementation of the pushout for wrapped rings (::NO EXAMPLE::)'''
@@ -2394,7 +2415,7 @@ class DRing_Wrapper(Parent):
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R = DRing(QQ['x'], diff)
+                sage: R = DRing(QQ['x'], [1], types=("derivation",))
                 sage: R.one()
                 1
         '''
@@ -2407,7 +2428,7 @@ class DRing_Wrapper(Parent):
             EXAMPLES::
 
                 sage: from dalgebra import *
-                sage: R = DRing(QQ['x'], diff)
+                sage: R = DRing(QQ['x'], diff, types=("derivation",))
                 sage: R.zero()
                 0
         '''
@@ -2633,10 +2654,10 @@ class DRingFunctor(ConstructionFunctor):
 
         ::NO EXAMPLE::
     '''
-    def __init__(self, operators: Sequence[Morphism], types: Sequence[str]):
+    def __init__(self, operators: Sequence[AdditiveMap | Morphism], types: Sequence[str]):
         if len(operators) != len(types):
             raise ValueError("The length of the operators and types must coincide.")
-        self.__operators = tuple(operators)
+        self.__operators = tuple(el.to_sage() if isinstance(el, AdditiveMap) else el for el in operators)
         self.__types = tuple(types)
         self.rank = 10 # just above PolynomialRing
 
@@ -2659,7 +2680,7 @@ class DRingFunctor(ConstructionFunctor):
         r'''Magic method to check inequality two functors. (::NO EXAMPLE::)'''
         return not (self == other)
 
-    def __merge_skews(self, f: SkewMap, g: SkewMap):
+    def __merge_skews(self, f: Morphism, g: Morphism):
         r'''
             Method to merge to skew derivations.
 
@@ -2673,37 +2694,37 @@ class DRingFunctor(ConstructionFunctor):
             2. We check `R` is the domain of `df` or `dg`. Let `S` be the other domain.
             3. We compute `df` and `dg`restricted to `S` by getting its representation over its generators.
             4. We check equality on the two restricted derivations.
-            5. If they coincide, then we return the functor with the corresponding derivation.
+            5. If they coincide, then we return the functor with the derivation over `R` (the big ring).
 
             ::NO EXAMPLE::
         '''
-        Mf, Mg = f.function.parent(), g.function.parent()
+        Mf, Mg = f.parent(), g.parent()
         # we try to merge the base ring of the modules
         R = pushout(Mf.domain(), Mg.domain())
 
         if R == Mf.domain():
             MR = Mf
-            twist = f.twist
-            goal = f.function
+            goal = f
             MS = Mg
         elif R == Mg.domain():
             MR = Mg
-            twist = g.twist
-            goal = g.function
+            goal = g
             MS = Mf
         else:
             raise AssertionError("We can only extend to one parent, no mix between them")
+        
+        tR, tS = MR.twisting_morphism(), MS.twisting_morphism()
+        tR = MR.domain().hom(MR.codomain()) if tR is None else tR
+        tS = MS.domain().hom(MS.codomain()) if tS is None else tS
 
-        # we try and cast both derivation into MS
-        df = MS(f.function) if f.function in MS else MS([f.function(v) for v in MS.domain().gens()]) if len(MS.gens()) > 0 else MS()
-        dg = MS(g.function) if g.function in MS else MS([g.function(v) for v in MS.domain().gens()]) if len(MS.gens()) > 0 else MS()
+        if self.__merge_homomorphism(tR, tS) is None:
+            return None # the twisting morphisms are not compatible
 
-        if df - dg == 0: # this is the comparison on the restricted derivation
-            if isinstance(f, DerivationMap):
-                return DerivationMap(MR.domain(), goal)
-            else: # general skew case
-                return SkewMap(MR.domain(), twist, goal)
-        return None
+        # we check the images of all the generators of the smaller domain
+        df = [f(v) for v in MS.domain().gens_dict_recursive().values()]
+        dg = [g(v) for v in MS.domain().gens_dict_recursive().values()]
+
+        return goal if df == dg else None
 
     def __merge_homomorphism(self, f, g):
         r'''Method that merges two homomorphisms to a bigger domain. (::NO EXAMPLE::)'''
@@ -2713,16 +2734,21 @@ class DRingFunctor(ConstructionFunctor):
 
         if R == Mf.domain():
             M = Mf
+            goal = f
+            S = Mg.domain()
         elif R == Mg.domain():
             M = Mg
+            goal = g
+            S = Mf.domain()
         else:
             raise AssertionError("We can only extend to one parent, no mix between them")
 
-        # we try and cast both derivation into M
-        df = M(f) if f in M else M([f(v) for v in M.domain().gens()])
-        dg = M(g) if g in M else M([g(v) for v in M.domain().gens()])
+        # we check the images of all the generators of the smaller domain
+        df = [f(v) for v in S.gens_dict_recursive().values()]
+        dg = [g(v) for v in S.gens_dict_recursive().values()]
 
-        return df if df == dg else None
+        ## If these coincide, the two coincide in their common domain, and we can return the functor with the bigger domain
+        return goal if df == dg else None
 
     def merge(self, other):
         r'''General merging operation between functors (::NO EXAMPLE::)'''
@@ -2754,7 +2780,7 @@ class DRingFunctor(ConstructionFunctor):
                             except (AssertionError, NotImplementedError):
                                 pass
                 else: # we need to add the operator to the final list
-                    new_operators.append(merged)
+                    new_operators.append(operator)
                     new_types.append(ttype)
 
             return DRingFunctor(new_operators, new_types)
@@ -3083,15 +3109,21 @@ class SkewMap(AdditiveMap):
                 sage: from dalgebra import *
                 sage: R = DifferentialRing(QQ['x'], diff)
                 sage: d = R.operators()[0]
-                sage: d.factor()
-                Traceback (most recent call last):
-                ...
-                ValueError: The factor of a derivation is undefined, since the twist is the identity
-                sage: R = DRing(QQ['x'], ('x+1', diff), types=('skew',))
+                sage: print(d.factor())
+                None
+                sage: R = DRing(QQ['x'], [('x+1', 1)], types=('skew',))
                 sage: d = R.operators()[0]
                 sage: d.factor()
                 1
-                sage: R = DRing(QQ['x'], ('-x', diff), types=('skew',))
+                sage: R = DRing(QQ['x'], [('-x', 1)], types=('skew',))
+                Traceback (most recent call last):
+                ...
+                ValueError: Impossible error: the twist seems to be the identity or the factor is outside the base ring.
+                sage: R = DRing(QQ['x'].fraction_field(), [('-x', 1)], types=('skew',))
+                sage: d = R.operators()[0]
+                sage: d.factor()
+                -1/2/x
+                
         '''
         if self.__factor is None:
             if self.is_derivation():
