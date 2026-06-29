@@ -41,11 +41,18 @@ coverage:
 lint:
 	$(SAGE) -tox -e relint,pycodestyle-minimal -- $(PACKAGE)
 
-release-audit:
-	python3 scripts/release_audit.py
+audit:
+	@echo "###############################################################################"
+	@echo "Checking documentation of new elements for release..."
+	@echo "-------------------------------------------------------------------------------"
+	@python3 scripts/release_audit.py
+	@echo "###############################################################################"
+	@echo "Checking all TODOs for this branch are resolved..."
+	@echo "-------------------------------------------------------------------------------"
+	@python3 scripts/todo_audit.py --warnings
 
-ready: lint test release-audit
-	@echo "Repository is ready to push: check with act th actions in case of changes."
+ready: audit lint test
+	@echo "Repository is ready to push: check with act the actions in case of changes."
 
 # Documentation commands
 doc:

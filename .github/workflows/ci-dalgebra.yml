@@ -17,9 +17,9 @@ on: # only used on pushes or pull_request over the master branch
 ##############################################################################################
 
 jobs:
-  linting:    
+  linting:
     runs-on: ubuntu-latest
-    container: 
+    container:
         image: sagemath/sagemath-dev:latest
         options: --user root
     steps:
@@ -28,9 +28,9 @@ jobs:
       run: |
         sage -tox -e relint -- dalgebra
 
-  style:    
+  style:
     runs-on: ubuntu-latest
-    container: 
+    container:
         image: sagemath/sagemath-dev:latest
         options: --user root
     steps:
@@ -52,10 +52,23 @@ jobs:
       run: |
         python3 scripts/release_audit.py --warnings-as-ok
 
+  todo-audit:
+    runs-on: ubuntu-latest
+    container:
+        image: sagemath/sagemath-dev:latest
+        options: --user root
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Checking all todos of this branch are fixed
+      run: |
+        python3 scripts/todo_audit.py
+
   # Job for running the automatic tests in Sagemath
   testing:
     runs-on: ubuntu-latest
-    container: 
+    container:
         image: sagemath/sagemath-dev:latest
         options: --user root
     steps:
