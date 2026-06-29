@@ -261,7 +261,7 @@ def main() -> int:
 
     findings = audit_todos(root, branch)
     print_findings(findings, branch, warnings=args.warnings)
-    
+
     return 1 if any(finding.severity == "ERROR" for finding in findings) else 0
 
 
