@@ -17,7 +17,7 @@ on: # only used on pushes or pull_request over the master branch
 ##############################################################################################
 
 jobs:
-  linting:
+  linting-dev:
     runs-on: ubuntu-latest
     container:
         image: sagemath/sagemath-dev:latest
@@ -28,7 +28,7 @@ jobs:
       run: |
         sage -tox -e relint -- dalgebra
 
-  style:
+  style-dev:
     runs-on: ubuntu-latest
     container:
         image: sagemath/sagemath-dev:latest
@@ -39,7 +39,7 @@ jobs:
       run: |
         sage -tox -e pycodestyle-minimal -- dalgebra
 
-  release-audit:
+  release-audit-dev:
     runs-on: ubuntu-latest
     container:
         image: sagemath/sagemath-dev:latest
@@ -54,7 +54,7 @@ jobs:
         || git config --system --add safe.directory "$GITHUB_WORKSPACE"
         || python3 scripts/release_audit.py --warnings-as-ok
 
-  todo-audit:
+  todo-audit-dev:
     runs-on: ubuntu-latest
     container:
         image: sagemath/sagemath-dev:latest
@@ -70,7 +70,7 @@ jobs:
         || python3 scripts/todo_audit.py
 
   # Job for running the automatic tests in Sagemath
-  testing:
+  testing-dev:
     runs-on: ubuntu-latest
     container:
         image: sagemath/sagemath-dev:latest

@@ -2041,6 +2041,8 @@ class DRing_Wrapper(Parent):
 
             If more than one is present, we use a subindex enumerating them.
 
+            TODO (pseudo): change the use of ore_algebra to inner structures
+
             EXAMPLES::
 
                 sage: from dalgebra import *
