@@ -65,7 +65,7 @@ def create_base(family: str, **kwds):
             g_3 = QQ(kwds.get("g_3", "g_3"))
         except TypeError:
             g_3 = kwds.get("g_3", "g_3")
-        
+
         lc = QQ(kwds.get("lc", 4))
 
         constants = [el for el in (g_2, g_3) if isinstance(el, str)]
@@ -81,7 +81,7 @@ def create_base(family: str, **kwds):
             BD = DifferentialRing(B, [0,0]).fraction_field()
         else:
             BD = DifferentialRing(QQ)
-        E = DElliptic(BD, f"eta_p^2 - {lc}*eta^3 - {g_2}*eta - {g_3}", names=("eta",))
+        E = DElliptic(BD, f"eta_p^2 - {lc}*eta^3 + {g_2}*eta + {g_3}", names=("eta",))
         eta = E.gens()[0]
         return E, (eta,), family
     raise ValueError(f"Unknown family {family}")
@@ -105,7 +105,7 @@ def get_templates(generators: tuple, family: str, n:int) -> dict:
         f = eta
     else:
         raise ValueError(f"Unknown family {family}")
-   
+
     templates = {2:[f]}
     for i in range(3, n+1):
         g = f.derivative(times=i-2)
@@ -119,12 +119,12 @@ def add_constants(R, generators, n: int, family: str) -> dict:
                  [f"a_{i}_{j}" for j in range(len(templates[i]))]
                  if len(templates[i]) > 1 else [f"a_{i}"]
                 for i in range(2,n+1)}
-   
+
     all_constants = sum(constants.values(), [])
     R_wa = R.add_constants(*all_constants)
 
     constants = {k: [R_wa(el) for el in v] for k, v in constants.items()}
-   
+
     return R_wa, constants
 
 def create_Us(generators: tuple, constants: dict, family: str):
@@ -136,7 +136,7 @@ def create_Us(generators: tuple, constants: dict, family: str):
     print(templates.keys())
     for k in templates.keys():
         Us[k] = sum(c*t for (c,t) in zip(constants[k], templates[k]))
-   
+
     print(Us)
     n = min(Us.keys())
     return tuple([Us[i] for i in range(N, n-1, -1)])
@@ -168,7 +168,7 @@ if __name__ == "__main__":
     parser.add_argument("-family", type=str, required=True, choices=["rational", "trigonometric", "hyperbolic", "hyperbolic_exp", "elliptic"], help="The family of coefficients.")
     parser.add_argument("-simple", action="store_true", help="Consider as systems the ideal of the last column.")
     parser.add_argument("-maple", action="store_true", help="Use Maple to solve algebraic systems.")
-    
+
     # Parse additional arbitrary arguments of the form -name value
     args, unknown_args = parser.parse_known_args()
     extra_args = {}

@@ -1,0 +1,93 @@
+##############################################################################################
+### Action for the Continuous-Integration of the package `dalgebra`
+## This module contains two actions:
+##    - Linting --> guarantees the proper format according to Pylint
+##    - Testing --> run the tests in the documentation to guarantee the correctness in new version of the code.
+####
+##############################################################################################
+name: CI-Actions (Develop)
+
+on: # only used on pushes or pull_request over the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master, develop ]
+
+##############################################################################################
+##############################################################################################
+
+jobs:
+  linting-dev:
+    runs-on: ubuntu-latest
+    container:
+        image: sagemath/sagemath-dev:latest
+        options: --user root
+    steps:
+    - uses: actions/checkout@v4
+    - name: Linting code for repository
+      run: |
+        sage -tox -e relint -- dalgebra
+
+  style-dev:
+    runs-on: ubuntu-latest
+    container:
+        image: sagemath/sagemath-dev:latest
+        options: --user root
+    steps:
+    - uses: actions/checkout@v4
+    - name: Checking pycodestyle-minimal
+      run: |
+        sage -tox -e pycodestyle-minimal -- dalgebra
+
+  release-audit-dev:
+    runs-on: ubuntu-latest
+    container:
+        image: sagemath/sagemath-dev:latest
+        options: --user root
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Run release audit (warnings allowed)
+      run: >-
+        git status
+        || git config --system --add safe.directory "$GITHUB_WORKSPACE"
+        || python3 scripts/release_audit.py --warnings-as-ok
+
+  todo-audit-dev:
+    runs-on: ubuntu-latest
+    container:
+        image: sagemath/sagemath-dev:latest
+        options: --user root
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Checking all todos of this branch are fixed
+      run: >-
+        git status
+        || git config --system --add safe.directory "$GITHUB_WORKSPACE"
+        || python3 scripts/todo_audit.py
+
+  # Job for running the automatic tests in Sagemath
+  testing-dev:
+    runs-on: ubuntu-latest
+    container:
+        image: sagemath/sagemath-dev:latest
+        options: --user root
+    steps:
+    - uses: actions/checkout@v4
+    - name: Installing git and dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends git apt-transport-https ca-certificates
+        sudo apt-get clean
+    - name: Install package
+      run: |
+        sage -pip install --upgrade .
+    - name: Running sage tests
+      run: |
+        sage -tox -e doctest -- dalgebra
+
+##############################################################################################
+##############################################################################################

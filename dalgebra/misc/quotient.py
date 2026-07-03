@@ -14,6 +14,8 @@ from sage.rings.quotient_ring_element import QuotientRingElement
 class QuotientRingElement_extended(QuotientRingElement):
     r"""
         A class to extend the behavior of the QuotientRingElement class.
+
+        ::NO EXAMPLE::
     """
 
     def __init__(self, parent, rep, reduce=True):
@@ -23,6 +25,8 @@ class QuotientRingElement_extended(QuotientRingElement):
         r"""
             Compute the gcd of two elements in the quotient ring.
             This method is overridden to handle cases where the ambient ring is infinite.
+
+            ::NO EXAMPLE::
         """
         lself, lother = self.lift(), other.lift() # they are now polynomials over a field
         g = self.parent()(lself.gcd(lother)) # this reduces module the ideal
@@ -32,6 +36,7 @@ class QuotientRingElement_extended(QuotientRingElement):
         return c*g
 
     def content(self) -> Element:
+        r'''Redefinition of the content method for elements in a quotient ring. (::NO EXAMPLE::)'''
         from sage.arith.misc import GCD
         return GCD(self.lift().coefficients())
 
@@ -39,6 +44,8 @@ class QuotientRingElement_extended(QuotientRingElement):
 class QuotientRing_extended(QuotientRing_generic):
     r"""
         A class to extend the behavior of the QuotientRing_generic class.
+
+        ::NO EXAMPLE::
     """
     Element = QuotientRingElement_extended
 
@@ -51,5 +58,7 @@ class QuotientRing_extended(QuotientRing_generic):
     def is_finite(self):
         r"""
             Return whether the quotient ring is finite. In this case it is always false, since the ambient ring is infinite.
+
+            ::NO EXAMPLE::
         """
         return False

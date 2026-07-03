@@ -36,10 +36,10 @@ def send_results(folder: str):
     destination_folder = os.path.join(folder, 'data')
     if not os.path.exists(destination_folder):
         raise ValueError(f" !! Folder {destination_folder} does not exist.")
-   
+
     ## Regex for the file names
     regex = re.compile(r'base_almost_commuting_wilson\((\d+),(\d+)\)\[\]_[\d\.]+.out')
-   
+
     print(f" ++ Copying files from {RESULTS_FOLDER} to {destination_folder}")
     ## Copying files
     for filename in os.listdir(RESULTS_FOLDER):
@@ -86,7 +86,7 @@ def import_results(folder: str = None, version: str = None):
             ## Creating the names for all the files to be used
             full_file_name = os.path.join(source_folder, filename)
             full_copied_name = os.path.join(RESULTS_FOLDER, filename)
-           
+
             ## Checking if the original file matches the expected pattern
             M = regex.match(filename)
             if M is not None:
@@ -107,8 +107,8 @@ def import_results(folder: str = None, version: str = None):
             subprocess.run(['rm', '-rf', folder], check = True)
 
     print(f"### FINISHED IMPORT OF RESULT FILES ###")
-   
-       
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Manage results of almost commuting operators.')
     subparsers = parser.add_subparsers(dest='command')

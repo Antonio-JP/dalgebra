@@ -18,7 +18,7 @@ setup(
     long_description_content_type="text/markdown",
     url='https://github.com/Antonio-JP/dalgebra',
     author = "Antonio Jimenez-Pastor",
-    author_email = "ajpa@cs.aau.dk",
+    author_email = "antonio.jimenezp@upm.es",
     license = "GPLv3+", # See LICENSE file
     classifiers=[
       # How mature is this project? Common values are
@@ -39,4 +39,4 @@ setup(
     include_package_data=True,
     package_data={'dalgebra': ['results/almost_commuting/*.out']}
 )
-    
+

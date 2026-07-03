@@ -142,10 +142,10 @@ r'''
         10/9*u_2_0*u_2_1*u_3_0 + 5/9*u_2_0*u_3_3 + 5/9*u_2_0^2*u_3_1 + 5/3*u_2_1*u_3_2 + 20/9*u_2_2*u_3_1 + 10/9*u_2_3*u_3_0 - 5/3*u_3_0*u_3_2 - 5/3*u_3_1^2 + 1/9*u_3_5
         5/9*u_2_0*u_2_3 + 5/9*u_2_0^2*u_2_1 + 5/9*u_2_1*u_2_2 + 5/3*u_2_1*u_3_1 + 5/3*u_2_2*u_3_0 + 1/9*u_2_5 - 10/3*u_3_0*u_3_1
 
-    **Things remaining TODO**
+    **Things remaining to do**
     -----------------------------------------
 
-    1. Incorporate methods to reduce the equations for higher hierarchies.
+    1. TODO (unassigned): Incorporate methods to reduce the equations for higher hierarchies.
 
     **Elements provided by the module**
     -----------------------------------------
@@ -316,7 +316,8 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "direct", s
         * Let `W(L)` the set of almost commuting linear operators. Then `W(L)` is a `C`-vector space
           where `C` is the field of constants of the differential ring `R` where `L` and `A` are built over.
 
-        It was shown by Wilson (TODO: add reference), that for an operator `L` of order `n` in normal form
+        It was shown by Wilson (:doi:`10.1007/bf02698802` and `here <https://scholar.google.com/scholar_lookup?title=Algebraic%20curves%20and%20soliton%20equations&pages=303-329&publication_year=1985&author=Wilson%2CG>`),
+        that for an operator `L` of order `n` in normal form
 
         .. MATH::
 
@@ -417,6 +418,37 @@ def base_almost_commuting_wilson(n: int, m: int, equation_gens:str = "direct", s
 
 @cache_in_file
 def almost_commuting_wilson(n: int, m: int, name_u: str | list[str] | tuple[str] = "u", name_z: str = "z"):
+    r'''
+        Method to compute the order `m` almost-commuting basis element for a generic operator of order `n`.
+
+        INPUT:
+
+        * ``n``: the order of the generic operator `L_n`.
+        * ``m``: the order of the almost-commuting operator `P_m`.
+        * ``name_u`` (optional): base name for the `u` variables that will appear as coefficients in `L_n`.
+        * ``name_z`` (optional): base name for the differential variable to represent `\partial`.
+
+        OUTPUT:
+
+        A tuple `(P_m, (T_0,\ldots,T_{n-2}))` such that `P_m` is the almost commutator for the generic `L_n` and the `T_i` are such
+        `[L_n, P_m] = T_0 + T_1\partial + \ldots + T_{n-2}\partial^{n-2}`.
+
+        EXAMPLES::
+
+            sage: from dalgebra.commutators.almost_commuting import almost_commuting_wilson
+            sage: Q, (c0,c1) = almost_commuting_wilson(3,5)
+            sage: u_2, u_3, z = Q.parent().gens()
+            sage: Q.coefficients(z)
+            (10/9*u_2_0*u_3_0 + 10/9*u_3_2,
+             5/9*u_2_0^2 + 10/9*u_2_2 + 5/3*u_3_1,
+             5/3*u_2_1 + 5/3*u_3_0,
+             5/3*u_2_0,
+             1)
+            sage: c0
+            10/9*u_2_0*u_2_1*u_3_0 + 5/9*u_2_0*u_3_3 + 5/9*u_2_0^2*u_3_1 + 5/3*u_2_1*u_3_2 + 20/9*u_2_2*u_3_1 + 10/9*u_2_3*u_3_0 - 5/3*u_3_0*u_3_2 - 5/3*u_3_1^2 + 1/9*u_3_5
+            sage: c1
+            5/9*u_2_0*u_2_3 + 5/9*u_2_0^2*u_2_1 + 5/9*u_2_1*u_2_2 + 5/3*u_2_1*u_3_1 + 5/3*u_2_2*u_3_0 + 1/9*u_2_5 - 10/3*u_3_0*u_3_1
+    '''
     import os
     from .. import dalgebra_folder
 
@@ -480,6 +512,8 @@ def __almost_commuting_direct(parent: DPolynomialRing_Monoid, order_L: int, orde
         * `R`: is the final ring of differential polynomials generated to represent the equations.
         * `eqs`: a list/tuple with the equations to be solved.
         * `T`: the remaining equations unnecessary for the almost-commuting that will define the hierarchies.
+
+        ::NO EXAMPLE::
     '''
     ## We add the variables of `p` into the ring ``parent``.
     R = parent.append_variables(*__names_variables(order_P, name_p, simplify_names=False))
@@ -566,6 +600,11 @@ def __almost_commuting_recursive(parent: DPolynomialRing_Monoid, order_L: int, o
         n, m = order_L, order_P-1 # for simplicity in the following formulas
 
         def gen_monomial(ind_p=-1, ord_p=-1, ind_u=-1, ord_u=-1) -> DMonomial:
+            r'''
+                Return a monomial given the appropriate indices of `p` and `u`.
+
+                ::NO EXAMPLE::
+            '''
             if ind_p == 1 or ind_u == n-1: # zero cases
                 return tuple()
             output = tuple()
@@ -636,6 +675,8 @@ def __almost_commuting_integral(parent: DPolynomialRing_Monoid, equations: list[
 
         Then, the output is in the usual format for these methods: it returns a dictionary `v \mapsto A` where `v` are
         the variables given in ``p`` and `A` are the values such that, plugged into ``equations``, make them all vanish.
+
+        ::NO EXAMPLE::
     '''
     S = DSystem(equations, parent=parent, variables=p)
     return S.solve_linear()
@@ -659,6 +700,8 @@ def __almost_commuting_linear(parent: DPolynomialRing_Monoid, equations: list[DP
 
         Then, the output is in the usual format for these methods: it returns a dictionary `v \mapsto A` where `v` are
         the variables given in ``p`` and `A` are the values such that, plugged into ``equations``, make them all vanish.
+
+        ::NO EXAMPLE::
     '''
     n, m = len(u) + 1, len(p) + 1
     # Creating the Weight function
@@ -697,12 +740,21 @@ def __almost_commuting_linear(parent: DPolynomialRing_Monoid, equations: list[DP
 #################################################################################################
 
 
-def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = None):
+def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = None) -> tuple[DPolynomial, DPolynomial] | DPolynomial | list[DPolynomial]:
     r'''
         Return equations of the `m`-th step of the integrable hierarchy induced by `n`.
 
         This method computes all the equations in the hierarchy using the method :func:`almost_commuting_wilson`
         and then return the corresponding equations indicated by the argument `i`,
+
+        EXAMPLES::
+
+            sage: from dalgebra.commutators.almost_commuting import hierarchy
+            sage: c0, c1 = hierarchy(3,5)
+            sage: c0
+            10/9*u_2_0*u_2_1*u_3_0 + 5/9*u_2_0*u_3_3 + 5/9*u_2_0^2*u_3_1 + 5/3*u_2_1*u_3_2 + 20/9*u_2_2*u_3_1 + 10/9*u_2_3*u_3_0 - 5/3*u_3_0*u_3_2 - 5/3*u_3_1^2 + 1/9*u_3_5
+            sage: c1
+            5/9*u_2_0*u_2_3 + 5/9*u_2_0^2*u_2_1 + 5/9*u_2_1*u_2_2 + 5/3*u_2_1*u_3_1 + 5/3*u_2_2*u_3_0 + 1/9*u_2_5 - 10/3*u_3_0*u_3_1
     '''
     H = almost_commuting_wilson(n,m)[1]
     if isinstance(i, int):
@@ -714,168 +766,34 @@ def hierarchy(n: int, m: int, i: int | tuple[int] | list[int] | slice | None = N
     return H
 
 
-def kdv(m: int):
+def kdv(m: int) -> DPolynomial:
     r'''
         KdV hierarchy (see :wiki:`KdV_hierarchy`) is the integrable hierarchy that appears from almost commutators of a generic operator of order 2.
+
+        EXAMPLES::
+
+            sage: from dalgebra.commutators.almost_commuting import kdv
+            sage: c0 = kdv(5)
+            sage: c0
+            -5/8*u_0*u_3 - 15/8*u_0^2*u_1 - 5/4*u_1*u_2 - 1/16*u_5
     '''
     return hierarchy(2,m,0)
 
 
-def boussinesq(m: int, i: int | tuple[int] | list[int] | slice | None = None):
+def boussinesq(m: int, i: int | tuple[int] | list[int] | slice | None = None) -> tuple[DPolynomial, DPolynomial] | DPolynomial | list[DPolynomial]:
     r'''
-        Boussinesq hierarchy (TODO: add reference)
+        Return the Boussinesq hierarchy differential system (not reduced) that appears from almost commutators of a generic operator of order 3.
+
+        EXAMPLES::
+
+            sage: from dalgebra.commutators.almost_commuting import boussinesq
+            sage: c0, c1 = boussinesq(5)
+            sage: c0
+            10/9*u_2_0*u_2_1*u_3_0 + 5/9*u_2_0*u_3_3 + 5/9*u_2_0^2*u_3_1 + 5/3*u_2_1*u_3_2 + 20/9*u_2_2*u_3_1 + 10/9*u_2_3*u_3_0 - 5/3*u_3_0*u_3_2 - 5/3*u_3_1^2 + 1/9*u_3_5
+            sage: c1
+            5/9*u_2_0*u_2_3 + 5/9*u_2_0^2*u_2_1 + 5/9*u_2_1*u_2_2 + 5/3*u_2_1*u_3_1 + 5/3*u_2_2*u_3_0 + 1/9*u_2_5 - 10/3*u_3_0*u_3_1
     '''
     return hierarchy(3,m,i)
-
-
-@cache_in_file
-def recursion(n: int):
-    r'''
-        Method that computes the associated recursion matrix that arises from checking the first jumping in the hierarchy.
-
-        Namely, assume we have computed the almost commuting basis given by Wilson's theorem, `P_m(U)` and let
-
-        .. MATH::
-
-            [L, P_m(U)] = H_{m,0}(U) + \ldots H_{m,n-2}(U) \partial^{n-2}.
-
-        We know that the elements `H_{m,i}` are homogeneous of weight `n+m-i`. Moreover, it is supposed (at least for `n=2` and
-        `n=3`) that there are recursion matrices of pseudo-differential operators `R` such that
-
-        .. MATH::
-
-            R H_m = H_{m+n},
-
-        where `H_m = (H_{m,0}(U),\ldots, H_{m,n-2}(U))^T`.
-
-        A priori, we do not know how bad is `R` in terms of the pseudo-differential part. However, since this formula works for all
-        `m \geq 1`, these operator must be applicable for that particular case `m=1`. This, luckily, is always a very simple case:
-
-        .. MATH::
-
-            H_{1,i}(U) = -u_{n-2-i}'.
-
-        Hence, the operators in `R` can be pseudo differential operators with, at most, negative order `-1`. This can be adapted in the code
-        to be working.
-
-        Moreover, the recursion formula gives also structure to the operators in `R`. Since `R H_m = H_{n+m}`, we have that the output of the recursion
-        is again homogeneous. This means that the elements of `R` are homogeneous of some particular weights. More precisely,
-
-        .. MATH::
-
-            w(R_{i,j}) = (2n+m-i) - (n+m-j) = n + j - i,
-
-        which is independent of `m`. Hence, we can do an ansatz using the homogeneous monomials of weights `0, \ldots, n+j-i+1` where
-
-        .. MATH::
-
-            R_{i,j} = \sum_{o=-1}^{n+j-i} c_{i,j,o}(U) \partial^o,
-
-        where the elements `c_{i,j,o} are generic homogeneous elements of weight `o`. We can plug these expressions right away into `R H_m = H_{m+n}` for
-        `m=1,\ldots,n-1` and then we check the conditions on the generic coefficients to obtain the equality. Solving this system leads to the recursion
-        matrix.
-
-        NOTE: We need to check whether this always leads to a unique solution or not. The hope is that, yes.
-    '''
-    from sage.rings.ideal import Ideal
-    ## Some auxiliary functions
-    logger.info(f"[recursion] ++ Defining the auxiliary function...")
-    I = lambda p : p.inverse_operation(0) # computes the integral of an element (or tries)
-    ACT = lambda op, p: op[0](**{z.variable_name(): p}) + (op[1]*I(p) if (not op[1] == 0) else op[1]) # computes the action of a pseudo_operator of order -1 `op` over `p`
-    ACT_M = lambda M, ps: [sum(ACT(op, p) for (op, p) in zip(M[i], ps)) for i in range(len(M))] # applies a matrix of p.o. of order -1 `M` over a vector of `ps`.
-
-    logger.info(f"[recursion] Computing the recursion matrix for {n=}.")
-    L = generic_normal(n)
-    z = L.parent().gen("z")
-
-    ## We compute now the first two steps of the hierarchy
-    logger.info(f"[recursion] ++ Computing the hierarchy up to order {2*n-1}...")
-    H = [None] + [hierarchy(n, m) for m in range(1, 2*n)]
-
-    ## We check the valid elements for the pseudo-part
-    logger.info("[recursion] ++ Checking which columns on R can have \\partial^{-1}")
-    valid_pseudo = []
-    for r in range(n-1):
-        try:
-            for m in range(1,n):
-                I(H[m][r])
-            # all have exact integrals -> valid for \partial^{-1}
-            valid_pseudo.append(r)
-        except ValueError:
-            pass
-    valid_pseudo = set(valid_pseudo)
-    logger.info(f"[recursion] ++ Valid columns: {valid_pseudo}")
-
-    ## We compute now the homogeneous monomials
-    order_in_matrix = lambda i,j : n + j - i
-    logger.info(f"[recursion] ++ Computing the homogeneous monomials up to order {2*n-1}")
-    W = L.parent().weight_func([int(v.variable_name()[2:]) for v in L.parent().gens()[:-1]] + [0], [1]) # everything except derivation has weight 1 # TODO: the getting of weight is dubious
-    T = [W.homogeneous_monomials(i) for i in range(2*n)]
-
-    ## We first create the ansatz. For that, we need to define the ansatz constants first.
-    logger.info(f"[recursion] ++ Creating all the variable names...")
-    variable_names_matrix = [
-        [
-            [[f"c_{i}_{j}_{o}_{k}" for k in range(len(T[o]))] for o in range(order_in_matrix(i,j)+2)]
-            for j in range(n-1)
-        ]
-        for i in range(n-1)
-    ]
-    all_variables = sum((sum((sum((variable_names_matrix[i][j][o] for o in range(order_in_matrix(i,j)+2)), []) for j in range(n-1)), []) for i in range(n-1)), [])
-    logger.info(f"[recursion] ++ Created {len(all_variables)} variables")
-    logger.info(f"[recursion] ++ Adding the constants to the ring")
-    R = L.parent().add_constants(*all_variables) # The differential ring with the differential variables and all the constants
-    logger.info(f"[recursion] ++ Creating the generic matrix of operators...")
-    M = [
-            [
-                (
-                    sum(sum(R.base()(c)*R(t) for (c,t) in zip(variable_names_matrix[i][j][o], T[o]))*R(z[order_in_matrix(i,j)-o]) for o in range(order_in_matrix(i,j)+1)),
-                    sum(R.base()(c)*R(t) for (c,t) in zip(variable_names_matrix[i][j][n+j-i+1], T[n+j-i+1])) if j in valid_pseudo else R.zero() # homogeneous of weight n+j-i+1 for "\partial^{-1}"
-                )
-            for j in range(n-1)]
-        for i in range(n-1)]
-
-    BwC = R.base().wrapped # base ring w/o differential structure
-    B = BwC.base() # base ring w/o ansatz variables --> solutions will live here
-
-    ## Casting the computed hierarchy to the new ring
-    logger.info(f"[recursion] ++ Casting the Hs into the appropriate ring...")
-    H = [None] + [[sum(R.base()(c)*R(m) for (c,m) in zip(el.coefficients(), el.monomials())) for el in h] for h in H[1:]]
-
-    ## We compute the equations to be solve
-    logger.info(f"[recursion] ++ Computing the equations to be solved...")
-    equations = []
-    for m in range(1,n):
-        MH = ACT_M(M, H[m])
-        diff = [MH[i] - H[m+n][i] for i in range(n-1)]
-        equations += sum([[el.wrapped for el in h.coefficients()] for h in diff], [])
-
-    logger.info(f"[recursion] ++ Created the linear systems. We have {len(equations)} equations")
-    ## We solve the system (NOTE: right now we use groebner bases and reduce, maybe it is better to change this)
-
-    logger.info(f"[recursion] ++ Solving the linear system... (currently with Gröbner basis)")
-    ideal_orig = Ideal(equations)
-    ideal_gb = ideal_orig.groebner_basis()
-    logger.info(f"[recursion] ++ Computing the final solutions")
-
-    variables_solved = [
-        [
-            [[B(ideal_gb.reduce(BwC(f"c_{i}_{j}_{o}_{k}"))) for k in range(len(T[o]))] for o in range(order_in_matrix(i,j)+2)]
-            for j in range(n-1)
-        ]
-        for i in range(n-1)
-    ]
-    M = [
-            [
-                (
-                    sum(sum(c*t for (c,t) in zip(variables_solved[i][j][o], T[o]))*z[order_in_matrix(i,j)-o] for o in range(order_in_matrix(i,j)+1)),
-                    sum(c*t for (c,t) in zip(variables_solved[i][j][n+j-i+1], T[n+j-i+1])) # homogeneous of weight n+j-i+1 for "\partial^{-1}"
-                )
-            for j in range(n-1)]
-        for i in range(n-1)]
-
-    logger.info(f"[recursion] ++ Finished computation")
-    return M
 
 
 __all__ = [

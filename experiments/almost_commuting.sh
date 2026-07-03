@@ -10,7 +10,7 @@ do
     do
         for r in $(seq 1 1 $REPEATS)
         do
-            sage almost_commuting.sage -run $n $m direct integral 
+            sage almost_commuting.sage -run $n $m direct integral
             sleep 15
         done
     done

@@ -1,7 +1,7 @@
 r'''
     Computing non-trivial centralizers.
 
-    TODO: CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
+    TODO (unassigned): CHECK CHANGES FROM NEW DPOLYNOMIAL FRAMEWORK
 
     This module contains the main functionality used for computing non-trivial centralizers of linear differential operators.
 
@@ -48,12 +48,12 @@ r'''
     **Examples of usage**
     -----------------------------------------
 
-    TODO: Add examples of usage of the module that will serve as tests
+    TODO (unassigned): Add examples of usage of the module that will serve as tests
 
-    **Things remaining TODO**
+    **Things remaining to do**
     -----------------------------------------
 
-    1. Fill the Examples on the documentation
+    1. TODO (unassigned): Fill the Examples on the documentation
 
     **Elements provided by the module**
     -----------------------------------------
@@ -117,6 +117,11 @@ except RuntimeError:
 
 
 def _generate_maple_command(ideal: list[DPolynomial]) -> str:
+    r'''
+        Method to generate the Maple command for a list of differential polynomials equations to solve it via Maple.
+
+        ::NO EXAMPLE::
+    '''
     return "\n".join(["seq_polys := " + ",".join(str(p) for p in ideal) + ":",
                       r'print("Read file: ", nops({seq_polys}));',
                       r"solve({seq_polys});"
@@ -124,6 +129,11 @@ def _generate_maple_command(ideal: list[DPolynomial]) -> str:
 
 
 def _parse_maple_output(output: str, ring) -> list[Ideal]:
+    r'''
+        Processing the output of Maple after solving a list of differential polynomial equations.
+
+        ::NO EXAMPLE::
+    '''
     ## We process the string: "{solution_1}, {solution_2}, ..., {solution_n}
     solutions = output.split("{") ## we split through the opening of each solution
     solutions = [solution.strip()[:solution.find("}")] for solution in solutions[1:]] # we remove the closing bracket in each string
@@ -137,15 +147,31 @@ def _parse_maple_output(output: str, ring) -> list[Ideal]:
 
 
 def latex(*args, **kwds) -> str:
+    r'''
+        Method to generate LaTeX code changing bold letters to blackboard bold.
+
+        ::NO EXAMPLE::
+    '''
     latex_str = str(_latex(*args, **kwds))
     return latex_str.replace(r"\Bold", r"\mathbb")
 
 
 @lru_cache
 def Jset(bound: int, congruence:int, *to_remove: int):
+    r'''
+        Method to get the set of integer up to a bound filtering the congruences already found.
+
+        Given an integer `n`, we are interested in all the integers up to a bound `B` that are not congruent with any of the integers in `to_remove` modulo `n`. This allows a nice filtering for solving the generalized hierarchy from :func:`GetCentralizer`.
+
+        EXAMPLES::
+
+            sage: from dalgebra.commutators.commutator import Jset
+            sage: Jset(20, 5, 3, 9)
+            [0, 1, 2, 4, 6, 7, 11, 12, 16, 17]
+    '''
     result = []
     for el in range(bound+1):
-        if all(el < i or el % congruence != i % congruence for i in to_remove):
+        if (el < congruence or el % congruence != 0) and all(el < i or el % congruence != i % congruence for i in to_remove):
             result.append(el)
     return result
 
@@ -185,6 +211,32 @@ def GetCentralizer(
 
         The argument ``ignore_bounds`` will allow the code to go beyond the original bound when a new precise bound have been
         obtained.
+
+        EXAMPLES::
+
+            sage: from dalgebra import *
+            sage: from dalgebra.commutators.commutator import GetCentralizer
+            sage: R = DifferentialRing(QQ[x], [1])
+            sage: x = R.gens()[0]
+            sage: DR.<z> = DifferentialPolynomialRing(R.fraction_field())
+            sage: U = (40/x^4, 32/x^3, -16/x^2)
+            sage: L, GB, fl = GetCentralizer(U, 5, starting_level=5, ignore_bound=True)
+            sage: L
+            40/x^4*z_0 + 32/x^3*z_1 + ((-16)/x^2)*z_2 + z_4
+            sage: GB[0]
+            z_0
+            sage: GB[1]
+            ((-120)/x^5)*z_0 + 60/x^3*z_2 + ((-20)/x^2)*z_3 + z_5
+            sage: GB[2]
+            504/x^6*z_0 + ((-144)/x^5)*z_1 + ((-108)/x^4)*z_2 + 96/x^3*z_3 + ((-24)/x^2)*z_4 + z_6
+            sage: GB[3]
+            ((-2688)/x^7)*z_0 + 1176/x^6*z_1 + 168/x^5*z_2 + ((-308)/x^4)*z_3 + 140/x^3*z_4 + ((-28)/x^2)*z_5 + z_7
+
+        We cans ee that all these operator commute with `L`::
+
+            sage: all(L.lie_bracket(g, z) == 0 for g in GB)
+            True
+
     '''
     ## Checking the arguments
     if global_bound not in ZZ or global_bound <= 0:
@@ -331,6 +383,19 @@ def GetCentralizer(
 
 
 def __compute_bounds(n, *K, global_bound, ignore_bound=False):
+    r'''
+        Compute bounds for the orders of the generators when we have information about elements in the centralizer.
+
+        If we are looking for the centralizer of an operator `L` of order `n` and we know operators `G_1,...,G_k` of orders `m_1,...,m_k` are elements in its Goodearl's basis, then all monomial combinations are in the centraler of `L`. Namely, for any tuple `(e_0,...,e_k)`, we know
+
+        .. MATH::
+
+            L^{e_0} \cdot G_1^{e_1} \cdot \ldots \cdot G_k^{e_k} \in \mathcal{Z}(L).
+
+        Hence for each congruence class `r` modulo `n`, we can obtain a bound for the order of the generator in this class by looking at the monomial combinations of the known elements that are congruent with `r` modulo `n`. This method allows to obtain better bounds for the generators, which is crucial for the performance of the algorithm.
+
+        ::NO EXAMPLE::
+    '''
     import heapq
     bounds = [0] + (n-1)*[None]
     queue = list(K)
@@ -374,6 +439,8 @@ def GetEquationsForLevel(n: int, level: int,
 
         We ensure that the output are the conditions and remaining equations determines solutions
         that have exactly level `m`.
+
+        ::NO EXAMPLE::
     '''
     L, P, conditions = GetEquationsForSolution(n, level, U, simple=simple, maple=maple, filename=filename, path=path)
 
@@ -438,6 +505,8 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None,
         A tuple `(L, P, H)` where `L` is the main operator we are looking for a commutator, `P` is a list
         of the almost commuting operators used for building the commutator and `H` is an ideal or set of
         conditions for `P` to commute with `L`.
+
+        ::NO EXAMPLE::
     '''
     logger.debug(f"[GEFS] Getting the linear system associated for having a centralizer of order `m`")
     L, Ps, (Hs,mons) = GetHierarchyLinearEquations(n,m,U,tuple(i for i in range(m+1) if i % n != 0))
@@ -582,6 +651,8 @@ def GetHierarchyLinearEquations(n: int, m : int,
         `L`. This system `S` will be given in matrix form where the columns are indexed by the
         constants `c_i`, `i` going through the input ``c``. We include the tuple `m` of "monomials"
         used to index the rows of `S`.
+
+        ::NO EXAMPLE::
     '''
     ## Converting the input so it can be cached
     ### Coefficients of the operator `L`
@@ -600,6 +671,11 @@ def GetHierarchyLinearEquations(n: int, m : int,
 
 @lru_cache
 def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple):
+    r'''
+        See :func:`GetHierarchyLinearEquations`. This is the actual method that computes the linear system, but it is cached and takes as input the converted arguments.
+
+        ::NO EXAMPLE::
+    '''
     logger.debug(f"[GHLE] Calling method with {n=}, {m=}, {U=}, {c_list=}")
     ## Checking correctness of arguments
     if n not in ZZ or n < 2:
@@ -666,6 +742,13 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple):
 #################################################################################################
 @loglevel(logger)
 def PolynomialCommutator(n: int, m: int, d: int, force_level: bool = False) -> tuple[DPolynomial, DPolynomial, Ideal]:
+    r'''
+        Looks for conditions for the existence of a non-trivial centralizer for a generic order `n` operator in normal form whose coefficients are all polynomials (w.r.t. the variable `x`) of degree at most `d` and for a commutator of order at most `m`.
+
+        This is a method that instead of computing the centralizer of a given operator, it computes conditions for a certain type of operators to have a non-trivial centralizer.
+
+        ::NO EXAMPLE::
+    '''
     logger.debug(f"[PolyComm] Computing equations for polynomial commutators for L_{n} up to order {m} and degree {d}.")
     logger.debug(f"[PolyComm] --- Generating the ansatz polynomials...")
     U = generate_polynomial_ansatz(QQ, n, d)
@@ -693,6 +776,8 @@ def generate_polynomial_ansatz(base, n: int, d: int, var_name: str = "x", ansatz
         * ``n``: the order of the Schrödinger operator to be considered.
         * ``d``: degree of the ansatz generated
         * ``var_name``: name of the variable to be used as a polynomial element. We will make its derivative to be `1`.
+
+        ::NO EXAMPLE::
     '''
     logger.debug(f"[GenPolyAn] Generating the variables for the constant coefficients and the polynomial variable")
     var_names = [f"{ansatz_var}_{i}_{j}" for i in range(n-1) for j in range(d+1)] + [var_name]
@@ -715,7 +800,13 @@ def generate_polynomial_ansatz(base, n: int, d: int, var_name: str = "x", ansatz
 ###
 #################################################################################################
 def generate_polynomial_equations(H: DPolynomial, var_name: str = "x") -> list[Polynomial]:
-    r'''Method to extract equations assuming a polynomial ansatz'''
+    r'''
+        Method to extract equations assuming a polynomial ansatz
+
+        TODO (unassigned): Check the validity of this method. Does it make sense to keep this while having the methods to check if something is zero?
+
+        ::NO EXAMPLE::
+    '''
     logger.debug(f"[GenPolyEqus] Getting equations (w.r.t. {var_name}) from: H={repr(H)[:20]}...")
     B = H.parent().base()
     # We remove the diff. variable and the diff. structure remaining only the ansatz variables and the polynomial variable
@@ -762,9 +853,11 @@ def module_quo_rem(P: DPolynomial, L: DPolynomial, basis: tuple[DPolynomial], ge
 
         * A tuple of tuples of elements that are the coefficients of a polynomial in `C[L]` that goes with each element of the ``basis``.
         * A polynomial `R` that can not be further reduced by the `C[L]`-module generated by `basis`.
+
+        ::NO EXAMPLE::
     '''
     ## Congruences of the orders of the element in the basis. All must be different (otherwise it is not a basis)
-    orders_cong = [el.order() % L.order(gen) for el in basis]
+    orders_cong = [el.order(gen) % L.order(gen) for el in basis]
 
     assert len(orders_cong) == len(set(orders_cong)), "The basis is not a `C[L]`-module basis"
 
@@ -824,6 +917,8 @@ def reduce_as_module(P: DPolynomial, L: DPolynomial, basis: tuple[DPolynomial], 
             P = \sum_{i=0}^{n-1} \left(\sum_{j=0}^{m_i-1} O[i][j] L^j\right) B[i],
 
         where `B[i]` is the `i`-th element of the basis and `O[i]` is the `i`-th tuple in the output.
+
+        ::NO EXAMPLE::
     '''
     output, R = module_quo_rem(P, L, basis, gen)
     assert R == L.parent().zero(), f"The polynomial {P} is not in the `C[L]`-module generated by the basis"
@@ -847,6 +942,8 @@ def BC_ideal(L: DPolynomial, basis: tuple[DPolynomial], gen: DPolynomialGen, *, 
         of the elements in `B` with coefficients in `C[L]`. This will lead to an ideal that is maximal and
         is the Groebner basis of all possible relations under the ordering \lambda < (\mu_1,\ldots,\mu_m), and then
         the variables `\mu_i` are ordered by degree and lexicographic ordering.
+
+        ::NO EXAMPLE::
     '''
     from sage.rings.polynomial.term_order import TermOrder
     from sage.misc.misc_c import prod
@@ -887,6 +984,13 @@ def BC_ideal(L: DPolynomial, basis: tuple[DPolynomial], gen: DPolynomialGen, *, 
 ###
 #################################################################################################
 class GDH_Solution:
+    r'''
+        Class representing the knowledge about one solution to the Gelfand-Dicky homogeneous hierarchies.
+
+        For those cases where we want to check the conditions for an operator to have a non-trivial centralizer, we will have algebraic variables that must satisfy an algebraic constrain. This is represented in this class. It uses a :class:`SolutionBranch` to keep the information about the algebraic constraints and the solution for the variables, and then it keeps the information about the centralizer of the operator corresponding to this solution branch.
+
+        ::NO EXAMPLE::
+    '''
     def __init__(self, case: SolutionBranch, gen: DPolynomialGen, L: DPolynomial, centr_GB: tuple[DPolynomial], flag: tuple[Element]):
         from sage.arith.misc import GCD
 
@@ -910,6 +1014,11 @@ class GDH_Solution:
 
     @staticmethod
     def Error(case: SolutionBranch, L:DPolynomial) -> GDH_Solution:
+        r'''
+            Static method to generate a :class:`GDH_Solution` representing an error case.
+
+            ::NO EXAMPLE::
+        '''
         gen = L.parent().gen("z")
         centr = L.order(gen)*[None]
         flag = L.order(gen)*[0]
@@ -917,21 +1026,27 @@ class GDH_Solution:
 
     @property
     def gen(self) -> DPolynomialGen:
+        r'''Generator of the differential polynomial ring where the centralizer is computed. (::NO EXAMPLE::)'''
         return self.__gen
     @property
     def L(self) -> DPolynomial:
+        r'''The operator for which we are computing the centralizer. (::NO EXAMPLE::)'''
         return self.__L
     @property
     def n(self) -> int:
+        r'''Order of the operator `L`. (::NO EXAMPLE::)'''
         return self.__n
     @property
     def basis(self) -> tuple[DPolynomial]:
+        r'''Basis of the centralizer. (::NO EXAMPLE::)'''
         return self.__centralizer_basis
     @property
     def flag(self) -> tuple[Element]:
+        r'''Flag indicating the status of the solution. (::NO EXAMPLE::)'''
         return self.__flag
     @property
     def orders(self) -> tuple[int]:
+        r'''Orders of the elements in the centralizer. If the solution is an error, all orders are -1. (::NO EXAMPLE::)'''
         if self.__orders is None:
             if self.is_error():
                 return tuple(self.n*[-1])
@@ -940,6 +1055,7 @@ class GDH_Solution:
         return self.__orders
     @property
     def operators_tex(self) -> tuple[str]:
+        r'''TeX code for the operators in the centralizer. If the solution is an error, all elements are "Error". (::NO EXAMPLE::)'''
         if self.__operators_tex is None:
             self.__operators_tex = [
                 latex(el) if not isinstance(el, (list,tuple))
@@ -948,6 +1064,7 @@ class GDH_Solution:
         return self.__operators_tex
 
     def relations(self) -> str:
+        r'''Method to get the relations of the centralizer in TeX format. (::NO EXAMPLE::)'''
         relations = []
         for i,el in enumerate(self.basis):
             if isinstance(el, (list,tuple)):
@@ -956,9 +1073,11 @@ class GDH_Solution:
 
     @property
     def algebraic_generators(self) -> int:
+        r'''Algebraic generators of the centralizer. If the solution is an error, this is 0. (::NO EXAMPLE::)'''
         return self.__alg_gens
     @property
     def rank(self) -> int:
+        r'''Rank of the centralizer. (::NO EXAMPLE::)'''
         return self.__rank
 
     def are_similar(self, other: GDH_Solution) -> bool:
@@ -967,14 +1086,17 @@ class GDH_Solution:
 
             We consider two solutions to be similar if they have the same orders in the generators
             of the Goodearl's basis.
+
+            ::NO EXAMPLE::
         '''
         return self.orders == other.orders
 
     def is_error(self) -> bool:
+        r'''Method to check if the solution is an error case. (::NO EXAMPLE::)'''
         return all(el is None for el in self.__centralizer_basis)
 
     def point_case(self) -> tuple[Element]:
-
+        r'''Method to know if this solution is a point or not. (::NO EXAMPLE::)'''
         if len(self.__case.remaining_variables()) == 0:
             return tuple(v for (_,v) in sorted(self.__case._SolutionBranch__solution.items()))
 
@@ -1014,6 +1136,8 @@ def AnalyzeGDH(n: int, m: int,
         OUTPUT:
 
         A tuple with the cases we found and the solution for each of the cases.
+
+        ::NO EXAMPLE::
     '''
     with open(f"{path}/{filename}_{n}_{m}_report.md", "w") if filename else nullcontext() as file:
         if filename:
@@ -1075,6 +1199,7 @@ def __general_analysis(
         vars_not_all_zero: list[str] = [],
         file: TextIO = None
 ) -> list[tuple[int, tuple[SolutionBranch]]]:
+    r'''Private method to perform the analysis of the branches of the G.D. hierarchies for a given level. (::NO EXAMPLE::)'''
     if file:
         file.writelines([f"## CHECKING VALIDITY OF SOLUTIONS AT THIS LEVEL\n"])
     valid = list()
@@ -1114,6 +1239,7 @@ def __general_analysis(
 
 
 def __analyze_centralizer(branch: SolutionBranch, L: DPolynomial, M: int, B: int = None, **kwds):
+    r'''Private method to analyze the centralizer for a given branch of solutions. (::NO EXAMPLE::)'''
     B = M if B is None else B
 
     specific_solution = branch if len(kwds) == 0 else branch.subsolution(**kwds)
@@ -1137,6 +1263,7 @@ def __generate_table(
         filename: str,
         path: str,
         file: TextIO):
+    r'''Private method to generate a TeX table summarizing the cases and the solutions found. This method also updates the report file with a summary of the cases by families. (::NO EXAMPLE::)'''
     ## We merge the cases that are similar
     final_cases: list[tuple[GDH_Solution,list[GDH_Solution]]] = []
     for (case, comp) in zip(cases, computed):

@@ -132,7 +132,7 @@ This package is based on the work of the following research articles and books:
 - *E.R. Kolchin*: **Differential Algebra & Algebraic Groups**. `ISBN:9780080873695 <https://www.elsevier.com/books/differential-algebra-and-algebraic-groups/kolchin/978-0-12-417650-8>`_
 - *M. Bronstein*: **Symbolic Integration I**. `ISBN:978-3-662-03386-9 <https://link.springer.com/book/10.1007/978-3-662-03386-9>`_
 
-- J.J.Morales-Ruiz, S.L. Rueda, M.A. Zurro, *Factorization of KdV Schrödinger operators using differential subresultants*, Advances in Applied Mathematics, vol. 120 (**2020**). :doi:`10.1016/j.aam.2020.102065`.
+- *J.J.Morales-Ruiz*, *S.L. Rueda*, *M.A. Zurro*, *Factorization of KdV Schrödinger operators using differential subresultants*, Advances in Applied Mathematics, vol. 120 (**2020**). :doi:`10.1016/j.aam.2020.102065`.
 
 **Acknowledgements**
 -----------------------------------------
@@ -147,7 +147,7 @@ This package has been developed with the financial support of the following inst
 '''
 
 # ****************************************************************************
-#  Copyright (C) 2023 Antonio Jimenez-Pastor <ajpa@cs.aau.dk>
+#  Copyright (C) 2025 Antonio Jimenez-Pastor <antonio.jimenezp@upm.es>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -164,6 +164,11 @@ from .dextension import * # extensions of d-rings
 
 
 def dalgebra_version():
+    r'''
+        Method to get the version of the package.
+
+        ::NO EXAMPLE::
+    '''
     from importlib.metadata import version, PackageNotFoundError
     try:
         return version('dalgebra')
@@ -172,5 +177,10 @@ def dalgebra_version():
 
 
 def dalgebra_folder():
+    r'''
+        Method to get the path of the package.
+
+        ::NO EXAMPLE::
+    '''
     import os
     return os.path.dirname(__file__)

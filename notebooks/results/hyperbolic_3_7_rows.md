@@ -1,1 +1,0 @@
-[(0, cosh^6), (0, cosh^8), (0, cosh^5*cosh_p), (0, cosh^7*cosh_p), (0, cosh^3*cosh_p), (0, cosh^2), (0, cosh^4), (0, 1), (1, cosh^6*cosh_p), (1, cosh^5), (1, cosh^7), (1, cosh^3), (1, cosh^2*cosh_p), (1, cosh^4*cosh_p), (1, cosh_p)]

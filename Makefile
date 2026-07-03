@@ -41,9 +41,19 @@ coverage:
 lint:
 	$(SAGE) -tox -e relint,pycodestyle-minimal -- $(PACKAGE)
 
-ready: lint test
-	@echo "Repository is ready to push: check with act th actions in case of changes."
-	
+audit:
+	@echo "###############################################################################"
+	@echo "Checking documentation of new elements for release..."
+	@echo "-------------------------------------------------------------------------------"
+	@python3 scripts/release_audit.py
+	@echo "###############################################################################"
+	@echo "Checking all TODOs for this branch are resolved..."
+	@echo "-------------------------------------------------------------------------------"
+	@python3 scripts/todo_audit.py --warnings
+
+ready: audit lint test
+	@echo "Repository is ready to push: check with act the actions in case of changes."
+
 # Documentation commands
 doc:
 	cd docsrc && $(SAGE) -sh -c "make html"
@@ -73,5 +83,5 @@ clean_cache:
 	@echo "Cleaning the cached results in files"
 	@ rm -rf dalgebra/__pycache__/*.dmp
 
-.PHONY: all install develop test coverage clean clean_doc doc doc-pdf
+.PHONY: all install develop test coverage clean clean_doc doc doc-pdf release-audit
 	
