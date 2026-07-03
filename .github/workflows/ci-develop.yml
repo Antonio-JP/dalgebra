@@ -5,7 +5,7 @@
 ##    - Testing --> run the tests in the documentation to guarantee the correctness in new version of the code.
 ####
 ##############################################################################################
-name: CI-Actions
+name: CI-Actions (Develop)
 
 on: # only used on pushes or pull_request over the master branch
   push:
@@ -49,7 +49,9 @@ jobs:
       with:
         fetch-depth: 0
     - name: Run release audit (warnings allowed)
-      run: |
+      run: >-
+        git status
+        || git config --system --add safe.directory "$GITHUB_WORKSPACE"
         python3 scripts/release_audit.py --warnings-as-ok
 
   todo-audit:
@@ -62,7 +64,9 @@ jobs:
       with:
         fetch-depth: 0
     - name: Checking all todos of this branch are fixed
-      run: |
+      run: >-
+        git status
+        || git config --system --add safe.directory "$GITHUB_WORKSPACE"
         python3 scripts/todo_audit.py
 
   # Job for running the automatic tests in Sagemath
