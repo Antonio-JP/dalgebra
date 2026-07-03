@@ -75,7 +75,7 @@ from sage.symbolic.ring import SR
 
 from typing import Collection
 
-from ..dring import DRings, DFractionField, AdditiveMap, RingHomomorphism, DerivationMap, SkewMap, DifferentialRing, DifferenceRing
+from ..dring import DRings, DFractionField, DFractionFieldElement, AdditiveMap, RingHomomorphism, DerivationMap, SkewMap, DifferentialRing, DifferenceRing
 from .dmonoids import DMonomialMonoid, DMonomialGen, DMonomial, IndexBijection
 
 
@@ -1329,6 +1329,11 @@ class DPolynomial(Element):
 
     ### Some aliases
     lc = initial #: alias for initial (also called "leading coefficient")
+
+    ###################################################################################
+    ### Methods for Normal Form of Differential Fractions (TODO (rational_normal))
+    ###################################################################################
+    
 
     ###################################################################################
     ### Other magic methods
@@ -3246,6 +3251,94 @@ class DPolynomialRing_Monoid(Parent):
             ::NO EXAMPLE::
         '''
         return self.ranking(ordering, "orderly")
+
+    ###################################################################################
+    ### Methods for Normal Form of Differential Fractions (TODO (rational_normal))
+    ###################################################################################
+    def hermite(self, element: DPolynomial | DFractionFieldElement, variable: DPolynomial) -> tuple[DPolynomial | DFractionFieldElement, DPolynomial | DFractionFieldElement]:
+        r'''
+            Method to compute the Hermite decomposition of a differential fraction.
+
+            This method computes the Hermite decomposition of a differential fraction `f` w.r.t. a variable `y`:
+
+            .. MATH::
+
+                f = D_y(g) + h
+
+            where h has a squarefree denominator w.r.t. `y` and D_y is the derivation w.r.t. `y` (not linked with any operation in the ring).
+
+            INPUT:
+
+            * ``element``: the object representing the fraction `f` to be decomposed.
+            * ``variable``: the variable `y` w.r.t. which the decomposition is computed. It must be a variable in ``self``, i.e., an element of arbitrary order
+              of degree 1 with coefficient 1.
+ 
+            OUTPUT: 
+
+            A tuple `(g,h)` where `g` is the integral part with zero constant term and `h` is the squarefree part of the decomposition.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<k2,ke,Ve> = QQ[]
+                sage: DR = DifferentialRing(R)
+                sage: k2,ke,Ve = DR.gens()
+                sage: OR.<y> = DPolynomialRing(DR.fraction_field())
+                sage: F = k2*ke*Ve*(~(y[0]+ke)) + ke*Ve*y[1]*(~(y[0]+ke)^2)
+                sage: R,W = OR.hermite(F, y[0])
+                sage: R == -ke*V_e*y[1]*(~(y[0]+ke))
+                True
+                sage: W == k2*ke*Ve*(~(y[0]+ke))
+                True
+        '''
+        ## Checking the inputs
+        variable = self(variable)
+        element = self.fraction_field()(element)
+
+        if not variable.is_variable():
+            raise TypeError(f"[hermite] The variable {variable} is not a variable in {self}")
+
+        ## Converting everything into a polynomial in SageMath (with notation from Bronstein's HermiteReduce (page 44))
+        A, D, x = self.as_polynomials(element.numerator(), element.denominator(), variable, as_sage=True)
+        poly_parent = A.parent()
+        A, D = A.polynomial(x), D.polynomial(x)
+        ensure_field = A.parent().change_ring(A.parent().base().fraction_field())
+        A, D = ensure_field(A), ensure_field(D)
+
+        ## Code from HermiteReduce
+        from sage.arith.misc import GCD as gcd, XGCD as xgcd
+        g = 0
+        D_ = gcd(D, D.derivative(x))
+        D_star = D // D_ # exact division
+        while D_.degree(x) > 0: 
+            D__ = gcd(D_, D_.derivative(x))
+            D__star = D_ // D__ # exact division
+            ## ExtendedEuclidean(-D_star*D_.derivative(x)//D_, D__star, A)
+            a, b, c = -D_star*D_.derivative(x)//D_, D__star, A
+            _g,s,t = xgcd(a, b)
+            q,r = c // _g, c%_g
+            assert r == 0, "[hermite] The division A//_g is not exact"
+            s, t = q*s, q*t
+            if s != 0 and s.degree(x) >= b.degree(x):
+                q, r = s // b, s % b
+                s, t = r, t + q*a
+            ## Return s,t
+            B,C = s,t
+            A = C - B.derivative(x)*D_star // D__star ## exact division
+            g += B/D_
+            D_ = D__
+        ## Return (g, A/D_star)
+        R, W = g, A/D_star
+
+        ## We remove the constant term of R
+        Rnum, Rden = R.numerator(), R.denominator()
+        Rpoly = Rnum // Rden # polynomial part
+        R = R - Rpoly[0]
+
+        return self(poly_parent(R.numerator()))/self(poly_parent(R.denominator())), self(poly_parent(W.numerator()))/self(poly_parent(W.denominator()))
+
+
+
 
     #################################################
     ### Other computation methods
