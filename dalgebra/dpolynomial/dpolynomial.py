@@ -45,9 +45,10 @@ r'''
 
 import logging
 
+from functools import wraps
 from itertools import product
 
-from sage.arith.misc import GCD, falling_factorial
+from sage.arith.misc import GCD
 from sage.calculus.functional import diff
 from sage.categories.category import Category
 from sage.categories.monoids import Monoids
@@ -59,12 +60,10 @@ from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
 from sage.misc.misc_c import prod
 from sage.modules.free_module_element import vector
-from sage.rings.ideal import Ideal_generic
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing, InfinitePolynomialGen, InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.infinity import Infinity as oo
 from sage.rings.integer_ring import ZZ
-from sage.rings.rational_field import QQ
 from sage.rings.ring import Ring
 from sage.sets.family import LazyFamily
 from sage.structure.element import Element, Matrix
@@ -82,6 +81,36 @@ from .dmonoids import DMonomialMonoid, DMonomialGen, DMonomial, IndexBijection
 logger = logging.getLogger(__name__)
 _DRings = DRings.__classcall__(DRings)
 _Sets = Sets.__classcall__(Sets)
+
+
+## Decorators for methods in this module
+## METHODS WITH A RANKING FUNCTION
+def ranked_method(method):
+    r'''Decorator for method that require a ranking function. It sets up the standard behavior of arguments and checkings for the ranking.'''
+    @wraps(method)
+    def wrapped(self, *args, 
+                ranking : RankingFunction = None, 
+                ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, order_operators: (list | tuple)[int] = None, ttype: str = "orderly", **kwds
+    ):
+        r'''Wrapped method for ranked methods (::NO EXAMPLE::)'''
+        ## Checking argument ``self``
+        if isinstance(self, DPolynomial):
+            self = self.parent()
+        if not isinstance(self, DPolynomialRing_Monoid):
+            raise TypeError(f"Ranked method {method.__name__} called from unkown class {type(self)}")
+
+        ## Checking argument ``ranking``
+        if ranking is None:
+            ranking = self.ranking(ordering, order_operators, ttype)
+        
+        if ranking.parent() != self:
+            raise ValueError(f"Ranking function {ranking} is not compatible with the parent ring {self}")
+        
+        return method(self, *args, ranking=ranking, **kwds)
+    return wrapped
+        
+
+
 
 
 ## Factories for all structures
@@ -2758,6 +2787,27 @@ class DPolynomialRing_Monoid(Parent):
 
             ::NO EXAMPLE::
 
+            TODO (rational_normal): Compare this the integration method of Bilge (:func:`integral_decomposition_Bilge`) and Boulier (:func:`integral_decomposition_Boulier`)
+        '''
+        return self.integrate_polynomial(element, operation, ttype="orderly")
+
+    def integral_decomposition(self, element: DPolynomial, operation: int = 0) -> tuple[DPolynomial, DPolynomial]:
+        r'''
+            Method to compute an integral decomposition of an element.
+
+            Method that perform an integral decomposition, i.e., takes an element `f` and computes two new values
+            `A` and `B` such that ``f = partial(A) + B``.
+
+            A good integral decomposition is such that `f` is integrable if and only if `B = 0`.
+
+            In the article by Bilge (:doi:``), an integral decomposition is computed where `f = partial(A) + B + C`
+            where `C` is an element of the base field, obtaining that `f` is integrable if and only if `B = 0` and
+            `C` is integrable.
+
+            This is the algorithm we are implementing here in the context of :class:`DPolynomial`, after the computation w.r.t. `C`.
+
+            ::NO EXAMPLE::
+
             TODO (unassigned): Add examples to this method.
         '''
         logger.debug(f"[inverse_derivation] Called with {element}")
@@ -3214,7 +3264,7 @@ class DPolynomialRing_Monoid(Parent):
         '''
         return WeightFunction(self, weight_vars, weight_operators)
 
-    def ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, ttype: str = "orderly") -> RankingFunction:
+    def ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, order_operators: (list | tuple)[int] = None, ttype: str = "orderly") -> RankingFunction:
         r'''
             Method to create a ranking for this ring.
 
@@ -3229,28 +3279,33 @@ class DPolynomialRing_Monoid(Parent):
         elif isinstance(ordering, list):
             ordering = tuple(ordering)
 
+        if order_operators is None:
+            order_operators = tuple(range(self.noperators()))
+        elif isinstance(order_operators, list):
+            order_operators = tuple(order_operators)
+
         if ttype not in ("orderly", "elimination"):
             raise ValueError("Only 'orderly' and 'elimination' rankings are allowed")
 
-        if (ordering, ttype) not in self.__cache_ranking:
-            self.__cache_ranking[(ordering, ttype)] = EliminationRanking(self, ordering) if ttype == "elimination" else OrderlyRanking(self, ordering)
-        return self.__cache_ranking[(ordering, ttype)]
+        if (ordering, order_operators, ttype) not in self.__cache_ranking:
+            self.__cache_ranking[(ordering, order_operators, ttype)] = EliminationRanking(self, ordering, order_operators) if ttype == "elimination" else OrderlyRanking(self, ordering, order_operators)
+        return self.__cache_ranking[(ordering, order_operators, ttype)]
 
-    def elimination_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None):
+    def elimination_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, order_operators: (list | tuple)[int] = None):
         r'''
             Build the elimination ranking for the given ordering between d-variables.
 
             ::NO EXAMPLE::
         '''
-        return self.ranking(ordering, "elimination")
+        return self.ranking(ordering, order_operators, "elimination")
 
-    def orderly_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None):
+    def orderly_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, order_operators: (list | tuple)[int] = None):
         r'''
             Build the orderly ranking for the given ordering between d-variables.
 
             ::NO EXAMPLE::
         '''
-        return self.ranking(ordering, "orderly")
+        return self.ranking(ordering, order_operators, "orderly")
 
     ###################################################################################
     ### Methods for Normal Form of Differential Fractions (TODO (rational_normal))
@@ -3337,8 +3392,201 @@ class DPolynomialRing_Monoid(Parent):
 
         return self(poly_parent(R.numerator()))/self(poly_parent(R.denominator())), self(poly_parent(W.numerator()))/self(poly_parent(W.denominator()))
 
+    @ranked_method
+    def is_functional_monomial(self, element : DPolynomial, operation: int = 0, *, ranking: RankingFunction = None) -> bool:
+        r'''
+            Method to check if a monomial is integrable or functional.
 
+            Following the paper :doi:`10.1016/j.jsc.2016.01.002`, we say that a monomial `M` is integrable w.r.t. a ranking `R`
+            if we can generate this monomial as a derivation from another monomial. In this case, we can obtain
+            a monomial `m` such that `D(m) = M + other terms` where the other terms are smaller than `M` w.r.t. the ranking `R`. 
 
+            In the paper :doi:`10.1016/j.jsc.2016.01.002` (Definition 14), the authors provide a simple criterion to check: if 
+            `M = v_1^d_1 * ... * v_n^d_n` with `v_1 > v_2 > ... > v_d` w.r.t. the ranking `R`, then `M` is integrable if and only if
+
+            .. MATH::
+
+            (n = 0) \text{ or } v_1 = D(v) \text{ and } d_1 = 1 \text{ and } \left(n = 1 \text{ or } D(v_2) \leq v_1\right)
+        '''
+
+        return not self.is_integrable_monomial(element, operation, ranking=ranking)
+    
+    @ranked_method
+    @cached_method
+    def sorting_variables(self, element: DPolynomial, *, ranking: RankingFunction = None) -> tuple[tuple[DPolynomial], dict[DPolynomial,int]]:
+        r'''
+            Method to list and sort the variables of a monomial w.r.t. a ranking.
+
+            This method computes all the variables appearing in a monomial, sort them using a given ranking, and 
+            return the sorted list and the dictionary with the exponents of the variables in the monomial.
+
+            ::NO EXAMPLE::
+        '''
+        element = self(element)
+        if len(element.monomials()) > 1:
+            raise TypeError(f"[sorting_variables] The element {element} is not a monomial in {self}")
+        elif element == 0:
+            return tuple(),dict()
+        
+        monomial = element.monomials()[0]
+        if len(monomial._variables) == 0: ## Case n = 0
+            return tuple(),dict()
+        gens = self.gens()
+        exps = {gens[i][order]: exp for ((i, order), exp) in monomial._variables.items()}
+
+        return ranking.sort(tuple(exps.keys()), reverse=True), exps
+
+    @ranked_method
+    @cached_method
+    def is_integrable_monomial(self, element : DPolynomial, operation: int = 0, *, ranking: RankingFunction = None) -> bool:
+        r'''
+            Method to check if a monomial is integrable or functional.
+
+            Following the paper :doi:`10.1016/j.jsc.2016.01.002`, we say that a monomial `M` is integrable w.r.t. a ranking `R`
+            if we can generate this monomial as a derivation from another monomial. In this case, we can obtain
+            a monomial `m` such that `D(m) = M + other terms` where the other terms are smaller than `M` w.r.t. the ranking `R`. 
+
+            In the paper :doi:`10.1016/j.jsc.2016.01.002` (Definition 14), the authors provide a simple criterion to check: if 
+            `M = v_1^d_1 * ... * v_n^d_n` with `v_1 > v_2 > ... > v_d` w.r.t. the ranking `R`, then `M` is integrable if and only if
+
+            .. MATH::
+
+            (n = 0) \text{ or } \left(v_1 = D(v) \text{ and } d_1 = 1 \text{ and } \left(n = 1 \text{ or } D(v_2) \leq v_1\right)\right)
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ[x], (1,), (0,))
+                sage: x = B.gens()[0]
+                sage: DP.<u,v> = DifferentialPolynomialRing(B)
+                sage: R = DP.ranking(ordering=(u,v), ttype="orderly")
+                sage: integrable = [x, u[(1,0)]*u[0], v[(1,0)]*u[0], u[(2,0)]*v[0], x*v[(2,0)]*u[(1,0)]^2*u[0]]
+                sage: all(DP.is_integrable_monomial(m, ranking=R) for m in integrable)
+                True
+                sage: functional = [x*v[0], u[(1,0)]^2*u[0], u[(1,0)]*v[0], v[(0,1)]*u[(0,1)]]
+                sage: all(DP.is_functional_monomial(m, ranking=R) for m in functional)
+                True
+        '''
+        if self.operator_types()[operation] != "derivation":
+            raise NotImplementedError(f"[is_integrable_monomial] The operation {operation} is not a derivation in {self}")
+        
+        vs, exps = self.sorting_variables(element, ranking=ranking)
+
+        if len(vs) == 0: ## Case n = 0
+            return True
+        
+        ## Checking v_1 = D(v) and d_1 = 1
+        if all(o <= 0 for o in vs[0].orders(operation=operation)) or exps[vs[0]] != 1:
+            return False
+        
+        ## Checking n = 1 or D(v_2) <= v_1
+        return len(vs) == 1 or ranking.compare(vs[1].operation(operation), vs[0]) <= 0
+
+    @ranked_method
+    def integral_decomposition_Boulier(self, element : DPolynomial, operation: int = 0, *, ranking: RankingFunction = None) -> tuple[DPolynomial, DPolynomial]:
+        r'''
+            Method to partially integrate a polynomial w.r.t. a derivation.
+
+            When we want to compute a symbolic integral of a polynomial, following the ideas from Bilge or :doi:`10.1016/j.jsc.2016.01.002`, 
+            we can, for integrable polynomials `P` (see :func:`is_integrable_monomial`), we can decompose the polynomial as
+
+            .. MATH::
+
+                P = D(P_1) + Q
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ['a',x,'y'], (0,1,0), (0,0,1))
+                sage: a,x,y = B.gens()
+                sage: DP.<u,v> = DifferentialPolynomialRing(B)
+                sage: R = DP.ranking(ordering=(u,v), ttype="orderly")
+                sage: DP.integral_decomposition_Boulier(u[1,0]*v[0], ranking=R)
+                (u_1_0*v_0_0, 0)
+                sage: DP.integral_decomposition_Boulier(v[1,0]*u[0], ranking=R)
+                (-u_1_0*v_0_0, u_0_0*v_0_0)
+                sage: DP.integral_decomposition_Boulier(a + x^2 + v[2,0]*u[0] + u[0]^2, ranking=R)
+                (-v_1_0*u_1_0 + u_0_0^2, a*x + x^3/3 + u_0_0*v_1_0)
+                sage: DP.integral_decomposition_Boulier(u[1,1] + 2*u[0,1], ranking=R)
+                (2*u_0_1, u_0_1)
+        '''
+        element = self(element)
+        return self._integral_decomposition_Boulier(element, operation, ranking=ranking)
+
+    @cached_method
+    def _integral_decomposition_Boulier(self, element: DPolynomial, operation: int = 0, *, ranking: RankingFunction) -> tuple[DPolynomial, DPolynomial]:
+        r'''Internal method to itnegrate polynomials (::NO EXAMPLE::)'''
+        if element in self.base():
+            try:
+                integral = self.base()(element).integrate(operation)
+                return (0, self(integral))
+            except Exception:
+                return (element, 0)
+
+        var = ranking.leader(element)
+        v = ranking.rank(element)
+        i_v = ranking.initial(element)
+        d = v.degree(var)
+        g = var.infinite_variables()[0]
+        m = ranking.sort(tuple(self(el) for el in element.monomials()), reverse=True)[0]
+        c = element.coefficient(m)
+        ## m = c*v*M where M is a smaller monomial
+
+        if d > 1 or g.index(var, True)[operation] == 0:
+            rec_func, rec_int = self._integral_decomposition_Boulier(element - i_v*v, operation, ranking=ranking)
+            return i_v*v + rec_func, rec_int
+        else:
+            new_order = tuple(o - 1 if i == operation else o for i, o in enumerate(g.index(var, True)))
+            new_var = g[new_order]
+
+            i_v_M = sum(
+                (coeff*self(mon) for coeff, mon in zip(i_v.coefficients(), i_v.monomials()) if ranking.compare(ranking.leader(mon), new_var) > 0),
+                self.zero())
+            i_v_m = i_v - i_v_M
+
+            ## Compute literal integral for i_v_m w.r.t. new_var
+            R = self.zero()
+            for coeff, mon in zip(i_v_m.coefficients(), i_v_m.monomials()):
+                mon = self(mon) # avoid type errors
+                d = mon.degree(new_var)
+                new_mon = mon*new_var
+                new_coeff = coeff / (mon.degree(var) + 1)
+                R += self(new_coeff*new_mon)
+
+            ## Recursive call
+            rec_func, rec_int = self._integral_decomposition_Boulier(element - i_v_M*var - R.operation(operation), operation, ranking=ranking)
+            return i_v_M*var + rec_func, R + rec_int
+        
+    def __Boulier3_quo_rem(self, P: DPolynomial, Q: DPolynomial, variable: DPolynomial) -> DPolynomial:
+        r'''
+            Compute the quotient and remainder of the Euclidean division of `P` by `Q` w.r.t. `variable`.
+
+            ::NO EXAMPLE::
+        '''
+        P, Q, y = self.as_polynomials(P, Q, variable, as_sage=True)
+        poly_parent = P.parent()
+        P, Q = P.polynomial(y), Q.polynomial(y)
+        ensure_field = P.parent().change_ring(P.parent().base().fraction_field())
+        P, Q = ensure_field(P), ensure_field(Q)
+
+        q, r = P // Q, P % Q
+
+        return self(poly_parent(q)), self(poly_parent(r))
+
+    @ranked_method
+    def __Boulier3_NonDifferentialPolynomialPart(self, N: DPolynomial, D: DPolynomial, *, ranking: RankingFunction) -> DPolynomial:
+        r'''
+            Method to compute the polynomial non-integral part of a fraction `N/D` w.r.t. a ranking.
+
+            See algorithm 3 in :doi:`10.1016/j.jsc.2016.01.002` for more details.
+
+            INPUT:
+
+            * ``N``: a :class:`DPolynomial` representing the numerator of the fraction.
+            * ``D``: a :class:`DPolynomial` representing the denominator of the fraction.
+            * ``ranking``: a :class:`RankingFunction` to be used for the computation.
+        '''
+        pass ## TODO (rational_normal) Go on here
 
     #################################################
     ### Other computation methods
@@ -4338,7 +4586,7 @@ class RankingFunction:
         elif v not in self.__ordering:
             return 1
         else:
-            return self.__ordering.index(v) - self.__ordering.index(u)
+            return self.__ordering.index(u) - self.__ordering.index(v)
 
     def compare_operations(self, t1: tuple[int], t2: tuple[int]) -> int:
         r'''
