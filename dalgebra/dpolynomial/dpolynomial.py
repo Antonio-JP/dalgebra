@@ -3338,8 +3338,92 @@ class DPolynomialRing_Monoid(Parent):
         return self(poly_parent(R.numerator()))/self(poly_parent(R.denominator())), self(poly_parent(W.numerator()))/self(poly_parent(W.denominator()))
 
 
+    @ranked_method
+    def classify_monomial_fraction(self, M: DPolynomial, Q: DPolynomial, operation: int = 0, *, ranking: RankingFunction = None) -> int:
+        r'''
+            Method to classify a fraction into functional or integral.
 
+            We distinguish between several types of functional fractions (i.e., fractions that can not be integrated) as described in Definition 
+            24 of :doi:`10.1016/j.jsc.2016.01.002`. In particular, we have the following classification:
 
+            * `1`: the fraction is in the base ring and it can not be integrated.
+            * `2`: the numerator is a functional monomial and the denominator is in the base ring.
+            * `3`: the denominator is not in the base ring. Let `v` be its leader (i.e., its highest ranking variable). Assume the degree of the numerator
+              is lower than the degree of the denominator w.r.t. `v`. We split further:
+              - `31`: the numerator is functional
+              - `32`: the numerator is integrable, not in the base ring, its leader is equal to the derivative of `v` and the denominator is squarefree w.r.t. `v`.
+              - `33`: the numerator is integrable and the numerator is in the base ring or its leader is smaller than the derivative of `v`.
+
+            In any other case we return the monomial fraction to be integrable (i.e., `0`). If there is any error in the input (we require that `M` is a monomial)
+            we raise an error.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R = DifferentialRing(QQ[x], (1,), (0,)) # QQ[x] with d/dx and d/dy
+                sage: x = R.gens()[0]
+                sage: S.<u,v> = DPolynomialRing(R)
+                sage: rank = S.ranking([u,v], "orderly")
+                sage: S.classify_monomial_fraction(3*x, x^2-2, ranking=rank) # 1: both in the base ring
+                1
+                sage: S.classify_monomial_fraction(u[1,0]^2, (1+x)^2, ranking=rank) # 2: numerator is functional and denominator in the base ring
+                2
+                sage: S.classify_monomial_fraction(u[1,0]*v[1,0], (x^2-2)*(1+x), ranking=rank) # 2: the denominator is in the base ring
+                2
+                sage: S.classify_monomial_fraction(u[1,0]*v[1,0], (1+u[1,0])^2, ranking=rank)
+                31
+                sage: S.classify_monomial_fraction(u[2,0], 1+u[1,0]^2, ranking=rank)
+                32
+                sage: S.classify_monomial_fraction(v[0,1], 1+u[1,0]^2, ranking=rank)
+                33
+        '''
+        M, Q = self(M), self(Q) # this checks elements are in ``self``
+
+        if not M.is_monomial():
+            raise TypeError(f"[classify_monomial_fraction] The numerator {M} is not a monomial")
+
+        if M in self.base() and Q in self.base():
+            return 1
+        elif Q in self.base() and self.is_functional_monomial(M, operation, ranking=ranking):
+            return 2
+        elif Q not in self.base():
+            v = ranking.leader(Q)
+            if M.degree(v) < Q.degree(v):
+                if self.is_functional_monomial(M, operation, ranking=ranking):
+                    return 31
+                elif (not M in self.base()) and (ranking.leader(M) == v.operation(operation)) and self.is_squarefree(Q, v):
+                    return 32
+                elif (M in self.base()) or ranking.compare(ranking.leader(M), v.operation(operation)) < 0:
+                    return 33
+
+        # Nothing detected: it is integrable
+        return 0
+
+    @ranked_method
+    def fraction_normal_form(self, Fn: DPolynomial, Fd: DPolynomial, operation: int = 0, *, ranking: RankingFunction = None) -> tuple[DPolynomial, tuple[DPolynomial]]:
+        Fn, Fd = self(Fn), self(Fd) # this checks elements are in ``self``
+
+        P = self.non_differential_polynomial_part(Fn, Fd, operation, ranking=ranking)
+        G = (Fn/Fd) - P
+        ## These should be reduced
+        Gn = G.numerator()
+        Gd = G.denominator()
+
+        i = 0
+        W = list()
+        while Gn != 0:
+            w,R = self.integrate(Gn, Gd, operation, ranking=ranking)
+            W.append(w)
+
+            P_tilde = self.non_differential_polynomial_part(R.numerator(), R.denominator(), operation, ranking=ranking)
+            P = P + P_tilde.operation(operation, times=i+1)
+            G = R - P_tilde
+            Gn = G.numerator()
+            Gd = G.denominator()
+            i = i+1
+
+        return P, W
+    
     #################################################
     ### Other computation methods
     #################################################
