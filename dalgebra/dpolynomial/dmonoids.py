@@ -290,7 +290,7 @@ class DMonomial(Element):
                 return self
             elif len(other) == 1:
                 return self.gcd(other[0])
-            return self.gcd(other[0]).gcd(other[1]) # recursive call
+            return self.gcd(other[0]).gcd(other[1:]) # recursive call
         else:
             out = dict()
             for k in self._variables:
