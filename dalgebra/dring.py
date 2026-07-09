@@ -825,6 +825,78 @@ class DRings(Category):
         ##########################################################
         ### LINEAR ALGEBRA METHODS
         ##########################################################
+        def solve_linear_system_constant(self, system: Matrix, homogeneous: bool = True, operation: int = 0) -> tuple[tuple[DRings.ElementMethods], Matrix]:
+            r'''
+                Method to compute the constant solutions to a linear system
+                
+                Given a linear system `(A|b)` over a field `F`, we can look for a set of constant solutions.
+                This type of solutions have an additional property: if `A \cdot c = b`, then for the given operation we 
+                obtain `op(A) \cdot c = op(b)`.
+
+                Hence we can extend the system `(A|b)` to a bigger system. This process can be repeated indefinitely and 
+                the dimension of solutions over `F` must stabilize at some point. Moreover, if we perform a gaussian elimination
+                of the system, we get a diagonal shape with 1s in the diagonal. It does not matter the type of operation we are 
+                using, the operation over these rows will either generate a new pivot in the gaussian elimination or it will generate 
+                a row of zeros.
+
+                When the system stabilizes, it means that new rows never generate new pivots, hence, they are already constant
+                rows. Hence the constant solutions over the stabilized system are exactly the constant solutions to the original
+                system.
+
+                NOTE: In the case of working with polynomials, this is equivalent to taking monomials and extending the system directly with
+                the coefficients of the monomials (see :func:`system_for_constant_solutions`), and sometimes this is more efficient than computing 
+                the stabilized system.
+
+                INPUT:
+
+                * ``system``: the system of the matrix `(A|b)`.
+                * ``homogeneous``: if ``True``, the system is considered homogeneous, (i.e., ``system`` is `(A)`)
+
+                OUTPUT:
+
+                A pair `(v_0, M)` where `v_0` is a particular constant solution to the system and `M` 
+                is a matrix such that `v = v_0 + M*c` is the general solution to the system for any constant vector `c`.
+            '''
+            logger.debug(f"[SLSC] Solving linear system for constant solutions")
+            logger.debug(f"[SLSC] Checking the base ring of the matrix is a field")
+            if not system.parent().base_ring().is_field():
+                return self.solve_linear_system_constant(system.change_ring(system.parent().base_ring().fraction_field()), homogeneous, operation)
+            
+            logger.debug(f"[SLSC] Computing normal form of the matrix")
+            system.echelonize()
+
+            if (not homogeneous) and any(row[-1] != 0 and all(el == 0 for el in row[:-1]) for row in system.rows()): # checking no solution
+                logger.debug(f"[SLSC] The system is inconsistent, returning None")
+                raise ValueError(f"The system is inconsistent, no solution exists.")
+            system = matrix([row for row in system.rows() if any(el != 0 for el in row)]) # removing zero rows -> redundant equations
+
+            logger.debug(f"[SLSC] We perform the extension in case we need")
+            current_rank = system.rank()
+            old_rank = system.ncols() 
+            while current_rank != old_rank:
+                old_rank = current_rank
+                system = matrix([row for row in system] + [[el.operation(operation) for el in row] for row in system.rows()])
+                system.echelonize()
+                current_rank = system.rank()
+
+                if (not homogeneous) and any(row[-1] != 0 and all(el == 0 for el in row[:-1]) for row in system.rows()): # checking no solution
+                    logger.debug(f"[SLSC] The system is inconsistent, returning None")
+                    raise ValueError(f"The system is inconsistent, no solution exists.")
+                system = matrix([row for row in system.rows() if any(el != 0 for el in row)]) # removing zero rows -> redundant equations
+
+            logger.debug(f"[SLSC] The system has stabilized, computing the general solution")
+            assert all(all(el.d_constant(operation) for el in row) for row in system.rows()), "The system has not stabilized, there are non-constant rows."
+
+            if not homogeneous:
+                lin_part = system[:,:-1]
+                inhom_part = system[:,-1]
+
+                particular_solution = lin_part.solve_right(inhom_part)
+                kernel = lin_part.right_kernel_matrix()
+                return tuple(particular_solution), kernel
+            else:
+                return tuple(self.zero() for _ in range(system.ncols())), system.right_kernel_matrix()
+
         def system_for_constant_solutions(self, system, homogeneous=True):
             r'''
                 Method that extends a linear system for computing constant solutions.
