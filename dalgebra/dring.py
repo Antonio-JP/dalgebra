@@ -862,13 +862,22 @@ class DRings(Category):
             if not system.parent().base_ring().is_field():
                 return self.solve_linear_system_constant(system.change_ring(system.parent().base_ring().fraction_field()), homogeneous, operation)
             
+            system = matrix([row for row in system]) # we create a copy
+            
             logger.debug(f"[SLSC] Computing normal form of the matrix")
             system.echelonize()
+            ncols = system.ncols()
 
-            if (not homogeneous) and any(row[-1] != 0 and all(el == 0 for el in row[:-1]) for row in system.rows()): # checking no solution
+            if (not homogeneous) and any(row[-1] != 0 and all(el == 0 for el in row[:-1]) for row in system): # checking no solution
                 logger.debug(f"[SLSC] The system is inconsistent, returning None")
                 raise ValueError(f"The system is inconsistent, no solution exists.")
-            system = matrix([row for row in system.rows() if any(el != 0 for el in row)]) # removing zero rows -> redundant equations
+            system = matrix([row for row in system if any(el != 0 for el in row)]) # removing zero rows -> redundant equations
+
+            if system.nrows() == 0: # No equations remain: anything is a solution
+                if homogeneous:
+                    return tuple(self.zero() for _ in range(ncols)), matrix.identity(self, ncols)
+                else:
+                    return tuple(self.zero() for _ in range(ncols-1)), matrix.identity(self, ncols-1)
 
             logger.debug(f"[SLSC] We perform the extension in case we need")
             current_rank = system.rank()
@@ -879,10 +888,10 @@ class DRings(Category):
                 system.echelonize()
                 current_rank = system.rank()
 
-                if (not homogeneous) and any(row[-1] != 0 and all(el == 0 for el in row[:-1]) for row in system.rows()): # checking no solution
+                if (not homogeneous) and any(row[-1] != 0 and all(el == 0 for el in row[:-1]) for row in system): # checking no solution
                     logger.debug(f"[SLSC] The system is inconsistent, returning None")
                     raise ValueError(f"The system is inconsistent, no solution exists.")
-                system = matrix([row for row in system.rows() if any(el != 0 for el in row)]) # removing zero rows -> redundant equations
+                system = matrix([row for row in system if any(el != 0 for el in row)]) # removing zero rows -> redundant equations
 
             logger.debug(f"[SLSC] The system has stabilized, computing the general solution")
             assert all(all(el.d_constant(operation) for el in row) for row in system.rows()), "The system has not stabilized, there are non-constant rows."
@@ -893,7 +902,7 @@ class DRings(Category):
 
                 particular_solution = lin_part.solve_right(inhom_part)
                 kernel = lin_part.right_kernel_matrix()
-                return tuple(particular_solution), kernel
+                return tuple(particular_solution.column(0)), kernel
             else:
                 return tuple(self.zero() for _ in range(system.ncols())), system.right_kernel_matrix()
 
