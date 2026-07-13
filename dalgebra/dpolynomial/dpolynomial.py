@@ -45,9 +45,10 @@ r'''
 
 import logging
 
+from functools import wraps
 from itertools import product
 
-from sage.arith.misc import GCD, falling_factorial
+from sage.arith.misc import GCD
 from sage.calculus.functional import diff
 from sage.categories.category import Category
 from sage.categories.monoids import Monoids
@@ -59,12 +60,10 @@ from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
 from sage.misc.misc_c import prod
 from sage.modules.free_module_element import vector
-from sage.rings.ideal import Ideal_generic
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing, InfinitePolynomialGen, InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.infinity import Infinity as oo
 from sage.rings.integer_ring import ZZ
-from sage.rings.rational_field import QQ
 from sage.rings.ring import Ring
 from sage.sets.family import LazyFamily
 from sage.structure.element import Element, Matrix
@@ -75,13 +74,45 @@ from sage.symbolic.ring import SR
 
 from typing import Collection
 
-from ..dring import DRings, DFractionField, AdditiveMap, RingHomomorphism, DerivationMap, SkewMap, DifferentialRing, DifferenceRing
+from ..dring import DRings, DFractionField, DFractionFieldElement, AdditiveMap, RingHomomorphism, DerivationMap, SkewMap, DifferentialRing, DifferenceRing
 from .dmonoids import DMonomialMonoid, DMonomialGen, DMonomial, IndexBijection
 
 
 logger = logging.getLogger(__name__)
 _DRings = DRings.__classcall__(DRings)
 _Sets = Sets.__classcall__(Sets)
+
+
+## Decorators for methods in this module
+## METHODS WITH A RANKING FUNCTION
+def ranked_method(method):
+    r'''
+        Decorator for method that require a ranking function. It sets up the standard behavior of arguments and checks for
+        the ranking.
+
+        ::NO EXAMPLE::
+    '''
+    @wraps(method)
+    def wrapped(self, *args,
+                ranking : RankingFunction = None,
+                ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, order_operators: (list | tuple)[int] = None, ttype: str = "orderly", **kwds
+    ):
+        r'''Wrapped method for ranked methods (::NO EXAMPLE::)'''
+        ## Checking argument ``self``
+        ranked = self.parent() if isinstance(self, DPolynomial) else self
+
+        if not isinstance(ranked, DPolynomialRing_Monoid):
+            raise TypeError(f"Ranked method {method.__name__} called from unknown class {type(self)}")
+
+        ## Checking argument ``ranking``
+        if ranking is None:
+            ranking = ranked.ranking(ordering, order_operators, ttype)
+
+        if ranking.parent() != ranked:
+            raise ValueError(f"Ranking function {ranking} is not compatible with the parent ring {self}")
+
+        return method(self, *args, ranking=ranking, **kwds)
+    return wrapped
 
 
 ## Factories for all structures
@@ -766,19 +797,42 @@ class DPolynomial(Element):
     ## Operation as polynomial
     ###################################################################################
     @cached_method
-    def as_polynomial(self) -> Element:
+    def as_polynomial(self, *, as_sage: bool = False) -> Element:
         r'''Method to get a polynomial for this d-polynomial (i.e., removing the infinite variable and the d-structure) (::NO EXAMPLE::)'''
-        return self.parent().as_polynomials(self)[0]
+        return self.parent().as_polynomials(self, as_sage=as_sage)[0]
 
     def as_linear_operator(self) -> Element:
         r'''Method to get a linear operator for this d-polynomial (::NO EXAMPLE::)'''
         return self.parent().as_linear_operator(self)
 
+    def is_squarefree(self, v: DPolynomial) -> bool:
+        r'''
+            Method to check whether a d-polynomial is squarefree when regarded as a polynomial w.r.t. one of its variables.
+
+            This method takes a variable (as a d-polynomial) and then considers ``self`` as a polynomial w.r.t. that variable.
+            Then we know a polynomial is squarefree if it has no double root in the algebraic closure, i.e., all factors has degree 1.
+
+            This method goes down to an implementation in SageMath to check this property.
+
+            ::NO EXAMPLE::
+        '''
+        v = self.parent()(v)
+        if not v.is_variable():
+            raise ValueError("The variable must be a variable of the ring")
+
+        poly, v = self.parent().as_polynomials(self, v, as_sage=True)
+        poly = poly.polynomial(v)
+        base = poly.parent().base()
+        if not base.is_field():
+            poly = poly.parent().change_ring(base.fraction_field())(poly)
+
+        return poly.is_squarefree()
+
     ####################################################################################
     ### Algebra_With_Basis methods
     ####################################################################################
     def monomial_coefficients(self, copy: bool = True) -> dict[DMonomial, Element]:
-        r'''Overriden method from Algebra_With_Basis (::NO EXAMPLE::)'''
+        r'''Overridden method from Algebra_With_Basis (::NO EXAMPLE::)'''
         return dict(zip(self.monomials(), self.coefficients())) if copy else self._content
 
     ###################################################################################
@@ -897,7 +951,7 @@ class DPolynomial(Element):
         '''
         coefficients = self.coefficients()
         if len(coefficients) == 0:
-            return 0
+            return self.parent().one()
         else:
             return coefficients[0].lcm_denominators(*coefficients[1:])
 
@@ -1294,37 +1348,37 @@ class DPolynomial(Element):
     ###################################################################################
     ### Ranking methods
     ###################################################################################
+    @ranked_method
     def monic(self, ranking: RankingFunction = None):
         r'''Method to get the monic polynomial w.r.t. a ranking (::NO EXAMPLE::)'''
-        ranking = self.parent().ranking() if ranking is None else ranking
         return ranking.monic(self)
 
+    @ranked_method
     def leader(self, ranking: RankingFunction = None):
         r'''
             Gets the leader of ``self`` w.r.t. a ranking (::NO EXAMPLE::).
         '''
-        ranking = self.parent().ranking() if ranking is None else ranking
         return ranking.leader(self)
 
+    @ranked_method
     def rank(self, ranking: RankingFunction = None):
         r'''
             Gets the rank of ``self`` w.r.t. a ranking (::NO EXAMPLE::).
         '''
-        ranking = self.parent().ranking() if ranking is None else ranking
         return ranking.rank(self)
 
+    @ranked_method
     def initial(self, ranking: RankingFunction = None):
         r'''
             Gets the leader of ``self`` w.r.t. a ranking (::NO EXAMPLE::).
         '''
-        ranking = self.parent().ranking() if ranking is None else ranking
         return ranking.initial(self)
 
+    @ranked_method
     def separant(self, ranking: RankingFunction = None):
         r'''
             Gets the leader of ``self`` w.r.t. a ranking (::NO EXAMPLE::).
         '''
-        ranking = self.parent().ranking() if ranking is None else ranking
         return ranking.separant(self)
 
     ### Some aliases
@@ -2038,6 +2092,18 @@ class DPolynomialRing_Monoid(Parent):
         r'''Get the number of generators of ``self``. (::NO EXAMPLE::)'''
         return self.monoids().ngens()
 
+    def zero(self) -> DPolynomial:
+        r'''Element creation method for zero (::NO EXAMPLE::)'''
+        return self.element_class(self, {})  # zero polynomial
+
+    def one(self) -> DPolynomial:
+        r'''Element creation method for one (::NO EXAMPLE::)'''
+        return self.element_class(self, {self.monoids().one(): self.base().one()})  # one polynomial
+
+    def _an_element_(self) -> DPolynomial:
+        r'''Element creation method (to avoid possible errors) (::NO EXAMPLE::)'''
+        return self.one()
+
     ################################################################################
     ### RINGS METHODS (from Rings.ParentMethods)
     ################################################################################
@@ -2359,7 +2425,7 @@ class DPolynomialRing_Monoid(Parent):
         return self.__fraction_field
 
     def get_evaluation_morphism(self, images: dict, inner: bool = False) -> Morphism:
-        r'''Get an evaluation morphism for the d-variables with the given values. It ensures unicity on the structure and cached results. (::NO EXAMPLE::)'''
+        r'''Get an evaluation morphism for the d-variables with the given values. It ensures uniqueness on the structure and cached results. (::NO EXAMPLE::)'''
         if len(images) == 0:
             return self.hom(self) #identity morphism
 
@@ -2750,6 +2816,24 @@ class DPolynomialRing_Monoid(Parent):
             `C` is integrable.
 
             This is the algorithm we are implementing here in the context of :class:`DPolynomial`, after the computation w.r.t. `C`.
+
+            ::NO EXAMPLE::
+
+            TODO (unassigned): add examples.
+        '''
+        return self.integral_decomposition_Bilge(element, operation)
+
+    def integral_decomposition_Boulier(self, element: DPolynomial, operation: int = 0) -> tuple[DPolynomial, DPolynomial]:
+        r'''
+            Implementation of integral decomposition using the algorithm in :doi:`10.1016/j.jsc.2016.01.002`. ::NO EXAMPLE::
+
+            TODO (unassigned): compare this approach with Bilge's (both in time and output)
+        '''
+        return self.integrate_polynomial(element, operation, ttype="orderly")
+
+    def integral_decomposition_Bilge(self, element: DPolynomial, operation: int = 0) -> tuple[DPolynomial, DPolynomial]:
+        r'''
+            Implementation of integral decomposition using the algorithm in :doi:`10.1016/0010-4655(92)90013-o`.
 
             ::NO EXAMPLE::
 
@@ -3209,7 +3293,7 @@ class DPolynomialRing_Monoid(Parent):
         '''
         return WeightFunction(self, weight_vars, weight_operators)
 
-    def ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, ttype: str = "orderly") -> RankingFunction:
+    def ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, order_operators: (list | tuple)[int] = None, ttype: str = "orderly") -> RankingFunction:
         r'''
             Method to create a ranking for this ring.
 
@@ -3224,28 +3308,675 @@ class DPolynomialRing_Monoid(Parent):
         elif isinstance(ordering, list):
             ordering = tuple(ordering)
 
+        if order_operators is None:
+            order_operators = tuple(range(self.noperators()))
+        elif isinstance(order_operators, list):
+            order_operators = tuple(order_operators)
+
         if ttype not in ("orderly", "elimination"):
             raise ValueError("Only 'orderly' and 'elimination' rankings are allowed")
 
-        if (ordering, ttype) not in self.__cache_ranking:
-            self.__cache_ranking[(ordering, ttype)] = EliminationRanking(self, ordering) if ttype == "elimination" else OrderlyRanking(self, ordering)
-        return self.__cache_ranking[(ordering, ttype)]
+        if (ordering, order_operators, ttype) not in self.__cache_ranking:
+            self.__cache_ranking[(ordering, order_operators, ttype)] = EliminationRanking(self, ordering, order_operators) if ttype == "elimination" else OrderlyRanking(self, ordering, order_operators)
+        return self.__cache_ranking[(ordering, order_operators, ttype)]
 
-    def elimination_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None):
+    def elimination_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, order_operators: (list | tuple)[int] = None):
         r'''
             Build the elimination ranking for the given ordering between d-variables.
 
             ::NO EXAMPLE::
         '''
-        return self.ranking(ordering, "elimination")
+        return self.ranking(ordering, order_operators, "elimination")
 
-    def orderly_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None):
+    def orderly_ranking(self, ordering: list[DMonomialGen] | tuple[DMonomialGen] = None, order_operators: (list | tuple)[int] = None):
         r'''
             Build the orderly ranking for the given ordering between d-variables.
 
             ::NO EXAMPLE::
         '''
-        return self.ranking(ordering, "orderly")
+        return self.ranking(ordering, order_operators, "orderly")
+
+    ###################################################################################
+    ### Methods for Normal Form of Differential Fractions
+    ###################################################################################
+    def hermite(self, element: DPolynomial | DFractionFieldElement, variable: DPolynomial) -> tuple[DPolynomial | DFractionFieldElement, DPolynomial | DFractionFieldElement]:
+        r'''
+            Method to compute the Hermite decomposition of a differential fraction.
+
+            This method computes the Hermite decomposition of a differential fraction `f` w.r.t. a variable `y`:
+
+            .. MATH::
+
+                f = D_y(g) + h
+
+            where h has a squarefree denominator w.r.t. `y` and D_y is the derivation w.r.t. `y` (not linked with any operation in the ring).
+
+            INPUT:
+
+            * ``element``: the object representing the fraction `f` to be decomposed.
+            * ``variable``: the variable `y` w.r.t. which the decomposition is computed. It must be a variable in ``self``, i.e., an element of arbitrary order
+              of degree 1 with coefficient 1.
+
+            OUTPUT:
+
+            A tuple `(g,h)` where `g` is the integral part with zero constant term and `h` is the squarefree part of the decomposition.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R.<k2,ke,Ve> = QQ[]
+                sage: DR = DifferentialRing(R)
+                sage: k2,ke,Ve = DR.gens()
+                sage: OR.<y> = DPolynomialRing(DR.fraction_field())
+                sage: F = k2*ke*Ve*(1/(y[0]+ke)) + ke*Ve*y[1]*(1/(y[0]+ke)^2)
+                sage: R,W = OR.hermite(F, y[0])
+                sage: R == -ke*Ve*y[1]*(~(y[0]+ke))
+                True
+                sage: W == k2*ke*Ve*(~(y[0]+ke))
+                True
+        '''
+        ## Checking the inputs
+        variable = self(variable)
+        element = self.fraction_field()(element)
+
+        if not variable.is_variable():
+            raise TypeError(f"[hermite] The variable {variable} is not a variable in {self}")
+
+        ## Converting everything into a polynomial in SageMath (with notation from Bronstein's HermiteReduce (page 44))
+        A, D, x = self.as_polynomials(element.numerator(), element.denominator(), variable, as_sage=True)
+        poly_parent = A.parent()
+        A, D = A.polynomial(x), D.polynomial(x)
+        ensure_field = A.parent().change_ring(A.parent().base().fraction_field())
+        A, D = ensure_field(A), ensure_field(D)
+
+        def cast_back(el):
+            r'''Auxiliar method to cast back elements from  the polynomial over the field (::NO EXAMPLE::)'''
+            from sage.rings.fraction_field import FractionField_generic
+            if isinstance(el.parent(), FractionField_generic):
+                return cast_back(el.numerator())/cast_back(el.denominator())
+            ## Polynomial case
+            el = ensure_field(el)
+            return sum(
+                (self(poly_parent(coefficient.numerator()))/self(poly_parent(coefficient.denominator())) * self(x**i)
+                 for i,coefficient in enumerate(el.list())
+                ), self.zero())
+
+        ## Code from HermiteReduce
+        from sage.arith.misc import GCD as gcd, XGCD as xgcd
+        g = ensure_field.zero()
+        D_ = gcd(D, D.derivative(x))
+        D_star = D // D_ # exact division
+        while D_.degree(x) > 0:
+            D__ = gcd(D_, D_.derivative(x))
+            D__star = D_ // D__ # exact division
+            ## ExtendedEuclidean(-D_star*D_.derivative(x)//D_, D__star, A)
+            a, b, c = -D_star*D_.derivative(x)//D_, D__star, A
+            _g,s,t = xgcd(a, b)
+            q,r = c // _g, c % _g
+            assert r == 0, "[hermite] The division A//_g is not exact"
+            s, t = q*s, q*t
+            if s != 0 and s.degree(x) >= b.degree(x):
+                q, r = s // b, s % b
+                s, t = r, t + q*a
+            ## Return s,t
+            B,C = s,t
+            A = C - B.derivative(x)*D_star // D__star ## exact division
+            g += B/D_
+            D_ = D__
+        ## Return (g, A/D_star)
+        R, W = g, A/D_star
+
+        ## We remove the constant term of R
+        Rnum, Rden = R.numerator(), R.denominator()
+        Rpoly = Rnum // Rden # polynomial part
+        R = R - Rpoly[0]
+
+        return cast_back(R), cast_back(W)
+
+    @ranked_method
+    def is_functional_monomial(self, element : DPolynomial, operation: int = 0, *, ranking: RankingFunction = None) -> bool:
+        r'''
+            Method to check if a monomial is integrable or functional.
+
+            Following the paper :doi:`10.1016/j.jsc.2016.01.002`, we say that a monomial `M` is integrable w.r.t. a ranking `R`
+            if we can generate this monomial as a derivation from another monomial. In this case, we can obtain
+            a monomial `m` such that `D(m) = M + other terms` where the other terms are smaller than `M` w.r.t. the ranking `R`.
+
+            In the paper :doi:`10.1016/j.jsc.2016.01.002` (Definition 14), the authors provide a simple criterion to check: if
+            `M = v_1^d_1 * ... * v_n^d_n` with `v_1 > v_2 > ... > v_d` w.r.t. the ranking `R`, then `M` is integrable if and only if
+
+            .. MATH::
+
+            (n = 0) \text{ or } v_1 = D(v) \text{ and } d_1 = 1 \text{ and } \left(n = 1 \text{ or } D(v_2) \leq v_1\right)
+
+            ::NO EXAMPLE::
+        '''
+
+        return not self.is_integrable_monomial(element, operation, ranking=ranking)
+
+    @ranked_method
+    def sorting_variables(self, element: DPolynomial, *, ranking: RankingFunction = None) -> tuple[tuple[DPolynomial], dict[DPolynomial,int]]:
+        r'''
+            Method to list and sort the variables of a monomial w.r.t. a ranking.
+
+            This method computes all the variables appearing in a monomial, sort them using a given ranking, and
+            return the sorted list and the dictionary with the exponents of the variables in the monomial.
+
+            ::NO EXAMPLE::
+        '''
+        element = self(element)
+        if not element.is_term():
+            raise TypeError(f"[sorting_variables] The element {element} is not a monomial in {self}")
+        elif element == 0:
+            return tuple(),dict()
+
+        monomial = element.monomials()[0]
+        if len(monomial._variables) == 0: ## Case n = 0
+            return tuple(),dict()
+        gens = self.gens()
+        exps = {gens[i][order]: exp for ((i, order), exp) in monomial._variables.items()}
+
+        return ranking.sort(tuple(exps.keys()), reverse=True), exps
+
+    @ranked_method
+    def is_integrable_monomial(self, element : DPolynomial, operation: int = 0, *, ranking: RankingFunction = None) -> bool:
+        r'''
+            Method to check if a monomial is integrable or functional.
+
+            Following the paper :doi:`10.1016/j.jsc.2016.01.002`, we say that a monomial `M` is integrable w.r.t. a ranking `R`
+            if we can generate this monomial as a derivation from another monomial. In this case, we can obtain
+            a monomial `m` such that `D(m) = M + other terms` where the other terms are smaller than `M` w.r.t. the ranking `R`.
+
+            In the paper :doi:`10.1016/j.jsc.2016.01.002` (Definition 14), the authors provide a simple criterion to check: if
+            `M = v_1^d_1 * ... * v_n^d_n` with `v_1 > v_2 > ... > v_d` w.r.t. the ranking `R`, then `M` is integrable if and only if
+
+            .. MATH::
+
+            (n = 0) \text{ or } \left(v_1 = D(v) \text{ and } d_1 = 1 \text{ and } \left(n = 1 \text{ or } D(v_2) \leq v_1\right)\right)
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ[x], (1,), (0,))
+                sage: x = B.gens()[0]
+                sage: DP.<u,v> = DifferentialPolynomialRing(B)
+                sage: R = DP.ranking(ordering=(u,v), ttype="orderly")
+                sage: integrable = [x, u[(1,0)]*u[0], v[(1,0)]*u[0], u[(2,0)]*v[0], x*v[(2,0)]*u[(1,0)]^2*u[0]]
+                sage: all(DP.is_integrable_monomial(m, ranking=R) for m in integrable)
+                True
+                sage: functional = [x*v[0], u[(1,0)]^2*u[0], u[(1,0)]*v[0], v[(0,1)]*u[(0,1)]]
+                sage: all(DP.is_functional_monomial(m, ranking=R) for m in functional)
+                True
+        '''
+        if self.operator_types()[operation] != "derivation":
+            raise NotImplementedError(f"[is_integrable_monomial] The operation {operation} is not a derivation in {self}")
+
+        vs, exps = self.sorting_variables(element, ranking=ranking)
+
+        if len(vs) == 0: ## Case n = 0
+            return True
+
+        ## Checking v_1 = D(v) and d_1 = 1
+        if all(o <= 0 for o in vs[0].orders(operation=operation)) or exps[vs[0]] != 1:
+            return False
+
+        ## Checking n = 1 or D(v_2) <= v_1
+        return len(vs) == 1 or ranking.compare(vs[1].operation(operation), vs[0]) <= 0
+
+    @ranked_method
+    def integral_decomposition_Boulier(self, element : DPolynomial, operation: int = 0, *, ranking: RankingFunction = None) -> tuple[DPolynomial, DPolynomial]:
+        r'''
+            Method to partially integrate a polynomial w.r.t. a derivation.
+
+            When we want to compute a symbolic integral of a polynomial, following the ideas from Bilge or :doi:`10.1016/j.jsc.2016.01.002`,
+            we can, for integrable polynomials `P` (see :func:`is_integrable_monomial`), we can decompose the polynomial as
+
+            .. MATH::
+
+                P = D(P_1) + Q
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ['a',x,'y'], (0,1,0), (0,0,1))
+                sage: a,x,y = B.gens()
+                sage: DP.<u,v> = DifferentialPolynomialRing(B)
+                sage: R = DP.ranking(ordering=(u,v), ttype="orderly")
+                sage: DP.integral_decomposition_Boulier(u[1,0]*v[0], ranking=R)
+                (u_1_0*v_0_0, 0)
+                sage: DP.integral_decomposition_Boulier(v[1,0]*u[0], ranking=R)
+                (-u_1_0*v_0_0, u_0_0*v_0_0)
+                sage: DP.integral_decomposition_Boulier(a + x^2 + v[2,0]*u[0] + u[0]^2, ranking=R)
+                (u_0_0^2 - u_1_0*v_1_0, (1/3*x^3 + a*x) + u_0_0*v_1_0)
+                sage: DP.integral_decomposition_Boulier(u[1,1] + 2*u[0,1], ranking=R)
+                (2*u_0_1, u_0_1)
+        '''
+        element = self(element)
+        return self._integral_decomposition_Boulier(element, operation, ranking=ranking)
+
+    @cached_method
+    def _integral_decomposition_Boulier(self, element: DPolynomial, operation: int = 0, *, ranking: RankingFunction) -> tuple[DPolynomial, DPolynomial]:
+        r'''Internal method to integrate polynomials (::NO EXAMPLE::)'''
+        if element in self.base():
+            try:
+                integral = self.base()(element).integrate(operation)
+                return (0, self(integral))
+            except Exception:
+                return (element, 0)
+
+        var = ranking.leader(element)
+        v = ranking.rank(element)
+        i_v = ranking.initial(element)
+        d = v.degree(var)
+        g = var.infinite_variables()[0]
+        m = ranking.sort(tuple(self(el) for el in element.monomials()), reverse=True)[0]
+        c = element.coefficient(m)
+        ## m = c*v*M where M is a smaller monomial
+
+        if d > 1 or g.index(var, True)[operation] == 0:
+            rec_func, rec_int = self._integral_decomposition_Boulier(element - i_v*v, operation, ranking=ranking)
+            return i_v*v + rec_func, rec_int
+        else:
+            new_order = tuple(o - 1 if i == operation else o for i, o in enumerate(g.index(var, True)))
+            new_var = g[new_order]
+
+            i_v_M = sum(
+                (coeff*self(mon) for coeff, mon in zip(i_v.coefficients(), i_v.monomials()) if ranking.compare(ranking.leader(mon), new_var) > 0),
+                self.zero())
+            i_v_m = i_v - i_v_M
+
+            ## Compute literal integral for i_v_m w.r.t. new_var
+            R = self.zero()
+            for coeff, mon in zip(i_v_m.coefficients(), i_v_m.monomials()):
+                mon = self(mon) # avoid type errors
+                d = mon.degree(new_var)
+                new_mon = mon*new_var
+                new_coeff = coeff / (mon.degree(var) + 1)
+                R += self(new_coeff*new_mon)
+
+            ## Recursive call
+            rec_func, rec_int = self._integral_decomposition_Boulier(element - i_v_M*var - R.operation(operation), operation, ranking=ranking)
+            return i_v_M*var + rec_func, R + rec_int
+
+    @ranked_method
+    def classify_monomial_fraction(self, M: DPolynomial, Q: DPolynomial, operation: int = 0, *, ranking: RankingFunction = None) -> int:
+        r'''
+            Method to classify a fraction into functional or integral.
+
+            We distinguish between several types of functional fractions (i.e., fractions that can not be integrated) as described in Definition
+            24 of :doi:`10.1016/j.jsc.2016.01.002`. In particular, we have the following classification:
+
+            * `1`: the fraction is in the base ring and it can not be integrated.
+            * `2`: the numerator is a functional monomial and the denominator is in the base ring.
+            * `3`: the denominator is not in the base ring. Let `v` be its leader (i.e., its highest ranking variable). Assume the degree of the numerator
+              is lower than the degree of the denominator w.r.t. `v`. We split further:
+              - `31`: the numerator is functional
+              - `32`: the numerator is integrable, not in the base ring, its leader is equal to the derivative of `v` and the denominator is squarefree w.r.t. `v`.
+              - `33`: the numerator is integrable and the numerator is in the base ring or its leader is smaller than the derivative of `v`.
+
+            In any other case we return the monomial fraction to be integrable (i.e., `0`). If there is any error in the input (we require that `M` is a monomial)
+            we raise an error.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: R = DifferentialRing(QQ[x], (1,), (0,)) # QQ[x] with d/dx and d/dy
+                sage: x = R.gens()[0]
+                sage: S.<u,v> = DPolynomialRing(R)
+                sage: rank = S.ranking(ordering=[u,v], ttype="orderly")
+                sage: S.classify_monomial_fraction(3*x, x^2-2, ranking=rank) # 1: both in the base ring
+                1
+                sage: S.classify_monomial_fraction(u[1,0]^2, (1+x)^2, ranking=rank) # 2: numerator is functional and denominator in the base ring
+                2
+                sage: S.classify_monomial_fraction(u[1,0]*v[1,0], (x^2-2)*(1+x), ranking=rank) # 2: the denominator is in the base ring
+                2
+                sage: S.classify_monomial_fraction(u[1,0]*v[1,0], (1+u[1,0])^2, ranking=rank)
+                31
+                sage: S.classify_monomial_fraction(u[2,0], 1+u[1,0]^2, ranking=rank)
+                32
+                sage: S.classify_monomial_fraction(v[1,0], 1+u[1,0]^2, ranking=rank)
+                33
+        '''
+        M, Q = self(M), self(Q) # this checks elements are in ``self``
+
+        if not M.is_term():
+            raise TypeError(f"[classify_monomial_fraction] The numerator {M} is not a monomial")
+
+        if M in self.base() and Q in self.base():
+            return 1
+        elif Q in self.base() and self.is_functional_monomial(M, operation, ranking=ranking):
+            return 2
+        elif Q not in self.base():
+            v = ranking.leader(Q)
+            if M.degree(v) < Q.degree(v):
+                if self.is_functional_monomial(M, operation, ranking=ranking):
+                    return 31
+                elif (M not in self.base()) and (ranking.leader(M) == v.operation(operation)) and Q.is_squarefree(v):
+                    return 32
+                elif (M in self.base()) or ranking.compare(ranking.leader(M), v.operation(operation)) < 0:
+                    return 33
+
+        # Nothing detected: it is integrable
+        return 0
+
+    def __Boulier3_quo_rem(self, P: DPolynomial, Q: DPolynomial, variable: DPolynomial) -> tuple[tuple[DPolynomial, DPolynomial], tuple[DPolynomial, DPolynomial]]:
+        r'''
+            Compute the quotient and remainder of the Euclidean division of `P` by `Q` w.r.t. `variable`.
+
+            ::NO EXAMPLE::
+        '''
+        P, Q, y = self.as_polynomials(P, Q, variable, as_sage=True)
+        poly_parent = P.parent()
+        P, Q = P.polynomial(y), Q.polynomial(y)
+        ensure_field = P.parent().change_ring(P.parent().base().fraction_field())
+        P, Q = ensure_field(P), ensure_field(Q)
+
+        q, r = P // Q, P % Q
+
+        ## q and r are elements in a field of fractions and a single variable (y)
+        q = sum(self(poly_parent(coeff.numerator()))/self(poly_parent(coeff.denominator())) * y**i for i, coeff in enumerate(q.coefficients(True)))
+        r = sum(self(poly_parent(coeff.numerator()))/self(poly_parent(coeff.denominator())) * y**i for i, coeff in enumerate(r.coefficients(True)))
+
+        return (q.numerator(), q.denominator()), (r.numerator(), r.denominator())
+
+    @ranked_method
+    def __Boulier3_NonDifferentialPolynomialPart(self, N: DPolynomial, D: DPolynomial, *, ranking: RankingFunction) -> DPolynomial:
+        r'''
+            Method to compute the polynomial non-integral part of a fraction `N/D` w.r.t. a ranking.
+
+            See algorithm 3 in :doi:`10.1016/j.jsc.2016.01.002` for more details.
+
+            INPUT:
+
+            * ``N``: a :class:`DPolynomial` representing the numerator of the fraction.
+            * ``D``: a :class:`DPolynomial` representing the denominator of the fraction.
+            * ``ranking``: a :class:`RankingFunction` to be used for the computation.
+
+            ::NO EXAMPLE::
+        '''
+        G = ((self(N), self.one()), (self(D), self.one())) # this checks elements are in ``self``
+
+        while all(el in self.base() for el in G[1]):
+            G = self.__
+
+        pass ## TODO (unassigned) Go on here
+
+    def __Boulier4_pseudo_quo_rem(self, N: DPolynomial, D: DPolynomial, variable: DPolynomial) -> tuple[int, DPolynomial, DPolynomial]:
+        r'''
+            Given the variable `v`, we consider the elements `N` and `D` as polynomials in `v`. Then this method returns
+            and integer `d` and two polynomials `Q` and `R` such that
+
+            .. MATH::
+
+                \text{lc}(D)^d N = Q D + R
+
+            ::NO EXAMPLE::
+        '''
+        N, D, y = self.as_polynomials(N, D, variable, as_sage=True)
+        poly_parent = N.parent()
+        N, D = N.polynomial(y), D.polynomial(y)
+
+        d = N.degree(y) - D.degree(y) + 1
+        quo, rem = N.pseudo_quo_rem(D)
+
+        return d, self(poly_parent(quo)), self(poly_parent(rem))
+
+    @ranked_method
+    def fraction_integral_decomposition_Boulier(self, N: DPolynomial, Q: DPolynomial, operation: int = 0, *, ranking: RankingFunction = None) -> tuple[DFractionFieldElement, DFractionFieldElement]:
+        r'''
+            Method to compute the integral decomposition of a fraction `N/D` w.r.t. a derivation.
+
+            This method computes the integral decomposition of a fraction `N/D` w.r.t. a derivation `D`:
+
+            .. MATH::
+
+                \frac{N}{D} = D(g) + h
+
+            and return the fractions `(h, g)`.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ[x,'y'], (1,0), (0,1))
+                sage: x,y = B.gens()
+                sage: DP.<u,v> = DPolynomialRing(B.fraction_field())
+                sage: rank = DP.ranking(ordering=(u,v), ttype="orderly")
+                sage: ## Case C2 in Example 46
+                sage: DP.fraction_integral_decomposition_Boulier(x*u[1,0], x+1, operation=0, ranking=rank)
+                (((-1)/(x^2 + 2*x + 1))*u_0_0, (x/(x + 1))*u_0_0)
+                sage: ## Cases F = A/T and ending at line 21
+                sage: DP.fraction_integral_decomposition_Boulier(x, (u[1,0]+1)^2, operation=0, ranking=rank)
+                (x/(1 + 2*u_1_0 + u_1_0^2), 0)
+                sage: DP.fraction_integral_decomposition_Boulier(u[1,0], (u[1,0]+1)^2, operation=0, ranking=rank)
+                (u_1_0/(1 + 2*u_1_0 + u_1_0^2), 0)
+                sage: ## Cases ending at line 25
+                sage: DP.fraction_integral_decomposition_Boulier(u[1,0]^2, (u[1,0]+1)^2, operation=0, ranking=rank)
+                (u_1_0^2/(1 + 2*u_1_0 + u_1_0^2), 0)
+                sage: DP.fraction_integral_decomposition_Boulier(u[0,2], u[1,0]+1, operation=0, ranking=rank)
+                (u_0_2/(1 + u_1_0), 0)
+                sage: ## More elaborate example
+                sage: R,W = DP.fraction_integral_decomposition_Boulier((1+u[2,0])*u[1,1], (u[0,0]+1)^2, operation=0, ranking=rank)
+                sage: R == (2*u[1,0]*u[0,1] / (u[0]+1)^3) + (u[2,0]*u[1,1] / (u[0]+1)^2)
+                True
+                sage: W == u[0,1] / (u[0]+1)^2
+                True
+                sage: ## Second elaborate case
+                sage: R,W = DP.fraction_integral_decomposition_Boulier(u[0]*u[1,0], (u[0]+2)^2, operation=0, ranking=rank)
+                sage: R == u[1,0]/(u[0]+2)
+                True
+                sage: W == 2*(~(u[0]+2))
+                True
+        '''
+        logger.debug(f"[FID] ** Starting with {N} -- {Q}")
+        F = self(N) / self(Q) # this checks elements are in ``self``
+        N, Q = F.numerator(), F.denominator()
+
+        if N in self.base() and Q in self.base():
+            logger.debug(f"[FID] Base case - integration in base")
+            f = self.base()(N)/self.base()(Q)
+            try:
+                integral = f.integrate(operation)
+                logger.debug(f"[FID] -- Returning: {0, self(integral)}")
+                return self.zero(), self(integral)
+            except Exception:
+                logger.debug(f"[FID] -- Returning: {F, 0}")
+                return F, self.zero()
+        elif Q in self.base():
+            logger.debug(f"[FID] Denominator in base -- mimicking the polynomial case")
+            v_N = ranking.rank(N)
+            d, v_N = v_N.degree(), v_N.variables()[0]
+            i_N = ranking.initial(N)
+
+            if d > 1 or all(o <= 0 for o in v_N.orders(operation=operation)):
+                logger.debug(f"[FID] The highest variable {v_N} can not be integrated -- recursive call with remaining polynomial")
+                nF = F - i_N*v_N**d/Q
+                rec_func, rec_int = self.fraction_integral_decomposition_Boulier(nF.numerator(), nF.denominator(), operation, ranking=ranking)
+
+                logger.debug(f"[FID] -- Returning: {i_N*v_N**d/Q + rec_func, rec_int}")
+                return (i_N*v_N**d/Q + rec_func, rec_int)
+            else:
+                logger.debug(f"[FID] The highest variable {v_N} can be integrated -- recursive call with remaining polynomial")
+                v = v_N.infinite_variables()[0]
+                v_ = v[tuple(o if i != operation else o-1 for i, o in enumerate(v.index(v_N, True)))]
+                i_N_M, i_N_m = self.zero(), self.zero()
+                for coeff, mon in zip(i_N.coefficients(), i_N.monomials()):
+                    mon = self(mon) # avoid type errors
+                    if ranking.compare(ranking.leader(mon), v_) > 0:
+                        i_N_M += coeff*mon
+                    else:
+                        i_N_m += coeff*mon
+
+                ## Compute literal integral for i_N_m w.r.t. v_
+                R = self.zero()
+                for coeff, mon in zip(i_N_m.coefficients(), i_N_m.monomials()):
+                    mon = self(mon) # avoid type errors
+                    d = mon.degree(v_)
+                    new_mon = mon*v_
+                    new_coeff = coeff / (mon.degree(v_N) + 1)
+                    R += self(new_coeff*new_mon)
+                R = R/Q
+
+                nF = F - R.operation(operation) - i_N_M*v_N/Q
+                rec_func, rec_int = self.fraction_integral_decomposition_Boulier(nF.numerator(), nF.denominator(), operation, ranking=ranking)
+
+                logger.debug(f"[FID] -- Returning: {i_N_M*v_N/Q + rec_func, R + rec_int}")
+                return (i_N_M*v_N/Q + rec_func, R + rec_int)
+        else: ## Q not in self.base()
+            logger.debug(f"[FID] Denominator not in base -- pure rational case")
+            v_Q = ranking.leader(Q)
+
+            i_Q = ranking.initial(Q)
+            alpha, S_1, S_2 = self.__Boulier4_pseudo_quo_rem(N, Q, v_Q)
+            logger.debug(f"[FID] We decompose the numerator by pseudo-division w.r.t. the leader of the denominator {v_Q}\n\t{i_Q}^({alpha})*F = {S_1} + [{S_2}]/Q")
+            ## Then F = N/Q = S_1/i_Q**alpha + S_2/(i_Q**alpha*Q)
+            assert S_2 != 0, f"[fraction_integral_decomposition_Boulier] The degree of S_2 w.r.t. v_Q is not positive (is {N}/{Q} irreducible?)"
+
+            F2 = (S_2 / i_Q**alpha) * (~Q)
+            A, T = F2.numerator(), F2.denominator() # we assume this is an irreducible fraction
+
+            logger.debug(f"[FID] Recursive case over the quotient {S_1}/{i_Q**alpha}")
+            I_S1_func, I_S1_int = self.fraction_integral_decomposition_Boulier(S_1, i_Q**alpha, operation, ranking=ranking)
+
+            ## If of line 20-34 from :doi:`10.1016/j.jsc.2016.01.002`
+            if A in self.base() or ranking.compare(ranking.leader(A), v_Q.operation(operation)) < 0:
+                logger.debug(f"[FID] The remainder part ({A}) is too small for the denominator ({T}) -- ({ranking.leader(A)}, {v_Q.operation(operation)}) we can not integrate it")
+                logger.debug(f"[FID] -- Returning: {I_S1_func + F2, I_S1_int}")
+                return (I_S1_func + F2, I_S1_int)
+            else:
+                logger.debug(f"[FID] The remainder part ({A}) is big enough for the denominator ({T}) -- we can integrate it")
+                v_A = ranking.rank(A)
+                d, v_A = v_A.degree(), v_A.variables()[0]
+                i_A = ranking.initial(A)
+
+                if d > 1 or all(o <= 0 for o in v_A.orders(operation=operation)):
+                    logger.debug(f"[FID] The variable {v_A} can not be integrated -- recursive call with remaining polynomial")
+                    nF = F2 - i_A*v_A**d/T
+                    rec_func, rec_int = self.fraction_integral_decomposition_Boulier(nF.numerator(), nF.denominator(), operation, ranking=ranking)
+
+                    logger.debug(f"[FID] -- Returning: {I_S1_func + i_A*v_A**d/T + rec_func, I_S1_int + rec_int}")
+                    return (I_S1_func + i_A*v_A**d/T + rec_func, I_S1_int + rec_int)
+                else:
+                    logger.debug(f"[FID] The variable {v_A} can be integrated -- recursive call with remaining polynomial")
+                    v = v_A.infinite_variables()[0]
+                    v_ = v[tuple(o if i != operation else o-1 for i, o in enumerate(v.index(v_A, True)))]
+                    i_A_M, i_A_m = self.zero(), self.zero()
+                    for coeff, mon in zip(i_A.coefficients(), i_A.monomials()):
+                        mon = self(mon) # avoid type errors
+                        if ranking.compare(ranking.leader(mon), v_) > 0:
+                            i_A_M += coeff*mon
+                        else:
+                            i_A_m += coeff*mon
+                    logger.debug(f"[FID] The integral of {v_A} is {v_} and {i_A} splits into\n\t- Smaller: {i_A_m}\n\t- Bigger:  {i_A_M}")
+
+                    if ranking.compare(v_A, v_Q.operation(operation)) > 0:
+                        logger.debug(f"[FID] The variable {v_A} is too big for the denominator -- we can not integrate it. We integrate what we can")
+                        ## Compute literal integral for i_A_m w.r.t. v_
+                        R = self.zero()
+                        for coeff, mon in zip(i_A_m.coefficients(), i_A_m.monomials()):
+                            mon = self(mon) # avoid type errors
+                            d = mon.degree(v_)
+                            new_mon = mon*v_
+                            new_coeff = coeff / (mon.degree(v_A) + 1)
+                            R += self(new_coeff*new_mon)
+                        R = R/T
+
+                        nF = F2 - R.operation(operation) - i_A_M*v_A/T
+                        rec_func, rec_int = self.fraction_integral_decomposition_Boulier(nF.numerator(), nF.denominator(), operation, ranking=ranking)
+
+                        logger.debug(f"[FID] -- Returning: {I_S1_func + i_A_M*v_A/T + rec_func, I_S1_int + R + rec_int}")
+                        return (I_S1_func + i_A_M*v_A/T + rec_func, I_S1_int + R + rec_int)
+                    else:
+                        logger.debug(f"[FID] The variable {v_A} is exactly the derivative of the denominator.")
+                        logger.debug(f"[FID] We compute the Hermite form of [{i_A_m} / {T}] w.r.t. {v_}")
+                        R, W = self.hermite(i_A_m / T, v_)
+                        logger.debug(f"[FID] R = {R}, W = {W}")
+                        logger.debug(f"[FID] For recursion we remove {R.operation(operation) - W*v_A - i_A_M*v_A/T}")
+                        nF = F2 - R.operation(operation) - W*v_A - i_A_M*v_A/T
+                        rec_func, rec_int = self.fraction_integral_decomposition_Boulier(nF.numerator(), nF.denominator(), operation, ranking=ranking)
+
+                        logger.debug(f"[FID] -- Returning: {I_S1_func + W*v_A+i_A_M*v_A/T + rec_func, I_S1_int + R + rec_int}")
+                        return (I_S1_func + W*v_A+i_A_M*v_A/T + rec_func, I_S1_int + R + rec_int)
+
+    @ranked_method
+    def fraction_normal_form(self, Fn: DPolynomial, Fd: DPolynomial, operation: int = 0, *, ranking: RankingFunction = None) -> tuple[DPolynomial, tuple[DPolynomial]]:
+        r'''
+            Implementation of Algorithm 5 of :doi:`10.1016/j.jsc.2016.01.002` to compute the normal form of a fraction `Fn/Fd` w.r.t. a derivation.
+
+            This method is not yet fully tested and it is based in other method of the module that are implemented from the same paper.
+
+            ::NO EXAMPLE::
+        '''
+        Fn, Fd = self(Fn), self(Fd) # this checks elements are in ``self``
+
+        P = self.__Boulier3_NonDifferentialPolynomialPart(Fn, Fd, operation, ranking=ranking)
+        G = (Fn/Fd) - P
+        ## These should be reduced
+        Gn = G.numerator()
+        Gd = G.denominator()
+
+        i = 0
+        W = list()
+        while Gn != 0:
+            w,R = self.fraction_integral_decomposition_Boulier(Gn, Gd, operation, ranking=ranking)
+            W.append(w)
+
+            P_tilde = self.__Boulier3_NonDifferentialPolynomialPart(R.numerator(), R.denominator(), operation, ranking=ranking)
+            P = P + P_tilde.operation(operation, times=i+1)
+            G = R - P_tilde
+            Gn = G.numerator()
+            Gd = G.denominator()
+            i = i+1
+
+        return P, W
+
+    def limited_integrate(self, f: DFractionFieldElement , *w: DFractionFieldElement, D: int = 0) -> tuple[DRings.ElementMethods, tuple[DRings.ElementMethods]]:
+        r'''
+                Method to solve the Limited Integration Problem (see Bronstein's page 241)
+
+                Given `f,w_1,\ldots,w_n \in \mathbb{K}`, this method decides whether there are constants `c_1,\ldots,c_n` such that
+                we can split `f` into a linear combination of `w_1,\ldots,w_n` and a total derivative for an element `v \in \mathbb{K}`.
+
+                This method return the element `v` and the constants `c_1,\ldots,c_n` if they exist or ``None`` if there is no such solution.
+
+                In the case of fractions of DPolynomials, the method :func:`fraction_integral_decomposition_Boulier` allows to write
+                in an additive way any fraction `f` as:
+
+                .. MATH::
+
+                    f = D(R) + W.
+
+                Hence, we can compute the linear combination of the decompositions of `f` and `w_1,\ldots,w_n`. This is explicitly written in
+                Remark 50 of :doi:`10.1016/j.jsc.2016.01.002`.
+
+                EXAMPLES::
+
+                    sage: from dalgebra import *
+                    sage: R.<u,v> = DifferentialPolynomialRing(QQ)
+                    sage: num = ((-6)*u[0]+11*u[0]*v[0]+8*u[0]^2+3*v[0]^2)*u[1]+(5*u[0]*v[0]+5*u[0]^2-6*u[0])*v[1]
+                    sage: den = 6*(u[0]+v[0])^2*u[0]
+                    sage: F = num/den
+                    sage: w_1 = u[1]/u[0] # ln(u[0])'
+                    sage: w_2 = (u[1] + v[1])/(u[0] + v[0]) # ln(u[0]+v[0])'
+                    sage: R.limited_integrate(F, w_1, w_2)
+                    ((1/2, 5/6), 1/(u_0 + v_0))
+        '''
+        if not self.operator_types()[D] == "derivation":
+            raise NotImplementedError(f"[limited_integrate] The operation {D} is not a derivation in {self}")
+
+        f = self.fraction_field()(f)
+        w = tuple(self.fraction_field()(wi) for wi in w)
+
+        Wf, Rf = self.fraction_integral_decomposition_Boulier(f.numerator(), f.denominator(), D)
+        Ww, Rw = zip(*[self.fraction_integral_decomposition_Boulier(wi.numerator(), wi.denominator(), D) for wi in w])
+
+        ## Now we want to check when we can write Wf = c_1*Ww[1] + ... + c_n*Ww[n]
+        ## This is a linear system over the base field for which constant solutions are interesting
+        v, M = self.fraction_field().solve_linear_system_constant(matrix([[wi for wi in Ww] + [Wf]]), homogeneous=False, operation=D)
+        R = Rf - sum(c*Rwi for c, Rwi in zip(v, Rw))
+
+        assert f == R.operation(D) + sum(c*wi for c, wi in zip(v, w)), "Operation successful"
+
+        return v, R
 
     #################################################
     ### Other computation methods
@@ -3599,6 +4330,8 @@ class InfiniteToDPoly_Coercion(Morphism):
 
     def _call_(self, element):
         r'''Call method for a morphism (::NO EXAMPLE::)'''
+        if element == self.domain().zero():
+            return self.codomain().zero()
         output = self.codomain().zero()
         for m,c in element.monomial_coefficients().items():
             # m is the list of exponents for some variables
@@ -3611,21 +4344,28 @@ class InfiniteToDPoly_Coercion(Morphism):
     def _monom_(self, monomial: tuple[int], ring=None) -> DPolynomial:
         r'''Method to convert a tuple of integers to a DPolynomial monomial (::NO EXAMPLE::)'''
         gens = self.domain().polynomial_ring().gens() if ring is None else ring.gens()
-        if len(monomial) != len(gens):
-            raise ValueError(f"Monomial {monomial} does not match the number of generators {len(gens)} in {self.domain()}")
+        from sage.rings.polynomial.polydict import ETuple
+        if isinstance(monomial, ETuple):
+            monomial = tuple(monomial)
+            if len(monomial) != len(gens):
+                raise ValueError(f"Monomial {monomial} does not match the number of generators {len(gens)} in {self.domain()}")
 
-        ## For each generator we find the DPolynomial analog
-        ngens = []
-        str_gens = [g._name for g in self.domain().gens()]
-        ngens = []
-        for el in gens:
-            g,i = str(el).split("_") # must be of this shape
-            ngens.append((str_gens.index(g),int(i)))
-        gens = ngens
+            ## For each generator we find the DPolynomial analog
+            ngens = []
+            str_gens = [g._name for g in self.domain().gens()]
+            ngens = []
+            for el in gens:
+                g,i = str(el).split("_") # must be of this shape
+                ngens.append((str_gens.index(g),int(i)))
+            gens = ngens
 
-        output = self.codomain().one()
-        for ((v,o),e) in zip(gens,monomial):
-            output *= self.__map[self.domain().gen(v)._name][o]**e
+            output = self.codomain().one()
+            for ((v,o),e) in zip(gens,monomial):
+                output *= self.__map[self.domain().gen(v)._name][o]**e
+        else: # necessary for newer versions: now the monomials are closer to DMonomial
+            output = self.codomain().one()
+            for ((v,o),e) in tuple(monomial):
+                output *= self.__map[self.domain().gen(v)._name][o]**e
 
         return output
 
@@ -3664,7 +4404,7 @@ class DPolynomial_Shift2SkewMorphism(Morphism):
         output = self.codomain().one()
 
         for ((v,o),e) in monomial._variables.items():
-            if o[self.operation] > 0: # we appl the operation over the given variable as many times as necessary
+            if o[self.operation] > 0: # we apply the operation over the given variable as many times as necessary
                 el = self._var_pow_(v, o[self.operation])
                 for i,order in enumerate(o):
                     if i != self.operation and order > 0:
@@ -3718,7 +4458,7 @@ class DPolynomial_Skew2ShiftMorphism(Morphism):
         output = self.codomain().one()
 
         for ((v,o),e) in monomial._variables.items():
-            if o[self.operation] > 0: # we appl the operation over the given variable as many times as necessary
+            if o[self.operation] > 0: # we apply the operation over the given variable as many times as necessary
                 el = self._var_pow_(v, o[self.operation])
                 for i,order in enumerate(o):
                     if i != self.operation and order > 0:
@@ -4245,7 +4985,7 @@ class RankingFunction:
         elif v not in self.__ordering:
             return 1
         else:
-            return self.__ordering.index(v) - self.__ordering.index(u)
+            return self.__ordering.index(u) - self.__ordering.index(v)
 
     def compare_operations(self, t1: tuple[int], t2: tuple[int]) -> int:
         r'''
@@ -4799,7 +5539,7 @@ class RankingFunction:
                 sage: from dalgebra import *
                 sage: R.<u,v> = DifferentialPolynomialRing(QQ[x]); x = R.base().gens()[0]
                 sage: system = DifferentialSystem([x*u[0] + x^2*u[2] - (1-x)*v[0], v[1] - v[2] + u[1]], variables = [u])
-                sage: r = R.ranking([v,u], "elimination")
+                sage: r = R.ranking([v,u], ttype="elimination")
                 sage: A = r.autoreduced(system.equations()); A
                 [-v_0 + x*v_1 + (x^3 - x^2)*v_3 - x^3*v_4,
                  x*u_0 + (x - 1)*v_0 - x^2*v_2 + x^2*v_3]
