@@ -4330,6 +4330,8 @@ class InfiniteToDPoly_Coercion(Morphism):
 
     def _call_(self, element):
         r'''Call method for a morphism (::NO EXAMPLE::)'''
+        if element == self.domain().zero():
+            return self.codomain().zero()
         output = self.codomain().zero()
         for m,c in element.monomial_coefficients().items():
             # m is the list of exponents for some variables
