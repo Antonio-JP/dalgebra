@@ -4344,29 +4344,29 @@ class InfiniteToDPoly_Coercion(Morphism):
     def _monom_(self, monomial: tuple[int], ring=None) -> DPolynomial:
         r'''Method to convert a tuple of integers to a DPolynomial monomial (::NO EXAMPLE::)'''
         gens = self.domain().polynomial_ring().gens() if ring is None else ring.gens()
-        ## I DO NOT UNDERSTAND THIS
-        try:
-            if monomial == 0:
-                return self.codomain().one()
-        except TypeError:
-            pass
+        from sage.rings.polynomial.polydict import ETuple
+        if isinstance(monomial, ETuple):
+            monomial = tuple(monomial)
+            if len(monomial) != len(gens):
+                raise ValueError(f"Monomial {monomial} does not match the number of generators {len(gens)} in {self.domain()}")
 
-        if len(monomial) != len(gens):
-            raise ValueError(f"Monomial {monomial} does not match the number of generators {len(gens)} in {self.domain()}")
+            ## For each generator we find the DPolynomial analog
+            ngens = []
+            str_gens = [g._name for g in self.domain().gens()]
+            ngens = []
+            for el in gens:
+                g,i = str(el).split("_") # must be of this shape
+                ngens.append((str_gens.index(g),int(i)))
+            gens = ngens
 
-        ## For each generator we find the DPolynomial analog
-        ngens = []
-        str_gens = [g._name for g in self.domain().gens()]
-        ngens = []
-        for el in gens:
-            g,i = str(el).split("_") # must be of this shape
-            ngens.append((str_gens.index(g),int(i)))
-        gens = ngens
-
-        output = self.codomain().one()
-        for ((v,o),e) in zip(gens,monomial):
-            output *= self.__map[self.domain().gen(v)._name][o]**e
-
+            output = self.codomain().one()
+            for ((v,o),e) in zip(gens,monomial):
+                output *= self.__map[self.domain().gen(v)._name][o]**e
+        else: # necessary for newer versions: now the monomials are closer to DMonomial
+            output = self.codomain().one()
+            for ((v,o),e) in tuple(monomial):
+                output *= self.__map[self.domain().gen(v)._name][o]**e
+                
         return output
 
 
