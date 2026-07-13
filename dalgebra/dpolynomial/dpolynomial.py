@@ -2092,6 +2092,15 @@ class DPolynomialRing_Monoid(Parent):
         r'''Get the number of generators of ``self``. (::NO EXAMPLE::)'''
         return self.monoids().ngens()
 
+    def zero(self) -> DPolynomial:
+        return self.element_class(self, {})  # zero polynomial
+    
+    def one(self) -> DPolynomial:
+        return self.element_class(self, {self.monoids().one(): self.base().one()})  # one polynomial
+    
+    def _an_element_(self) -> DPolynomial: 
+        return self.one()
+
     ################################################################################
     ### RINGS METHODS (from Rings.ParentMethods)
     ################################################################################
@@ -3356,7 +3365,7 @@ class DPolynomialRing_Monoid(Parent):
                 sage: DR = DifferentialRing(R)
                 sage: k2,ke,Ve = DR.gens()
                 sage: OR.<y> = DPolynomialRing(DR.fraction_field())
-                sage: F = k2*ke*Ve*(~(y[0]+ke)) + ke*Ve*y[1]*(~(y[0]+ke)^2)
+                sage: F = k2*ke*Ve*(1/(y[0]+ke)) + ke*Ve*y[1]*(1/(y[0]+ke)^2)
                 sage: R,W = OR.hermite(F, y[0])
                 sage: R == -ke*Ve*y[1]*(~(y[0]+ke))
                 True
