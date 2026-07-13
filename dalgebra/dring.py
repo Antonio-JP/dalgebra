@@ -866,7 +866,7 @@ class DRings(Category):
             if not system.parent().base_ring().is_field():
                 return self.solve_linear_system_constant(system.change_ring(system.parent().base_ring().fraction_field()), homogeneous, operation)
             system = matrix([row for row in system]) # we create a copy
-            
+
             logger.debug(f"[SLSC] Computing normal form of the matrix")
             system.echelonize()
             ncols = system.ncols()

@@ -35,7 +35,7 @@ def order(el):
         return el.order(el.parent().gen("z"))
 
 if __name__ == "__main__":
-    
+
     start = time.time()
     GB1 = first_example()
     first = time.time()

@@ -38,18 +38,22 @@ test: no-deps
 coverage:
 	$(SAGE) -tox -e coverage -- $(PACKAGE)
 
-lint:
+lint: whitespace
 	$(SAGE) -tox -e relint,pycodestyle-minimal -- $(PACKAGE)
+
+whitespace:
+	@echo "Removing trailing whitespaces in all .py files"
+	@find . -type f -name "*.py" -exec perl -pi -e 's/[ \t]+$$//' {} +
 
 audit:
 	@echo "###############################################################################"
 	@echo "Checking documentation of new elements for release..."
 	@echo "-------------------------------------------------------------------------------"
-	@python3 scripts/release_audit.py
+	@python3 scripts/release_audit.py --no-ok
 	@echo "###############################################################################"
 	@echo "Checking all TODOs for this branch are resolved..."
 	@echo "-------------------------------------------------------------------------------"
-	@python3 scripts/todo_audit.py --warnings
+	@python3 scripts/todo_audit.py
 
 ready: audit lint test
 	@echo "Repository is ready to push: check with act the actions in case of changes."
@@ -83,5 +87,5 @@ clean_cache:
 	@echo "Cleaning the cached results in files"
 	@ rm -rf dalgebra/__pycache__/*.dmp
 
-.PHONY: all install develop test coverage clean clean_doc doc doc-pdf release-audit
+.PHONY: all install develop test coverage clean clean_doc doc doc-pdf release-audit whitespace
 	
