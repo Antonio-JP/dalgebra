@@ -4336,6 +4336,9 @@ class InfiniteToDPoly_Coercion(Morphism):
         for m,c in element.monomial_coefficients().items():
             # m is the list of exponents for some variables
             # c is the coefficient of the monomial
+            from sage.rings.polynomial.polydict import ETuple
+            if not isinstance(m, (tuple, ETuple)):
+                print(f"WHAT? {m} --> {element} -- {self.domain()} -- {self.codomain()}")
             monom = self._monom_(m, element.polynomial().parent())
             coeff = self.codomain().base()(c) # this must work
             output += coeff * monom
