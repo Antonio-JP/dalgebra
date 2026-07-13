@@ -828,15 +828,15 @@ class DRings(Category):
         def solve_linear_system_constant(self, system: Matrix, homogeneous: bool = True, operation: int = 0) -> tuple[tuple[DRings.ElementMethods], Matrix]:
             r'''
                 Method to compute the constant solutions to a linear system
-                
+
                 Given a linear system `(A|b)` over a field `F`, we can look for a set of constant solutions.
-                This type of solutions have an additional property: if `A \cdot c = b`, then for the given operation we 
+                This type of solutions have an additional property: if `A \cdot c = b`, then for the given operation we
                 obtain `op(A) \cdot c = op(b)`.
 
-                Hence we can extend the system `(A|b)` to a bigger system. This process can be repeated indefinitely and 
+                Hence we can extend the system `(A|b)` to a bigger system. This process can be repeated indefinitely and
                 the dimension of solutions over `F` must stabilize at some point. Moreover, if we perform a gaussian elimination
-                of the system, we get a diagonal shape with 1s in the diagonal. It does not matter the type of operation we are 
-                using, the operation over these rows will either generate a new pivot in the gaussian elimination or it will generate 
+                of the system, we get a diagonal shape with 1s in the diagonal. It does not matter the type of operation we are
+                using, the operation over these rows will either generate a new pivot in the gaussian elimination or it will generate
                 a row of zeros.
 
                 When the system stabilizes, it means that new rows never generate new pivots, hence, they are already constant
@@ -844,7 +844,7 @@ class DRings(Category):
                 system.
 
                 NOTE: In the case of working with polynomials, this is equivalent to taking monomials and extending the system directly with
-                the coefficients of the monomials (see :func:`system_for_constant_solutions`), and sometimes this is more efficient than computing 
+                the coefficients of the monomials (see :func:`system_for_constant_solutions`), and sometimes this is more efficient than computing
                 the stabilized system.
 
                 INPUT:
@@ -854,14 +854,17 @@ class DRings(Category):
 
                 OUTPUT:
 
-                A pair `(v_0, M)` where `v_0` is a particular constant solution to the system and `M` 
+                A pair `(v_0, M)` where `v_0` is a particular constant solution to the system and `M`
                 is a matrix such that `v = v_0 + M*c` is the general solution to the system for any constant vector `c`.
+
+                TODO (unassigned): put some tests
+
+                ::NO EXAMPLE::
             '''
             logger.debug(f"[SLSC] Solving linear system for constant solutions")
             logger.debug(f"[SLSC] Checking the base ring of the matrix is a field")
             if not system.parent().base_ring().is_field():
                 return self.solve_linear_system_constant(system.change_ring(system.parent().base_ring().fraction_field()), homogeneous, operation)
-            
             system = matrix([row for row in system]) # we create a copy
             
             logger.debug(f"[SLSC] Computing normal form of the matrix")
@@ -881,7 +884,7 @@ class DRings(Category):
 
             logger.debug(f"[SLSC] We perform the extension in case we need")
             current_rank = system.rank()
-            old_rank = system.ncols() 
+            old_rank = system.ncols()
             while current_rank != old_rank:
                 old_rank = current_rank
                 system = matrix([row for row in system] + [[el.operation(operation) for el in row] for row in system.rows()])
@@ -1806,7 +1809,7 @@ class DRing_WrapperElement(Element):
         return self.wrapped._im_gens_(codomain, im_gens, base_map=base_map)
 
     def is_unit(self) -> bool:
-        r'''Overriden method for checking if an element is a unit (::NO EXAMPLE::)'''
+        r'''Overridden method for checking if an element is a unit (::NO EXAMPLE::)'''
         return self.wrapped.is_unit()
 
     def __getattr__(self, attr):
@@ -2105,7 +2108,7 @@ class DRing_Wrapper(Parent):
         self.__constant[operation] = ring
 
     def _lcm_denominators(self, *_: DRing_WrapperElement) -> DRing_WrapperElement:
-        r'''Auxiliry implementation of the method for computing the LCM of a set of elements. (::NO EXAMPLE::)'''
+        r'''Auxiliary implementation of the method for computing the LCM of a set of elements. (::NO EXAMPLE::)'''
         return self.one()
 
     def linear_operator_ring(self):
@@ -2219,6 +2222,10 @@ class DRing_Wrapper(Parent):
             except Exception as e:
                 raise NotImplementedError(f"[inverse_operation] Inverses not implemented in general. Moreover: {e}")
         elif self.operator_types()[operator] == "derivation":
+            sage_op = self.operators()[operator].to_sage()
+            if sage_op in sage_op.parent().gens(): # partial derivative w.r.t. a variable
+                index = sage_op.parent().gens().index(sage_op)
+                return self(element.wrapped.polynomial(self.gens()[index].wrapped).integral())
             if self.operators()[operator].function.function == 0: # all are constants
                 if element == 0:
                     return element
@@ -2319,7 +2326,7 @@ class DRing_Wrapper(Parent):
         return self.element_class(self, self.wrapped(x))
 
     def _is_valid_homomorphism_(self, codomain, im_gens, base_map=None) -> bool:
-        r'''Reimplementation of the wrapped method _is_valid_homomorphism_. (::NO EXAMPLE::)'''
+        r'''Overridden implementation of the wrapped method _is_valid_homomorphism_. (::NO EXAMPLE::)'''
         return self.wrapped._is_valid_homomorphism_(codomain, im_gens, base_map)
 
     def construction(self) -> DRingFunctor:
