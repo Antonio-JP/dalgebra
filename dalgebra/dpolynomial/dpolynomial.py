@@ -4366,7 +4366,7 @@ class InfiniteToDPoly_Coercion(Morphism):
             output = self.codomain().one()
             for ((v,o),e) in tuple(monomial):
                 output *= self.__map[self.domain().gen(v)._name][o]**e
-                
+
         return output
 
 
