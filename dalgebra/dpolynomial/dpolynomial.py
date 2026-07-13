@@ -2093,12 +2093,15 @@ class DPolynomialRing_Monoid(Parent):
         return self.monoids().ngens()
 
     def zero(self) -> DPolynomial:
+        r'''Element creation method for zero (::NO EXAMPLE::)'''
         return self.element_class(self, {})  # zero polynomial
-    
+
     def one(self) -> DPolynomial:
+        r'''Element creation method for one (::NO EXAMPLE::)'''
         return self.element_class(self, {self.monoids().one(): self.base().one()})  # one polynomial
-    
-    def _an_element_(self) -> DPolynomial: 
+
+    def _an_element_(self) -> DPolynomial:
+        r'''Element creation method (to avoid possible errors) (::NO EXAMPLE::)'''
         return self.one()
 
     ################################################################################
