@@ -2175,29 +2175,32 @@ class DRing_Wrapper(Parent):
                 sage: U = DifferenceRing(B, ns); U.linear_operator_ring()
                 Univariate Ore algebra in S over Multivariate Polynomial Ring in x, y over Rational Field
         '''
-        from ore_algebra.ore_algebra import OreAlgebra
-        if self.__linear_operator_ring is None:
-            ## We need the operators to commute
-            if not self.all_operators_commute():
-                raise TypeError("Ore Algebra can only be created with commuting operators.")
+        try:
+            from ore_algebra.ore_algebra import OreAlgebra
+            if self.__linear_operator_ring is None:
+                ## We need the operators to commute
+                if not self.all_operators_commute():
+                    raise TypeError("Ore Algebra can only be created with commuting operators.")
 
-            base_ring = self.wrapped
+                base_ring = self.wrapped
 
-            operators = []
+                operators = []
 
-            def zero(_):
-                r'''Zero function (::NO EXAMPLE::)'''
-                return 0
-            for operator, ttype in zip(self.operators(), self.operator_types()):
-                if ttype == "homomorphism":
-                    operators.append((f"S{f'_{self.differences().index(operator)}' if self.ndifferences() > 1 else ''}", operator.function, zero))
-                elif ttype == "derivation":
-                    operators.append((f"D{f'_{self.derivations().index(operator)}' if self.nderivations() > 1 else ''}", base_ring.Hom(base_ring).one(), operator.function))
-                elif ttype == "skew":
-                    operators.append((f"K{f'_{self.skews().index(operator)}' if self.nskews() > 1 else ''}", operator.twist.to_sage(), operator.to_sage()))
+                def zero(_):
+                    r'''Zero function (::NO EXAMPLE::)'''
+                    return 0
+                for operator, ttype in zip(self.operators(), self.operator_types()):
+                    if ttype == "homomorphism":
+                        operators.append((f"S{f'_{self.differences().index(operator)}' if self.ndifferences() > 1 else ''}", operator.function, zero))
+                    elif ttype == "derivation":
+                        operators.append((f"D{f'_{self.derivations().index(operator)}' if self.nderivations() > 1 else ''}", base_ring.Hom(base_ring).one(), operator.function))
+                    elif ttype == "skew":
+                        operators.append((f"K{f'_{self.skews().index(operator)}' if self.nskews() > 1 else ''}", operator.twist.to_sage(), operator.to_sage()))
 
-            self.__linear_operator_ring = OreAlgebra(self.wrapped, *operators)
-        return self.__linear_operator_ring
+                self.__linear_operator_ring = OreAlgebra(self.wrapped, *operators)
+            return self.__linear_operator_ring
+        except ModuleNotFoundError:
+            raise NotImplementedError("Ore Algebra not available. Please install ore_algebra package to use this functionality.")
 
     def to_sage(self):
         r'''Implementation of to_sage method. (::NO EXAMPLE::)'''

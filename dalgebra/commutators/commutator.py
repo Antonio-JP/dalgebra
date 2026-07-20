@@ -469,7 +469,7 @@ def GetEquationsForLevel(n: int, level: int,
 
 @loglevel(logger)
 def GetEquationsForSolution(n: int, m : int, U: list | dict = None,
-                            simple: bool = False, maple: bool = False,
+                            analyze: bool = True, simple: bool = False, maple: bool = False,
                             filename: str = None,
                             path: str = "./results"
 ) -> tuple[DPolynomial, DPolynomial, Ideal]:
@@ -563,46 +563,53 @@ def GetEquationsForSolution(n: int, m : int, U: list | dict = None,
                 f.write(f"I = ideal{tuple(el for el in final_ideal if el != 0)}")
 
         logger.debug(f"[GEFS] -- Finished elimination of linear variables")
-        ###############################################################################
-        ## ANALYZING THE SOLUTION IDEAL
-        ###############################################################################
-        solutions = list()
-        ### COMPUTATION OPTION "maple"
-        ### If we are in the maple mode, we use the Maple software to compute the different
-        ### solutions for the ideal system. This essentially create the equations in Maple
-        ### and then solve them using the "solve" command. If the ideal has dimension higher
-        ### than zero, it may not obtain full solutions but some points.
-        if maple and _HAS_MAPLE:
-            logger.debug(f"[GEFS] Using Maple to solve the system")
-            logger.warning(f"[GEFS] If the ideal has non-zero dimension, this may not provide full solutions")
-            command = _generate_maple_command(final_ideal)
-            if len(command) > 1000:
-                from tempfile import NamedTemporaryFile
-                with NamedTemporaryFile("w", delete=False) as tmp_file:
-                    tmp_file.write(command)
-                    tmp_file.close()
-                    command = f'read "{tmp_file.name}";'
-                    output = Maple.eval(command)
-            else:
-                output = Maple.eval(command)
-            for solution_branch in _parse_maple_output(output, ring):
-                solutions.extend(analyze_ideal(solution_branch, dict(), list()))
+
+        if not analyze:
+            ###############################################################################
+            ## We do not analyze the ideal
+            ###############################################################################
+            return L, Ps, ideal(final_ideal)
         else:
-            final_ideal = ideal(ideal(final_ideal).groebner_basis()) if len(final_ideal) > 0 else ideal(ring)
-
-            for primary in final_ideal.primary_decomposition():
-                solutions.extend(analyze_ideal(primary.radical(), dict(),list()))
-
-        ## We now evaluate the equations to get the remaining linear equations
-        output = list()
-        for solution in solutions:
-            system = Matrix([[solution.eval(el) for el in row] for row in Hs])
-            if system == 0:
-                system = system[0,:] ## The matrix was the zero, we keep just one row
+            ###############################################################################
+            ## ANALYZING THE SOLUTION IDEAL
+            ###############################################################################
+            solutions = list()
+            ### COMPUTATION OPTION "maple"
+            ### If we are in the maple mode, we use the Maple software to compute the different
+            ### solutions for the ideal system. This essentially create the equations in Maple
+            ### and then solve them using the "solve" command. If the ideal has dimension higher
+            ### than zero, it may not obtain full solutions but some points.
+            if maple and _HAS_MAPLE:
+                logger.debug(f"[GEFS] Using Maple to solve the system")
+                logger.warning(f"[GEFS] If the ideal has non-zero dimension, this may not provide full solutions")
+                command = _generate_maple_command(final_ideal)
+                if len(command) > 1000:
+                    from tempfile import NamedTemporaryFile
+                    with NamedTemporaryFile("w", delete=False) as tmp_file:
+                        tmp_file.write(command)
+                        tmp_file.close()
+                        command = f'read "{tmp_file.name}";'
+                        output = Maple.eval(command)
+                else:
+                    output = Maple.eval(command)
+                for solution_branch in _parse_maple_output(output, ring):
+                    solutions.extend(analyze_ideal(solution_branch, dict(), list()))
             else:
-                system = Matrix([row for row in system if row != 0])
-            output.append((solution, system, mons))
-        return L, Ps, tuple(output)
+                final_ideal = ideal(ideal(final_ideal).groebner_basis()) if len(final_ideal) > 0 else ideal(ring)
+
+                for primary in final_ideal.primary_decomposition():
+                    solutions.extend(analyze_ideal(primary.radical(), dict(),list()))
+
+            ## We now evaluate the equations to get the remaining linear equations
+            output = list()
+            for solution in solutions:
+                system = Matrix([[solution.eval(el) for el in row] for row in Hs])
+                if system == 0:
+                    system = system[0,:] ## The matrix was the zero, we keep just one row
+                else:
+                    system = Matrix([row for row in system if row != 0])
+                output.append((solution, system, mons))
+            return L, Ps, tuple(output)
     else:
         return L, Ps, Hs
 
@@ -722,6 +729,11 @@ def _GetHierarchyLinearEquations(n: int, m: int, U: tuple, c_list: tuple):
         Hs.append([h(dic=U) for h in nH])
 
         logger.debug(f"[GHLE]    Computed for order {i}")
+
+    ## We remove the operator "z" from the Hs, since they do not need it
+    Hs_parent = Hs[0][0].parent().remove_variables(z.variable_name())
+    Hs = [[Hs_parent(h) for h in row] for row in Hs]
+
 
     logger.debug(f"[GHLE] -- Computed the basis of almost commuting and the hierarchies")
 
