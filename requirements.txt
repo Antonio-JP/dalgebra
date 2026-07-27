@@ -1,2 +1,2 @@
-ore_algebra @ git+https://github.com/mkauers/ore_algebra.git@sage-10.9
+ore_algebra @ git+https://github.com/mkauers/ore_algebra.git
 timeoutcontext >= 1.2.0

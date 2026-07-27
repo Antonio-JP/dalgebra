@@ -1,12 +1,13 @@
 SHELL:=/bin/bash
-ZIP=dalgebra# ZIP name
+
+# Package folder
+PACKAGE=dalgebra
+
+ZIP=$(PACKAGE)# ZIP name
 VERSION=$(shell cat ./VERSION)
 
 # change to your sage command if needed
 SAGE=sage
-
-# Package folder
-PACKAGE=dalgebra
 
 all: install doc test
 		
@@ -18,7 +19,7 @@ no-deps: clean_build
 	$(SAGE) -pip install --upgrade --no-deps .
 
 with-data: clean_build clean_cache import-data install
-	@echo "Installed dalgebra with data from almost_commuting_wilson"
+	@echo "Installed $(PACKAGE) with data from almost_commuting_wilson"
 
 import-data:
 	@echo "Importing data for almost_commuting_wilson..."
@@ -85,7 +86,7 @@ clean_pyc:
 
 clean_cache:
 	@echo "Cleaning the cached results in files"
-	@ rm -rf dalgebra/__pycache__/*.dmp
+	@ rm -rf $(PACKAGE)/__pycache__/*.dmp
 
 .PHONY: all install develop test coverage clean clean_doc doc doc-pdf release-audit whitespace
 	
