@@ -21,3 +21,4 @@ AUTHORS:
 # ****************************************************************************
 
 from .delliptic import *
+from .puiseux import *

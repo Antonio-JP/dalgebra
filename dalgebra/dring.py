@@ -2081,13 +2081,15 @@ class DRing_Wrapper(Parent):
         r'''Returns the ring of constants for a given operation. (::NO EXAMPLE::)'''
         if self.__constant[operation] is None:
             operation_type = self.operator_types()[operation]
+            # ``.function`` may just be the internal wrapped_callable partial: compare the underlying sage object instead
+            sage_op = self.operators()[operation].to_sage()
             if operation_type == "homomorphism":
-                if self.operators()[operation].function == self.wrapped.Hom(self.wrapped).one():
+                if sage_op is not None and sage_op == self.wrapped.Hom(self.wrapped).one():
                     self.__constant[operation] = self
                 else:
                     raise NotImplementedError(f"Unable to decide constant for homomorphism (operation {operation})")
             elif operation_type in ("skew", "derivation"):
-                if self.operators()[operation].function.function == 0:
+                if sage_op is not None and sage_op == 0:
                     self.__constant[operation] = self
                 else:
                     raise NotImplementedError(f"Unable to decide constant for derivation (operation {operation})")
