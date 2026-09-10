@@ -14,10 +14,6 @@ r'''
     where `o \in \mathbb{Z}` and `a_n` are elements of the base differential field. Different elements of the same
     ring may use different ramification indices: the whole ring is (conceptually) the union `\bigcup_{e} F((x^{1/e}))`.
 
-    This module is a self-contained sibling of :mod:`dalgebra.dextension.series` (it does not import from it):
-    the design of :class:`~dalgebra.dextension.series.LSeries_Ring`/:class:`~dalgebra.dextension.series.LSeries_Element`
-    is used purely as a template.
-
     TODO (puiseux): Add examples and more detailed explanation of the structure.
 
     TODO (puiseux): implement Puiseux series not only for a differential field but also for a difference field.
@@ -141,6 +137,8 @@ class PuiseuxSeriesFactory(UniqueFactory):
 
         if base.noperators() != 1 or not base.is_differential():
             raise TypeError("The given ring must be a differential ring with just 1 derivation.")
+        elif base.constant_ring() != base:
+            raise TypeError("The base must be a differential ring with trivial constants")
 
         if name is None and "names" in kwds:
             if len(kwds["names"]) != 1:
@@ -166,7 +164,7 @@ class PuiseuxSeriesFactory(UniqueFactory):
         return PuiseuxSeries_Ring(base, name)
 
 
-PuiseuxSeries = PuiseuxSeriesFactory("dalgebra.dextension.puiseux.PuiseuxSeries_Element")
+PuiseuxSeries = PuiseuxSeriesFactory("dalgebra.dextension.puiseux.PuiseuxSeries_Ring")
 
 
 class PuiseuxSeries_Element(Element):
@@ -180,37 +178,31 @@ class PuiseuxSeries_Element(Element):
 
             f(x) = \sum_{n = o}^{\infty} a_n x^{n/e},
 
-        where `n \in \mathbb{Z}` and `e \in \mathbb{Z}_{>0}` is the *ramification index* of the element (i.e., the
+        where `o \in \mathbb{Z}` and `e \in \mathbb{Z}_{>0}` is the *ramification index* of the element (i.e., the
         denominator that is common to every exponent appearing in the series). Different elements of the same ring
         may have different ramification indices; arithmetic operations automatically bring both operands to a
         common ramification (the lcm of both) before combining them.
 
-        This class mirrors :class:`~dalgebra.dextension.series.LSeries_Element` (formal Laurent series, the
-        particular case `e = 1`), generalizing its internal representation with an explicit ramification index.
-
-        We allow three different ways to create a formal Puiseux series:
+        We allow four different ways to create a formal Puiseux series:
 
         1. By providing a ``coefficient_map``, which is a callable that receives an integer `n` (the numerator at
            the element's own ramification) and returns the corresponding coefficient `a_n`. This is the most
            generic way to create a formal Puiseux series. We never have a criteria for zero testing.
         2. By providing a finite list or map of elements as ``coefficients`` (again indexed by the integer
            numerator `n`). This creates a finite formal Puiseux polynomial, and all computations are exact.
-        3. TODO (puiseux): By providing a differential polynomial in one variable with coefficients in the
+        3. By providing two Puiseux series (as ``numerator`` and ``denominator``) that are finite (i.e., Puiseux polynomials). 
+           The resulting series is the quotient of the two, and all computations are exact.
+        4. TODO (puiseux): By providing a differential polynomial in one variable with coefficients in the
            constant field, together with a set of initial conditions.
-
-        The *public* interface of this class (:func:`__getitem__`, :func:`order`, :func:`degree`, :func:`gen_mult`,
-        :func:`truncate`, :func:`pseries_split`) is expressed in terms of the actual (rational) exponent of the
-        generator, e.g. ``f[1/3]`` returns the coefficient of `x^{1/3}` in `f`. Internally, this class stores and
-        manipulates coefficients using the integer numerator `n` at the element's own ramification (see the
-        private methods prefixed with an underscore).
     '''
-    TYPES = Enum('Type', [("default",0), ("polynomial", 1), ("dalgebraic", 2)])
+    TYPES = Enum('Type', [("default",0), ("polynomial", 1), ("rational", 2), ("dalgebraic", 3)])
 
     def __init__(self, parent: PuiseuxSeries_Ring, *,
-                 ramification: int = 1,
-                 coefficient_map: Callable[[int],Element] | None = None, order: int | None = None,
-                 coefficients: Collection[Element] | Mapping[int, Element] | None = None,
-                 differential_equation = None, initial_conditions: Collection[Element] | Mapping[int, Element] | None = None,
+                 ramification: int = None,
+                 coefficient_map: Callable[[Rational],Element] | None = None, order: Rational | None = None,
+                 coefficients: Collection[Element] | Mapping[Rational, Element] | None = None,
+                 numerator: "PuiseuxSeries_Element" | None = None, denominator: "PuiseuxSeries_Element" | None = None,
+                 differential_equation = None, initial_conditions: Collection[Element] | Mapping[Rational, Element] | None = None,
                  _reduce: bool = True,
     ):
         base = parent.base()
@@ -219,52 +211,65 @@ class PuiseuxSeries_Element(Element):
             raise ValueError(f"The ramification index must be a positive integer, got {ramification}.")
         ramification = ZZ(ramification)
 
-        default = coefficient_map is not None and order is not None
+        default = ramification is not None and coefficient_map is not None and order is not None
         polynomial = coefficients is not None
-        dalgebraic = differential_equation is not None and initial_conditions is not None
+        quotient = numerator is not None or denominator is not None
+        dalgebraic = ramification is not None and differential_equation is not None and initial_conditions is not None
 
-        if not any((default, polynomial, dalgebraic)):
-            raise TypeError("You must provide at least one of the following arguments: coefficient_map, coefficients, differential_equation and initial_conditions.")
-        elif sum((default, polynomial, dalgebraic)) > 1:
-            raise TypeError("You can only provide one of the following arguments: coefficient_map, coefficients, differential_equation and initial_conditions.")
+        if not any((default, polynomial, quotient, dalgebraic)):
+            raise TypeError("You must provide at least one of the following arguments: coefficient_map, coefficients, (numerator and denominator), or (differential_equation and initial_conditions).")
+        elif sum((default, polynomial, quotient, dalgebraic)) > 1:
+            raise TypeError("You can only provide one of the following arguments: coefficient_map, coefficients, (numerator and denominator), or (differential_equation and initial_conditions).")
+
+        if default or dalgebraic: # we make sure ramification makes sense
+            if ramification not in ZZ or ramification <= 0:
+                raise ValueError(f"The ramification index must be a positive integer, got {ramification}.")
 
         if default:
             self.__type = self.TYPES.default
             self.__map = coefficient_map
-            self.__order = ZZ(order)
-            self.__poly = None
+            self.__order = QQ(order)
+            self.__numerator = None
+            self.__denominator = None
             self.__dalgebraic = None
             self.__ramification = ramification
         elif polynomial:
-            self.__type = self.TYPES.polynomial
-
+            ## We process the argument "coefficients"
             if not isinstance(coefficients, Mapping):
-                poly = {ZZ(i): base(c) for (i,c) in enumerate(coefficients) if base(c) != base.zero()}
+                poly = {QQ(i): base(c) for (i,c) in enumerate(coefficients) if base(c) != base.zero()}
             else:
-                poly = {ZZ(k): base(v) for k, v in coefficients.items() if base(v) != base.zero()}
+                poly = {QQ(k): base(v) for k, v in coefficients.items() if base(v) != base.zero()}
 
-            if _reduce:
-                if len(poly) == 0:
-                    ramification = ZZ(1)
-                else:
-                    g = gcd([ramification] + list(poly.keys()))
-                    if g > 1:
-                        poly = {k // g: v for k, v in poly.items()}
-                        ramification = ramification // g
+            if len(poly) == 0:
+                self.__ramification = ZZ(1)
+            else:
+                self.__ramification = lcm(k.denominator() for k in poly)
 
-            self.__poly = poly
+            self.__type = self.TYPES.polynomial
+            self.__map = lambda q : self.__numerator.get(q, base.zero())
+            self.__numerator = self
+            self.__denominator = self.parent().one()
             self.__order = min(poly) if len(poly) > 0 else oo
-            self.__map = None
             self.__dalgebraic = None
-            self.__ramification = ramification
+            self.__ramification = lcm(k.denominator() for k in poly) if len(poly) > 0 else ZZ(1)
+        elif quotient:
+            numerator, denominator = self.parent()(numerator), self.parent()(denominator)
+
+            self.__type = self.TYPES.rational
+            self.__map = (numerator * ~denominator).__map
+            self.__numerator = numerator
+            self.__denominator = denominator
+            self.__order = numerator.order() - denominator.order()
+            self.__dalgebraic = None
+            self.__ramification = lcm(numerator.ramification(), denominator.ramification())
         else: # dalgebraic
             raise NotImplementedError("Differential algebraic formal Puiseux series are not yet implemented.")
 
         ## We create a cache for computed elements
-        self.__cache_computed = dict()
+        self.__cache_computed: Mapping[Rational, Element] = dict()
 
         super().__init__(parent)
-
+    ## TODO: Go on here
     ###################################################################################
     ### Ramification handling
     ###################################################################################
