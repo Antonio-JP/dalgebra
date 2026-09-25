@@ -214,9 +214,9 @@ class PuiseuxSeries_Element(Element):
                  ramification: int = None,
                  coefficient_map: Callable[[Rational],Element] | None = None, order: Rational | None = None,
                  coefficients: Collection[Element] | Mapping[Rational, Element] | None = None,
-                 numerator: "PuiseuxSeries_Element" | None = None, denominator: "PuiseuxSeries_Element" | None = None,
+                 numerator: PuiseuxSeries_Element | None = None, denominator: PuiseuxSeries_Element | None = None,
                  differential_equation = None, initial_conditions: Collection[Element] | Mapping[Rational, Element] | None = None,
-                 _reduce: bool = True,
+                 _reduce: bool = False,
     ):
         base = parent.base()
 
@@ -226,7 +226,7 @@ class PuiseuxSeries_Element(Element):
 
         default = ramification is not None and coefficient_map is not None and order is not None
         polynomial = coefficients is not None
-        quotient = numerator is not None or denominator is not None
+        quotient = numerator is not None and denominator is not None
         dalgebraic = ramification is not None and differential_equation is not None and initial_conditions is not None
 
         if not any((default, polynomial, quotient, dalgebraic)):
@@ -237,15 +237,14 @@ class PuiseuxSeries_Element(Element):
         if default or dalgebraic: # we make sure ramification makes sense
             if ramification not in ZZ or ramification <= 0:
                 raise ValueError(f"The ramification index must be a positive integer, got {ramification}.")
-        if quotient and any(element.type() != self.TYPES.polynomial for element in (numerator, denominator)):
-            raise TypeError
 
         if default:
             self.__type = self.TYPES.default
             self.__map = coefficient_map
             self.__order = QQ(order)
-            self.__numerator = None
-            self.__denominator = None
+            self.__polydict = None
+            self.__numerator = self
+            self.__denominator = self.parent().one()
             self.__dalgebraic = None
             self.__ramification = ramification
         elif polynomial:
@@ -256,7 +255,8 @@ class PuiseuxSeries_Element(Element):
                 poly = {QQ(k): base(v) for k, v in coefficients.items() if base(v) != base.zero()}
 
             self.__type = self.TYPES.polynomial
-            self.__map = lambda q : self.__numerator.get(q, base.zero())
+            self.__polydict = poly
+            self.__map = lambda q : self.__polydict.get(q, base.zero())
             self.__numerator = self
             self.__denominator = self.parent().one()
             self.__order = min(poly) if len(poly) > 0 else oo
@@ -264,16 +264,22 @@ class PuiseuxSeries_Element(Element):
             self.__ramification = lcm(k.denominator() for k in poly) if len(poly) > 0 else ZZ(1)
         elif quotient:
             numerator, denominator = self.parent()(numerator), self.parent()(denominator)
-            if any(element.type() != self.TYPES.polynomial for element in (numerator, denominator)):
-                raise TypeError(f"The numerator and denominator must be finite formal Puiseux series (i.e., polynomials). Got {numerator.type()} and {denominator.type()}.")
+            #if any(element.type() != self.TYPES.polynomial for element in (numerator, denominator)):
+            #    raise TypeError(f"The numerator and denominator must be finite formal Puiseux series (i.e., polynomials). Got {numerator.type()} and {denominator.type()}.")
+            # TODO (series): check all uses of numerator and denominator are valid for non-polynomial cases.
 
             self.__type = self.TYPES.rational
-            self.__map = (numerator * ~denominator).__map
             self.__numerator = numerator
             self.__denominator = denominator
+            if _reduce:
+                self.reduce_rational()
+
+            self.__map = (numerator * ~denominator).__map
+            self.__polydict = None
             self.__order = numerator.order() - denominator.order() # this is an exact computation
             self.__dalgebraic = None
             self.__ramification = lcm(numerator.ramification(), denominator.ramification())
+
         else: # dalgebraic
             raise NotImplementedError("Differential algebraic formal Puiseux series are not yet implemented.")
 
@@ -301,7 +307,15 @@ class PuiseuxSeries_Element(Element):
             ::NO EXAMPLE::
         '''
         if n not in self.__cache_computed:
-            self.__cache_computed[n] = self.__map(n)
+            ## We check the ramification
+            n = QQ(n)
+            p,q = n.numerator(), n.denominator()
+            if p*self.ramification() % q != 0: # this index is not in the ramification, hence, a zero is returned
+                self.__cache_computed[n] = self.parent().base().zero() 
+            elif n < self.order(): # this index is below the order, then we return zero
+                self.__cache_computed[n] = self.parent().base().zero()
+            else: # otherwise, we return the output of the map
+                self.__cache_computed[n] = self.__map(n)
 
         return self.__cache_computed[n]
 
@@ -312,7 +326,7 @@ class PuiseuxSeries_Element(Element):
 
             ::NO EXAMPLE::
         '''
-        if self.__type == self.TYPES.default:
+        if self.type() == self.TYPES.default:
             # Here we only know that all terms smaller than self.__order are zero.
             # We check the following terms until the bound
             for n in rat_range(self.__order, bound+1/self.ramification(), 1/self.ramification()):
@@ -320,7 +334,7 @@ class PuiseuxSeries_Element(Element):
                     self.__order = n # we update the data for the order
                     return n
             return bound
-        elif self.__type in (self.TYPES.polynomial, self.TYPES.rational):
+        elif self.type() in (self.TYPES.polynomial, self.TYPES.rational):
             return self.__order # computed on initialization
         else: # dalgebraic
             raise NotImplementedError("Order computation for differential algebraic formal Puiseux series is not yet implemented.")
@@ -331,9 +345,9 @@ class PuiseuxSeries_Element(Element):
 
             ::NO EXAMPLE::
         '''
-        if not self.__type == self.TYPES.polynomial:
+        if not self.type() == self.TYPES.polynomial:
             raise TypeError("Degree is only defined for finite formal Puiseux series.")
-        return max(self.__poly) if len(self.__poly) > 0 else -oo
+        return max(self.__polydict) if len(self.__polydict) > 0 else -oo
 
     def numerator(self) -> PuiseuxSeries_Element:
         r'''
@@ -344,7 +358,7 @@ class PuiseuxSeries_Element(Element):
 
             ::NO EXAMPLE::
         '''
-        if self.__type != self.TYPES.rational:
+        if self.type() != self.TYPES.rational:
             return self
         return self.__numerator
 
@@ -357,11 +371,11 @@ class PuiseuxSeries_Element(Element):
 
             ::NO EXAMPLE::
         '''
-        if self.__type != self.TYPES.rational:
+        if self.type() != self.TYPES.rational:
             return self.parent().one()
         return self.__denominator
     
-    def _shift_num(self, n: Rational) -> PuiseuxSeries_Element:
+    def gen_mult(self, n: Rational) -> PuiseuxSeries_Element:
         r'''
             Multiply ``self`` by the generator raised to the power ``n`` (i.e., shift all internal keys by ``n``).
 
@@ -370,13 +384,13 @@ class PuiseuxSeries_Element(Element):
         n = QQ(n)
         if n == 0:
             return self
-        elif self.__type == self.TYPES.polynomial:
+        elif self.type() == self.TYPES.polynomial:
             return self.parent().element_class(self.parent(),
-                coefficients={k + n: c for k, c in self.__poly.items()}, ramification=self.ramification())
-        elif self.__type == self.TYPES.rational:
+                coefficients={k + n: c for k, c in self.__polydict.items()}, ramification=self.ramification())
+        elif self.type() == self.TYPES.rational:
             return self.parent().element_class(self.parent(),
-                numerator=self.__numerator._shift_num(n), denominator=self.__denominator)
-        elif self.__type == self.TYPES.dalgebraic:
+                numerator=self.__numerator.gen_mult(n), denominator=self.__denominator)
+        elif self.type() == self.TYPES.dalgebraic:
             raise NotImplementedError("Multiplication by the generator for differential algebraic formal Puiseux series is not yet implemented.")
         else: # default
             return self.parent().element_class(self.parent(),
@@ -404,19 +418,17 @@ class PuiseuxSeries_Element(Element):
             This method checks whether the element is zero or not. If exact computation are possible, it returns ``True`` or ``False``.
             Otherwise it returns the last checked order for which the element is zero.
         '''
-        if self.__type == self.TYPES.default:
+        if self.type() == self.TYPES.default:
             if any(
                 self._coeff(k) != self.parent().base().zero() 
                 for k in rat_range(self.order(bound=bound), bound+1/self.ramification(), 1/self.ramification())
             ):
                 return False
             return bound
-        elif self.__type in (self.TYPES.polynomial, self.TYPES.rational):
+        elif self.type() in (self.TYPES.polynomial, self.TYPES.rational):
             return self.order() == oo
         else: # dalgebraic
             raise NotImplementedError("Zero checking for differential algebraic formal Puiseux series is not yet implemented.")
-
-        ## TODO: Go on here
 
     @CheckBound
     def is_one(self, *, bound: int | None = None) -> bool | int:
@@ -427,37 +439,14 @@ class PuiseuxSeries_Element(Element):
         '''
         return (self - self.parent().one()).is_zero(bound=bound)
 
-    def is_unit(self) -> bool:
+    @CheckBound
+    def is_unit(self, *, bound: int | None = None) -> bool:
         r'''
             Checker for whether the element is a unit or not.
 
             Puiseux series form a field, hence all non-zero elements are units.
         '''
-        return (self.is_zero() is False)
-
-    @CheckBound
-    def order(self, *, bound: int | None = None) -> Rational | int:
-        r'''
-            Method to get the (rational) order (i.e., lowest exponent) of a formal Puiseux series.
-
-            If this cannot be resolved up to ``bound``, the integer ``bound`` is returned instead.
-        '''
-        n = self._order_num(bound=bound)
-        if n in (oo, -oo):
-            return n
-        elif n == bound:
-            return bound
-        return QQ((n, self.ramification()))
-
-    def degree(self) -> Rational:
-        r'''
-            Computes the (rational) degree (i.e., highest exponent) of a Puiseux series.
-
-            We define the degree of a Puiseux series only for polynomials (i.e., finite series). For non-finite
-            series, this method raises an error.
-        '''
-        n = self._degree_num()
-        return n if n in (oo, -oo) else QQ((n, self.ramification()))
+        return (self.is_zero(bound=bound) is False)
 
     def type(self) -> PuiseuxSeries_Element.TYPES:
         r'''
@@ -465,11 +454,11 @@ class PuiseuxSeries_Element(Element):
         '''
         return self.__type
 
-    def is_finite(self) -> bool:
+    def is_finite(self) -> bool: ## TODO (series) Check the use of the method `is_finite`
         r'''
             Method to check whether the formal power series is finite or not.
         '''
-        return self.__type == self.TYPES.polynomial
+        return self.type() in (self.TYPES.polynomial, self.TYPES.rational)
 
     @CheckBound
     def is_monomial(self, *, bound: int | None = None) -> bool | int:
@@ -493,26 +482,32 @@ class PuiseuxSeries_Element(Element):
                 sage: f.is_monomial()
                 True
         '''
-        zero = self.is_zero(bound=bound+1)
-        if zero == bound+1:
-            return bound+1
-        return (self - self.trailing_term()).is_zero(bound=bound)
+        if self.type() == self.TYPES.polynomial:
+            return len(self.__polydict) == 1
+        elif self.type() == self.TYPES.rational:
+            return self.is_monomial(bound=bound) and self.denominator().is_monomial(bound=bound)
+        else:
+            zero = self.is_zero(bound=bound+1)
+            if zero == bound+1:
+                return bound+1
+            return (self - self.trailing_term()).is_zero(bound=bound)        
 
     def truncate(self, order: Rational | int) -> PuiseuxSeries_Element:
         r'''
             Return a :class:`PuiseuxSeries_Element` that contains only the coefficients with exponent at most ``order``.
 
-            This method always returns a finite formal Puiseux series, even if the original one is not finite.
+            This method always returns a polynomial formal Puiseux series, even if the original one is not polynomial.
         '''
-        order = QQ(order)
-        E = lcm(self.ramification(), order.denominator())
-        s = self._rescaled_to(E)
-        bound_num = ZZ(order * E)
-        coeffs = {k: s._coeff(k) for k in range(min(s._order_num(),0), bound_num+1)}
-        return self.parent().element_class(self.parent(), coefficients=coeffs, ramification=E)
+        coeffs = {k: self[k] for k in rat_range(self.order(), QQ(order)+1/self.ramification(), 1/self.ramification())}
+        return self.parent().element_class(self.parent(), coefficients=coeffs)
 
     def polynomial(self) -> Element:
         r'''
+            Converts (if possible) a Puiseux series into a polynomial. It requires three different conditions:
+            * the ramification to be 1,
+            * the element to be of polynomial type,
+            * the order must be non-negative.
+
             EXAMPLES::
 
                 sage: from dalgebra.dextension.puiseux import PuiseuxSeries
@@ -523,15 +518,25 @@ class PuiseuxSeries_Element(Element):
                 sage: X = P.gen()
                 sage: f.polynomial() == X**2 + 2*X + 1
                 True
+
+            TODO (series): add examples that raises some error.
         '''
         if self.ramification() != 1:
             raise TypeError("Only Puiseux series with trivial ramification (i.e., formal Laurent series) can be converted to a polynomial.")
-        if self.__type == self.TYPES.polynomial and self._order_num() >= 0:
-            return self.parent().poly_ring()(self)
-        raise TypeError("The element is not a polynomial.")
+        elif self.type() != self.TYPES.polynomial:
+            raise TypeError("The element is not a polynomial.")
+        elif self.order() < 0:
+            raise TypeError("The element is not a polynomial (it has negative order).")
+
+        var = self.parent().poly_ring()(self.parent().variable_name())
+        return sum(coeff * var**k for (k,coeff) in self.__polydict.items())
 
     def rational_function(self) -> Element:
         r'''
+            Converts (if possible) a Puiseux series into a rational function. It requires two different conditions:
+            * the ramification to be 1,
+            * both numerator and denominator to be polynomials.
+
             EXAMPLES::
 
                 sage: from dalgebra.dextension.puiseux import PuiseuxSeries
@@ -542,12 +547,11 @@ class PuiseuxSeries_Element(Element):
                 sage: X = T.gen()
                 sage: f.rational_function() == (1 - X)/X
                 True
+                
+            TODO (series): add examples that raises some error.
         '''
-        if self.ramification() != 1:
-            raise TypeError("Only Puiseux series with trivial ramification (i.e., formal Laurent series) can be converted to a rational function.")
-        if self.__type == self.TYPES.polynomial:
-            return self.parent().rat_field()(self)
-        raise TypeError("The element is not a Puiseux polynomial.")
+        ## The method polynomial checks the conditions for both numerator and denominator
+        return self.__numerator.polynomial() / self.__denominator.polynomial()
 
     def equation(self):
         r'''
@@ -566,7 +570,7 @@ class PuiseuxSeries_Element(Element):
         if order == bound+1:
             return self.parent().base().zero()
         else:
-            return self._coeff(order)
+            return self[order]
 
     @CheckBound
     def trailing_term(self, *, bound: int | None = None) -> PuiseuxSeries_Element:
@@ -579,18 +583,7 @@ class PuiseuxSeries_Element(Element):
         if order == bound+1:
             return self.parent().zero()
         else:
-            return self.parent().element_class(self.parent(), coefficients={order: self._coeff(order)}, ramification=self.ramification())
-
-    def gen_mult(self, n: Rational | int) -> PuiseuxSeries_Element:
-        r'''
-            Multiplies the formal Puiseux series by the generator to the power of ``n`` (a possibly fractional exponent).
-        '''
-        n = QQ(n)
-        if n == 0:
-            return self
-        E = lcm(self.ramification(), n.denominator())
-        s = self._rescaled_to(E)
-        return s._shift_num(ZZ(n * E))
+            return self.parent().element_class(self.parent(), coefficients={order: self[order]})
 
     @CheckBound
     def pseries_split(self, *, bound: int | None = None) -> tuple[Rational | int, PuiseuxSeries_Element]:
@@ -607,18 +600,14 @@ class PuiseuxSeries_Element(Element):
             start = QQ(key.start) if key.start is not None else QQ(0)
             stop = key.stop if key.stop is not None else oo
             step = QQ(key.step) if key.step is not None else QQ(1)
-            result = []
-            i = start
-            while i < stop:
-                result.append(self[i])
-                i += step
-            return result
+
+            if stop == oo:
+                raise ValueError(f"Infinite slice requested. Impossible to compute.")
+
+            return [self[i] for i in rat_range(start, stop, step)]
 
         exponent = QQ(key)
-        n = exponent * self.ramification()
-        if n not in ZZ:
-            return self.parent().base().zero() # the exponent is not representable at this ramification
-        return self._coeff(ZZ(n))
+        return self._coeff(exponent)
 
     ###################################################################################
     ### Arithmetic operations
@@ -639,26 +628,37 @@ class PuiseuxSeries_Element(Element):
         s = self._rescaled_to(E)
         o = other._rescaled_to(E)
 
-        if any(el.__type == self.TYPES.default for el in (s, o)):
+        if any(el.type() == self.TYPES.default for el in (self, other)):
             # at least one is default -> we change to default
             add_map = lambda k : s._coeff(k) + o._coeff(k)
-            return self.parent().element_class(self.parent(), coefficient_map=add_map, order=min(s._PuiseuxSeries_Element__order, o._PuiseuxSeries_Element__order), ramification=E)
-        elif s.__type == self.TYPES.polynomial and o.__type == self.TYPES.polynomial:
-            # both are polynomials
-            out = dict(s._PuiseuxSeries_Element__poly)
-            for k, v in o._PuiseuxSeries_Element__poly.items():
-                out[k] = out.get(k, self.parent().base().zero()) + v
-            return self.parent().element_class(self.parent(), coefficients=out, ramification=E)
+            return self.parent().element_class(
+                self.parent(), 
+                coefficient_map=add_map, 
+                order=min(self.order(), other.order()), 
+                ramification=lcm(self.ramification(), other.ramification()))
+        elif self.type() == self.TYPES.polynomial and other.type() == self.TYPES.polynomial:
+            # both are polynomials -> we can add in the keys of the dict
+            new_dict = self.__polydict.copy()
+            for k,v in other.__polydict.items():
+                new_dict[k] = new_dict[k] + v if k in new_dict else v
+            return self.parent().element_class(self.parent(), coefficients=new_dict)
+        elif self.type() in (self.TYPES.polynomial, self.TYPES.rational) and other.type() in (self.TYPES.polynomial, self.TYPES.rational):
+            # both are rational -> we can compute rationally, hoping for good behavior
+            new_num = self.numerator() * other.denominator() + other.numerator() * self.denominator()
+            new_den = self.denominator() * other.denominator()
+            return self.parent().element_class(self.parent(), numerator=new_num, denominator=new_den)
         else: # at least one is dalgebraic
             raise NotImplementedError("Addition of differential algebraic formal Puiseux series is not yet implemented.")
 
     def __neg__(self) -> PuiseuxSeries_Element:
         if self.is_zero() is True:
             return self
-        if self.__type == self.TYPES.polynomial:
-            coeffs = {k: -c for k, c in self.__poly.items()}
+        if self.type() == self.TYPES.polynomial:
+            coeffs = {k: -c for k, c in self.__polydict.items()}
             return self.parent().element_class(self.parent(), coefficients=coeffs, ramification=self.ramification())
-        elif self.__type == self.TYPES.dalgebraic:
+        elif self.type() == self.TYPES.rational:
+            return self.parent().element_class(self.parent(), numerator=-self.__numerator, denominator=self.__denominator)
+        elif self.type() == self.TYPES.dalgebraic:
             raise NotImplementedError("Negation of differential algebraic formal Puiseux series is not yet implemented.")
         else:
             return self.parent().element_class(self.parent(), coefficient_map=lambda k : -self._coeff(k), order=self.__order, ramification=self.ramification())
@@ -684,14 +684,18 @@ class PuiseuxSeries_Element(Element):
             return other
         elif (other.is_one() is True): # multiplication when other is one
             return self
+        elif self in self.parent().base() and other in self.parent().base(): # multiplication of scalars
+            return self.parent()(self.parent().base()(self) * self.parent().base()(other))
         elif self in self.parent().base(): # scalar product (self)
             scalar = self.parent().base()(self)
-            if other.__type == self.TYPES.polynomial:
-                return self.parent().element_class(self.parent(), coefficients={k: scalar * c for k, c in other.__poly.items()}, ramification=other.ramification())
-            elif other.__type == self.TYPES.dalgebraic:
+            if other.type() == self.TYPES.polynomial:
+                return self.parent().element_class(self.parent(), coefficients={k: scalar * c for k, c in other.__polydict.items()}, ramification=other.ramification())
+            elif other.type() == self.TYPES.rational:
+                return self.parent().element_class(self.parent(), numerator=scalar * other.__numerator, denominator=other.__denominator)
+            elif other.type() == self.TYPES.dalgebraic:
                 raise NotImplementedError("Multiplication of differential algebraic formal Puiseux series is not yet implemented.")
             else: # default
-                return self.parent().element_class(self.parent(), coefficient_map=lambda k: scalar * other._coeff(k), order=other._PuiseuxSeries_Element__order, ramification=other.ramification())
+                return self.parent().element_class(self.parent(), coefficient_map=lambda k: scalar * other._coeff(k), order=other.order(), ramification=other.ramification())
         elif other in self.parent().base(): # scalar product (other)
             return other * self
         elif self.is_monomial() is True: # multiplication by monomial (self)
@@ -699,27 +703,24 @@ class PuiseuxSeries_Element(Element):
             return self[order] * other.gen_mult(order)
         elif other.is_monomial() is True: # multiplication by monomial (other)
             return other * self
-
-        ## Multiplication when none is trivial
-        E = lcm(self.ramification(), other.ramification())
-        s = self._rescaled_to(E)
-        o = other._rescaled_to(E)
-
-        if any(el.__type == self.TYPES.default for el in (s, o)):
-            # at least one is default
-            t = s._order_num()
-            u = o._order_num()
-            mul_map = lambda k : sum(s._coeff(i)*o._coeff(k-i) for i in range(t, k-u+1))
-            return self.parent().element_class(self.parent(), coefficient_map=mul_map, order=t+u, ramification=E)
-        elif s.__type == self.TYPES.polynomial and o.__type == self.TYPES.polynomial:
-            # both finite case --> it remains finite (direct sparse convolution)
-            zero = self.parent().base().zero()
+        elif any(el.type() == self.TYPES.default for el in (self, other)): # multiplication when at least one is default
+            E = lcm(self.ramification(), other.ramification())
+            t = self.order()
+            s = other.order()
+            mul_map = lambda k : sum(self[i]*other[k-i] for i in rat_range(t, k+1/E, 1/self.ramification()))
+            return self.parent().element_class(self.parent(), coefficient_map=mul_map, order=t+s, ramification=E)
+        elif self.type() == self.TYPES.polynomial and other.type() == self.TYPES.polynomial: # multiplication of polynomials
             out = dict()
-            for k1, c1 in s._PuiseuxSeries_Element__poly.items():
-                for k2, c2 in o._PuiseuxSeries_Element__poly.items():
-                    out[k1+k2] = out.get(k1+k2, zero) + c1*c2
-            return self.parent().element_class(self.parent(), coefficients=out, ramification=E)
-        else: # at least one is dalgebraic
+            for k1, c1 in self.__polydict.items():
+                for k2, c2 in other.__polydict.items():
+                    exp = k1 + k2
+                    out[exp] = out[exp]+c1*c2 if exp in out else c1*c2
+            return self.parent().element_class(self.parent(), coefficients=out)
+        elif self.type() in (self.TYPES.polynomial, self.TYPES.rational) and other.type() in (self.TYPES.polynomial, self.TYPES.rational): # multiplication of rationals
+            new_num = self.numerator() * other.numerator()
+            new_den = self.denominator() * other.denominator()
+            return self.parent().element_class(self.parent(), numerator=new_num, denominator=new_den)
+        else: # at least one is dalgebraic and none is default
             raise NotImplementedError("Multiplication of differential algebraic formal Puiseux series is not yet implemented.")
 
     def _div_(self, other: PuiseuxSeries_Element) -> PuiseuxSeries_Element:
@@ -737,36 +738,53 @@ class PuiseuxSeries_Element(Element):
 
             ::NO EXAMPLE::
         '''
-        ## division is split into inversion and a multiplication
-        return self * (~other)
+        ## Division is done via the `rational` type of series
+        if self.is_zero() is True:
+            return self.parent().zero()
+        elif other.is_zero() is True:
+            raise ZeroDivisionError(f"Division by zero element is not allowed.")
+        elif other in self.parent().base(): # simple scalar division
+            scalar = (~self.parent().base()(other))
+            return scalar * self
+        else:
+            ## default case (we keep track of numerator and denominator)
+            new_num = self.numerator() * other.denominator()
+            new_den = self.denominator() * other.numerator()
+            return self.parent().element_class(self.parent(), numerator=new_num, denominator=new_den)
 
     @cached_method
     def __invert__(self) -> PuiseuxSeries_Element:
         r'''
-            Computes the multiplicative inverse of the formal Puiseux series.
+            Computes the multiplicative inverse of the formal Puiseux series as a series
+
+            This is important to distinguish between this method and :func:`__floordiv__`, which 
+            keeps the rational structure for simpler computations. This computes the series
+            expansion as a map, and creates a default type of series (except when a polynomial type can be obtained).
         '''
         if self.is_zero() is True:
             raise ZeroDivisionError(f"Inverse of zero element do not exist.")
-        elif self.is_monomial() is True:
-            n0 = self._order_num() # this computation is now exact
-            return self.parent().element_class(self.parent(), coefficients={-n0: ~self._coeff(n0)}, ramification=self.ramification())
+        elif self.is_monomial() is True: # the only case where exact computation can be performed
+            n0 = self.order() # this computation is now exact
+            return self.parent().element_class(self.parent(), coefficients={-n0: ~self[n0]})
 
-        order, ps = self.pseries_split()
-        if ps._coeff(0) == 0:
+        E = self.ramification()
+        order = self.order()
+
+        if self[order] == 0: # we can not compute inverse: this seems the zero series
             raise ZeroDivisionError(f"Could not say if an element is zero or not.")
 
+        to_div = ~self[order]
         @lru_cache(maxsize=256)
-        def inverse_coeffs(k: int) -> Element:
-            if k == 0:
-                return 1 / ps._coeff(0)
-            else:
-                num = sum(ps._coeff(k-i)*inverse_coeffs(i) for i in range(0, k))
-                denom = -inverse_coeffs(0)
-                return num * denom
+        def inverse_coeffs(k: Rational) -> Element:
+            L = E*QQ(k) + order
+            if L not in ZZ or L < 0:
+                return self.parent().base().zero()
+            elif L == 0:
+                return to_div
+            else: # L is a positive integer and we can compute the coefficient recursively
+                return -to_div * sum(self[order + i/E] * inverse_coeffs(k-i/E) for i in range(1, L+1))
 
-        ## Inverse of the formal power series
-        ps_inv = self.parent().element_class(self.parent(), coefficient_map=inverse_coeffs, order=0, ramification=ps.ramification())
-        return ps_inv.gen_mult(-order)
+        return self.parent().element_class(self.parent(), coefficient_map=inverse_coeffs, order=-order, ramification=E)
 
     @cached_method
     def __pow__(self, power: int | Rational) -> PuiseuxSeries_Element:
@@ -775,7 +793,7 @@ class PuiseuxSeries_Element(Element):
         elif power == 1:
             return self
         elif power < 0:
-            return (~self)**(-power)
+            return self.parent().one() / (self)**(-power)
         elif power not in ZZ:
             if power not in QQ:
                 raise ValueError(f"Power {power} is not a rational number, only rational powers are allowed in pseudo-differential operators.")
@@ -783,38 +801,59 @@ class PuiseuxSeries_Element(Element):
             n = power.numerator()
             m = power.denominator()
 
-            if n == 1:
-                # This is the key generalization over formal Laurent series: rescaling the ramification
-                # always resolves the divisibility of the order by ``m``, so we can always extract an m-th root.
-                e = self.ramification()
-                if self._order_num() % m != 0:
-                    self_r = self._rescaled_to(e*m)
-                else:
-                    self_r = self
-                order, ps = self_r._split_num()
-                a0 = ps._coeff(0)
-                b0 = a0**power # this checks if the operation can be done
+            if n == 1: # n-root case
+                if self.is_zero() is True:
+                    return self.parent().zero()
+                elif self.is_zero() is not False:
+                    raise ValueError(f"Could not say if an element is zero or not.")
 
-                if ps.is_finite() and ps._degree_num() == 0:
-                    # ``self`` was already a pure monomial: the root is exact, no need for the infinite series machinery
-                    return self.parent().element_class(self.parent(), coefficients={order // m: b0}, ramification=self_r.ramification())
+                ## We use the following formula: if g(x) = f(x)^{1/m}, then we have that
+                ## g'(x) = 1/m * g(x) / f(x) * f'(x), which provides a recursive formula for the coefficients of g(x).
+                ## Namely, if we look for the coefficient of x^{k/m-1} of g'(x), we get (k/m) * g_{k/m}
+                ## On the other hand, we get a formula for the same coefficient of the right hand side formula which only uses
+                ## coefficients of g(x) up to order (k-1)/m.                 
+                order = self.order() # order `d` of f(x)
+                e = self.ramification() # ramification of f(x)
+                inv = ~self # inverse power series: order is `-d` and its ramification is still `e`
+                b_0 = self[order]**(QQ((1,m))) # the coefficient of g(x) at order `d/m` is b_0 = a_d^{1/m}
 
-                # Coefficients of f = ps**(1/m) (f[0] = b0) solved from m*f'*ps = f*ps'
+                # we compute the parent where the output will live
+                out_parent = pushout(self.parent(), b_0.parent())
+
+                ## g(x) = f(x)^{1/m} has order `d/m` and ramification `e*m`
+                g_order = order / m
+                g_ramification = e * m
                 @lru_cache(maxsize=256)
-                def coeff_root(t: int) -> Element:
-                    if t == 0:
-                        return b0
-                    rhs = sum(coeff_root(i) * (t-i) * ps._coeff(t-i) for i in range(0, t))
-                    lhs_partial = m * sum((i+1)*coeff_root(i+1)*ps._coeff(t-1-i) for i in range(0, t-1))
-                    return (rhs - lhs_partial) / (m * t * a0)
-
-                result = self.parent().element_class(self.parent(), coefficient_map=coeff_root, order=0, ramification=self_r.ramification())
-                return result._shift_num(order // m)
-            else:
+                def root_coeffs(k: Rational) -> Element:
+                    if k < order / m or (k.numerator()*g_ramification) % k.denominator() != 0:
+                        # low order or out of ramification case
+                        return self.parent().base().zero()
+                    elif k == order / m:
+                        return b_0
+                    else:
+                        kn = k.numerator()*g_ramification // k.denominator() # exact division
+                        output = e/kn
+                        to_mult = out_parent.base().zero()
+                        for i in rat_range(g_order, k - 1 + 1/g_ramification, 1/g_ramification):
+                            to_add = out_parent.base().zero()
+                            for j in rat_range(order, order + k - i + 1/e, 1/e):
+                                to_add += (j+1) * self[j+1] * inv[k - i - j]
+                            to_mult += root_coeffs(i)*to_add
+                        output *= to_mult
+                        return output
+                return self.parent().element_class(
+                    self.parent(), 
+                    coefficient_map=root_coeffs, 
+                    order=g_order, 
+                    ramification=g_ramification
+                )
+            else: # general case
                 return (self**n)**(QQ((1,m)))
-        else:
+        else: # divide-and-conquer strategy
             a,A = (self**(power//2 + power % 2), self**(power//2))
             return a*A
+
+    ## TODO Go on here
 
     @CheckBound
     def __eq__(self, other, *, bound: int | None = None) -> bool:
@@ -842,14 +881,25 @@ class PuiseuxSeries_Element(Element):
         return hash(self.__repr__(bound=100))
 
     def __call__(self, **kwds) -> Element:
-        if self.__type == self.TYPES.polynomial:
-            new_poly = {k: el(**kwds) for (k,el) in self.__poly.items()}
+        if self.type() == self.TYPES.polynomial:
+            new_poly = {k: el(**kwds) for (k,el) in self.__polydict.items()}
             return self.parent().element_class(self.parent(), coefficients=new_poly, ramification=self.ramification())
-        elif self.__type == self.TYPES.default:
+        elif self.type() == self.TYPES.default:
             new_func = lambda n : self._coeff(n)(**kwds)
             return self.parent().element_class(self.parent(), coefficient_map=new_func, order=self.__order, ramification=self.ramification())
         else:
             raise ValueError("Impossible type for a Puiseux series")
+
+    def reduce_rational(self) -> None:
+        r'''
+            Method that reduces as much as possible a quotient of Puiseux series.    
+
+            IMPORTANT: this method can only access and change the attributes ``__numerator`` and ``__denominator`` of the object.
+        '''
+        if self.type() != self.TYPES.rational:
+            return self # nothing to be done without a denominator
+        else:
+            raise NotImplementedError("Reduction of rational Puiseux series is not yet implemented.")
 
     ###################################################################################
     @CheckBound
@@ -905,13 +955,13 @@ class PuiseuxSeries_Element(Element):
                     output = f"{sign}{el_str}{join}{op_str}"
             return output
 
-        if self.__type == self.TYPES.polynomial:
+        if self.type() == self.TYPES.polynomial:
             ## We print everything
             ## polynomial that is not zero: it has a finite order
             order = self._order_num()
             return term_str(order, self._coeff(order),True) + "".join(
                 term_str(k, self._coeff(k))
-                for k in range(order+1, max(self.__poly)+1)
+                for k in range(order+1, max(self.__polydict)+1)
                 if self._coeff(k) != 0
             )
         else:
@@ -976,13 +1026,13 @@ class PuiseuxSeries_Element(Element):
                 output = f"{sign}{el_str}" if op_str == "1" else f"{sign}{el_str}{op_str}"
             return output
 
-        if self.__type == self.TYPES.polynomial:
+        if self.type() == self.TYPES.polynomial:
             ## We print everything
             ## polynomial that is not zero: it has a finite order
             order = self._order_num()
             return term_str(order, self._coeff(order),True) + "".join(
                 term_str(k, self._coeff(k))
-                for k in range(order+1, max(self.__poly)+1)
+                for k in range(order+1, max(self.__polydict)+1)
                 if self._coeff(k) != 0
             )
         else:
