@@ -14,6 +14,17 @@ r'''
     where `o \in \mathbb{Z}` and `a_n` are elements of the base differential field. Different elements of the same
     ring may use different ramification indices: the whole ring is (conceptually) the union `\bigcup_{e} F((x^{1/e}))`.
 
+    EXAMPLES::
+
+        sage: from dalgebra import *
+        sage: R = PuiseuxSeries(QQ, "t")
+        sage: t = R.gens()[0]
+        sage: v = (~(1-t))**(1/3)
+        sage: v
+        1 + 1/3*t + 2/9*t^(2) + 14/81*t^(3) + 35/243*t^(4) + 91/729*t^(5) + 728/6561*t^(6) + 1976/19683*t^(7) + 5434/59049*t^(8) + 135850/1594323*t^(9) + 380380/4782969*t^(10) + 1071980/14348907*t^(11) + 9111830/129140163*t^(12) + 25933670/387420489*t^(13) + 74096200/1162261467*t^(14) + 637227320/10460353203*t^(15) + 1832028545/31381059609*t^(16) + 5280552865/94143178827*t^(17) + 137294374490/2541865828329*t^(18) + 397431084050/7625597484987*t^(19) + 1152550143745/22876792454961*t^(20) + O(t^(21))
+        sage: v.derivative() == (1/3)*v**4
+        20
+
     TODO (puiseux): Add examples and more detailed explanation of the structure.
 
     TODO (puiseux): implement Puiseux series not only for a differential field but also for a difference field.
@@ -329,7 +340,7 @@ class PuiseuxSeries_Element(Element):
             # Here we only know that all terms smaller than self.__order are zero.
             # We check the following terms until the bound
             for n in rat_range(self.__order, bound+1/self.ramification(), 1/self.ramification()):
-                if self._coeff(n) != self.parent().base().zero():
+                if self.__map(n) != self.parent().base().zero():
                     self.__order = n # we update the data for the order
                     return n
             return bound
@@ -393,18 +404,8 @@ class PuiseuxSeries_Element(Element):
             raise NotImplementedError("Multiplication by the generator for differential algebraic formal Puiseux series is not yet implemented.")
         else: # default
             return self.parent().element_class(self.parent(),
-                coefficient_map=lambda k: self._coeff(k - n), order=self.__order + n, 
+                coefficient_map=lambda k: self[k - n], order=self.__order + n, 
                 ramification=lcm(self.ramification(), n.denominator()))
-
-    @CheckBound
-    def _split_num(self, *, bound: int | None = None) -> tuple[int, PuiseuxSeries_Element]:
-        r'''
-            Splits ``self`` into the numerator order and the (same ramification) series with that order removed.
-
-            ::NO EXAMPLE::
-        '''
-        order = self._order_num(bound=bound)
-        return (order, self._shift_num(-order))
 
     ###################################################################################
     ### Public property methods (working with the actual rational exponent)
@@ -419,7 +420,7 @@ class PuiseuxSeries_Element(Element):
         '''
         if self.type() == self.TYPES.default:
             if any(
-                self._coeff(k) != self.parent().base().zero() 
+                self[k] != self.parent().base().zero() 
                 for k in rat_range(self.order(bound=bound), bound+1/self.ramification(), 1/self.ramification())
             ):
                 return False
@@ -436,7 +437,12 @@ class PuiseuxSeries_Element(Element):
 
             See :func:`is_zero` for more information on the output of this type of methods.
         '''
-        return (self - self.parent().one()).is_zero(bound=bound)
+        if self.type() in (self.TYPES.default, self.TYPES.rational):
+            return (self - self.parent().one()).is_zero(bound=bound)
+        elif self.type() == self.TYPES.polynomial:
+            return len(self.__polydict) == 1 and self[0] == self.parent().base().one()
+        else:
+            raise NotImplementedError("One-checking for differential algebraic formal Puiseux series is not yet implemented.")
 
     @CheckBound
     def is_unit(self, *, bound: int | None = None) -> bool:
@@ -565,7 +571,7 @@ class PuiseuxSeries_Element(Element):
 
             The trailing coefficient is the coefficient of the monomial with lowest degree. When we do not find any non-zero coefficient up to the given ``bound``, we return 0.
         '''
-        order = self._order_num(bound=bound+1)
+        order = self.order(bound=bound+1)
         if order == bound+1:
             return self.parent().base().zero()
         else:
@@ -578,7 +584,7 @@ class PuiseuxSeries_Element(Element):
 
             The trailing term is the monomial with its coefficient with lowest degree. When we do not find any non-zero coefficient up to the given ``bound``, we return 0.
         '''
-        order = self._order_num(bound=bound+1)
+        order = self.order(bound=bound+1)
         if order == bound+1:
             return self.parent().zero()
         else:
@@ -658,7 +664,7 @@ class PuiseuxSeries_Element(Element):
         elif self.type() == self.TYPES.dalgebraic:
             raise NotImplementedError("Negation of differential algebraic formal Puiseux series is not yet implemented.")
         else:
-            return self.parent().element_class(self.parent(), coefficient_map=lambda k : -self._coeff(k), order=self.__order, ramification=self.ramification())
+            return self.parent().element_class(self.parent(), coefficient_map=lambda k : -self[k], order=self.__order, ramification=self.ramification())
 
     def _sub_(self, other: PuiseuxSeries_Element) -> PuiseuxSeries_Element:
         r'''
@@ -692,7 +698,7 @@ class PuiseuxSeries_Element(Element):
             elif other.type() == self.TYPES.dalgebraic:
                 raise NotImplementedError("Multiplication of differential algebraic formal Puiseux series is not yet implemented.")
             else: # default
-                return self.parent().element_class(self.parent(), coefficient_map=lambda k: scalar * other._coeff(k), order=other.order(), ramification=other.ramification())
+                return self.parent().element_class(self.parent(), coefficient_map=lambda k: scalar * other[k], order=other.order(), ramification=other.ramification())
         elif other in self.parent().base(): # scalar product (other)
             return other * self
         elif self.is_monomial() is True: # multiplication by monomial (self)
@@ -804,6 +810,11 @@ class PuiseuxSeries_Element(Element):
                 elif self.is_zero() is not False:
                     raise ValueError(f"Could not say if an element is zero or not.")
 
+                if self.is_monomial() is True: # the only case where exact computation can be performed
+                    o = self.order()
+                    c = self[o]
+                    return self.parent().element_class(self.parent(), coefficients={o/m: c**(1/m)})
+
                 ## We use the following formula: if g(x) = f(x)^{1/m}, then we have that
                 ## g'(x) = 1/m * g(x) / f(x) * f'(x), which provides a recursive formula for the coefficients of g(x).
                 ## Namely, if we look for the coefficient of x^{k/m-1} of g'(x), we get (k/m) * g_{k/m}
@@ -887,7 +898,7 @@ class PuiseuxSeries_Element(Element):
         elif self.type() == self.TYPES.dalgebraic:
             raise NotImplementedError("Evaluation of differential algebraic formal Puiseux series is not yet implemented.")
         elif self.type() == self.TYPES.default:
-            new_func = lambda n : self._coeff(n)(**kwds)
+            new_func = lambda n : self[n](**kwds)
             return self.parent().element_class(self.parent(), coefficient_map=new_func, order=self.order(), ramification=self.ramification())
         else:
             raise ValueError("Impossible type for a Puiseux series")
@@ -1213,13 +1224,13 @@ class PuiseuxSeries_Ring(Parent):
             ## we add coercion and conversion for this ring and its field of fractions
             ## poly ring -> Puiseux series ring (this is a coercion)
             try:
-                self.register_coercion(PSCoerceFromPoly(self, self.__poly_rings[ramification], ramification=ramification))
+                self.register_coercion(PSCoerceFromPoly(self.__poly_rings[ramification], self, ramification=ramification))
             except AssertionError: # This coercion was already registered
                 pass
             ## Puiseux series ring -> poly ring (this is a conversion)
             try:
-                self.__poly_rings[ramification].register_conversion(PSConvertToPoly(self.__poly_rings[ramification], self, ramification=ramification))
-                self.__poly_rings[ramification].fraction_field().register_conversion(PSConvertToRational(self.__poly_rings[ramification].fraction_field(), self, ramification=ramification))
+                self.__poly_rings[ramification].register_conversion(PSConvertToPoly(self, self.__poly_rings[ramification], ramification=ramification))
+                self.__poly_rings[ramification].fraction_field().register_conversion(PSConvertToRational(self, ramification=ramification))
             except AssertionError: # This conversion was already registered
                 pass
 
@@ -1361,6 +1372,7 @@ class PuiseuxSeries_Ring(Parent):
 
             ::NO EXAMPLE::
         '''
+        ## TODO (puiseux): detected error in this method.
         return self.change_base(self.base().add_constants(*new_constants)) # this guarantees coercion
 
     def linear_operator_ring(self):
@@ -1424,7 +1436,7 @@ class PuiseuxSeries_Ring(Parent):
                     coefficient_map=lambda k: (k+1)*element[k+1] + element[k].derivative(),
                     order=element.order()-1, ramification=e)
 
-        return DerivationMap(self, derivation_map)
+        return DerivationMap(self, derivation_map, check=False)
 
 
 class PuiseuxSeriesFunctor(ConstructionFunctor):
@@ -1503,7 +1515,7 @@ class PSConvertToBase(Morphism):
 
             ::NO EXAMPLE::
         '''
-        if (element - element[0]).is_zero() is True:
+        if element.is_monomial() is True and element.order() == 0:
             return self.codomain()(element[0])
         else:
             raise TypeError("Impossible to convert the formal Puiseux series to the base ring, as it has non-zero higher order terms.")
@@ -1541,7 +1553,7 @@ class PSCoerceBetweenBases(Morphism):
         elif element.type() == PuiseuxSeries_Element.TYPES.dalgebraic:
             raise NotImplementedError("Coercion of differential algebraic formal Puiseux series between different bases is not yet implemented.")
         else: # default case
-            new_map = lambda k: self.base_map(element._coeff(k))
+            new_map = lambda k: self.base_map(element[k])
             return self.codomain().element_class(self.codomain(),
                                                  coefficient_map=new_map, 
                                                  order=element.order(), 
