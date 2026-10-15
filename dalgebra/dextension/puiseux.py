@@ -4,8 +4,7 @@ r'''
     Module to create univariate formal Puiseux series over a given differential field.
 
     A formal Puiseux series is a generalization of a formal Laurent series where fractional
-    (rational) powers of the generator are allowed. Concretely, for a ramification index `e \in \mathbb{Z}_{>0}`,
-    an element of this ring has the form
+    (rational) powers of the generator are allowed. Concretely, for a ramification index `e\in\mathbb{N}`, an element of this ring has the form
 
     .. MATH::
 
@@ -17,11 +16,9 @@ r'''
     EXAMPLES::
 
         sage: from dalgebra import *
-        sage: R = PuiseuxSeries(QQ, "t")
-        sage: t = R.gens()[0]
-        sage: v = (~(1-t))**(1/3)
-        sage: v
-        1 + 1/3*t + 2/9*t^(2) + 14/81*t^(3) + 35/243*t^(4) + 91/729*t^(5) + 728/6561*t^(6) + 1976/19683*t^(7) + 5434/59049*t^(8) + 135850/1594323*t^(9) + 380380/4782969*t^(10) + 1071980/14348907*t^(11) + 9111830/129140163*t^(12) + 25933670/387420489*t^(13) + 74096200/1162261467*t^(14) + 637227320/10460353203*t^(15) + 1832028545/31381059609*t^(16) + 5280552865/94143178827*t^(17) + 137294374490/2541865828329*t^(18) + 397431084050/7625597484987*t^(19) + 1152550143745/22876792454961*t^(20) + O(t^(21))
+        sage: R = PuiseuxSeries(QQ, "x")
+        sage: x = R.gen()
+        sage: v = (~(1-x))**(1/3)
         sage: v.derivative() == (1/3)*v**4
         20
 
@@ -86,7 +83,18 @@ def PSChangeBound(bound: int):
     r'''
         Changes the global bound for computations in formal Puiseux series.
 
-        ::NO EXAMPLE::
+        EXAMPLES::
+
+            sage: import dalgebra.dextension.puiseux as puiseux
+            sage: old_bound = puiseux.PS_GLOBAL_BOUND
+            sage: puiseux.PSChangeBound(4)
+            sage: puiseux.PS_GLOBAL_BOUND
+            4
+            sage: puiseux.PSChangeBound(old_bound)
+            sage: puiseux.PSChangeBound(2)
+            Traceback (most recent call last):
+            ...
+            ValueError: The bound must be a non-negative integer, got 2.
     '''
     global PS_GLOBAL_BOUND
     if bound not in ZZ or bound < 3:
@@ -101,7 +109,18 @@ def CheckBound(func):
         This is a decorator to check that the method has a bound argument, that it is set and call properly. This
         simplifies and unifies the check of this type of argument which appears naturally throughout the module.
 
-        ::NO EXAMPLE::
+        EXAMPLES::
+
+            sage: from dalgebra.dextension.puiseux import CheckBound
+            sage: @CheckBound
+            ....: def _bounded(_, *, bound=None):
+            ....:     return bound
+            sage: _bounded(None, bound=4)
+            4
+            sage: _bounded(None, bound=-1)
+            Traceback (most recent call last):
+            ...
+            TypeError: The method _bounded requires a non-negative integer 'bound' argument to be passed.
     '''
     from functools import wraps
 
@@ -127,9 +146,23 @@ def rat_range(start, end=None, step=None):
     r'''
         Generate a range of rational numbers. It follows the same conventions as the Python ``range`` function.
 
-        ::NO EXAMPLE::
+        EXAMPLES::
+
+            sage: from dalgebra.dextension.puiseux import rat_range
+            sage: list(rat_range(3))
+            [0, 1, 2]
+            sage: list(rat_range(3, 0, -QQ((1, 2))))
+            [3, 5/2, 2, 3/2, 1, 1/2]
+            sage: list(rat_range(2, 2))
+            []
+            sage: list(rat_range(0, 3, 0))
+            Traceback (most recent call last):
+            ...
+            ValueError: rat_range() arg 3 must not be zero
     '''
     step = QQ(1) if step is None else QQ(step)
+    if step == 0:
+        raise ValueError("rat_range() arg 3 must not be zero")
     start, end = (QQ(start), QQ(end)) if end is not None else (QQ(0), QQ(start))
     current = start
     check = (lambda x: x < end) if step > 0 else (lambda x: x > end)
@@ -153,7 +186,23 @@ class PuiseuxSeriesFactory(UniqueFactory):
         r'''
             See :func:`UniqueFactory.create_key` for more information.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: PuiseuxSeries(QQ, 'x') is PuiseuxSeries(QQ, 'x')
+                True
+                sage: PuiseuxSeries(QQ, names=('x', 'y'))
+                Traceback (most recent call last):
+                ...
+                ValueError: You must provide exactly one name for the generator of the formal Puiseux series ring.
+                sage: PuiseuxSeries(ZZ, 'x')
+                Traceback (most recent call last):
+                ...
+                TypeError: The base ring must be a field
+                sage: PuiseuxSeries(QQ)
+                Traceback (most recent call last):
+                ...
+                TypeError: You must provide a name for the generator of the formal Puiseux series ring.
         '''
         if base not in _Fields:
             raise TypeError("The base ring must be a field")
@@ -209,6 +258,8 @@ class PuiseuxSeries_Element(Element):
         may have different ramification indices; arithmetic operations automatically bring both operands to a
         common ramification (the lcm of both) before combining them.
 
+        The interface to get a coefficient of the series is through the ``__getitem__`` method, which receives a rational number `n` and returns the coefficient `a_n` of the term `x^{n}`. If the term does not exist in the series, it returns zero.
+
         We allow four different ways to create a formal Puiseux series:
 
         1. By providing a ``coefficient_map``, which is a callable that receives an integer `n` (the numerator at
@@ -220,6 +271,32 @@ class PuiseuxSeries_Element(Element):
            The resulting series is the quotient of the two, and all computations are exact.
         4. TODO (puiseux): By providing a differential polynomial in one variable with coefficients in the
            constant field, together with a set of initial conditions.
+
+        EXAMPLES::
+
+            sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+            sage: R = PuiseuxSeries(QQ, 'x')
+            sage: f = R.element_class(R, coefficients={QQ((-1, 2)): 2, 1: 3})
+            sage: (f[QQ((-1, 2))], f[0], f.order(), f.degree(), f.ramification())
+            (2, 0, -1/2, 1, 2)
+            sage: f.is_finite()
+            True
+            sage: R.element_class(R)
+            Traceback (most recent call last):
+            ...
+            TypeError: You must provide at least one of the following arguments: coefficient_map, coefficients, (numerator and denominator), or (differential_equation and initial_conditions).
+            sage: R.element_class(R, coefficients={}, ramification=1, coefficient_map=lambda _: 0, order=0)
+            Traceback (most recent call last):
+            ...
+            TypeError: You can only provide one of the following arguments: coefficient_map, coefficients, (numerator and denominator), or (differential_equation and initial_conditions).
+            sage: R.element_class(R, ramification=0, coefficient_map=lambda _: 0, order=0)
+            Traceback (most recent call last):
+            ...
+            ValueError: The ramification index must be a positive integer, got 0.
+            sage: R.element_class(R, ramification=1, differential_equation=object(), initial_conditions={})
+            Traceback (most recent call last):
+            ...
+            NotImplementedError: Differential algebraic formal Puiseux series are not yet implemented.
     '''
     TYPES = Enum('Type', [("default",0), ("polynomial", 1), ("rational", 2), ("dalgebraic", 3)])
 
@@ -304,6 +381,13 @@ class PuiseuxSeries_Element(Element):
     def ramification(self) -> int:
         r'''
             Return the ramification index of ``self``, i.e., the denominator common to every exponent in the series.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: (R.gen()**QQ((1, 2))).ramification()
+                2
         '''
         return self.__ramification
 
@@ -319,7 +403,7 @@ class PuiseuxSeries_Element(Element):
         if n not in self.__cache_computed:
             ## We check the ramification
             n = QQ(n)
-            p,q = n.numerator(), n.denominator()
+            p, q = n.numerator(), n.denominator()
             if p*self.ramification() % q != 0: # this index is not in the ramification, hence, a zero is returned
                 self.__cache_computed[n] = self.parent().base().zero() 
             elif n < self.order(): # this index is below the order, then we return zero
@@ -334,7 +418,14 @@ class PuiseuxSeries_Element(Element):
         r'''
             Return the lowest exponent `n` with `a_n \neq 0` (or ``bound`` if this cannot be resolved).
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: f = R.element_class(R, ramification=2, order=0,
+                ....:     coefficient_map=lambda n: 7 if n == 2 else 0)
+                sage: (f[QQ((1, 2))], f[2], f.order(bound=1), f.order(bound=3))
+                (0, 7, 1, 2)
         '''
         if self.type() == self.TYPES.default:
             # Here we only know that all terms smaller than self.__order are zero.
@@ -353,7 +444,18 @@ class PuiseuxSeries_Element(Element):
         r'''
             Return the highest exponent `n` with `a_n \neq 0` (only defined for finite series).
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: R.element_class(R, coefficients={QQ((-1, 2)): 2, 1: 3}).degree()
+                1
+                sage: R.zero().degree()
+                -Infinity
+                sage: (1/(1 - R.gen())).degree()
+                Traceback (most recent call last):
+                ...
+                TypeError: Degree is only defined for finite formal Puiseux series.
         '''
         if not self.type() == self.TYPES.polynomial:
             raise TypeError("Degree is only defined for finite formal Puiseux series.")
@@ -366,7 +468,16 @@ class PuiseuxSeries_Element(Element):
             It is defined generically, but we only return something different than ``self`` if 
             it is a rational Puiseux series.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: q = x/(1 - x)
+                sage: (q.numerator(), q.denominator()) == (x, 1 - x)
+                True
+                sage: (x + 1).numerator() == x + 1
+                True
         '''
         if self.type() != self.TYPES.rational:
             return self
@@ -379,7 +490,15 @@ class PuiseuxSeries_Element(Element):
             It is defined generically, but we only return something different than ``1`` if 
             it is a rational Puiseux series.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: (x/(1 - x)).denominator() == 1 - x
+                True
+                sage: (x + 1).denominator().is_one()
+                True
         '''
         if self.type() != self.TYPES.rational:
             return self.parent().one()
@@ -389,7 +508,19 @@ class PuiseuxSeries_Element(Element):
         r'''
             Multiply ``self`` by the generator raised to the power ``n`` (i.e., shift all internal keys by ``n``).
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: p = 2*x**QQ((-1, 2)) + 3 + x
+                sage: p.gen_mult(QQ((1, 2))) == 2 + 3*x**QQ((1, 2)) + x**QQ((3, 2))
+                True
+                sage: f = ~(1 - x)
+                sage: f.gen_mult(2)[2:6]
+                [1, 1, 1, 1]
+                sage: (x/(1 - x)).gen_mult(1)[1:4]
+                [0, 1, 1]
         '''
         n = QQ(n)
         if n == 0:
@@ -417,6 +548,17 @@ class PuiseuxSeries_Element(Element):
 
             This method checks whether the element is zero or not. If exact computation are possible, it returns ``True`` or ``False``.
             Otherwise it returns the last checked order for which the element is zero.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: R.zero().is_zero()
+                True
+                sage: f = R.element_class(R, ramification=2, order=0,
+                ....:     coefficient_map=lambda n: 7 if n == 2 else 0)
+                sage: f.is_zero(bound=1)
+                1
         '''
         if self.type() == self.TYPES.default:
             if any(
@@ -436,6 +578,12 @@ class PuiseuxSeries_Element(Element):
             Checker for the identity element.
 
             See :func:`is_zero` for more information on the output of this type of methods.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: PuiseuxSeries(QQ, 'x').one().is_one()
+                True
         '''
         if self.type() in (self.TYPES.default, self.TYPES.rational):
             return (self - self.parent().one()).is_zero(bound=bound)
@@ -450,6 +598,13 @@ class PuiseuxSeries_Element(Element):
             Checker for whether the element is a unit or not.
 
             Puiseux series form a field, hence all non-zero elements are units.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: (2*R.gen()).is_unit(), R.zero().is_unit()
+                (True, False)
         '''
         return (self.is_zero(bound=bound) is False)
 
@@ -462,6 +617,14 @@ class PuiseuxSeries_Element(Element):
     def is_finite(self) -> bool: ## TODO (series) Check the use of the method `is_finite`
         r'''
             Method to check whether the formal power series is finitely represented or not.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: ((1 + x).is_finite(), (x/(1 - x)).is_finite(), (~(1 - x)).is_finite())
+                (True, True, False)
         '''
         if self.type() == self.TYPES.polynomial:
             return True
@@ -491,11 +654,15 @@ class PuiseuxSeries_Element(Element):
                 sage: f = x**(1/2)
                 sage: f.is_monomial()
                 True
+                sage: R.zero().is_monomial()
+                False
+                sage: (x/(2*x)).is_monomial()
+                True
         '''
         if self.type() == self.TYPES.polynomial:
             return len(self.__polydict) == 1
         elif self.type() == self.TYPES.rational:
-            return self.is_monomial(bound=bound) and self.denominator().is_monomial(bound=bound)
+            return self.numerator().is_monomial(bound=bound) and self.denominator().is_monomial(bound=bound)
         else:
             zero = self.is_zero(bound=bound+1)
             if zero == bound+1:
@@ -507,6 +674,19 @@ class PuiseuxSeries_Element(Element):
             Return a :class:`PuiseuxSeries_Element` that contains only the coefficients with exponent at most ``order``.
 
             This method always returns a polynomial formal Puiseux series, even if the original one is not polynomial.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: p = R.element_class(R, coefficients={QQ((-1, 2)): 2, 0: 3, 1: 1})
+                sage: p[QQ((-1, 2)):QQ((3, 2)):QQ((1, 2))]
+                [2, 3, 0, 1]
+                sage: p.truncate(0) == 2*x**QQ((-1, 2)) + 3
+                True
+                sage: (~(1 - x)).truncate(3) == 1 + x + x**2 + x**3
+                True
         '''
         coeffs = {k: self[k] for k in rat_range(self.order(), QQ(order)+1/self.ramification(), 1/self.ramification())}
         return self.parent().element_class(self.parent(), coefficients=coeffs)
@@ -514,7 +694,7 @@ class PuiseuxSeries_Element(Element):
     def polynomial(self, ramification: int = 1) -> Element:
         r'''
             Converts (if possible) a Puiseux series into a polynomial. It requires three different conditions:
-            * the `des_ramification` must divide the actual ramification,
+            * the requested `ramification` must be a multiple of the actual ramification,
             * the element to be of polynomial type,
             * the order must be non-negative.
 
@@ -528,10 +708,30 @@ class PuiseuxSeries_Element(Element):
                 sage: X = P.gen()
                 sage: f.polynomial() == X**2 + 2*X + 1
                 True
-                sage: P = R.poly_ring(des_ramification=2)
+                sage: P = R.poly_ring(ramification=2)
                 sage: X = P.gen()
-                sage: f.polynomial() == X**4 + 2*X**2 + 1
+                sage: f.polynomial(2) == X**4 + 2*X**2 + 1
                 True
+                sage: (x**QQ((1, 2)) + 1).polynomial(2) == R.poly_ring(2).gen() + 1
+                True
+                sage: R.zero().polynomial() == R.poly_ring().zero()
+                True
+                sage: (x**-1).polynomial()
+                Traceback (most recent call last):
+                ...
+                TypeError: The element is not a polynomial.
+                sage: R.element_class(R, coefficients={-1: 1}).polynomial()
+                Traceback (most recent call last):
+                ...
+                TypeError: The element is not a polynomial (it has negative order).
+                sage: (~(1 - x)).polynomial()
+                Traceback (most recent call last):
+                ...
+                TypeError: The element is not a polynomial.
+                sage: (x**QQ((1, 2))).polynomial()
+                Traceback (most recent call last):
+                ...
+                TypeError: The desired ramification does not divide the actual ramification.
 
             TODO (series): add examples that raises some error.
         '''
@@ -540,7 +740,7 @@ class PuiseuxSeries_Element(Element):
     def rational_function(self, ramification: int = 1) -> Element:
         r'''
             Converts (if possible) a Puiseux series into a rational function. It requires two different conditions:
-            * the `des_ramification` must divide the actual ramification,
+            * the requested `ramification` must be a multiple of the actual ramification,
             * both numerator and denominator to be of finite type.
 
             EXAMPLES::
@@ -553,14 +753,26 @@ class PuiseuxSeries_Element(Element):
                 sage: X = T.gen()
                 sage: f.rational_function() == (1 - X)/X
                 True
+                sage: R.gen()/(2*R.gen()) == QQ((1, 2))
+                True
+                sage: R.zero().rational_function() == T.zero()
+                True
                 
             TODO (series): add examples that raises some error.
         '''
-        return self.parent().rat_function(ramification)(self)
+        return self.parent().rat_field(ramification)(self)
 
     def equation(self):
         r'''
             Gets the differential equation that defines the element. (Not always possible)
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: PuiseuxSeries(QQ, 'x').gen().equation()
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: Differential algebraic formal Puiseux series are not yet implemented.
         '''
         raise NotImplementedError("Differential algebraic formal Puiseux series are not yet implemented.")
 
@@ -570,6 +782,15 @@ class PuiseuxSeries_Element(Element):
             Method to get the trailing coefficient of a formal Puiseux series.
 
             The trailing coefficient is the coefficient of the monomial with lowest degree. When we do not find any non-zero coefficient up to the given ``bound``, we return 0.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: f = R.element_class(R, ramification=2, order=0,
+                ....:     coefficient_map=lambda n: 7 if n == 2 else 0)
+                sage: f.trailing_coefficient(bound=1), f.trailing_coefficient(bound=3)
+                (0, 7)
         '''
         order = self.order(bound=bound+1)
         if order == bound+1:
@@ -583,6 +804,15 @@ class PuiseuxSeries_Element(Element):
             Method to get the trailing term of a formal Puiseux series.
 
             The trailing term is the monomial with its coefficient with lowest degree. When we do not find any non-zero coefficient up to the given ``bound``, we return 0.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: f = R.element_class(R, ramification=2, order=0,
+                ....:     coefficient_map=lambda n: 7 if n == 2 else 0)
+                sage: f.trailing_term(bound=3) == 7*R.gen()**2
+                True
         '''
         order = self.order(bound=bound+1)
         if order == bound+1:
@@ -595,12 +825,40 @@ class PuiseuxSeries_Element(Element):
         r'''
             Splits the formal Puiseux series into the product of a power of the generator and a formal power series with non-zero constant term.
 
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: p = 2*x**QQ((-1, 2)) + 3 + x
+                sage: order, unit = p.pseries_split()
+                sage: order, unit[0]
+                (-1/2, 2)
+                sage: q = x/(1 - x)
+                sage: order, unit = q.pseries_split()
+                sage: order, unit[0:4]
+                (1, [1, 1, 1, 1])
+                sage: order, unit = (~(1 - x)).pseries_split()
+                sage: (order, unit[0])
+                (0, 1)
+
             This is a method that may not be exact, hence, if we can not compute fully the power of the generator, we return the last computed order.
         '''
         order = self.order(bound=bound)
         return (order, self.gen_mult(-order))
 
     def __getitem__(self, key: Rational | int) -> Element:
+        r'''
+            Return the coefficient of an exponent or a finite list of coefficients.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: f = R.element_class(R, coefficients={QQ((-1, 2)): 2, 0: 3, 1: 1})
+                sage: f[QQ((-1, 2)):QQ((3, 2)):QQ((1, 2))]
+                [2, 3, 0, 1]
+        '''
         if isinstance(key, slice):
             start = QQ(key.start) if key.start is not None else QQ(0)
             stop = key.stop if key.stop is not None else oo
@@ -621,7 +879,18 @@ class PuiseuxSeries_Element(Element):
         r'''
             See :func:`Element._add_` for further information.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: r = x**QQ((1, 2))
+                sage: r + x == x + r
+                True
+                sage: (r + x).ramification()
+                2
+                sage: ((r + x) + (~(1 - x)))[0:4] == ((~(1 - x)) + (r + x))[0:4]
+                True
         '''
         ## Checking for trivial cases
         if self.is_zero() is True:
@@ -654,6 +923,19 @@ class PuiseuxSeries_Element(Element):
             raise NotImplementedError("Addition of differential algebraic formal Puiseux series is not yet implemented.")
 
     def __neg__(self) -> PuiseuxSeries_Element:
+        r'''
+            Return the additive inverse of this series.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: -((1 + x)/(1 - x)) == (-1 - x)/(1 - x)
+                True
+                sage: (-~(1 - x))[0:4]
+                [-1, -1, -1, -1]
+        '''
         if self.is_zero() is True:
             return self
         if self.type() == self.TYPES.polynomial:
@@ -678,7 +960,19 @@ class PuiseuxSeries_Element(Element):
         r'''
             See :func:`Element._mul` for further information.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: r = x**QQ((1, 2))
+                sage: (r + x)*(r - x) == x - x**2
+                True
+                sage: 2*(r + x) == 2*r + 2*x
+                True
+                sage: f = ~(1 - x)
+                sage: (f*f)[0:5]
+                [1, 2, 3, 4, 5]
         '''
         ## Multiplication with trivial/simpler cases
         if (self.is_zero() is True) or (other.is_zero() is True): # multiplication by a true zero
@@ -739,13 +1033,34 @@ class PuiseuxSeries_Element(Element):
         r'''
             See :func:`Element._floordiv_` for further information.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: q = x/(1 - x)
+                sage: q.type() == q.TYPES.rational
+                True
+                sage: q.numerator().is_finite() and q.denominator().is_finite()
+                True
+                sage: q.rational_function() == R.rat_field().gen()/(1 - R.rat_field().gen())
+                True
+                sage: x/(2*x) == QQ((1, 2))
+                True
+                sage: x/R.zero()
+                Traceback (most recent call last):
+                ...
+                ZeroDivisionError: Division by zero element is not allowed.
+                sage: R.zero()/R.zero()
+                Traceback (most recent call last):
+                ...
+                ZeroDivisionError: Division by zero element is not allowed.
         '''
         ## Division is done via the `rational` type of series
-        if self.is_zero() is True:
-            return self.parent().zero()
-        elif other.is_zero() is True:
+        if other.is_zero() is True:
             raise ZeroDivisionError(f"Division by zero element is not allowed.")
+        elif self.is_zero() is True:
+            return self.parent().zero()
         elif other in self.parent().base(): # simple scalar division
             scalar = (~self.parent().base()(other))
             return scalar * self
@@ -763,6 +1078,18 @@ class PuiseuxSeries_Element(Element):
             This is important to distinguish between this method and :func:`__floordiv__`, which 
             keeps the rational structure for simpler computations. This computes the series
             expansion as a map, and creates a default type of series (except when a polynomial type can be obtained).
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: inverse = ~(1 - R.gen())
+                sage: inverse[0:5]
+                [1, 1, 1, 1, 1]
+                sage: ~R.zero()
+                Traceback (most recent call last):
+                ...
+                ZeroDivisionError: Inverse of zero element do not exist.
         '''
         if self.is_zero() is True:
             raise ZeroDivisionError(f"Inverse of zero element do not exist.")
@@ -791,6 +1118,24 @@ class PuiseuxSeries_Element(Element):
 
     @cached_method
     def __pow__(self, power: int | Rational) -> PuiseuxSeries_Element:
+        r'''
+            Raise a Puiseux series to an integer or rational power.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: root = (1 - x)**QQ((1, 3))
+                sage: root[0], root[1]
+                (1, -1/3)
+                sage: (root**3)[0:4]
+                [1, -1, 0, 0]
+                sage: ((1 - x)**QQ((2, 3)))[0:3]
+                [1, -2/3, -1/9]
+                sage: (x**QQ((1, 2)))**2 == x
+                True
+        '''
         if power == 0:
             return self.parent().one()
         elif power == 1:
@@ -863,6 +1208,22 @@ class PuiseuxSeries_Element(Element):
 
     @CheckBound
     def __eq__(self, other, *, bound: int | None = None) -> bool:
+        r'''
+            Compare series, returning a precision bound when equality is unresolved.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: (1 + x) == (x + 1)
+                True
+                sage: f = ~(1 - x)
+                sage: f.__eq__(1 + x, bound=1)
+                1
+                sage: f == 1 + x
+                False
+        '''
         if not isinstance(other, self.__class__) or other.parent() != self.parent():
             try:
                 other = self.parent()(other)
@@ -876,6 +1237,19 @@ class PuiseuxSeries_Element(Element):
 
     @CheckBound
     def __ne__(self, other, *, bound: int | None = None) -> bool:
+        r'''
+            Compare series for inequality, preserving unresolved precision bounds.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: (1 + x) != (x + 1)
+                False
+                sage: (~(1 - x)).__ne__(1 + x, bound=1)
+                1
+        '''
         equals = self.__eq__(other, bound=bound)
         if equals is True:
             return False
@@ -884,10 +1258,42 @@ class PuiseuxSeries_Element(Element):
         return equals
 
     def __hash__(self) -> int:
+        r'''
+            Return a hash based on the bounded series representation.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: f = R.element_class(R, coefficients={0: 2, 1: 3})
+                sage: hash(f) == hash(f)
+                True
+        '''
         return hash(self.__repr__(bound=100))
 
     def __call__(self, **kwds) -> Element:
-        r'''Evaluates ONLY the coefficients of the series'''
+        r'''
+            Evaluate the coefficients of the series.
+
+            Calling without substitutions leaves each representation unchanged.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: p = 1 + x
+                sage: p() is p
+                True
+                sage: q = x/(1 - x)
+                sage: q() is q
+                True
+                sage: f = ~(1 - x)
+                sage: f() is f
+                True
+        '''
+        if not kwds:
+            return self
         if self.type() == self.TYPES.polynomial:
             new_poly = {k: el(**kwds) for (k,el) in self.__polydict.items()}
             return self.parent().element_class(self.parent(), coefficients=new_poly)
@@ -907,7 +1313,64 @@ class PuiseuxSeries_Element(Element):
         r'''
             Method that reduces as much as possible a quotient of Puiseux series.    
 
-            IMPORTANT: this method can only access and change the attributes ``__numerator`` and ``__denominator`` of the object.
+            This method tries to reduce the numerator and denominator of a rational Puiseux series. Depending
+            on the type of its numerator and denominator, it will perform different actions:
+            * If both are finite, it will compute the rational expression and reduce it to its simplest form.
+              This is based on SageMath reduction of rational functions.
+            * If at least one of them is not finite, it will return a "normalized" version where the denominator
+              has order 0.
+
+            IMPORTANT:
+              1. This method can only access the parent, type and current values of numerator and denominator.
+            Then, it can only change the attributes ``__numerator`` and ``__denominator`` of the object.
+              2. This method does not return anything, it modifies the object in place.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                                sage: p = 1 + x
+                                sage: p.reduce_rational()
+                                sage: p.type() == p.TYPES.polynomial
+                                True
+
+                        Common factors cancel for polynomial components:
+
+                sage: q = R.element_class(R, numerator=x - x**2, denominator=1 - x)
+                sage: q.reduce_rational()
+                sage: q.rational_function() == R.rat_field().gen()
+                True
+
+            Rational numerator and denominator components are reduced as well:
+
+                sage: n = x/(1 - x)
+                sage: d = x/(1 + x)
+                sage: q = R.element_class(R, numerator=n, denominator=d)
+                sage: q.reduce_rational()
+                sage: X = R.rat_field().gen()
+                sage: q.rational_function() == (1 + X)/(1 - X)
+                True
+
+            A zero numerator is normalized to ``0/1``:
+
+                sage: q = R.element_class(R, numerator=R.zero(), denominator=1 + x)
+                sage: q.reduce_rational()
+                sage: q.numerator().is_zero(), q.denominator().is_one()
+                (True, True)
+
+            For default series components, the denominator's leading power is moved into the numerator:
+
+                sage: n = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda e: 1 if e == 0 else 0)
+                sage: d = R.element_class(R, ramification=1, order=2,
+                ....:     coefficient_map=lambda e: 3 if e == 2 else 0)
+                sage: q = R.element_class(R, numerator=n, denominator=d)
+                sage: q.reduce_rational()
+                sage: q.numerator().order(), q.denominator().order()
+                (-2, 0)
+                sage: q.numerator()[-2], q.denominator()[0]
+                (1, 3)
         '''
         if self.type() != self.TYPES.rational:
             return # nothing to be done without a denominator
@@ -921,8 +1384,9 @@ class PuiseuxSeries_Element(Element):
             
             ## We try the case where both are finite represented
             try:
-                n = n.rational_function(self.ramification())
-                d = d.rational_function(self.ramification())
+                ramification = lcm(n.ramification(), d.ramification())
+                n = n.rational_function(ramification)
+                d = d.rational_function(ramification)
                 quot = n / d # this should simplify the rational expression
                 self.__numerator = self.parent()(quot.numerator())
                 self.__denominator = self.parent()(quot.denominator())
@@ -939,6 +1403,17 @@ class PuiseuxSeries_Element(Element):
     ###################################################################################
     @CheckBound
     def __repr__(self, *, bound: int | None = None) -> str:
+        r'''
+            Return the series representation through ``bound``.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: f = ~(1 - R.gen())
+                sage: 'O(x^(4))' in f.__repr__(bound=3)
+                True
+        '''
         if self.is_zero() is True:
             return "0"
         elif self.is_one() is True:
@@ -1013,7 +1488,15 @@ class PuiseuxSeries_Element(Element):
         r'''
             Computes a LaTeX string to represent the formal Puiseux series.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: f = 1 + R.gen()**QQ((1, 2))
+                sage: f._latex_() != ''
+                True
+                sage: r'\text{O}' in (~(1 - R.gen()))._latex_(bound=3)
+                True
         '''
         if self.is_zero() is True:
             return "0"
@@ -1077,6 +1560,30 @@ class PuiseuxSeries_Element(Element):
             ) + (f" + \\text{{O}}({variable_str(bound+1)})")
 
     def to_sage(self) -> PuiseuxSeriesElement:
+        r'''
+            Convert this element to Sage's Puiseux series representation.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: f = 1 + R.gen()**QQ((1, 2))
+                sage: sage_f = f.to_sage()
+                sage: sage_f[0], sage_f[QQ((1, 2))]
+                (1, 1)
+                sage: R(sage_f) == f
+                True
+                sage: R.zero().to_sage() == R.to_sage().zero()
+                True
+                sage: f = ~(1 - R.gen())
+                sage: sage_f = f.to_sage()
+                sage: (sage_f.prec(), sage_f[0], sage_f[1])
+                (20, 1, 1)
+                sage: R(R.to_sage()(1).add_bigoh(3))
+                Traceback (most recent call last):
+                ...
+                ValueError: A finite-precision Sage Puiseux series cannot be reconstructed exactly.
+        '''
         return self.parent().to_sage()(self)
 
 class PuiseuxSeries_Ring(Parent):
@@ -1092,7 +1599,34 @@ class PuiseuxSeries_Ring(Parent):
         * ``base``: a field with one derivative.
         * ``name``: name that the variable `x` will have.
 
-        TODO (puiseux): add examples
+        EXAMPLES::
+
+            sage: from dalgebra.dextension.puiseux import PuiseuxSeries, PuiseuxSeries_Ring
+            sage: R = PuiseuxSeries(QQ, 'x')
+            sage: PuiseuxSeries(QQ, 'x') is R
+            True
+            sage: (R.gen(), R.gens(), R.ngens(), R.gen_name(), R.variable_name(), R.variable_name(3))
+            (x, (x,), 1, 'x', 'x', 'x_3')
+            sage: (R.zero().is_zero(), R.one().is_one(), R.is_field(), R.is_integral_domain())
+            (True, True, True, True)
+            sage: (R.fraction_field() is R, R.constant_ring() is R.base(), R.operator_types(), R.noperators())
+            (True, True, ('derivation',), 1)
+            sage: R.gen().derivative() == 1
+            True
+            sage: (R.gen()**QQ((3, 2))).derivative() == QQ((3, 2))*R.gen()**QQ((1, 2))
+            True
+            sage: functor, base = R.construction()
+            sage: base is R.base() and functor(base) is R
+            True
+            sage: R.change_base(QQ) is R
+            True
+            sage: f = R.random_element(-2, 3, ramification=2, density=1)
+            sage: f.is_finite() and all(QQ(-1) <= k <= QQ((3, 2)) for k in f._PuiseuxSeries_Element__polydict)
+            True
+            sage: PuiseuxSeries_Ring(ZZ, 'x')
+            Traceback (most recent call last):
+            ...
+            TypeError: The base must be a ring with operators
 
         TODO (puiseux): (1) add possibility to create a Puiseux series ring with a non-trivial constant ring (i.e. a differential field with non-trivial constants)
         TODO (puiseux): (2) add possibility to create a Puiseux series ring with a non-trivial derivation (i.e. the generator is not derivated to 1).
@@ -1157,7 +1691,16 @@ class PuiseuxSeries_Ring(Parent):
             Return the string for representing the name of the variable of the field of Puiseux series. 
 
             It has the optional case that it will return the name for the ramification variable (for finite Puiseux series)
-            TODO (puiseux): (3)
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: R.variable_name(), R.variable_name(3)
+                ('x', 'x_3')
+                sage: R.variable_name(0)
+                Traceback (most recent call last):
+                ...
+                ValueError: Ramification 0 must be a positive integer.
         '''
         output = self.gen_name()
         if ramification is not None:
@@ -1216,7 +1759,18 @@ class PuiseuxSeries_Ring(Parent):
     def poly_ring(self, ramification: int = 1) -> Parent:
         r'''
             Return the polynomial ring associated to this field of formal Puiseux series with the specified ramification.
-            TODO (puiseux): (3)
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: P = R.poly_ring(2)
+                sage: P.gen().variable_name()
+                'x_2'
+                sage: R(P.gen() + 1) == x**QQ((1, 2)) + 1
+                True
+                sage: P(x**QQ((1, 2)) + 1) == P.gen() + 1
+                True
         '''
         if ramification not in self.__poly_rings:
             self.__poly_rings[ramification] = PolynomialRing(self.base().to_sage(), self.variable_name(ramification = None if ramification == 1 else ramification))
@@ -1239,7 +1793,16 @@ class PuiseuxSeries_Ring(Parent):
     def rat_field(self, ramification: int = 1) -> Parent:
         r'''
             Return the field of rational functions associated to this field of formal Puiseux series with the specified ramification.
-            TODO (puiseux): (3)
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: T = R.rat_field(2)
+                sage: T(x**QQ((1, 2)) + 1) == T.gen() + 1
+                True
+                sage: R.rat_field() is R.poly_ring().fraction_field()
+                True
         '''
         return self.poly_ring(ramification=ramification).fraction_field()
 
@@ -1250,7 +1813,14 @@ class PuiseuxSeries_Ring(Parent):
         r'''
             See :func:`Parent._coerce_map_from_base_ring` for further information.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: R(7)[0]
+                7
+                sage: R.base()(R(7)) == 7
+                True
         '''
         return PSCoerceFromBase(self)
 
@@ -1262,7 +1832,13 @@ class PuiseuxSeries_Ring(Parent):
             a valid input for it that would create ``self`` again. This is a necessary method to
             implement all the coercion system properly.
 
-            TODO (puiseux): (1), (2), (3)
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: functor, base = R.construction()
+                sage: base is R.base() and functor(base) is R
+                True
         '''
         return PuiseuxSeriesFunctor(self.__gens[0]), self.base()
 
@@ -1270,7 +1846,12 @@ class PuiseuxSeries_Ring(Parent):
         r'''
             See :func:`Parent.fraction_field` for further information.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: R.fraction_field() is R
+                True
         '''
         return self
 
@@ -1279,8 +1860,25 @@ class PuiseuxSeries_Ring(Parent):
             Method to change the base field for considering the series.
 
             This method takes into consideration the coercions between the old and the new base to create the appropriate coercion maps between the old and new Puiseux series rings.
+
+            EXAMPLES::
+
+                sage: from sage.all import PolynomialRing
+                sage: from dalgebra.dring import DifferentialRing
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: K = PolynomialRing(QQ, 't').fraction_field()
+                sage: Kd = DifferentialRing(K, lambda f: 0)
+                sage: S = R.change_base(Kd)
+                sage: p = R.element_class(R, coefficients={0: 2, 1: 1})
+                sage: q = R.gen()/(1 - R.gen())
+                sage: f = ~(1 - R.gen())
+                sage: S(p)[0], S(q)[0:3], S(f)[0:3]
+                (2, [0, 1, 1], [1, 1, 1])
         '''
         new_ring = PuiseuxSeries(R, self.gen_name())
+        if new_ring is self:
+            return self
         ## Creating the coercion map if possible
         try:
             M = PSCoerceBetweenBases(self, new_ring, R.coerce_map_from(self.base()))
@@ -1294,7 +1892,12 @@ class PuiseuxSeries_Ring(Parent):
         r'''
             Return the corresponding Sage ring for this field of Puiseux series.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: R.to_sage().base_ring() is QQ
+                True
         '''
         return PuiseuxSeriesRing(self.base().to_sage(), self.gen_name())
     
@@ -1308,7 +1911,12 @@ class PuiseuxSeries_Ring(Parent):
         r'''
             Computes a LaTeX representation for this field of Puiseux series.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: 'x' in R._latex_()
+                True
         '''
         return f"{latex(self.base())}\\left(\\left({self.__gens[0]}^{{1/\\infty}}\\right)\\right)"
 
@@ -1379,7 +1987,13 @@ class PuiseuxSeries_Ring(Parent):
         r'''
             Overridden method from :func:`~DRings.ParentMethods.linear_operator_ring`.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: PuiseuxSeries(QQ, 'x').linear_operator_ring()
+                Traceback (most recent call last):
+                ...
+                NotImplementedError: Linear operator ring over Formal Puiseux Series not yet implemented
         '''
         raise NotImplementedError("Linear operator ring over Formal Puiseux Series not yet implemented")
 
@@ -1387,7 +2001,26 @@ class PuiseuxSeries_Ring(Parent):
         r'''
             See :func:`DRings.ParentMethods.inverse_operation` for further information.
 
-            ::NO EXAMPLE::
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: f = 4*R.gen()**QQ((1, 2))
+                sage: f.integrate().derivative() == f
+                True
+                sage: x = R.gen()
+                sage: p = 3*x**QQ((3, 2)) + 2*x**QQ((-1, 2))
+                sage: p.derivative() == QQ((9, 2))*x**QQ((1, 2)) - x**QQ((-3, 2))
+                True
+                sage: q = x/(1 - x)
+                sage: q.derivative().rational_function() == 1/(1 - R.rat_field().gen())**2
+                True
+                sage: from dalgebra.dring import IntegrationError
+                sage: (x**-1).integrate()
+                Traceback (most recent call last):
+                ...
+                IntegrationError: Puiseux series with a term in x^-1 can not be integrated.
+
             TODO (puiseux): (2), (3)
         '''
         ## Coefficients are all constants, hence integrating is simply shifting coefficients by rational numbers and 
@@ -1397,11 +2030,11 @@ class PuiseuxSeries_Ring(Parent):
         elif element.type() == element.TYPES.polynomial:
             if -1 in element._PuiseuxSeries_Element__polydict:
                 raise IntegrationError(f"Puiseux series with a term in x^{-1} can not be integrated.")
-            out_dict = {k + 1: element[k] / QQ(k) for k in element._PuiseuxSeries_Element__polydict}
+            out_dict = {k + 1: element[k] / QQ(k + 1) for k in element._PuiseuxSeries_Element__polydict}
             
             return self.element_class(self, coefficients=out_dict)
         else: # other cases: we create a default series by defining its elements
-            if element[-1] == 0:
+            if element[-1] != 0:
                 raise IntegrationError(f"Puiseux series with a term in x^{-1} can not be integrated.")
             out_map = lambda k: element[k-1] / QQ(k) if k != 0 else self.base().zero()
             return self.element_class(self, coefficient_map=out_map, order=element.order()+1, ramification=element.ramification())
@@ -1451,6 +2084,15 @@ class PuiseuxSeriesFunctor(ConstructionFunctor):
         INPUT:
 
         * ``name``: name of the variable that the functor will add
+
+        EXAMPLES::
+
+            sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+            sage: f, base = PuiseuxSeries(QQ, 'x').construction()
+            sage: repr(f)
+            'PuiseuxSeries(*,x)'
+            sage: f == PuiseuxSeries(QQ, 'x').construction()[0]
+            True
     '''
     def __init__(self, name: str):
         self.__gen_name = name
@@ -1502,6 +2144,17 @@ class PSCoerceFromBase(Morphism):
 class PSConvertToBase(Morphism):
     r'''
         Conversion morphism from the Puiseux series ring to its field of coefficients.
+
+        EXAMPLES::
+
+            sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+            sage: R = PuiseuxSeries(QQ, 'x')
+            sage: R.base()(R(7))
+            7
+            sage: R.base()(R.gen())
+            Traceback (most recent call last):
+            ...
+            TypeError: Impossible to convert the formal Puiseux series to the base ring, as it has non-zero higher order terms.
     '''
     def __init__(self, domain: PuiseuxSeries_Ring):
         if not isinstance(domain, PuiseuxSeries_Ring):
@@ -1601,7 +2254,7 @@ class PSConvertToPoly(Morphism):
 
             ::NO EXAMPLE::
         '''
-        if element.ramification() % self.ramification != 0:
+        if self.ramification % element.ramification() != 0:
             raise TypeError("The desired ramification does not divide the actual ramification.")
         elif element.type() != element.TYPES.polynomial:
             raise TypeError("The element is not a polynomial.")
@@ -1609,7 +2262,12 @@ class PSConvertToPoly(Morphism):
             raise TypeError("The element is not a polynomial (it has negative order).")
 
         var = self.codomain()(self.domain().variable_name(ramification = None if self.ramification == 1 else self.ramification))
-        return sum(coeff * var**ZZ(k*self.ramification) for (k,coeff) in element._PuiseuxSeries_Element__polydict.items())
+        base = self.codomain().base()
+        return sum(
+            (base(coeff) * var**ZZ(k*self.ramification)
+             for k, coeff in element._PuiseuxSeries_Element__polydict.items()),
+            self.codomain().zero(),
+        )
 
 
 class PSConvertToRational(Morphism):
@@ -1629,24 +2287,33 @@ class PSConvertToRational(Morphism):
 
             ::NO EXAMPLE::
         '''
-        if element.ramification() % self.ramification != 0:
+        if self.ramification % element.ramification() != 0:
             raise TypeError("The desired ramification does not divide the actual ramification.")
         elif element.numerator().type() not in (element.TYPES.polynomial, element.TYPES.rational) or element.denominator().type() not in (element.TYPES.polynomial, element.TYPES.rational):
             raise TypeError("The numerator and denominator must be finite formal Puiseux series.")
 
         ## We convert both numerator and denominator to rational functions
-        # Numerator
-        if element.numerator().type() == element.TYPES.rational:
-            n = element.numerator().rational_function(self.ramification) # this may raise an error if the numerator was not fully finite
+        numerator = element.numerator()
+        denominator = element.denominator()
+        if numerator.type() == element.TYPES.rational:
+            n = numerator.rational_function(self.ramification) # this may raise an error if the numerator was not fully finite
         else: # polynomial type (function polynomial is not enough, since we now allow negative order)
-            var = element.parent().poly_ring(ramification=self.ramification)(element.parent().variable_name())
-            n = sum(coeff * var**ZZ(k*self.ramification) for (k,coeff) in element._PuiseuxSeries_Element__polydict.items())
+            name = element.parent().variable_name(
+                None if self.ramification == 1 else self.ramification
+            )
+            var = element.parent().poly_ring(ramification=self.ramification)(name)
+            base = element.parent().base().to_sage()
+            n = sum(base(coeff) * var**ZZ(k*self.ramification) for (k,coeff) in numerator._PuiseuxSeries_Element__polydict.items())
         # Denominator
-        if element.denominator().type() == element.TYPES.rational:
-            d = element.denominator().rational_function(self.ramification) # this may raise an error if the denominator was not fully finite
+        if denominator.type() == element.TYPES.rational:
+            d = denominator.rational_function(self.ramification) # this may raise an error if the denominator was not fully finite
         else: # polynomial type (function polynomial is not enough, since we now allow negative order)
-            var = element.parent().poly_ring(ramification=self.ramification)(element.parent().variable_name())
-            d = sum(coeff * var**ZZ(k*self.ramification) for (k,coeff) in element._PuiseuxSeries_Element__polydict.items())
+            name = element.parent().variable_name(
+                None if self.ramification == 1 else self.ramification
+            )
+            var = element.parent().poly_ring(ramification=self.ramification)(name)
+            base = element.parent().base().to_sage()
+            d = sum(base(coeff) * var**ZZ(k*self.ramification) for (k,coeff) in denominator._PuiseuxSeries_Element__polydict.items())
 
         return n / d
 
@@ -1671,13 +2338,17 @@ class PSCoerceToSage(Morphism):
         '''
         if element.type() == element.TYPES.polynomial:
             var = self.codomain().gen()
-            return sum(coeff * var**k for (k,coeff) in element._PuiseuxSeries_Element__polydict.items())
+            base = self.domain().base().to_sage()
+            return sum(
+                (base(coeff) * var**k for k, coeff in element._PuiseuxSeries_Element__polydict.items()),
+                self.codomain().zero(),
+            )
         elif element.type() == element.TYPES.rational:
             return self(element.numerator()) / self(element.denominator())
         else:
             var = self.codomain().gen()
             out =  sum(
-                element[k] * var**k 
+                self.domain().base().to_sage()(element[k]) * var**k
                 for k in rat_range(element.order(), PS_GLOBAL_BOUND+(1/element.ramification()), 1/element.ramification())
             )
 
@@ -1702,9 +2373,9 @@ class PSConvertFromSage(Morphism):
 
             ::NO EXAMPLE::
         '''
-        if element.prec() != oo: # full precision is known -> polynomial type is created
+        if element.prec() == oo: # exact Sage series have finite polynomial support
             out_dict = {exp : coeff for (exp, coeff) in zip(element.exponents(), element.coefficients())}
             return self.codomain().element_class(self.codomain(), coefficients=out_dict)
         else:
-            raise ValueError(f"The precision of a Puiseux Series is not infinite, hence, we can not fully reconstruct the element.")
+            raise ValueError("A finite-precision Sage Puiseux series cannot be reconstructed exactly.")
         
