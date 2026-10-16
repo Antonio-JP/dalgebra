@@ -1547,3 +1547,26 @@ class PSConvertToRational(Morphism):
         x = self.codomain().gen()
         B = self.codomain().base()
         return sum(B(v) * x**k for k, v in element._items())
+
+
+class PSCoerceFromDRing(Morphism):
+    r'''
+        Coercion morphism from a differential ring to the Puiseux series ring.
+
+        This is a generic morphism that coerce a differential ring into a field of Puiseux series. It 
+        takes a callable that builds the Puiseux series of an element in a differential ring. It overlaps
+        with the other coercions from the base ring, which is always the field of constants.
+    '''
+    def __init__(self, domain: Parent, codomain: PuiseuxSeries_Ring, *, map: Callable[[Element], PuiseuxSeries_Element]):
+        if not isinstance(codomain, PuiseuxSeries_Ring):
+            raise TypeError("The codomain must be a formal Puiseux series ring")
+        super().__init__(domain, codomain)
+        self.__map = map
+
+    def _call_(self, element: Element) -> PuiseuxSeries_Element:
+        r'''
+            See :func:`Morphism._call_` for further information.
+
+            ::NO EXAMPLE::
+        '''
+        return self.__map(element)
