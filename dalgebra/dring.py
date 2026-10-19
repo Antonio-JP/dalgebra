@@ -978,9 +978,8 @@ class DRings(Category):
         ##########################################################
         ### METHODS FOR PUISEUX SERIES
         ##########################################################
-        from .dextension.puiseux import PuiseuxSeries_Ring
         @cached_method
-        def puiseux_field(self, operation: int = 0) -> PuiseuxSeries_Ring:
+        def puiseux_field(self, operation: int = 0) -> Parent:
             r'''
                 Method to get the Puiseux series field of ``self``.
 
@@ -989,24 +988,7 @@ class DRings(Category):
 
                 ::NO EXAMPLE::
             '''
-            output = self._puiseux_field(operation)
-
-            ## We try to create a "default" morphism
-            try:
-                morphism = self.puiseux_morphism(output, operation=operation)
-            except Exception:
-                logger.warning(f"Could not create a default morphism for the Puiseux series field.")
-            try:
-                self._set_coercion_puiseux(morphism)
-            except Exception:
-                logger.warning(f"Could not set the default morphism for the Puiseux series field of {self}.\nAnother morphism may have been already registered.")
-
-            return output
-
-        @cached_method
-        def _puiseux_field(self, operation: int = 0) -> PuiseuxSeries_Ring:
-            r'''Auxiliary method for :func:`puiseux_field` that actually computes the field (::NO EXAMPLE::)'''
-            if self.operation_types()[operation] != "derivation":
+            if self.operator_types()[operation] != "derivation":
                 raise TypeError(f"Operation {operation} is not a derivation, cannot compute Puiseux series field.")
 
             constant_ring = self.constant_ring(operation)
@@ -1021,13 +1003,13 @@ class DRings(Category):
             else:
                 t_name = "t"
 
-            from .dextension.puiseux import PuiseuxSeries
             # We remove the d-structure from the constant ring and we create a new Puiseux series field over it,
             # hence, by default, the new field will be all constants.
+            from .dextension.puiseux import PuiseuxSeries
             return PuiseuxSeries(constant_ring.to_sage(), t_name)
 
         @cached_method
-        def puiseux_morphism(self, operation: int = 0, set_coercion: bool = False, **kwds) -> Morphism:
+        def puiseux_morphism(self, operation: int = 0, **kwds) -> Morphism:
             r'''
                 Method to get the Puiseux morphism of ``self``.
 
@@ -1036,28 +1018,20 @@ class DRings(Category):
 
                 ::NO EXAMPLE::
             '''
-            codomain = self._puiseux_field(operation)
+            codomain = self.puiseux_field(operation)
 
             # We create the morphism
-            from .dextension.puiseux import PSCoerceFromDRing
-            map = self._create_puiseux_map(codomain, operation, **kwds)
-            morphism = PSCoerceFromDRing(self, codomain, map=map)
-
-            if set_coercion:
-                self._set_coercion_puiseux(morphism)
-            return morphism
-
-        def _set_coercion_puiseux(self, morphism: Morphism):
-            r'''Auxiliary method to set the coercion for the Puiseux morphism (::NO EXAMPLE::)'''
-            codomain = morphism.codomain()
-
-            if codomain.has_coerce_map_from(self):
-                logger.warning(f"Could not register coercion for Puiseux morphism of {self} to {codomain}.\nThis is because another morphism was already registered.")
+            if self.constant_ring(operation) is self:
+                def __constant_coercion_map(element):
+                    return codomain(element) # element is part of the base ring of the Puiseux series.
+                map = __constant_coercion_map
             else:
-                codomain.register_coercion(morphism)
+                map = self._puiseux_morphism(codomain, operation, **kwds)
+            from .dextension.puiseux import PSCoerceFromDRing
+            return PSCoerceFromDRing(self, codomain, map=map)
 
         @abstract_method
-        def _create_puiseux_map(self, codomain: PuiseuxSeries_Ring, operation: int = 0, **kwds) -> Morphism:
+        def _puiseux_morphism(self, codomain: Parent, operation: int = 0, **kwds) -> Morphism:
             r'''Method to create the actual map to the Puiseux series (::NO EXAMPLE::)'''
             raise NotImplementedError(f"Method _create_puiseux_map not yet implemented for {self.__class__}")            
 
@@ -2398,9 +2372,9 @@ class DRing_Wrapper(Parent):
     ##########################################################
     ### METHODS FOR PUISEUX SERIES
     ##########################################################
-    def _create_puiseux_map(self, codomain, operation: int = 0, *, c: list[Element], **kwds) -> Morphism:
+    def _puiseux_morphism(self, codomain, operation: int = 0, *, c: list[Element] = None) -> Morphism:
         r'''
-            Method to create the map into the Puiseus series ring.
+            Method to create the map into the Puiseux series ring.
 
             In general, a :class:`DRing_Wrapper` is used to wrap a polynomial ring (or an algebraic extension of it) and provide the d-structure into it. Hence, we are assuming that ``self`` is a polynomial ring `\mathbf{C}[x_1,\ldots,x_n]` or its field of fractions, where `\mathbf{C}` is a field of constants.
 
@@ -2409,7 +2383,7 @@ class DRing_Wrapper(Parent):
             Hence, to define the map to the Puiseux series ring, we need to map the non-constant generators of the polynomial ring into a Puiseux series. We can do this generically when each of the generators derivative are expressions in term of themselves. Let as assume then `D(x) = A(x) / B(x)` for two coprime univariate polynomials `A` and `B`. We are looking for solutions of  that equation in `C{{t}}`. We have two cases:
 
             1. If `A` has roots in `C`, then `x` could be constant and take the value of one of the roots. This is a particular case where the constant ring is not `C`, hence this case may lead to problems later.
-            2. Otherwise, we destinguish three non-constant solution cases:
+            2. Otherwise, we distinguish three non-constant solution cases:
               * If `A` and `B` are both constants, then `x` is a linear function in `t` (`x = (A/B)*t + c`).
               * If `B` is constant and `A` is a quadratic polynomial (i.e., `D(x) = k(x - a)^2`) then we can solve this equation with `x = a - \frac{1}{kt + c}`.
               * Otherwise, we need to solve the equation `B(x)*D(x) = A(x)`, which will lead to some Puiseux series solution determined by a constant `c`.
@@ -2419,35 +2393,43 @@ class DRing_Wrapper(Parent):
             EXAMPLES::
 
                 sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ)
+                sage: B.puiseux_field() 
+                Formal Puiseux Series Ring in t over Differential Ring [[Rational Field], (0,)]
+                sage: B.puiseux_morphism()
+                Generic morphism:
+                  From: Differential Ring [[Rational Field], (0,)]
+                  To:   Formal Puiseux Series Ring in t over Differential Ring [[Rational Field], (0,)]
                 sage: R = DifferentialRing(QQ[x], [1])
+                sage: R.set_constant(DifferentialRing(QQ))
+                sage: x = R.gens()[0]
                 sage: P = R.puiseux_field() # impossible to create the default morphism
-                sage: S = R.puiseux_morphism(c=[0], set_default=True)
-                sage: P(x)
+                sage: S = R.puiseux_morphism(c=(0,))
+                sage: S(x)
                 t
-                sage: P(x^2)
-                t^2
+                sage: S(x^2)
+                t^(2)
                 sage: S(x^3 - 3*x + 2)
-                t^3 - 3*t + 2
+                2 - 3*t + t^(3)
 
             It also work for other constants::
 
-                sage: S2 = R.puiseux_morphism(c=[1])
+                sage: S2 = R.puiseux_morphism(c=(1,))
                 sage: S2(x)
-                t + 1
+                1 + t
 
             And we can have other derivations::
 
-                sage: R = DiffferentialRing(QQ[x], ['(2/3)*(x-3)^2']) # x == exp(t) + C
+                sage: R = DifferentialRing(QQ[x], ['(2/3)*(x-3)^2']) # derivation with a quadratic polynomial
+                sage: R.set_constant(DifferentialRing(QQ))
                 sage: P = R.puiseux_field() # impossible to create the default morphism
-                sage: S = R.puiseux_morphism(c=[0], set_default=True)
-                sage: P(x)
+                sage: S = R.puiseux_morphism(c=(0,))
+                sage: S(x)
+                -3/2*t^(-1) + 3 + O(t^(21))
         '''
-        ## Base case: the wrapped ring are all constant, hence the Puiseux morphism is the trivial case
-        if self.constant_ring(operation) == self:
-            def __constant_coercion_map(element):
-                return codomain(element) # element is part of the base ring of the Puiseux series.
-            return __constant_coercion_map
-
+        if c is None:
+            raise ValueError("The constant `c` must be provided to create the morphism into the Puiseux series ring.")
+        
         ## We check if the wrapped ring is a field. If it is, it must be a fraction field of a polynomial ring.
         ## Otherwise, it must be only a polynomial ring.
         if self.is_field():
@@ -2462,23 +2444,26 @@ class DRing_Wrapper(Parent):
             poly_ring = self.wrapped
 
         constants = codomain.base()
-        c = [constants(ci.to_sage()) for ci in c] # casting the constants into the base ring of the Puiseux series
+        c = [constants(ci) for ci in c] # casting the constants into the base ring of the Puiseux series
 
         variable_map = dict()
         for (i,x) in enumerate(self.gens()): # we check generator by generator
             if not x.d_constant(operation): 
+                xd = x.operation(operation)
+                if len(xd.variables()) > 0 and xd.variables() != (x,):
+                    raise TypeError(f"Derivation of generator {x} is {xd} which not only depends on {x}.")
                 # We compute a Puiseux series for this element
-                A = poly_ring(x.operation(operation).numerator())
-                B = poly_ring(x.operation(operation).denominator())
+                A = poly_ring(xd.numerator().to_sage())
+                B = poly_ring(xd.denominator().to_sage())
                 a = A.leading_coefficient()
                 A_ = A // a # monic polynomial
 
-                if A.to_sage()(c[i]) == 0: ## Constant case: the constant provided annihilates A
+                if A(**{str(x): c[i]}) == 0: ## Constant case: the constant provided annihilates A
                     variable_map[str(x)] = codomain(c[i])
-                elif self.parent()(B).d_constant(operation) and self.parent()(A).d_constant(operation): ## Both A and B are constants, hence the solution is linear in t
+                elif self(B).d_constant(operation) and self(A).d_constant(operation): ## Both A and B are constants, hence the solution is linear in t
                     t = codomain.gens()[0]
                     variable_map[str(x)] = constants(A/B)*t + c[i]
-                elif self.parent()(B).d_constant(operation) and A_.is_square():
+                elif self(B).d_constant(operation) and A_.is_square():
                     t = codomain.gens()[0]
                     k = constants(a/B)
                     gamma = constants(-A_.sqrt().constant_coefficient())
@@ -2497,9 +2482,12 @@ class DRing_Wrapper(Parent):
 
         ## Now we have the variables mapped into the Puiseux series. We create now the callable for mapping every element
         def __generic_coercion_map(element):
+            r'''Generic coercion map for the Puiseux series (::NO EXAMPLE::)'''
             num, den = element.to_sage().numerator(), element.to_sage().denominator()
             num, den = poly_ring(num), poly_ring(den)
-            return num(**variable_map) / den(**variable_map)           
+            return num(**variable_map) / den(**variable_map) 
+
+        return __generic_coercion_map          
     
 
     ## Coercion methods
@@ -2905,6 +2893,23 @@ class DFractionField(FractionField_generic):
         output = self.base().to_sage().fraction_field()
         output, _ = DFractionField.flatten_fraction_field(output)
         return output
+
+    ##########################################################
+    ### METHODS FOR PUISEUX SERIES
+    ##########################################################
+    def _puiseux_morphism(self, codomain, operation: int = 0, **kwds) -> Morphism:
+        r'''
+            Method to create the actual map between the field of fractions and a Puiseux Series ring.
+
+            This method relies on the morphism for the base ring and extends it as a ring homomorphism to the 
+            corresponding field of fractions.
+        '''
+        base_map = self.base()._puiseux_morphism(codomain, operation, **kwds)
+        def __fraction_coercion_map(element):
+            r'''Auxiliar method for maps in the field of fractions. (::NO EXAMPLE::)'''
+            return base_map(element.numerator()) / base_map(element.denominator())
+        
+        return __fraction_coercion_map
 
     ################################################################################################
     ### Methods from FractionField_generic

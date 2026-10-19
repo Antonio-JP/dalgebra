@@ -409,7 +409,7 @@ class PuiseuxSeries_Element(Element):
             elif n < self.order(): # this index is below the order, then we return zero
                 self.__cache_computed[n] = self.parent().base().zero()
             else: # otherwise, we return the output of the map
-                self.__cache_computed[n] = self.__map(n)
+                self.__cache_computed[n] = self.parent().base()(self.__map(n))
 
         return self.__cache_computed[n]
 
@@ -1578,7 +1578,7 @@ class PuiseuxSeries_Element(Element):
                 sage: f = ~(1 - R.gen())
                 sage: sage_f = f.to_sage()
                 sage: (sage_f.prec(), sage_f[0], sage_f[1])
-                (20, 1, 1)
+                (21, 1, 1)
                 sage: R(R.to_sage()(1).add_bigoh(3))
                 Traceback (most recent call last):
                 ...
@@ -1629,7 +1629,7 @@ class PuiseuxSeries_Ring(Parent):
             TypeError: The base must be a ring with operators
 
         TODO (puiseux): (1) add possibility to create a Puiseux series ring with a non-trivial constant ring (i.e. a differential field with non-trivial constants)
-        TODO (puiseux): (2) add possibility to create a Puiseux series ring with a non-trivial derivation (i.e. the generator is not derivated to 1).
+        TODO (puiseux): (2) add possibility to create a Puiseux series ring with a non-trivial derivation (i.e. the generator is not derived to 1).
         TODO (puiseux): (3) add possibility to create multivariate Puiseux series rings (i.e. several generators with several derivations)
     '''
     Element = PuiseuxSeries_Element
@@ -2351,7 +2351,7 @@ class PSCoerceToSage(Morphism):
                 self.domain().base().to_sage()(element[k]) * var**k
                 for k in rat_range(element.order(), PS_GLOBAL_BOUND+(1/element.ramification()), 1/element.ramification())
             )
-            return out.add_bigoh(PS_GLOBAL_BOUND)
+            return out.add_bigoh(PS_GLOBAL_BOUND+1)
             
 
 
@@ -2373,10 +2373,11 @@ class PSConvertFromSage(Morphism):
 
             ::NO EXAMPLE::
         '''
+        if element.prec() < oo:
+            raise ValueError("A finite-precision Sage Puiseux series cannot be reconstructed exactly.")
         x = self.codomain().gen()
         B = self.codomain().base()
-        return sum(B(v) * x**k for k, v in element._items())
-
+        return sum(B(v) * x**k for k, v in zip(element.exponents(), element.coefficients()))
 
 
 class PSCoerceFromDRing(Morphism):

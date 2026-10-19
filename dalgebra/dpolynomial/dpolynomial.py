@@ -2718,9 +2718,9 @@ class DPolynomialRing_Monoid(Parent):
         '''
         return self.change_ring(self.base().add_constants(*new_constants))
 
-    def constant_ring(self):
+    def constant_ring(self, operation: int = 0):
         r'''DRing method to compute the constant ring of the ring of d-polynomials. (::NO EXAMPLE::)'''
-        return self.base().constant_ring()
+        return self.base().constant_ring(operation)
 
     def linear_operator_ring(self) -> Ring:
         r'''
@@ -2930,6 +2930,94 @@ class DPolynomialRing_Monoid(Parent):
         r'''DRing method to compute the lcm for the denominators of a d-polynomial. (::NO EXAMPLE::)'''
         from sage.arith.functions import lcm
         return lcm(element.denominator() for element in elements)
+
+    ##########################################################
+    ### METHODS FOR PUISEUX SERIES
+    ##########################################################
+    def _puiseux_morphism(self, 
+                          codomain, operation: int = 0, *, 
+                          images: tuple[tuple[str,tuple[DPolynomial, tuple[Element]] | Element]], 
+                          map = None, 
+                          **kwds) -> Morphism:
+        r'''
+            Method to create the morphism to Puiseux series for a D-Polynomial ring with a given operation.
+
+            The set of images are a tuple (i.e., hashable) of the form `(varname, data)` where `data` contains all the information 
+            necessary to know the Puiseux series. It can have two formats:
+            * `(equation, values)` such that the image of the given variable is the D-algebraic series solution (see construction of d-algebraic puiseux series).
+              The equations must only have a unique d-variable involving only the given operation `operation`. Other cases are not included.
+            * `series`, which is a Puiseux series to be assigned for the given variable.
+
+            Note: arguments in ``kwds`` may be used when map is None to create the transformation between coefficients and Puiseux series.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ)
+                sage: T.<u,v> = DPolynomialRing(B)
+                sage: P = T.puiseux_field()
+                sage: sin = P.element_class(P, coefficient_map=lambda n : 0 if ZZ(n)%2==0 else (-1)**(ZZ(n)//2)/factorial(n), ramification=1, order=1)
+                sage: exp = P.element_class(P, coefficient_map=lambda n : 1/factorial(n), ramification=1, order=0)
+                sage: m = T.puiseux_morphism(images=(('u', sin), (v, exp)))
+                sage: m(u[1]^2 + u[0]^2) == 1
+                20
+                sage: m(v[1] - v[0]) == 0
+                20
+
+            We can also have a non-constant coefficient ring, but the information must be provided to the morphism::
+
+                sage: R1 = DifferentialRing(QQ['x'], [1])
+                sage: R1.set_constant(B)
+                sage: x = R1.gens()[0]
+                sage: T2.<u> = DPolynomialRing(R1)
+                sage: P2 = T2.puiseux_field()
+                sage: P is P2
+                True
+                sage: m = T2.puiseux_morphism(images=(('u', exp),), map=R1.puiseux_morphism(c=(0,)))
+                sage: m(x)
+                t
+                sage: m(x*u[0]) == m(x)*exp
+                20
+                sage: m((x*u[0]).derivative()) == m(x*u[1] + u[0])
+                20
+        '''
+        final_images = dict()
+        for var, data in images:
+            if var in self.gens():
+                var = var.variable_name()
+            elif isinstance(var, str) and not var in self.variable_names():
+                raise ValueError(f"[puiseux_morphism] Variable {var} is not in the ring of d-polynomials")
+
+            if isinstance(data, tuple): 
+                equ, data = data
+                if not isinstance(equ, DPolynomial):
+                    raise TypeError(f"[puiseux_morphism] The equation {equ} is not a d-polynomial")
+                elif len(equ.infinite_variables()) != 1:
+                    raise ValueError(f"[puiseux_morphism] The equation {equ} has more than one infinite variable, which is not allowed")
+
+                series = codomain.element_class(codomain, differential_equation=equ, initial_conditions=data)
+            else:
+                series = codomain(data)
+            final_images[var] = series
+
+        if len(final_images) != self.ngens():
+            raise ValueError(f"[puiseux_morphism] The number of images ({len(final_images)}) is not equal to the number of variables ({self.ngens()})")
+
+        ## We create the map as an EvaluationMap
+        ## We need a map from DPolynomials to the Puiseux series going through the coefficients.
+        from ..dextension.puiseux import PSCoerceFromDRing
+        if map is None or not isinstance(map, PSCoerceFromDRing):
+            map = self.base().puiseux_morphism(operation, **kwds)
+
+        b_s = self.base().convert_map_from(self) # base <- self
+        p_b = map # puiseux <- base
+        p_s = p_b * b_s # puiseux <- self
+
+        to_wrap = EvaluationMorphism_DPolynomial(self, codomain, final_images, domain_to_codomain=p_s)
+        def __dpoly_coercion_map(element):
+            r'''Generic coercion map for the DPolynomial (::NO EXAMPLE::)'''
+            return to_wrap(element)
+        return __dpoly_coercion_map
 
     @cached_method
     def to_sage(self):
@@ -4490,7 +4578,7 @@ class EvaluationMorphism_DPolynomial(Morphism):
         ::NO EXAMPLE::
     '''
     @staticmethod
-    def decide_codomain(domain: DPolynomialRing_Monoid, images: dict[Element]) -> tuple[Parent, Morphism]:
+    def decide_codomain(domain: DPolynomialRing_Monoid, images: dict[Element], map: Morphism = None) -> tuple[Parent, Morphism]:
         r'''Static method to return the codomain for a given set of evaluations with a morphism to cast variables (::NO EXAMPLE::)'''
         from functools import reduce
         final_base = reduce(pushout,
@@ -4546,7 +4634,7 @@ class EvaluationMorphism_DPolynomial(Morphism):
                 else:
                     rem_mon[(v,o)] = m._variables[(v,o)]
             rem_mon = self.domain()(self.domain().monoids().element_class(self.domain().monoids(), rem_mon)) if len(rem_mon) > 0 else self.domain().one()
-            result += self.__domain_to_codomain(rem_mon) * self.codomain().base()(c) * ev_mon
+            result += self.__domain_to_codomain(c*rem_mon) * ev_mon
         return result
 
 
