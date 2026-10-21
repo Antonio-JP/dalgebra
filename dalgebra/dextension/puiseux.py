@@ -2039,6 +2039,85 @@ class PuiseuxSeries_Ring(Parent):
             out_map = lambda k: element[k-1] / QQ(k) if k != 0 else self.base().zero()
             return self.element_class(self, coefficient_map=out_map, order=element.order()+1, ramification=element.ramification())
 
+    def algebraic_element(self, equation: Element, *conditions: tuple[Rational, Element], map: PSCoerceFromDRing = None) -> PuiseuxSeries_Element:
+        r'''
+            Method to compute a d-algebraic element in ``self``.
+
+            This method computes a Puiseux series solution to a differential polynomial equation with some initial conditions.
+            This method follows an integral approach, meaning that it will report a detailed error if the conditions are not 
+            properly given, with suggestions for the user.
+
+            The idea behind this is the following: given a differential polynomial `P(y) = 0`, of order `d` that is linear 
+            in its highest order term, we can write it as `y^{(d)} = f(x, y, y', ..., y^{(d-1)})`, for a rational function `f`.
+            This allows naturally to compute the coefficients of the Puiseux series solutions recursively, since the element
+            `n/e+d` can be written in terms of the previous terms. Hence, knowing the initial conditions up to order `d-1` is 
+            enough to compute as many coefficients as we want.
+
+            The main difficulty here is to check whether the equation has solutions with lower orders and how to check which 
+            conditions are forced, which are flexible and which are impossible. To work with this, we divide this method in two
+            steps:
+
+            1. Compute with the Newton Polygon plus the Fréchet derivative of the equation the coefficients until order `d-1`.
+            2. Compute recursively the coefficients of the solution using the recursive formula given by the equation.
+
+            It is only in step 1 where we need the initial conditions. Initial conditions has the following format: `(d, c)` where
+            `d` is a rational number and `c` is an element of the base field. When we check the possible orders of a solution, we may get 
+            several candidates as the slopes of the faces of the Newton polygon. Then, its characteristic polynomial provides an algebraic
+            equation for the actual element to be in that order.
+
+            Hence, the initial condition `(d,c)` will be picked among the different options. We have the following cases:
+            * If there is no choice for the order (i.e., it must be of a fixed order) we allow `d` to be not given (i.e., the input is 
+              `c` instead of `(d,c)`). But if it is actually given and a choice in the initial condition is available, we will check the value is correct.
+            * Once we are done with the order, we will compute the characteristic polynomial. If the polynomial has 1 valid option, we assume 
+              only one initial condition works, hence we simply compute it a move forward.
+            * Another option is that the polynomial has degree greater than 1, i.e., several options are possible. Here we check the condition 
+              is valid (i.e., satisfies the algebraic condition).
+            * Otherwise, the polynomial is zero and the initial condition is fully free. In this case, the value of `c` will determine which 
+              coefficient we set for the given order.
+            It is in this process where the integral approach of the algorithm raises: if we detect an error here, we indicate what went wrong,
+            and we will provide the user the possibility of fixing the input by suggesting a change in the input ``conditions``.
+        '''
+        ## We check the input of the equation
+        from ..dpolynomial.dpolynomial import DPolynomial
+        if not isinstance(equation, DPolynomial):
+            raise TypeError("The equation must be a differential polynomial over the base ring.")
+        elif len(equation.infinite_variables()) > 0:
+            raise TypeError("The equation must be a differential polynomial over the base ring, not over the Puiseux series ring.")
+        elif equation.parent().noperators() != 1:
+            raise TypeError("The equation must be a differential polynomial over the base ring with one operator.")
+        elif not equation.parent().is_differential():
+            raise TypeError("The equation must be a differential polynomial over the base ring with one operator.")
+        elif not self.has_coerce_map_from(equation.parent().puiseux_field()):
+            raise TypeError("The equation must be a differential polynomial over the base ring of the Puiseux series ring.")
+
+        u = equation.infinite_variables()[0] # generator of the equation
+        d = equation.order(u) # order of the equation
+        if equation.degree(u[d]) != 1:
+            raise ValueError("The equation must be linear in its highest order term.")
+
+        ## We ensure the map is valid for the coefficients
+        if map is None:
+            map = equation.parent().base().puiseux_morphism()
+        if not isinstance(map, PSCoerceFromDRing) or map.codomain() != equation.parent().puiseux_field():
+            raise TypeError("The map must be a coercion from the base ring of the equation to the Puiseux series ring.")
+
+        ## The map is correct fr the coefficients. Now we ensure the codomain is ``self``
+        if map.codomain() != self:
+            map_self = self.coerce_map_from(map.codomain())*map
+        else:
+            map_self = map
+
+        ## We can start working here. Recall the steps are as follows:
+        ## 1. Compute the order for the normal recursion to work (let us call it `D`).
+        ## 2. Compute with the Newton Polygon plus the Fréchet derivative of the equation for values until order `D-1`.
+        ## 3. Compute recursively coefficients of higher orders.
+        ## 4. Collect the result into a callable to be used by the d-algebraic Puiseux series.
+        ## 5. Return the d-algebraic Puiseux series element.
+
+        
+
+        raise NotImplementedError("Algebraic elements over Formal Puiseux Series not yet implemented")
+
     def __build_derivation(self) -> DerivationMap:
         r'''
             Internal method to build the derivation of the field of Puiseux series.
