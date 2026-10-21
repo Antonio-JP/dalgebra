@@ -48,13 +48,15 @@ import logging
 from functools import wraps
 from itertools import product
 
-from sage.arith.misc import GCD
+from sage.arith.misc import GCD, falling_factorial
 from sage.calculus.functional import diff
 from sage.categories.category import Category
 from sage.categories.monoids import Monoids
 from sage.categories.morphism import Morphism, SetMorphism
 from sage.categories.pushout import ConstructionFunctor, pushout
 from sage.categories.sets_cat import Sets
+from sage.geometry.polyhedron.constructor import Polyhedron
+from sage.geometry.polyhedron.parent import Polyhedron_QQ_ppl
 from sage.matrix.constructor import matrix
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex
@@ -64,6 +66,7 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.infinite_polynomial_ring import InfinitePolynomialRing, InfinitePolynomialGen, InfinitePolynomialRing_dense, InfinitePolynomialRing_sparse
 from sage.rings.infinity import Infinity as oo
 from sage.rings.integer_ring import ZZ
+from sage.rings.rational_field import QQ
 from sage.rings.ring import Ring
 from sage.sets.family import LazyFamily
 from sage.structure.element import Element, Matrix
@@ -1235,6 +1238,114 @@ class DPolynomial(Element):
         '''
         output = {m : coeff.reduce_algebraic(polynomials) for (m, coeff) in zip(self.monomials(), self.coefficients())}
         return self.parent().element_class(self.parent(), output)
+
+    ##########################################################
+    ### METHODS FOR PUISEUX SERIES
+    ##########################################################
+    @cached_method
+    def newton_polygon(self, gen: DPolynomialGen = None, map = None) -> Polyhedron_QQ_ppl:
+        r'''
+            Method to compute the Newton polyhedron of a d-algebraic polynomial w.r.t. a variable.
+
+            This method can only work when ``self`` is a univariate differential polynomial. We will allow having several d-variables 
+            if the ``map`` given includes an image as Puiseux series for said variables. The variable ``gen`` will be consider as 
+            the unknown variable.
+
+            If ``gen`` is not given, we will take the first variable of the parent ring. 
+            If ``map`` is not given, we try to create a Puiseux morphism by default over the coefficients.
+
+            This method return both the Polyhedron object and the list of characteristic polynomials for each face.
+            of the faces of the Newton polygon.
+
+            EXAMPLES::
+
+                sage: from dalgebra import *
+                sage: B = DifferentialRing(QQ['g_2', 'g_3'])
+                sage: g_2, g_3 = B.gens()
+                sage: T.<u> = DPolynomialRing(B)
+                sage: equ = u[1]^2 - 4*u[0]^3 - g_2*u[0] - g_3
+                sage: equ.newton_polygon()
+                (A 2-dimensional polyhedron in QQ^2 defined as the convex hull of 3 vertices and 1 ray,
+                  ((1, C_^2 - g_3), (-2, -4*C_^3 + 4*C_^2), (0, 0)))
+                sage: equ.newton_polygon()[0].vertices()
+                (A vertex at (-2, 2), A vertex at (0, 0), A vertex at (0, 3))
+                
+            We can only work with non-constant coefficients::
+
+                sage: B = DifferentialRing(QQ['x','n'], [1,0])
+                sage: B.set_constant(DifferentialRing(QQ['n']))
+                sage: x, n = B.gens()[0]
+                sage: puiseux_map = B.puiseux_morphism(c=(1,0))
+                sage: T.<u> = DPolynomialRing(B)
+                sage: equ = x^2*u[2] + x*u[1] + (x^2 - n^2)*u[0]
+                sage: equ.newton_polygon(map=puiseux_map)
+                (A 1-dimensional polyhedron in QQ^2 defined as the convex hull of 1 vertex and 1 ray,
+                  ((0, 0),))
+        '''
+        if self.parent().noperators() > 1:
+            raise NotImplementedError("[newton_polygon] Method implemented only for 1 operator.")
+        elif not self.parent().is_differential():
+            raise NotImplementedError("[newton_polygon] Method implemented only for differential polynomials.")
+
+        if gen is None:
+            gen = self.parent().gens()[0]
+
+        from ..dextension.puiseux import PSCoerceFromDRing
+        parent_wo_gen = self.parent().remove_variables(gen)
+        if map is None:
+            map = parent_wo_gen.puiseux_morphism() # raise an error if not possible
+        if not isinstance(map, PSCoerceFromDRing):
+            raise TypeError("[newton_polygon] The map must be a Puiseux morphism")
+        elif not map.domain() is parent_wo_gen:
+            raise ValueError("[newton_polygon] The map must be a Puiseux morphism from the parent without the variable")
+
+        monomials = self.monomials(gen)
+        coefficients = [
+            map(
+                parent_wo_gen(
+                    self.coefficient_full(m) if m != 1 else self.constant_coefficient(gen)
+                )
+            ) for m in monomials]
+        order = self.order(gen)
+
+        ## We are now ready to compute the vertices. Remember the way the Newton polygon is computed:
+        ## we take for each monomial a point in the plane `(A,B)` where 
+        ##   * `A` can be computed as `a - e_1 - 2e_2 - ... - de_d` where `a` is the order of the coefficient and `e_i` is the degree of the monomial in the variable `gen[i]` (i.e., the order of the variable).
+        ##   * `B` is the degree of the monomial in the variable `gen`
+        points = [(coeff.order() - sum(mon.degree(mon.parent()(gen[i]))*i for i in range(1, order+1)),
+                   mon.degree())
+                   for coeff, mon in zip(coefficients, monomials)]
+        polyhedron = Polyhedron(vertices=points, rays=[(1,0)], base_ring=QQ)
+        breakpoint()
+        ## We compute now the characteristic polynomials for each face of the Newton polygon:
+        faces = [face for face in polyhedron.faces(1) if len(face.vertices()) > 1]
+        vertices_per_face = [sorted(face.vertices(), key=lambda v: v[0]) for face in faces] # we sorted the vertices by x-coordinate
+        inclinations = [(v[0][0]-v[-1][0])/(v[-1][1]-v[0][1]) for v in vertices_per_face] # we compute the inclination of each face
+
+        poly_ring = PolynomialRing(map.codomain().base().to_sage(), 'C_')
+        C = poly_ring.gens()[0]
+        characteristic_polynomials = [
+            sum(
+                poly_ring(coeff.trailing_coefficient())*C**(P[1]) * 
+                prod(falling_factorial(inclination, i)**mon.degree(mon.parent()(gen[i])) for i in range(1, order+1))
+                for coeff, mon, P in zip(coefficients, monomials, points) if P in face)
+            for face, inclination in zip(faces, inclinations)
+        ]
+
+        ## We check if 0 is a valid inclination. If not, we add it
+        if 0 not in inclinations:
+            inclinations.append(0)
+            ## We search for the left-most vertex in the polygon
+            P = min(polyhedron.vertices(), key=lambda v: v[0])
+            characteristic_polynomials.append(sum(
+                poly_ring(coeff.trailing_coefficient())*C**(P[1]) * 
+                prod(falling_factorial(0, i)**mon.degree(mon.parent()(gen[i])) for i in range(1, order+1))
+                for coeff, mon, P2 in zip(coefficients, monomials, points) if P2 == P))
+
+        ## We clean the zero solution (if possible) from the characteristic polynomials
+        characteristic_polynomials = [poly // C**min(m.degree() for m in poly.monomials()) for poly in characteristic_polynomials]
+
+        return polyhedron, tuple(zip(inclinations, characteristic_polynomials))
 
     ###################################################################################
     ### Sylvester methods

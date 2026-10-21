@@ -1021,7 +1021,9 @@ class DRings(Category):
             codomain = self.puiseux_field(operation)
 
             # We create the morphism
-            if self.constant_ring(operation) is self:
+            if self is codomain:
+                return self.hom(self) # identity map
+            elif self.constant_ring(operation) is self:
                 def __constant_coercion_map(element):
                     return codomain(element) # element is part of the base ring of the Puiseux series.
                 map = __constant_coercion_map
