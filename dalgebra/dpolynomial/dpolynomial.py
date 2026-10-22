@@ -1290,11 +1290,11 @@ class DPolynomial(Element):
         if gen is None:
             gen = self.parent().gens()[0]
 
-        from ..dextension.puiseux import PSCoerceFromDRing
+        from ..dextension.puiseux import PuiseuxSeries_Ring
         parent_wo_gen = self.parent().remove_variables(gen)
         if map is None:
             map = parent_wo_gen.puiseux_morphism() # raise an error if not possible
-        if not isinstance(map, PSCoerceFromDRing):
+        if not isinstance(map.codomain(), PuiseuxSeries_Ring) or not map.codomain().is_valid_map(map):
             raise TypeError("[newton_polygon] The map must be a Puiseux morphism")
         elif not map.domain() is parent_wo_gen:
             raise ValueError("[newton_polygon] The map must be a Puiseux morphism from the parent without the variable")
@@ -1316,7 +1316,6 @@ class DPolynomial(Element):
                    mon.degree())
                    for coeff, mon in zip(coefficients, monomials)]
         polyhedron = Polyhedron(vertices=points, rays=[(1,0)], base_ring=QQ)
-        breakpoint()
         ## We compute now the characteristic polynomials for each face of the Newton polygon:
         faces = [face for face in polyhedron.faces(1) if len(face.vertices()) > 1]
         vertices_per_face = [sorted(face.vertices(), key=lambda v: v[0]) for face in faces] # we sorted the vertices by x-coordinate
@@ -1325,10 +1324,10 @@ class DPolynomial(Element):
         poly_ring = PolynomialRing(map.codomain().base().to_sage(), 'C_')
         C = poly_ring.gens()[0]
         characteristic_polynomials = [
-            sum(
+            sum((
                 poly_ring(coeff.trailing_coefficient())*C**(P[1]) * 
                 prod(falling_factorial(inclination, i)**mon.degree(mon.parent()(gen[i])) for i in range(1, order+1))
-                for coeff, mon, P in zip(coefficients, monomials, points) if P in face)
+                for coeff, mon, P in zip(coefficients, monomials, points) if P in face), start = poly_ring.zero())
             for face, inclination in zip(faces, inclinations)
         ]
 
@@ -1337,16 +1336,25 @@ class DPolynomial(Element):
             inclinations.append(0)
             ## We search for the left-most vertex in the polygon
             P = min(polyhedron.vertices(), key=lambda v: v[0])
-            characteristic_polynomials.append(sum(
+            characteristic_polynomials.append(sum((
                 poly_ring(coeff.trailing_coefficient())*C**(P[1]) * 
                 prod(falling_factorial(0, i)**mon.degree(mon.parent()(gen[i])) for i in range(1, order+1))
-                for coeff, mon, P2 in zip(coefficients, monomials, points) if P2 == P))
+                for coeff, mon, P2 in zip(coefficients, monomials, points) if P2 == P), start = poly_ring.zero()))
 
         ## We clean the zero solution (if possible) from the characteristic polynomials
-        characteristic_polynomials = [poly // C**min(m.degree() for m in poly.monomials()) for poly in characteristic_polynomials]
+        characteristic_polynomials = [poly // C**min(m.degree() for m in poly.monomials()) if poly != 0 else poly for poly in characteristic_polynomials]
 
         return polyhedron, tuple(zip(inclinations, characteristic_polynomials))
 
+    @cached_method
+    def frechet_coefficients(self, gen: DMonomialGen = None) -> tuple[DPolynomial]:
+        r'''
+            Return the coefficients (to be evaluated) of the Fréchet derivative of a polynomial.
+        '''
+        if gen is None:
+            gen = self.parent().gens()[0]
+        return tuple(self.partial(gen[i]) for i in range(self.order(gen)+1))
+    
     ###################################################################################
     ### Sylvester methods
     ###################################################################################
@@ -3095,9 +3103,11 @@ class DPolynomialRing_Monoid(Parent):
         final_images = dict()
 
         ## We need a map from DPolynomials to the Puiseux series going through the coefficients.
-        from ..dextension.puiseux import PSCoerceFromDRing
-        if map is None or not isinstance(map, PSCoerceFromDRing):
+        from ..dextension.puiseux import PuiseuxSeries_Ring
+        if map is None: 
             map = self.base().puiseux_morphism(operation, **kwds)
+        if not isinstance(map.codomain(), PuiseuxSeries_Ring) or not map.codomain().is_valid_map(map):
+            raise TypeError(f"[puiseux_morphism] The map {map} is not a valid map to the Puiseux series")
 
         for var, data in images:
             if var in self.gens():
