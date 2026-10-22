@@ -2478,7 +2478,7 @@ class DRing_Wrapper(Parent):
                     y = equation_ring.gens()[0]
                     equation = y[1] - A(y[0]) / B(y[0])
 
-                    variable_map[str(x)] = codomain.element_class(differential_equation = equation, initial_conditions=[c[i]])
+                    variable_map[str(x)] = codomain.algebraic_element(equation, c[i])
             else:
                 variable_map[str(x)] = constants(x)
 

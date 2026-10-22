@@ -3093,6 +3093,12 @@ class DPolynomialRing_Monoid(Parent):
                 20
         '''
         final_images = dict()
+
+        ## We need a map from DPolynomials to the Puiseux series going through the coefficients.
+        from ..dextension.puiseux import PSCoerceFromDRing
+        if map is None or not isinstance(map, PSCoerceFromDRing):
+            map = self.base().puiseux_morphism(operation, **kwds)
+
         for var, data in images:
             if var in self.gens():
                 var = var.variable_name()
@@ -3106,7 +3112,7 @@ class DPolynomialRing_Monoid(Parent):
                 elif len(equ.infinite_variables()) != 1:
                     raise ValueError(f"[puiseux_morphism] The equation {equ} has more than one infinite variable, which is not allowed")
 
-                series = codomain.element_class(codomain, differential_equation=equ, initial_conditions=data)
+                series = codomain.algebraic_element(equ, *data, map=map)
             else:
                 series = codomain(data)
             final_images[var] = series
@@ -3115,11 +3121,6 @@ class DPolynomialRing_Monoid(Parent):
             raise ValueError(f"[puiseux_morphism] The number of images ({len(final_images)}) is not equal to the number of variables ({self.ngens()})")
 
         ## We create the map as an EvaluationMap
-        ## We need a map from DPolynomials to the Puiseux series going through the coefficients.
-        from ..dextension.puiseux import PSCoerceFromDRing
-        if map is None or not isinstance(map, PSCoerceFromDRing):
-            map = self.base().puiseux_morphism(operation, **kwds)
-
         b_s = self.base().convert_map_from(self) # base <- self
         p_b = map # puiseux <- base
         p_s = p_b * b_s # puiseux <- self

@@ -496,7 +496,7 @@ class DMonomial(Element):
         r'''
             Tries to get the previous element of an operation.
 
-            It only works when we have a variable, otherwise,  we would need more information.
+            It only works when we have a variable, otherwise, we would need more information.
 
             ::NO EXAMPLE::
         '''
