@@ -1275,7 +1275,7 @@ class DPolynomial(Element):
                 sage: B = DifferentialRing(QQ['x','n'], [1,0])
                 sage: B.set_constant(DifferentialRing(QQ['n']))
                 sage: x, n = B.gens()[0]
-                sage: puiseux_map = B.puiseux_morphism(c=(1,0))
+                sage: puiseux_map = B.puiseux_morphism(1,0)
                 sage: T.<u> = DPolynomialRing(B)
                 sage: equ = x^2*u[2] + x*u[1] + (x^2 - n^2)*u[0]
                 sage: equ.newton_polygon(map=puiseux_map)
@@ -3054,7 +3054,7 @@ class DPolynomialRing_Monoid(Parent):
     ### METHODS FOR PUISEUX SERIES
     ##########################################################
     def _puiseux_morphism(self, 
-                          codomain, operation: int = 0, *, 
+                          codomain, *, operation: int = 0,
                           images: tuple[tuple[str,tuple[DPolynomial, tuple[Element]] | Element]], 
                           map = None, 
                           **kwds) -> Morphism:
@@ -3105,7 +3105,7 @@ class DPolynomialRing_Monoid(Parent):
         ## We need a map from DPolynomials to the Puiseux series going through the coefficients.
         from ..dextension.puiseux import PuiseuxSeries_Ring
         if map is None: 
-            map = self.base().puiseux_morphism(operation, **kwds)
+            map = self.base().puiseux_morphism(operation=operation, **kwds)
         if not isinstance(map.codomain(), PuiseuxSeries_Ring) or not map.codomain().is_valid_map(map):
             raise TypeError(f"[puiseux_morphism] The map {map} is not a valid map to the Puiseux series")
 

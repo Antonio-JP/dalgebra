@@ -166,6 +166,7 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 from sage.rings.polynomial.polynomial_ring import PolynomialRing_generic
 from sage.rings.polynomial.multi_polynomial_ring import MPolynomialRing_base
 from sage.rings.quotient_ring import QuotientRing_generic
+from sage.rings.rational import Rational
 from sage.rings.ring import Ring, CommutativeRing
 from sage.structure.element import parent, Element
 from sage.structure.factory import UniqueFactory
@@ -1009,7 +1010,7 @@ class DRings(Category):
             return PuiseuxSeries(constant_ring.to_sage(), t_name)
 
         @cached_method
-        def puiseux_morphism(self, operation: int = 0, **kwds) -> Morphism:
+        def puiseux_morphism(self, *args, operation: int = 0, **kwds) -> Morphism:
             r'''
                 Method to get the Puiseux morphism of ``self``.
 
@@ -1028,12 +1029,12 @@ class DRings(Category):
                     return codomain(element) # element is part of the base ring of the Puiseux series.
                 map = __constant_coercion_map
             else:
-                map = self._puiseux_morphism(codomain, operation, **kwds)
+                map = self._puiseux_morphism(codomain, *args, operation=operation, **kwds)
             from .dextension.puiseux import PSCoerceFromDRing
             return PSCoerceFromDRing(self, codomain, map=map)
 
         @abstract_method
-        def _puiseux_morphism(self, codomain: Parent, operation: int = 0, **kwds) -> Morphism:
+        def _puiseux_morphism(self, codomain: Parent, *args, operation: int = 0, **kwds) -> Morphism:
             r'''Method to create the actual map to the Puiseux series (::NO EXAMPLE::)'''
             raise NotImplementedError(f"Method _create_puiseux_map not yet implemented for {self.__class__}")            
 
@@ -2374,7 +2375,7 @@ class DRing_Wrapper(Parent):
     ##########################################################
     ### METHODS FOR PUISEUX SERIES
     ##########################################################
-    def _puiseux_morphism(self, codomain, operation: int = 0, *, c: list[Element] = None) -> Morphism:
+    def _puiseux_morphism(self, codomain, *c: Element | tuple[Rational,Element], operation : int = 0) -> Morphism:
         r'''
             Method to create the map into the Puiseux series ring.
 
@@ -2406,7 +2407,7 @@ class DRing_Wrapper(Parent):
                 sage: R.set_constant(DifferentialRing(QQ))
                 sage: x = R.gens()[0]
                 sage: P = R.puiseux_field() # impossible to create the default morphism
-                sage: S = R.puiseux_morphism(c=(0,))
+                sage: S = R.puiseux_morphism(0)
                 sage: S(x)
                 t
                 sage: S(x^2)
@@ -2416,7 +2417,7 @@ class DRing_Wrapper(Parent):
 
             It also work for other constants::
 
-                sage: S2 = R.puiseux_morphism(c=(1,))
+                sage: S2 = R.puiseux_morphism(1)
                 sage: S2(x)
                 1 + t
 
@@ -2424,14 +2425,25 @@ class DRing_Wrapper(Parent):
 
                 sage: R = DifferentialRing(QQ[x], ['(2/3)*(x-3)^2']) # derivation with a quadratic polynomial
                 sage: R.set_constant(DifferentialRing(QQ))
-                sage: P = R.puiseux_field() # impossible to create the default morphism
-                sage: S = R.puiseux_morphism(c=(0,))
+                sage: P = R.puiseux_field()
+                sage: S = R.puiseux_morphism(0)
                 sage: S(x)
                 -3/2*t^(-1) + 3 + O(t^(21))
+
+            We can also have several variables to map::
+
+                sage: R = DifferentialRing(QQ['x','e','tan'], ['1', 'e', '1+tan^2'])
+                sage: R.set_constant(DifferentialRing(QQ))
+                sage: x,e,tan = R.gens()
+                sage: P = R.puiseux_field()
+                sage: S = R.puiseux_morphism(0, 0, 0)
+                sage: S(x)
+                t
+                sage: S(e)[:5]
+                [1, 1, 1/2, 1/6, 1/24]
+                sage: S(tan)[:10]
+                [0, 1, 0, 1/3, 0, 2/15, 0, 17/315, 0, 62/2835]
         '''
-        if c is None:
-            raise ValueError("The constant `c` must be provided to create the morphism into the Puiseux series ring.")
-        
         ## We check if the wrapped ring is a field. If it is, it must be a fraction field of a polynomial ring.
         ## Otherwise, it must be only a polynomial ring.
         if self.is_field():
@@ -2445,6 +2457,9 @@ class DRing_Wrapper(Parent):
                 raise TypeError(f"Wrapped ring is not a polynomial ring. Found {self.wrapped}")        
             poly_ring = self.wrapped
 
+        if len(c) != poly_ring.ngens():
+            raise ValueError(f"One constant per variable must be provided. Given {len(c)} out of {poly_ring.ngens()} variables.")
+              
         constants = codomain.base()
         c = [constants(ci) for ci in c] # casting the constants into the base ring of the Puiseux series
 
@@ -2472,11 +2487,11 @@ class DRing_Wrapper(Parent):
                     ## A/B = k*(x-gamma)^2
                     variable_map[str(x)] = gamma - 1/(k*t + c[i])
                 else: ## generic case we go as a d-algebraic function
-                    ## TODO (puiseux): Currently this is not working properly
                     from .dpolynomial.dpolynomial import DPolynomialRing
                     equation_ring = DPolynomialRing(constants, "_y")
                     y = equation_ring.gens()[0]
-                    equation = y[1] - A(y[0]) / B(y[0])
+                    Ae, Be = A(**{str(poly_ring.gens()[i]): y[0]}), B(**{str(poly_ring.gens()[i]): y[0]})
+                    equation = y[1] - equation_ring(Ae) / equation_ring(Be)
 
                     variable_map[str(x)] = codomain.algebraic_element(equation, c[i])
             else:
@@ -2491,7 +2506,6 @@ class DRing_Wrapper(Parent):
 
         return __generic_coercion_map          
     
-
     ## Coercion methods
     def _coerce_map_from_(self, S):
         r'''Implementation of coercion map for another parent (::NO EXAMPLE::)'''
@@ -2899,14 +2913,14 @@ class DFractionField(FractionField_generic):
     ##########################################################
     ### METHODS FOR PUISEUX SERIES
     ##########################################################
-    def _puiseux_morphism(self, codomain, operation: int = 0, **kwds) -> Morphism:
+    def _puiseux_morphism(self, codomain, *args, operation: int = 0, **kwds) -> Morphism:
         r'''
             Method to create the actual map between the field of fractions and a Puiseux Series ring.
 
             This method relies on the morphism for the base ring and extends it as a ring homomorphism to the 
             corresponding field of fractions.
         '''
-        base_map = self.base()._puiseux_morphism(codomain, operation, **kwds)
+        base_map = self.base()._puiseux_morphism(codomain, *args, operation=operation, **kwds)
         def __fraction_coercion_map(element):
             r'''Auxiliar method for maps in the field of fractions. (::NO EXAMPLE::)'''
             return base_map(element.numerator()) / base_map(element.denominator())
