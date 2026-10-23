@@ -142,7 +142,7 @@ def CheckBound(func):
         return func(self, *args, **kwds)
     return wrapper
 
-def rat_range(start, end=None, step=None):
+def rat_range(start, end=None, step=None, with_end: bool = False):
     r'''
         Generate a range of rational numbers. It follows the same conventions as the Python ``range`` function.
 
@@ -165,7 +165,10 @@ def rat_range(start, end=None, step=None):
         raise ValueError("rat_range() arg 3 must not be zero")
     start, end = (QQ(start), QQ(end)) if end is not None else (QQ(0), QQ(start))
     current = start
-    check = (lambda x: x < end) if step > 0 else (lambda x: x > end)
+    if with_end:
+        check = (lambda x: x <= end) if step > 0 else (lambda x: x >= end)
+    else:
+        check = (lambda x: x < end) if step > 0 else (lambda x: x > end)
     while check(current):
         yield current
         current += step
@@ -1010,7 +1013,7 @@ class PuiseuxSeries_Element(Element):
         if isinstance(key, slice):
             start = QQ(key.start) if key.start is not None else QQ(0)
             stop = key.stop if key.stop is not None else oo
-            step = QQ(key.step) if key.step is not None else QQ(1)
+            step = QQ(key.step) if key.step is not None else self.ramification()
 
             if stop == oo:
                 raise ValueError(f"Infinite slice requested. Impossible to compute.")
@@ -1162,7 +1165,7 @@ class PuiseuxSeries_Element(Element):
             E = lcm(self.ramification(), other.ramification())
             t = self.order()
             s = other.order()
-            mul_map = lambda k : sum(self[i]*other[k-i] for i in rat_range(t, k+1/E, 1/self.ramification()))
+            mul_map = lambda k : sum(self[i]*other[k-i] for i in rat_range(t, k-s, 1/self.ramification(), True))
             return self.parent().element_class(self.parent(), coefficient_map=mul_map, order=t+s, ramification=E)
         elif self.type() == self.TYPES.polynomial and other.type() == self.TYPES.polynomial: # multiplication of polynomials
             out = dict()
@@ -1176,8 +1179,13 @@ class PuiseuxSeries_Element(Element):
             new_den = self.denominator() * other.denominator()
             return self.parent().element_class(self.parent(), numerator=new_num, denominator=new_den)
         else: # at least one is dalgebraic and none is default
-            raise NotImplementedError("Multiplication of differential algebraic formal Puiseux series is not yet implemented.")
-
+            logger.error(f"[dalgebraic] Multiplication of differential algebraic formal Puiseux falls back into default type of series.")
+            E = lcm(self.ramification(), other.ramification())
+            t = self.order()
+            s = other.order()
+            mul_map = lambda k : sum(self[i]*other[k-i] for i in rat_range(t, k-s, 1/self.ramification(), True))
+            return self.parent().element_class(self.parent(), coefficient_map=mul_map, order=t+s, ramification=E)
+            
     def _div_(self, other: PuiseuxSeries_Element) -> PuiseuxSeries_Element:
         r'''
             See :func:`Element._div_` for further information.
@@ -2207,7 +2215,10 @@ class PuiseuxSeries_Ring(Parent):
             out_map = lambda k: element[k-1] / QQ(k) if k != 0 else self.base().zero()
             return self.element_class(self, coefficient_map=out_map, order=element.order()+1, ramification=element.ramification())
 
-    def algebraic_element(self, equation: Element, *conditions: tuple[Rational, Element], map: PSCoerceFromDRing = None) -> PuiseuxSeries_Element:
+    def algebraic_element(self, 
+                          equation: Element, 
+                          *conditions: tuple[Rational, Element] | Element, 
+                          map: PSCoerceFromDRing = None) -> PuiseuxSeries_Element:
         r'''
             Method to compute a d-algebraic element in ``self``.
 
@@ -2300,26 +2311,28 @@ class PuiseuxSeries_Ring(Parent):
                 nn = n.derivative()*d - n*d.derivative()
                 dd = d*d
                 return self.element_class(self, numerator=nn, denominator=dd, _reduce=True)
-            elif element.type() == element.TYPES.dalgebraic:
-                equ, ics, map, _ = element._PuiseuxSeries_Element__dalgebraic
-                gen = equ.infinite_variables()[0] # we assume the equation comes with only one d-variable
-                equ_d = equ.derivative()
+            # elif element.type() == element.TYPES.dalgebraic:
+            #     equ, ics, map, _ = element._PuiseuxSeries_Element__dalgebraic
+            #     gen = equ.infinite_variables()[0] # we assume the equation comes with only one d-variable
+            #     equ_d = equ.derivative()
 
-                # We eliminate gen[0] from equ and equ_d
-                E1, E2, v = equ.parent().as_polynomials(equ, equ_d, gen[0])
-                new_E = E1.resultant(E2, v)
-                new_equ = equ.parent()(new_E)
-                monomials = new_equ.monomials()
-                coefficients = new_equ.coefficients()
+            #     # We eliminate gen[0] from equ and equ_d
+            #     E1, E2, v = equ.parent().as_polynomials(equ, equ_d, gen[0])
+            #     new_E = E1.resultant(E2, v)
+            #     new_equ = equ.parent()(new_E)
+            #     monomials = new_equ.monomials()
+            #     coefficients = new_equ.coefficients()
 
-                new_mons = list()
-                for mon in monomials:
-                    new_mons.append(equ.parent()(mon.parent().element_class(mon.parent(), {(v, tuple(el-1 for el in o)): e for (v, o), e in mon._variables.items()})))
+            #     new_mons = list()
+            #     for mon in monomials:
+            #         new_mons.append(equ.parent()(mon.parent().element_class(mon.parent(), {(v, tuple(el-1 for el in o)): e for (v, o), e in mon._variables.items()})))
 
-                new_equ = sum(c*mon for c, mon in zip(coefficients, new_mons))
-                new_ics = tuple(ic if not isinstance(ic, (list,tuple)) else (ic[0]-1, ic[1]) for ic in ics)
-                return self.algebraic_element(new_equ, *new_ics, map=map)
+            #     new_equ = sum(c*mon for c, mon in zip(coefficients, new_mons))
+            #     new_ics = tuple(ic if not isinstance(ic, (list,tuple)) else (ic[0]-1, ic[1]) for ic in ics)
+            #     return self.algebraic_element(new_equ, *new_ics, map=map)
             else:
+                if element.type() == element.TYPES.dalgebraic:
+                    logger.error(f"[dalgebraic] Derivation of d-algebraic series falls back to default behavior.")
                 return self.element_class(self,
                     coefficient_map=lambda k: (k+1)*element[k+1] + element[k].derivative(),
                     order=element.order()-1, ramification=e)
@@ -2622,7 +2635,7 @@ class PSCoerceToSage(Morphism):
                 self.domain().base().to_sage()(element[k]) * var**k
                 for k in rat_range(element.order(), PS_GLOBAL_BOUND+(1/element.ramification()), 1/element.ramification())
             )
-            return out.add_bigoh(PS_GLOBAL_BOUND+1)
+            return out.add_bigoh(PS_GLOBAL_BOUND+1/element.ramification())
             
 
 
