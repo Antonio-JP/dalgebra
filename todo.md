@@ -1,6 +1,6 @@
-1. Fix the generation of Puiseux morphism for Wrapper: the input may not be a simple number, orders must be given sometimes.
-1.1. Fix implementation of all puiseux morphisms to allow the new *args.
-1.2. Fix the computation of dalgebraic series (the format of the initial data allowing a dictionary too)
+1. [x] Fix the generation of Puiseux morphism for Wrapper: the input may not be a simple number, orders must be given sometimes.
+   1. Fix implementation of all puiseux morphisms to allow the new *args.
+   2. Fix the computation of dalgebraic series (the format of the initial data allowing a dictionary too)
 2. Fix computation of derivative for dalgebraic series.
 3. Check other cases where the default behavior is used for dalgebraic.
 4. Implement the morphisms for DElliptic extensions.

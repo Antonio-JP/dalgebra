@@ -2436,7 +2436,7 @@ class DRing_Wrapper(Parent):
                 sage: R.set_constant(DifferentialRing(QQ))
                 sage: x,e,tan = R.gens()
                 sage: P = R.puiseux_field()
-                sage: S = R.puiseux_morphism(0, 0, 0)
+                sage: S = R.puiseux_morphism(0, 1, (1,1))
                 sage: S(x)
                 t
                 sage: S(e)[:5]
@@ -2461,7 +2461,7 @@ class DRing_Wrapper(Parent):
             raise ValueError(f"One constant per variable must be provided. Given {len(c)} out of {poly_ring.ngens()} variables.")
               
         constants = codomain.base()
-        c = [constants(ci) for ci in c] # casting the constants into the base ring of the Puiseux series
+        c = [(QQ(ci[0]), constants(ci[1])) if isinstance(ci, tuple) else constants(ci) for ci in c] # casting the constants into the base ring of the Puiseux series
 
         variable_map = dict()
         for (i,x) in enumerate(self.gens()): # we check generator by generator
@@ -2475,17 +2475,33 @@ class DRing_Wrapper(Parent):
                 a = A.leading_coefficient()
                 A_ = A // a # monic polynomial
 
-                if A(**{str(x): c[i]}) == 0: ## Constant case: the constant provided annihilates A
-                    variable_map[str(x)] = codomain(c[i])
-                elif self(B).d_constant(operation) and self(A).d_constant(operation): ## Both A and B are constants, hence the solution is linear in t
+                C = c[i][1] if isinstance(c[i], tuple) else c[i]
+                if (not isinstance(c[i], tuple) or (isinstance(c[i], tuple) and c[i][0] == 0)) and A(**{str(x): C}) == 0: 
+                    ## Constant case: the constant provided annihilates A
+                    variable_map[str(x)] = codomain(C)
+                elif (not isinstance(c[i], tuple) or (isinstance(c[i], tuple) and c[i][0] == 0)) and self(B).d_constant(operation) and self(A).d_constant(operation): ## Both A and B are constants, hence the solution is linear in t
                     t = codomain.gens()[0]
-                    variable_map[str(x)] = constants(A/B)*t + c[i]
+                    variable_map[str(x)] = constants(A/B)*t + C
                 elif self(B).d_constant(operation) and A_.is_square():
+                    ## A/B = k*(x-gamma)^2
                     t = codomain.gens()[0]
                     k = constants(a/B)
                     gamma = constants(-A_.sqrt().constant_coefficient())
-                    ## A/B = k*(x-gamma)^2
-                    variable_map[str(x)] = gamma - 1/(k*t + c[i])
+                    
+                    if isinstance(c[i], tuple): 
+                        if c[i][0] == -1: 
+                            if c[i][1] != -1/k:
+                                raise ValueError(f"Quadratic case error: given order -1 but initial condition do not match. Found {c[i][1]} but expected {1/k}.")
+                            else:
+                                C = 0
+                        elif c[i][0] == 0:
+                            if c[i][1] == gamma:
+                                raise ValueError(f"[IMPOSSIBLE] Quadratic case error: given order 0 but initial condition is incompatible. Found {c[i][1]}.")
+                            else:
+                                C = 1/(gamma - C)
+                        else:
+                            raise ValueError(f"Quadratic case error: given order {c[i][0]}, but only -1 or 0 are allowed.")
+                    variable_map[str(x)] = gamma - 1/(k*t + C)
                 else: ## generic case we go as a d-algebraic function
                     from .dpolynomial.dpolynomial import DPolynomialRing
                     equation_ring = DPolynomialRing(constants, "_y")

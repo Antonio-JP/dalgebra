@@ -508,7 +508,7 @@ class PuiseuxSeries_Element(Element):
             if self.__order is None:
                 # Computing the order for a differential algebraic formal Puiseux series using the Newton polygon
                 equ, ics, map, count = self.__dalgebraic
-                order, coeff, used_condition = self.first_term_of_solution(equ, None if len(ics) <=  count else ics[count], map)
+                order, coeff, used_condition = self.first_term_of_solution(equ, None if len(ics) <= count else ics[count], map)
                 self.__order = order
                 self.__ramification = QQ(order).denominator()
                 self.__polydict[order] = coeff
@@ -544,6 +544,8 @@ class PuiseuxSeries_Element(Element):
                     elif charpoly(ics[1]) != 0:
                         raise ValueError(f"Initial condition {ics} for {equ} is not compatible.\n\t- Found UNIQUE order {order} from the Newton polygon.\n\t- Characteristic polynomial {charpoly} evaluated at {ics[1]} is not zero.\n\t- Try givin one of the roots: {charpoly.roots()}.")
                 else: # the initial condition was given with just `c`
+                    if ics is None:
+                        raise ValueError(f"Initial condition {ics} for {equ} is not compatible.\n\t- Found UNIQUE order {order} from the Newton polygon.\n\t- Data given only by the coefficient, but no initial condition was provided.\n\t- Characteristic polynomial is {charpoly}.\n\t- Try givin one of the roots.")
                     if charpoly(ics) != 0:
                         raise ValueError(f"Initial condition {ics} for {equ} is not compatible.\n\t- Found UNIQUE order {order} from the Newton polygon.\n\t- Data given only by the coefficient.\n\t - Characteristic polynomial {charpoly} evaluated at {ics} is not zero.\n\t- Try givin one of the roots: {charpoly.roots()}.")
                     
@@ -702,7 +704,7 @@ class PuiseuxSeries_Element(Element):
             incl_charpoly = dict(incl_charpoly)
             M = max(incl_charpoly) # maximal order of a solution
             self[M+1] # guarantees we have computed until this term
-            return any(el != 0 for el in self.__polydict.values())
+            return all(el == 0 for el in self.__polydict.values())
 
     @CheckBound
     def is_one(self, *, bound: int | None = None) -> bool | int:
@@ -1142,6 +1144,8 @@ class PuiseuxSeries_Element(Element):
             return self.parent()(self.parent().base()(self) * self.parent().base()(other))
         elif self in self.parent().base(): # scalar product (self)
             scalar = self.parent().base()(self)
+            if scalar == -1:
+                return -other
             if other.type() == self.TYPES.polynomial:
                 return self.parent().element_class(self.parent(), coefficients={k: scalar * c for k, c in other.__polydict.items()})
             elif other.type() == self.TYPES.rational:
