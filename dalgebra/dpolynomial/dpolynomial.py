@@ -1299,6 +1299,9 @@ class DPolynomial(Element):
         elif not map.domain() is parent_wo_gen:
             raise ValueError("[newton_polygon] The map must be a Puiseux morphism from the parent without the variable")
 
+        if self.is_zero():
+            raise ValueError("[newton_polygon] The zero polynomial does not have a Newton polygon")
+
         monomials = self.monomials(gen)
         coefficients = [
             map(
@@ -1318,28 +1321,41 @@ class DPolynomial(Element):
         polyhedron = Polyhedron(vertices=points, rays=[(1,0)], base_ring=QQ)
         ## We compute now the characteristic polynomials for each face of the Newton polygon:
         faces = [face for face in polyhedron.faces(1) if len(face.vertices()) > 1]
-        vertices_per_face = [sorted(face.vertices(), key=lambda v: v[0]) for face in faces] # we sorted the vertices by x-coordinate
-        inclinations = [(v[0][0]-v[-1][0])/(v[-1][1]-v[0][1]) for v in vertices_per_face] # we compute the inclination of each face
 
-        poly_ring = PolynomialRing(map.codomain().base().to_sage(), 'C_')
-        C = poly_ring.gens()[0]
-        characteristic_polynomials = [
-            sum((
-                poly_ring(coeff.trailing_coefficient())*C**(P[1]) * 
-                prod(falling_factorial(inclination, i)**mon.degree(mon.parent()(gen[i])) for i in range(1, order+1))
-                for coeff, mon, P in zip(coefficients, monomials, points) if P in face), start = poly_ring.zero())
-            for face, inclination in zip(faces, inclinations)
-        ]
+        if len(faces) > 0:
+            vertices_per_face = [sorted(face.vertices(), key=lambda v: v[0]) for face in faces] # we sorted the vertices by x-coordinate
+            inclinations = [(v[0][0]-v[-1][0])/(v[-1][1]-v[0][1]) for v in vertices_per_face] # we compute the inclination of each face
 
-        ## We check if 0 is a valid inclination. If not, we add it
-        if 0 not in inclinations:
-            inclinations.append(0)
-            ## We search for the left-most vertex in the polygon
-            P = min(polyhedron.vertices(), key=lambda v: v[0])
-            characteristic_polynomials.append(sum((
-                poly_ring(coeff.trailing_coefficient())*C**(P[1]) * 
-                prod(falling_factorial(0, i)**mon.degree(mon.parent()(gen[i])) for i in range(1, order+1))
-                for coeff, mon, P2 in zip(coefficients, monomials, points) if P2 == P), start = poly_ring.zero()))
+            poly_ring = PolynomialRing(map.codomain().base().to_sage(), 'C_')
+            C = poly_ring.gens()[0]
+            characteristic_polynomials = [
+                sum((
+                    poly_ring(coeff.trailing_coefficient())*C**(P[1]) * 
+                    prod(falling_factorial(inclination, i)**mon.degree(mon.parent()(gen[i])) for i in range(1, order+1))
+                    for coeff, mon, P in zip(coefficients, monomials, points) if P in face), start = poly_ring.zero())
+                for face, inclination in zip(faces, inclinations)
+            ]
+
+            ## We check if 0 is a valid inclination. If not, we add it
+            if 0 not in inclinations:
+                inclinations.append(0)
+                ## We search for the left-most vertex in the polygon
+                P = min(polyhedron.vertices(), key=lambda v: v[0])
+                characteristic_polynomials.append(sum((
+                    poly_ring(coeff.trailing_coefficient())*C**(P[1]) * 
+                    prod(falling_factorial(0, i)**mon.degree(mon.parent()(gen[i])) for i in range(1, order+1))
+                    for coeff, mon, P2 in zip(coefficients, monomials, points) if P2 == P), start = poly_ring.zero()))
+                
+        else: # the polygon is a horizontal line: we compute the indicial polynomial for order candidates
+            
+            poly_ring = PolynomialRing(map.codomain().base().to_sage(), 'C_')
+            C = poly_ring.gens()[0]
+            indicial_polynomial = sum((
+                poly_ring(coeff.trailing_coefficient())* 
+                                    prod(falling_factorial(C, i)**mon.degree(mon.parent()(gen[i])) for i in range(1, order+1))
+                                    for coeff, mon, P in zip(coefficients, monomials, points) if P == tuple(polyhedron.vertices()[0])), start = poly_ring.zero())
+            inclinations = [root[0] for root in indicial_polynomial.roots(QQ)]
+            characteristic_polynomials = [poly_ring.zero() for _ in inclinations]
 
         ## We clean the zero solution (if possible) from the characteristic polynomials
         characteristic_polynomials = [poly // C**min(m.degree() for m in poly.monomials()) if poly != 0 else poly for poly in characteristic_polynomials]
@@ -3054,7 +3070,7 @@ class DPolynomialRing_Monoid(Parent):
     ### METHODS FOR PUISEUX SERIES
     ##########################################################
     def _puiseux_morphism(self, 
-                          codomain, *, operation: int = 0,
+                          codomain, *args, operation: int = 0,
                           images: tuple[tuple[str,tuple[DPolynomial, tuple[Element]] | Element]], 
                           map = None, 
                           **kwds) -> Morphism:
@@ -3105,7 +3121,7 @@ class DPolynomialRing_Monoid(Parent):
         ## We need a map from DPolynomials to the Puiseux series going through the coefficients.
         from ..dextension.puiseux import PuiseuxSeries_Ring
         if map is None: 
-            map = self.base().puiseux_morphism(operation=operation, **kwds)
+            map = self.base().puiseux_morphism(operation=operation, *args, **kwds)
         if not isinstance(map.codomain(), PuiseuxSeries_Ring) or not map.codomain().is_valid_map(map):
             raise TypeError(f"[puiseux_morphism] The map {map} is not a valid map to the Puiseux series")
 

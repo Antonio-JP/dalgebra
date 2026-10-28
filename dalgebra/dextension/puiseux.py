@@ -304,7 +304,7 @@ class PuiseuxSeries_Element(Element):
                  coefficient_map: Callable[[Rational],Element] | None = None, order: Rational | None = None,
                  coefficients: Collection[Element] | Mapping[Rational, Element] | None = None,
                  numerator: PuiseuxSeries_Element | None = None, denominator: PuiseuxSeries_Element | None = None,
-                 differential_equation = None, initial_conditions: Collection[Element | tuple[Rational, Element]] | None = None, map : PSCoerceFromDRing | None = None,
+                 differential_equation = None, initial_conditions: Collection[Element | tuple[Rational, Element]] | Callable[[Rational], Element] | None = None, map : PSCoerceFromDRing | None = None,
                  _reduce: bool = False, _one = False
     ):
         base = parent.base()
@@ -376,7 +376,14 @@ class PuiseuxSeries_Element(Element):
             self.__denominator = self.parent().one()
             self.__map = self.__dalgebraic_coeff
             self.__polydict = dict()
-            self.__dalgebraic = (differential_equation, initial_conditions, map, 0)
+
+            if callable(initial_conditions):
+                init_list = tuple()
+                init_dict = initial_conditions
+            else:
+                init_list = [base(c) for c in initial_conditions if not isinstance(c, (list,tuple))] # we keep the initial conditions without order
+                init_dict = {QQ(c[0]): base(c[1]) for c in initial_conditions if isinstance(c, (list,tuple))} # we keep the initial conditions with order
+            self.__dalgebraic = (differential_equation, init_list, init_dict, map, 0)
 
             ## We compute the order and ramification of the series
             self.__order = None
@@ -385,6 +392,8 @@ class PuiseuxSeries_Element(Element):
             self[differential_equation.order() + self.__order] # this will compute coefficients of the series at least until the given order
             if self.__dalgebraic[-1] != len(self.__dalgebraic[1]):
                 logger.error("Not all initial conditions have been used. This is an unexpected behavior. Please check the initial conditions provided.")
+            elif isinstance(self.__dalgebraic[2], dict) and any(self.__dalgebraic[2][k] != self[k] for k in self.__dalgebraic[2]):
+                logger.error("Error in initial conditions. This is an unexpected behavior. Please check the initial conditions provided.")
     
     ###################################################################################
     ### Ramification handling
@@ -428,7 +437,7 @@ class PuiseuxSeries_Element(Element):
         r'''
             Internal method to extend first the coefficient map for differential algebraic formal Puiseux series, and then return an element.
         '''
-        if not self.type() == self.TYPES.dalgebraic:
+        if self.type() != self.TYPES.dalgebraic:
             raise TypeError(f"The method __dalgebraic_coeff is only defined for differential algebraic formal Puiseux series, got {self.type()}.")
         if len(self.__polydict) == 0 or max(self.__polydict) < n: # more coefficients are needed
             self.__dalgebraic_compute_until(n)
@@ -439,7 +448,7 @@ class PuiseuxSeries_Element(Element):
         r'''
             Internal method to compute the coefficients of a differential algebraic formal Puiseux series until a given order.
         '''
-        if not self.type() == self.TYPES.dalgebraic:
+        if self.type() != self.TYPES.dalgebraic:
             raise TypeError(f"The method __dalgebraic_compute_until is only defined for differential algebraic formal Puiseux series, got {self.type()}.")
 
         if len(self.__polydict) == 0: # no element has been computed yet
@@ -456,12 +465,9 @@ class PuiseuxSeries_Element(Element):
             ## P(Y) = P(y_0) + L_{y_0}(h) + R(h) where the terms of R(h) are of higher order.
             ## Since we want Y to be a solution, then analyzing the lowest order term of 
             ## P(y_0) + L_{y_0}(h) we can find the next coefficient of h, which is the next coefficient of Y.
-            equ, ics, map, count = self.__dalgebraic
+            equ, ics_list, ics_dict, map, count = self.__dalgebraic
             gen = equ.infinite_variables()[0] # we assume the differential equation is in one variable
             P_y = equ(**{gen.variable_name(): y_0}) # this will compute P(y_0)
-            if P_y.is_zero() is True:
-                self.__polydict[oo] = self.parent().base().zero() # nothing else to compute
-                continue
             
             ## We need to compute further
             from ..dpolynomial.dpolynomial import DifferentialPolynomialRing
@@ -472,12 +478,17 @@ class PuiseuxSeries_Element(Element):
             new_equ = P_y + sum(L[i]*gen_l[i] for i in range(len(L))) # this is the linear differential operator P_{y_0} + L_{y_0}(h)
             new_map = new_equ.parent().base().puiseux_morphism() # this is always trivial, since coefficients are already Puiseux series.
             ## The lowest order term can be obtained as usual
-            order, coeff, used_condition = self.first_term_of_solution(new_equ, None if len(ics) <= count else ics[count], new_map, bound=p)
-            
-            self.__ramification = lcm(self.__ramification, QQ(order).denominator())
+            coeff = 0
+            order = p
+            while coeff == 0 and order != oo:
+                order, coeff, used_condition = self.first_term_of_solution(new_equ, ics_list, ics_dict, count, new_map, bound=order)
+                count = count + 1 if used_condition else count
+
+            if order != oo:
+                self.__ramification = lcm(self.__ramification, QQ(order).denominator())
             self.__polydict[order] = coeff
-            count = count + 1 if used_condition else count
-            self.__dalgebraic = (equ, ics, map, count)
+            self.__dalgebraic = (equ, ics_list, ics_dict, map, count)
+
         return
 
     @CheckBound
@@ -507,29 +518,39 @@ class PuiseuxSeries_Element(Element):
         else: # dalgebraic
             if self.__order is None:
                 # Computing the order for a differential algebraic formal Puiseux series using the Newton polygon
-                equ, ics, map, count = self.__dalgebraic
-                order, coeff, used_condition = self.first_term_of_solution(equ, None if len(ics) <= count else ics[count], map)
+                equ, ics_list, ics_dict, map, count = self.__dalgebraic
+                coeff = 0
+                order = -oo
+                while coeff == 0:
+                    order, coeff, used_condition = self.first_term_of_solution(equ, ics_list, ics_dict, count, map, bound=order)
+                    count = count + 1 if used_condition else count
                 self.__order = order
                 self.__ramification = QQ(order).denominator()
                 self.__polydict[order] = coeff
-                count = count + 1 if used_condition else count
-                self.__dalgebraic = (equ, ics, map, count)
+                self.__dalgebraic = (equ, ics_list, ics_dict, map, count)
             else:
                 return self.__order
 
     @staticmethod
-    def first_term_of_solution(equ, ics, map, bound : Rational = -oo) -> tuple[Rational, Element, bool]:
+    def first_term_of_solution(equ, ics_list: list | tuple, ics_dict: dict[Rational, Element] | Callable[[Rational], Element], count: int , map, bound : Rational = -oo) -> tuple[Rational, Element, bool]:
         r'''
             Return the first term of a solution of a differential algebraic equation given a condition.
         '''
         gen = equ.infinite_variables()[0] # we assume the differential equation is in one variable
         P, incl_charpoly = equ.newton_polygon(gen, map) # this computes the polygon plus candidates to orders
+
         used_condition = False
         orig_options = tuple(incl_charpoly) # we keep the original options for error messages
         incl_charpoly = [(order, charpoly) for order, charpoly in incl_charpoly if order > bound]
 
+        in_data = lambda k: callable(ics_dict) or (isinstance(ics_dict, dict) and k in ics_dict)
+        call_data = lambda k: ics_dict(k) if callable(ics_dict) else ics_dict[k]
+
         if len(incl_charpoly) == 0:
-            raise ValueError(f"The differential equation {equ} does not have a valid initial condition to compute the order of the series.\n\t- Original options from newton polygon: {orig_options}.\n\t- Options after applying the bound {bound}: {incl_charpoly}.")
+            if not equ.constant_coefficient().is_zero():
+                raise ValueError(f"The differential equation {equ} does not have a valid initial condition to compute the order of the series.\n\t- Original options from newton polygon: {orig_options}.\n\t- Options after applying the bound {bound}: {incl_charpoly}.")
+            else: # 0 is a solution of infinite order, we return 0
+                return oo, 0, False
         elif len(incl_charpoly) == 1: # only one option for the order, we check the characteristic polynomial for options on the initial condition
             order, charpoly = incl_charpoly[0]
 
@@ -537,32 +558,30 @@ class PuiseuxSeries_Element(Element):
                 raise ValueError(f"[IMPOSSIBLE] The characteristic polynomial {charpoly} for the order {order} is constant, hence, no valid condition can be found")
             elif charpoly.degree() == 1: # unique term, initial conditions are not consumed
                 coeff = -charpoly[0]/charpoly[1]
+                if in_data(order) and coeff != call_data(order):
+                    raise ValueError(f"Initial condition {call_data(order)} for {equ} is not compatible.\n\t- Found UNIQUE order {order} from the Newton polygon.\n\t- Characteristic polynomial {charpoly} evaluated at {call_data(order)} is not zero.\n\t- Try givin the unique root: {coeff}.")
             else: # we have to check the initial conditions
-                if isinstance(ics, (list,tuple)): # the initial condition was given with (`d`, `c`)
-                    if ics[0] != order:
-                        raise ValueError(f"Initial condition {ics} for {equ} is not compatible.\n\t- Found UNIQUE order {order} from the Newton polygon.\n\t- Requested order {ics[0]} from the initial condition.")
-                    elif charpoly(ics[1]) != 0:
-                        raise ValueError(f"Initial condition {ics} for {equ} is not compatible.\n\t- Found UNIQUE order {order} from the Newton polygon.\n\t- Characteristic polynomial {charpoly} evaluated at {ics[1]} is not zero.\n\t- Try givin one of the roots: {charpoly.roots()}.")
-                else: # the initial condition was given with just `c`
-                    if ics is None:
-                        raise ValueError(f"Initial condition {ics} for {equ} is not compatible.\n\t- Found UNIQUE order {order} from the Newton polygon.\n\t- Data given only by the coefficient, but no initial condition was provided.\n\t- Characteristic polynomial is {charpoly}.\n\t- Try givin one of the roots.")
-                    if charpoly(ics) != 0:
-                        raise ValueError(f"Initial condition {ics} for {equ} is not compatible.\n\t- Found UNIQUE order {order} from the Newton polygon.\n\t- Data given only by the coefficient.\n\t - Characteristic polynomial {charpoly} evaluated at {ics} is not zero.\n\t- Try givin one of the roots: {charpoly.roots()}.")
+                if in_data(order):
+                    if charpoly(call_data(order)) != 0:
+                        raise ValueError(f"Initial condition {call_data(order)} for {equ} is not compatible.\n\t- Found UNIQUE order {order} from the Newton polygon.\n\t- Characteristic polynomial {charpoly} evaluated at {call_data(order)} is not zero.\n\t- Try givin one of the roots: {charpoly.roots()}.")
+                elif count >= len(ics_list):
+                    raise ValueError(f"Initial condition for {equ} not compatible at order {order}.\n\t- Found UNIQUE order {order} from the Newton polygon.\n\t- Characteristic polynomial {charpoly} has degree {charpoly.degree()}.\n\t- No initial condition was provided for this order, and all initial conditions in the list are consumed. Please provide more initial conditions.")
+                elif charpoly(ics_list[count]) != 0:
+                    raise ValueError(f"Initial condition {ics_list[count]} for {equ} is not compatible.\n\t- Found UNIQUE order {order} from the Newton polygon.\n\t- Data given only by the coefficient.\n\t - Characteristic polynomial {charpoly} evaluated at {ics_list[count]} is not zero.\n\t- Try givin one of the roots: {charpoly.roots()}.")
                     
-                coeff = ics[1] if isinstance(ics, (list,tuple)) else ics
-                used_condition = True # we have used one initial condition
+                coeff = call_data(order) if in_data(order) else ics_list[count]
+                used_condition = not in_data(order) # we have used one initial condition
         else: # options for orders are several -> we need to check if the information is correct
             incl_charpoly = dict(incl_charpoly) # we convert to a dictionary for easier access
-            if not isinstance(ics, (list,tuple)):
-                raise ValueError(f"Initial condition {ics} for {equ} is not compatible.\n\t- Found MULTIPLE options for the order from the Newton polygon: {list(incl_charpoly.keys())}.\n\t- Characteristic polynomials for each order: {incl_charpoly}.\n\t- Initial condition must be given as a pair (order, coefficient).")
-            elif ics[0] not in incl_charpoly:
-                raise ValueError(f"Initial condition {ics} for {equ} is not compatible.\n\t- Found MULTIPLE options for the order from the Newton polygon: {list(incl_charpoly.keys())}.\n\t- Characteristic polynomials for each order: {incl_charpoly}.\n\t- Initial condition given {ics} do not match a valid order in the list of options.")
-            elif incl_charpoly[ics[0]](ics[1]) != 0:
-                raise ValueError(f"Initial condition {ics} for {equ} is not compatible.\n\t- Found MULTIPLE options for the order from the Newton polygon: {list(incl_charpoly.keys())}.\n\t- The order given matches one of the possible orders.\n\t- Characteristic polynomial {incl_charpoly[ics[0]]} evaluated at {ics[1]} is not zero.\n\t- Try giving one of the roots: {incl_charpoly[ics[0]].roots()}.")
+            pos_order = [k for k in incl_charpoly if in_data(k)]
+            if len(pos_order) == 0:
+                raise ValueError(f"Initial condition for {equ} is not compatible.\n\t- Found MULTIPLE options for the order from the Newton polygon: {list(incl_charpoly.keys())}.\n\t- Characteristic polynomials for each order: {incl_charpoly}.\n\t- No initial condition was provided for any of the possible orders. Please provide more initial conditions.")
+            order = min(pos_order) # we take the lowest order that is compatible with the initial conditions
+            if incl_charpoly[order](call_data(order)) != 0:
+                raise ValueError(f"Initial condition for {equ} is not compatible.\n\t- Found MULTIPLE options for the order from the Newton polygon: {list(incl_charpoly.keys())}.\n\t- The order given matches one of the possible orders ({order}).\n\t- Characteristic polynomial {incl_charpoly[order]} evaluated at {call_data(order)} is not zero.\n\t- Try giving one of the roots: {incl_charpoly[order].roots()}.")
             else: # everything is correct, we set the order and the coefficient
-                order = ics[0]
-                coeff = ics[1]
-                used_condition = True
+                coeff = call_data(order)
+                used_condition = False
         return order, coeff, used_condition
 
     def degree(self) -> int:
@@ -656,9 +675,17 @@ class PuiseuxSeries_Element(Element):
         elif self.type() == self.TYPES.rational:
             return self.parent().element_class(self.parent(),
                 numerator=self.__numerator.gen_mult(n), denominator=self.__denominator)
+        elif self.type() == self.TYPES.dalgebraic:
+            ## TODO (series): test this functionality
+            equ, _, _, map, _ = self.__dalgebraic
+            gen = equ.infinite_variables()[0] # we assume the differential equation is in one variable
+            from ..dpolynomial.dpolynomial import DifferentialPolynomialRing
+            R = DifferentialPolynomialRing(map.codomain(), gen.variable_name())
+            gen = R.gens()[0]
+            t = self.parent().gens()[0]
+            new_equ = equ(**{gen.variable_name(): t**n * gen[0]})
+            return self.parent().algebraic_element(new_equ, init_dict= lambda k : self[k - n])
         else: # default
-            if self.type() == self.TYPES.dalgebraic:
-                logger.warning(f"[dalgebraic] Multiplication by generator falls back into default type of series.")
             return self.parent().element_class(self.parent(),
                 coefficient_map=lambda k: self[k - n], order=self.__order + n, 
                 ramification=lcm(self.ramification(), n.denominator()))
@@ -695,7 +722,7 @@ class PuiseuxSeries_Element(Element):
         elif self.type() in (self.TYPES.polynomial, self.TYPES.rational):
             return self.order() == oo
         else: # dalgebraic
-            equ, ics, map, count = self.__dalgebraic
+            equ,_,_,map,_ = self.__dalgebraic
             gen = equ.infinite_variables()[0] # we assume the differential equation is in one variable
             if not equ(**{gen.variable_name(): ZZ(0)}) == 0:
                 return False
@@ -925,9 +952,9 @@ class PuiseuxSeries_Element(Element):
             TODO (series): add examples
         '''
         if self.type() != self.TYPES.dalgebraic:
-            return None # if not explcit, we return None
+            return None # if not explicit, we return None
         else:
-            return self.__dalgebraic[2] # we return the map of the differential equation
+            return self.__dalgebraic[3] # we return the map of the differential equation
         
     @CheckBound
     def trailing_coefficient(self, *, bound: int | None = None) -> Element:
@@ -1098,12 +1125,11 @@ class PuiseuxSeries_Element(Element):
         elif self.type() == self.TYPES.rational:
             return self.parent().element_class(self.parent(), numerator=-self.__numerator, denominator=self.__denominator)
         elif self.type() == self.TYPES.dalgebraic:
-            equ, ics, map, count = self.__dalgebraic
+            equ, _, _, map, _ = self.__dalgebraic
             gen = equ.infinite_variables()[0] # we assume the differential equation is in one variable
             new_equ = equ(**{gen.variable_name(): -gen[0]}) # we negate the variable in the differential equation
-            new_ics = tuple(-ic if not isinstance(ic, (list,tuple)) else (ic[0], -ic[1]) for ic in ics) # we negate the initial conditions
 
-            return self.parent().algebraic_element(new_equ, *new_ics, map=map)
+            return self.parent().algebraic_element(new_equ, init_dict=lambda k : -self[k], map=map)
         else:
             return self.parent().element_class(self.parent(), coefficient_map=lambda k : -self[k], order=self.__order, ramification=self.ramification())
 
@@ -1151,11 +1177,10 @@ class PuiseuxSeries_Element(Element):
             elif other.type() == self.TYPES.rational:
                 return self.parent().element_class(self.parent(), numerator=scalar * other.__numerator, denominator=other.__denominator)
             elif other.type() == self.TYPES.dalgebraic:
-                equ, ics, map, count = other.__dalgebraic
+                equ, _, _, map, _ = other.__dalgebraic
                 gen = equ.infinite_variables()[0] # we assume the differential equation is in one variable
                 new_equ = equ(**{gen.variable_name(): gen[0]/scalar}) #
-                new_ics = tuple(scalar*ic if not isinstance(ic, (list,tuple)) else (ic[0], scalar*ic[1]) for ic in ics) # we scale the initial conditions
-                raise NotImplementedError("Multiplication of differential algebraic formal Puiseux series is not yet implemented.")
+                return self.parent().element_class(self.parent(), diff_eq=new_equ, init_dict=lambda k : scalar*other[k], map=map)
             else: # default
                 return self.parent().element_class(self.parent(), coefficient_map=lambda k: scalar * other[k], order=other.order(), ramification=other.ramification())
         elif other in self.parent().base(): # scalar product (other)
@@ -1183,6 +1208,7 @@ class PuiseuxSeries_Element(Element):
             new_den = self.denominator() * other.denominator()
             return self.parent().element_class(self.parent(), numerator=new_num, denominator=new_den)
         else: # at least one is dalgebraic and none is default
+            # TODO (series): implement multiplication of dalgebraic series using differential elimination.
             logger.error(f"[dalgebraic] Multiplication of differential algebraic formal Puiseux falls back into default type of series.")
             E = lcm(self.ramification(), other.ramification())
             t = self.order()
@@ -1473,10 +1499,10 @@ class PuiseuxSeries_Element(Element):
             new_den = self.__denominator(**kwds)
             return self.parent().element_class(self.parent(), numerator=new_num, denominator=new_den)
         elif self.type() == self.TYPES.dalgebraic:
-            equ, ics, map, count = self.__dalgebraic
+            # TODO (series): test this
+            equ, _, _, map, _ = self.__dalgebraic
             new_equ = equ(**kwds) # inner evaluation of the equation
-            new_ics = tuple(ic(**kwds) if not isinstance(ic, (list,tuple)) else (ic[0], ic[1](**kwds)) for ic in ics) # inner evaluation of the initial conditions
-            return self.parent().algebraic_element(new_equ, *new_ics, map=map)
+            return self.parent().algebraic_element(new_equ, init_dict = lambda k : self[k](**kwds), map=map)
         elif self.type() == self.TYPES.default:
             new_func = lambda n : self[n](**kwds)
             return self.parent().element_class(self.parent(), coefficient_map=new_func, order=self.order(), ramification=self.ramification())
@@ -2208,11 +2234,12 @@ class PuiseuxSeries_Ring(Parent):
             
             return self.element_class(self, coefficients=out_dict)
         elif element.type() == element.TYPES.dalgebraic:
+            # TODO (series): test this
             equ, ics, map, _ = element._PuiseuxSeries_Element__dalgebraic
             gen = equ.infinite_variables()[0] # we assume the equation comes with only one d-variable
             new_equ = equ(**{gen.variable_name(): gen[1]})
             ics = tuple(ic if not isinstance(ic, (list,tuple)) else (ic[0]+1, ic[1]) for ic in ics)
-            return self.algebraic_element(new_equ, *ics, map=map)
+            return self.algebraic_element(new_equ, ics_dict = lambda k: element[k-1] / QQ(k) if k != 0 else self.base().zero(), map=map)
         else: # other cases: we create a default series by defining its elements
             if element[-1] != 0:
                 raise IntegrationError(f"Puiseux series with a term in x^{-1} can not be integrated.")
@@ -2222,7 +2249,8 @@ class PuiseuxSeries_Ring(Parent):
     def algebraic_element(self, 
                           equation: Element, 
                           *conditions: tuple[Rational, Element] | Element, 
-                          map: PSCoerceFromDRing = None) -> PuiseuxSeries_Element:
+                          map: PSCoerceFromDRing = None,
+                          init_dict: dict[Rational, Element] | Callable[[Rational],Element] = None) -> PuiseuxSeries_Element:
         r'''
             Method to compute a d-algebraic element in ``self``.
 
@@ -2273,24 +2301,49 @@ class PuiseuxSeries_Ring(Parent):
         elif not self.has_coerce_map_from(equation.parent().puiseux_field()):
             raise TypeError("The equation must be a differential polynomial over the base ring of the Puiseux series ring.")
 
-        # u = equation.infinite_variables()[0] # generator of the equation
-        # d = equation.order(u) # order of the equation
-        # if equation.degree(u[d]) != 1:
-        #     raise ValueError("The equation must be linear in its highest order term.")
-
         ## We ensure the map is valid for the coefficients
         if map is None:
             map = equation.parent().base().puiseux_morphism()
         if not equation.parent().puiseux_field().is_valid_map(map):
             raise TypeError("The map must be a coercion from the base ring of the equation to the Puiseux series ring.")
 
-        ## The map is correct fr the coefficients. Now we ensure the codomain is ``self``
+        ## The map is correct for the coefficients. Now we ensure the codomain is ``self``
         if map.codomain() != self:
             map_self = self.coerce_map_from(map.codomain())*map
         else:
             map_self = map
 
-        return self.element_class(self, differential_equation=equation, initial_conditions=conditions, map=map_self)
+        # We process the initial conditions format: we create a list of elements without indicated order and a dictionary of elements with indicated order.
+        ## Case with a map -> we call the element_class with the map as initial conditions
+        if callable(init_dict):
+            if len(conditions) > 0:
+                raise ValueError("If the initial conditions are given as a callable, no other initial conditions can be given.")
+            return self.element_class(self, differential_equation=equation, initial_conditions=init_dict, map=map_self)
+        
+        ## Case with a dictionary
+        if init_dict is None:
+            init_dict = dict()
+
+        if any(not k in QQ for k in init_dict.keys()):
+            raise TypeError("The initial conditions must be a dictionary with rational keys and base elements as values.")
+        init_dict = {k: self.base()(v) for k, v in init_dict.items()}
+
+        rem_conditions = list()
+        for i, cond in enumerate(conditions):
+            if isinstance(cond, (list, tuple)):
+                order, element = cond
+                if order not in QQ:
+                    raise TypeError(f"The initial condition {i} has an invalid order {order}. It must be a rational number.")
+                elif order in init_dict:
+                    raise ValueError(f"The initial condition {i} has an order {order} that is already given in the initial conditions dictionary.")
+                init_dict[QQ(order)] = self.base()(element)
+            else:
+                rem_conditions.append(self.base()(cond))
+
+        return self.element_class(self, 
+                                  differential_equation=equation, 
+                                  initial_conditions=tuple(rem_conditions)+tuple(init_dict.items()), 
+                                  map=map_self)
 
     def __build_derivation(self) -> DerivationMap:
         r'''
@@ -2315,28 +2368,30 @@ class PuiseuxSeries_Ring(Parent):
                 nn = n.derivative()*d - n*d.derivative()
                 dd = d*d
                 return self.element_class(self, numerator=nn, denominator=dd, _reduce=True)
-            # elif element.type() == element.TYPES.dalgebraic:
-            #     equ, ics, map, _ = element._PuiseuxSeries_Element__dalgebraic
-            #     gen = equ.infinite_variables()[0] # we assume the equation comes with only one d-variable
-            #     equ_d = equ.derivative()
+            elif element.type() == element.TYPES.dalgebraic:
+                # TODO (series): test this
+                equ, _, _, map, _ = element._PuiseuxSeries_Element__dalgebraic
+                gen = equ.infinite_variables()[0] # we assume the equation comes with only one d-variable
 
-            #     # We eliminate gen[0] from equ and equ_d
-            #     E1, E2, v = equ.parent().as_polynomials(equ, equ_d, gen[0])
-            #     new_E = E1.resultant(E2, v)
-            #     new_equ = equ.parent()(new_E)
-            #     monomials = new_equ.monomials()
-            #     coefficients = new_equ.coefficients()
+                if gen[0] not in equ.variables() and equ.order(gen) > 0: # the equation is ready
+                    new_E = equ
+                else: # we need to eliminate gen[0]
+                    equ_d = equ.derivative()
+                    # We eliminate gen[0] from equ and equ_d
+                    E1, E2, v = equ.parent().as_polynomials(equ, equ_d, gen[0])
+                    new_E = E1.resultant(E2, v)
+                new_equ = equ.parent()(new_E)
+                monomials = new_equ.monomials()
+                coefficients = new_equ.coefficients()
 
-            #     new_mons = list()
-            #     for mon in monomials:
-            #         new_mons.append(equ.parent()(mon.parent().element_class(mon.parent(), {(v, tuple(el-1 for el in o)): e for (v, o), e in mon._variables.items()})))
+                new_mons = list()
+                for mon in monomials:
+                    new_mons.append(equ.parent()(mon.parent().element_class(mon.parent(), {(v, tuple(el-1 for el in o)): e for (v, o), e in mon._variables.items()})))
 
-            #     new_equ = sum(c*mon for c, mon in zip(coefficients, new_mons))
-            #     new_ics = tuple(ic if not isinstance(ic, (list,tuple)) else (ic[0]-1, ic[1]) for ic in ics)
-            #     return self.algebraic_element(new_equ, *new_ics, map=map)
+                new_equ = sum(c*mon for c, mon in zip(coefficients, new_mons))
+
+                return self.algebraic_element(new_equ, init_dict = lambda k: (k+1)*element[k+1] + element[k].derivative(), map=map)
             else:
-                if element.type() == element.TYPES.dalgebraic:
-                    logger.error(f"[dalgebraic] Derivation of d-algebraic series falls back to default behavior.")
                 return self.element_class(self,
                     coefficient_map=lambda k: (k+1)*element[k+1] + element[k].derivative(),
                     order=element.order()-1, ramification=e)
@@ -2488,10 +2543,20 @@ class PSCoerceBetweenBases(Morphism):
             return self.codomain().element_class(self.codomain(),
                                                  numerator = self(element.numerator()),
                                                  denominator = self(element.denominator()))
+        elif element.type() == PuiseuxSeries_Element.TYPES.dalgebraic:
+            # TODO (series): test this
+            equ, _, _, map, _ = element._PuiseuxSeries_Element__dalgebraic
+            new_map = lambda k: self.base_map(element[k])
+
+            # Casting the equation using the new base
+            equ_parent = equ.parent()
+            new_base = pushout(equ_parent.base(), self.base_map.codomain())
+            new_equ_parent = equ_parent.change_ring(new_base)
+            new_equ = new_equ_parent(equ)
+
+            # Building a d-algebraic element
+            return self.codomain().algebraic_element(new_equ, init_dict = new_map, map = self.base_map*map)
         else: # default case
-            if element.type() == PuiseuxSeries_Element.TYPES.dalgebraic:
-                logger.warning("[dalgebraic] Coercion of differential algebraic formal Puiseux series between different bases is not yet implemented. Using default coercion.")
-                # TODO (series): implement this option for dalgebraic
             new_map = lambda k: self.base_map(element[k])
             return self.codomain().element_class(self.codomain(),
                                                  coefficient_map=new_map, 
