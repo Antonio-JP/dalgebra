@@ -927,6 +927,7 @@ class PuiseuxSeries_Element(Element):
         '''
         return self.parent().rat_field(ramification)(self)
 
+    @cached_method
     def equation(self):
         r'''
             Gets the differential equation that defines the element. (Not always possible)
@@ -973,7 +974,7 @@ class PuiseuxSeries_Element(Element):
         else:
             raise NotImplementedError("[equation] Default formal Puiseux series do not have a differential equation associated.")
             
-
+    @cached_method
     def equation_map(self):
         r'''
             Gets the map for the coefficients of the differential equation that defines the element. (Not always possible)
@@ -984,11 +985,19 @@ class PuiseuxSeries_Element(Element):
 
             TODO (series): add examples
         '''
-        if self.type() != self.TYPES.dalgebraic:
-            return None # if not explicit, we return None
-        else:
+        if self.type() == self.TYPES.polynomial:
+            # the equations has as coefficient the corresponding dpoly_ring, whose generator if the ramification element
+            R = self.parent().dpoly_ring(self.ramification())
+            t = R.gens()[0]
+            img = self.parent().gens()[0]**(ZZ(1)/self.ramification())
+            return R.puiseux_morphism(**{str(t) : img}) # we return the map of the differential equation
+        elif self.type() == self.TYPES.rational:
+            raise NotImplementedError("[equation_map] Computing map for differential equation of rational series not implemented.")
+        elif self.type() == self.TYPES.dalgebraic:
             return self.__dalgebraic[3] # we return the map of the differential equation
-        
+        else:
+            return None # if not explicit, we return None
+                    
     @CheckBound
     def trailing_coefficient(self, *, bound: int | None = None) -> Element:
         r'''
