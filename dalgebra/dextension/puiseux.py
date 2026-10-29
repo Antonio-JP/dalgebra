@@ -52,6 +52,7 @@ from sage.categories.morphism import Morphism
 from sage.categories.pushout import pushout, ConstructionFunctor
 from sage.misc.cachefunc import cached_method
 from sage.misc.latex import latex, latex_variable_name
+from sage.rings.fraction_field import FractionField_generic
 from sage.rings.infinity import Infinity as oo
 from sage.rings.integer_ring import ZZ
 from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
@@ -930,16 +931,48 @@ class PuiseuxSeries_Element(Element):
         r'''
             Gets the differential equation that defines the element. (Not always possible)
 
+            We get a differential equation for a Puiseux series. It can be computed in several cases:
+
+            * For `polynomial` Puiseux series, we can compute always a order 0 differential equation.
+            * For `rational` Puisueux series, we compute the differential equation from the equation for its numerator and denominator.
+            * For `dalgebraic` Puiseux series, we return the differential equation that defines the series.
+            * For `default` Puiseux series, we do not have a differential equation associated.
+
             EXAMPLES::
 
-                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: from dalgebra import *
 
             TODO (series): add examples
         '''
-        if self.type() != self.TYPES.dalgebraic:
-            return None # if not explicit, we return None
-        else:
+        if self.type() == self.TYPES.polynomial:
+            if self.is_zero():
+                raise NotImplementedError("[equation] Zero polynomial formal Puiseux series do not have a differential equation associated.")
+            
+            if self.order() < 0:
+                R = self.parent().dpoly_ring(self.ramification()).fraction_field()
+            else:
+                R = self.parent().dpoly_ring(self.ramification())
+
+            S = R(self) # this is the element but in the differential polynomial ring
+            from ..dpolynomial.dpolynomial import DifferentialPolynomialRing
+            DR = DifferentialPolynomialRing(R, "u_gen")
+            u = DR.gens()[0]
+            return u[0] - S
+        elif self.type() == self.TYPES.rational:
+            try:
+                equ_n = self.numerator().equation()
+                equ_d = self.denominator().equation()
+
+                equ_d = self.equation_for_inverse(equ_d) # we compute the differential equation for the inverse of the denominator
+                equ = self.equation_for_product(equ_n, equ_d) # we compute
+                return equ
+            except NotImplementedError:
+                raise NotImplementedError("[equation] Eror in rational: numerator or denominator do not have equation.")
+        elif self.type() == self.TYPES.dalgebraic:
             return self.__dalgebraic[0] # we return the differential equation
+        else:
+            raise NotImplementedError("[equation] Default formal Puiseux series do not have a differential equation associated.")
+            
 
     def equation_map(self):
         r'''
@@ -1310,7 +1343,13 @@ class PuiseuxSeries_Element(Element):
             else: # L is a positive integer and we can compute the coefficient recursively
                 return -to_div * sum(self[order + i/E] * inverse_coeffs(k-i/E) for i in range(1, L+1))
 
-        return self.parent().element_class(self.parent(), coefficient_map=inverse_coeffs, order=-order, ramification=E)
+        ## We try to work with d-algebraic series
+        try:
+            self_equ = self.equation()
+            new_equ = self.equation_for_inverse(self_equ)
+            return self.parent().algebraic_element(new_equ, init_dict=inverse_coeffs)
+        except NotImplementedError: # we fall back to default series
+            return self.parent().element_class(self.parent(), coefficient_map=inverse_coeffs, order=-order, ramification=E)
 
     @cached_method
     def __pow__(self, power: int | Rational) -> PuiseuxSeries_Element:
@@ -1332,16 +1371,20 @@ class PuiseuxSeries_Element(Element):
                 sage: (x**QQ((1, 2)))**2 == x
                 True
         '''
+        power = QQ(power)
         if power == 0:
             return self.parent().one()
         elif power == 1:
             return self
+        elif self.is_monomial() is True:
+            o = self.order()
+            c = self[o]
+            return self.parent().element_class(self.parent(), coefficients={o*power: c**power})
         elif power < 0:
             return self.parent().one() / (self)**(-power)
         elif power not in ZZ:
             if power not in QQ:
                 raise ValueError(f"Power {power} is not a rational number, only rational powers are allowed in pseudo-differential operators.")
-            power = QQ(power)
             n = power.numerator()
             m = power.denominator()
 
@@ -1350,11 +1393,6 @@ class PuiseuxSeries_Element(Element):
                     return self.parent().zero()
                 elif self.is_zero() is not False:
                     raise ValueError(f"Could not say if an element is zero or not.")
-
-                if self.is_monomial() is True: # the only case where exact computation can be performed
-                    o = self.order()
-                    c = self[o]
-                    return self.parent().element_class(self.parent(), coefficients={o/m: c**(1/m)})
 
                 ## We use the following formula: if g(x) = f(x)^{1/m}, then we have that
                 ## g'(x) = 1/m * g(x) / f(x) * f'(x), which provides a recursive formula for the coefficients of g(x).
@@ -1863,6 +1901,7 @@ class PuiseuxSeries_Ring(Parent):
         self.__gen = self.element_class(self, coefficients={1: self.base().one()})
         self.__poly_rings = dict()
         self.poly_ring(ramification=1) # we create the basic (ramification 1) polynomial ring
+        self.__dpoly_rings = dict()
 
         ## Setting up basic conversions
         ## Puiseux series ring -> Base ring of coefficients (constants) (this is a conversion)
@@ -1979,6 +2018,7 @@ class PuiseuxSeries_Ring(Parent):
             ## poly ring -> Puiseux series ring (this is a coercion)
             try:
                 self.register_coercion(PSCoerceFromPoly(self.__poly_rings[ramification], self, ramification=ramification))
+                self.register_coercion(PSCoerceFromRational(self.__poly_rings[ramification].fraction_field(), self, ramification=ramification))
             except AssertionError: # This coercion was already registered
                 pass
             ## Puiseux series ring -> poly ring (this is a conversion)
@@ -2005,6 +2045,53 @@ class PuiseuxSeries_Ring(Parent):
                 True
         '''
         return self.poly_ring(ramification=ramification).fraction_field()
+
+    def dpoly_ring(self, ramification: int = 1) -> Parent:
+        r'''
+            Return the d-polynomial ring associated to this field of formal Puiseux series with the specified ramification.
+
+            We use the following simple idea: if `t^(1/e)` is the variable for the desired ramification, then
+            we need to compute its derivative: `(t^(1/e))' = 1/e * t^((1-e)/e)`. This split the cases depending on `e`:
+
+            * If `e = 1`, then the derivative is just `1` and we can use the standard d-polynomial ring over the polynomial ring.
+            * If `e > 1`, then the derivative is a negative power of the variable, hence we need to use the rational function field.
+            
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: P = R.dpoly_ring(2)
+                sage: P.gen().variable_name()
+                'x_2'
+                sage: P.gen().derivative() == (1/2) * P.gen()**(-1)
+                True
+        '''
+        if ramification not in ZZ or ramification <= 0:
+            raise ValueError(f"Ramification {ramification} must be a positive integer.")
+        
+        if ramification not in self.__dpoly_rings:
+            ring = self.poly_ring(ramification=1) if ramification == 1 else self.rat_field(ramification=ramification)
+            dpoly_ring = DifferentialRing(ring, (1/ramification) * ring.gen()**(1 - ramification))
+            self.__dpoly_rings[ramification] = dpoly_ring
+
+            # we try to register the coercion and conversion for and from this ring
+            # Conversion Puiseux -> poly_ring
+            try:
+                pui_ring = ring.convert_map_from(self) # Puiseux -> poly_ring
+                ring_dpoly = dpoly_ring.coerce_map_from(ring) # poly_ring -> dpoly_ring
+                dpoly_ring.register_conversion(ring_dpoly*pui_ring) 
+            except AssertionError: # This coercion was already discovered
+                pass
+            # Coercion poly_ring -> Puiseux
+            try:
+                dpoly2ring = ring.coerce_map_from(dpoly_ring) # dpoly_ring -> poly_ring
+                ring2pui = self.coerce_map_from(ring) # poly_ring -> Puiseux
+                self.register_coercion(ring2pui*dpoly2ring) 
+            except AssertionError: # This conversion was already discovered
+                pass
+
+        return self.__dpoly_rings[ramification]
 
     #################################################
     ### Coercion methods
@@ -2351,8 +2438,32 @@ class PuiseuxSeries_Ring(Parent):
 
             The chain rule gives `d(x^{n/e}) = (n/e) x^{(n-e)/e}` for a term with (internal) numerator `n` at
             ramification `e`.
+            
+            EXAMPLES::
 
-            ::NO EXAMPLE::
+                sage: from dalgebra import *
+                sage: PSChangeBound(5)
+                sage: R = PuiseuxSeries(QQ, 't')
+                sage: t = R.gen()
+                sage: T.<u> = DifferentialPolynomialRing(QQ)
+                sage: p = t^(3/2) - 2*t + 1 - t^(-1/3)
+                sage: p.derivative()
+                1/3*t^(-4/3) - 2 + 3/2*t^(1/2)
+                sage: p = ~(1-t) # 1 + t + t^2 + t^3 + ... (default case)
+                sage: p.derivative()
+                1 + 2*t + 3*t^(2) + 4*t^(3) + 5*t^(4) + 6*t^(5) + O(t^(6))
+                sage: p.derivative().type()
+                <Type.default: 0>
+                sage: p = R.algebraic_element(u[1]-u[0], 1) # exponential as d-algebraic
+                sage: p.derivative() # is equal to p
+                1 + t + 1/2*t^(2) + 1/6*t^(3) + 1/24*t^(4) + 1/120*t^(5) + O(t^(6))
+                sage: p.derivative().type()
+                <Type.dalgebraic: 3>
+                sage: q = (1+t) / p # (1+t)/exp(t)
+                sage: q.derivative()
+                -t + t^(2) - 1/2*t^(3) + 1/6*t^(4) - 1/24*t^(5) + O(t^(6))
+                sage: q.derivative().type()
+                <Type.rational: 2>
 
             TODO (puiseux): (2), (3)
         '''
@@ -2586,6 +2697,29 @@ class PSCoerceFromPoly(Morphism):
         out_dict = {k/ZZ(self.ramification): element[k] for k in range(element.degree()+1)}
         # element is a univariate polynomial
         return self.codomain().element_class(self.codomain(), coefficients=out_dict)
+
+class PSCoerceFromRational(Morphism):
+    r'''
+        Coercion morphism from the field of rational functions naturally embedded (at trivial ramification) in the Puiseux series ring.
+    '''
+    def __init__(self, domain, codomain: PuiseuxSeries_Ring, ramification: int = 1):
+        if not isinstance(codomain, PuiseuxSeries_Ring):
+            raise TypeError("The domain must be a formal power series ring")
+        if not isinstance(domain, FractionField_generic):
+            raise TypeError("The domain must be a field of rational functions")
+        elif ramification not in ZZ or ramification <= 0:
+            raise ValueError(f"Ramification {ramification} must be a positive integer.")
+
+        super().__init__(domain, codomain)
+        self.poly_to_puiseux = codomain.coerce_map_from(domain.base()) # this already has registered the ramification
+
+    def _call_(self, element: Element) -> PuiseuxSeries_Element:
+        r'''
+            See :func:`Morphism._call_` for further information.
+
+            ::NO EXAMPLE::
+        '''
+        return self.poly_to_puiseux(element.numerator()) / self.poly_to_puiseux(element.denominator())
 
 
 class PSConvertToPoly(Morphism):

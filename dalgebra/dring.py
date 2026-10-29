@@ -2027,24 +2027,13 @@ class DRing_Wrapper(Parent):
 
         #########################################################################################################
         ### COERCION AND CONVERSION MORPHISMS
-        # registering conversion to simpler structures
-        current = self.__wrapped
-        morph = DRing_Wrapper_SimpleMorphism(self, current)
         try:
-            current.register_conversion(morph)
-            while current.base() != current:
-                current = current.base()
-                morph = DRing_Wrapper_SimpleMorphism(self, current)
-                current.register_conversion(morph)
-        except AssertionError:
-            pass # conversion already registered
-
-        # registering coercion into its ring of linear operators
+            self.register_coercion(DRing_Wrapper_FromSimpleMorphism(self.wrapped, self))
+        except AssertionError: # coercion already registered
+            pass
         try:
-            operator_ring = self.linear_operator_ring()
-            morph = DRing_Wrapper_SimpleMorphism(self, operator_ring)
-            operator_ring.register_conversion(morph)
-        except Exception:
+            self.wrapped.register_coercion(DRing_Wrapper_ToSimpleMorphism(self, self.wrapped))
+        except AssertionError: # coercion already registered
             pass
 
     @property
@@ -3118,7 +3107,7 @@ class DRingFunctor(ConstructionFunctor):
         return self.__types
 
 
-class DRing_Wrapper_SimpleMorphism(Morphism):
+class DRing_Wrapper_ToSimpleMorphism(Morphism):
     r'''
         Class representing maps to simpler rings.
 
@@ -3133,6 +3122,22 @@ class DRing_Wrapper_SimpleMorphism(Morphism):
     def _call_(self, p):
         r'''Method to apply the morphism (::NO EXAMPLE::)'''
         return self.codomain()(p.wrapped)
+
+class DRing_Wrapper_FromSimpleMorphism(Morphism):
+    r'''
+        Class representing maps to simpler rings.
+
+        This map allows the coercion system to detect that some elements in a
+        :class:`DRing_Wrapper` are included in simpler rings.
+
+        ::NO EXAMPLE::
+    '''
+    def __init__(self, domain, codomain):
+        super().__init__(domain, codomain)
+
+    def _call_(self, p):
+        r'''Method to apply the morphism (::NO EXAMPLE::)'''
+        return self.codomain().element_class(self.codomain(), self.codomain().wrapped(p))
 
 
 class DRing_Wrapper_ToPolyRingMorphism(Morphism):
