@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dalgebra.dpolynomial.dsystems import DSystem
+
 r'''
     Module to create univariate formal Puiseux series over a given differential field.
 
@@ -945,35 +947,162 @@ class PuiseuxSeries_Element(Element):
 
             TODO (series): add examples
         '''
+        if self.is_zero() is True: # zero element has no real equation, we return 0
+            return 0
+        
         if self.type() == self.TYPES.polynomial:
-            if self.is_zero():
-                raise NotImplementedError("[equation] Zero polynomial formal Puiseux series do not have a differential equation associated.")
-            
-            if self.order() < 0:
-                R = self.parent().dpoly_ring(self.ramification()).fraction_field()
-            else:
-                R = self.parent().dpoly_ring(self.ramification())
+            if self.ramification() == 1 and self.order() >= 0:
+                from ..dpolynomial.dpolynomial import DifferentialPolynomialRing
+                from sage.functions.other import factorial 
+                DR = DifferentialPolynomialRing(self.parent().constant_ring(), "u_gen")
+                u = DR.gens()[0]
 
-            S = R(self) # this is the element but in the differential polynomial ring
-            from ..dpolynomial.dpolynomial import DifferentialPolynomialRing
-            DR = DifferentialPolynomialRing(R, "u_gen")
-            u = DR.gens()[0]
-            return u[0] - S
+                return u[self.degree()] - self[self.degree()]*factorial(self.degree())
+            else:
+                DR = DifferentialPolynomialRing(self.parent().dpoly_ring(), "u_gen")
+                t = DR.base().gens()[0]
+                u = DR.gens()[0]
+                ## we start from an equation for the function x^n*f(x^e) where `e` is the ramification and `n` is the order of the remaining series. This is going to be 
+                ## a polynomial, of degree `deg(f)*e + n`, so the equation is 
+                ## `u[deg(f)*e + n] - coeff*factorial(deg(f)*e + n) = 0` where `coeff` is the coefficient of the highest degree term.
+                poly_equ = u[(self.degree() + self.order())*self.ramification()] - self[self.degree()]*factorial((self.degree() + self.order())*self.ramification())
+
+                ## Now we compute the equation for f(x^e) 
+                rat_equ = poly_equ(**{u.variable_name(): t**(self.ramification()*self.order())*u[0]})
+
+                ## Finally we compute the equation for f(x)
+                equ = self.equation_from_inner_power(rat_equ, self.ramification())
+
+                ## We now map every `t` to `t^{1/e}` to get the final equation
+                DR_e = DifferentialPolynomialRing(self.parent().dpoly_ring(self.ramification()), "u_gen")
+                u_e = DR_e.gens()[0]
+                t_e = DR_e.base().gens()[0]
+                equ = equ(**{t: t_e**(1/self.ramification()), u.variable_name(): u_e[0]})
+                return equ
         elif self.type() == self.TYPES.rational:
             try:
                 equ_n = self.numerator().equation()
                 equ_d = self.denominator().equation()
 
                 equ_d = self.equation_for_inverse(equ_d) # we compute the differential equation for the inverse of the denominator
-                equ = self.equation_for_product(equ_n, equ_d) # we compute
+                equ = self.equation_for_product(equ_n, equ_d) # we compute the equation for the product of two elements
                 return equ
             except NotImplementedError:
-                raise NotImplementedError("[equation] Eror in rational: numerator or denominator do not have equation.")
+                raise NotImplementedError("[equation] Error in rational: numerator or denominator do not have equation.")
         elif self.type() == self.TYPES.dalgebraic:
             return self.__dalgebraic[0] # we return the differential equation
         else:
             raise NotImplementedError("[equation] Default formal Puiseux series do not have a differential equation associated.")
+        
+    @staticmethod
+    def equation_for_inverse(equ):
+        r'''
+            Computes the differential equation for the multiplicative inverse of solutions for a differential equation.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: f = 1/(1 - x)
+                sage: equ = f.equation()
+                sage: equ_inv = f.denominator().equation()
+                sage: equ_inv == f.equation_for_inverse(equ)
+                True
+        '''
+        DR = equ.parent()
+        gen = equ.infinite_variables()[0] # we assume the differential equation is in one
+        return equ(**{gen.variable_name(): gen[0]**(-1)}).numerator() # we compute the equation for 1/f(x) by substituting u -> 1/u
+
+    @staticmethod
+    def unify_equations(equ1, equ2=None):
+        r'''
+            Unifies the parent for two differential equations so they share the same parent structure.
+        '''
+        DR1 = equ1.parent()
+        DR2 = equ2.parent() if equ2 is not None else DR1
+        u = equ1.infinite_variables()[0] # we assume the differential equation is in one variable
+        v = equ2.infinite_variables()[0] if equ2 is not None else None # we assume the differential equation is in
+
+        R = pushout(DR1.base(), DR2.base())
+
+        from ..dpolynomial.dpolynomial import DifferentialPolynomialRing
+        DR = DifferentialPolynomialRing(R, "u_gen", "v_gen", "w_gen")
+        u_e,v_e,w_e = DR.gens()
+        equ1 = DR(equ1(**{u.variable_name(): u_e[0]}))
+        equ2 = DR(equ2(**{v.variable_name(): v_e[0]})) if equ2 is not None else None
+        return equ1, equ2, u_e, v_e, w_e
+
+    @staticmethod
+    def equation_for_addition(equ1, equ2):
+        r'''
+            Computes the differential equation for the addition of solutions for two differential equations.
+
+            EXAMPLES::
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: f = 1/(1 - x)
+                sage: g = 1/(1 + x)
+                sage: equ_f = f.equation()
+                sage: equ_g = g.equation()
+                sage: equ_fg = (f + g).equation()
+                sage: equ_fg == f.equation_for_addition(equ_f, equ_g)
+                True
+        '''
+        equ1, equ2, u, v, w = PuiseuxSeries_Element.unify_equations(equ1, equ2)
+        DR = equ1.parent()
+        equ3 = w[0] - u[0] - v[0]
+
+        from ..dpolynomial.dsystems import DSystem
+
+        system = DSystem([equ1, equ2, equ3], DR , [u,v])
+        red_system = system.eliminate_variables()
+
+        return red_system[0] if len(red_system) > 0 else None
+
+    @staticmethod
+    def equation_for_product(equ1, equ2):
+        r'''
+            Computes the differential equation for the product of solutions for two differential equations.
+
+            EXAMPLES::
+
+                sage: from dalgebra.dextension.puiseux import PuiseuxSeries
+                sage: R = PuiseuxSeries(QQ, 'x')
+                sage: x = R.gen()
+                sage: f = 1/(1 - x)
+                sage: g = 1/(1 + x)
+                sage: equ_f = f.equation()
+                sage: equ_g = g.equation()
+                sage: equ_fg = (f*g).equation()
+                sage: equ_fg == f.equation_for_product(equ_f, equ_g)
+                True
+        '''
+        equ1, equ2, u, v, w = PuiseuxSeries_Element.unify_equations(equ1, equ2)
+        DR = equ1.parent()
+        equ3 = w[0] - u[0]*v[0]
+
+        from ..dpolynomial.dsystems import DSystem
+
+        system = DSystem([equ1, equ2, equ3], DR , [u,v])
+        red_system = system.eliminate_variables()
+
+        return red_system[0] if len(red_system) > 0 else None
+
+    @staticmethod
+    def equation_from_inner_power(equ, power: int):
+        r'''
+            Computes the differential equation for a function `f(x)` given a differential equation for `f(x^e)` where `e` is a natural number.
+
+            EXAMPLES::
+        '''
+        raise NotImplementedError("[equation_from_inner_power] Computing the differential equation for f(x) given a differential equation for f(x^e) is not yet implemented.")
+        
             
+
+
+
     @cached_method
     def equation_map(self):
         r'''
@@ -1122,7 +1251,7 @@ class PuiseuxSeries_Element(Element):
 
         E = lcm(self.ramification(), other.ramification())
 
-        if any(el.type() in (self.TYPES.default, self.TYPES.dalgebraic) for el in (self, other)):
+        if any(el.type() == self.TYPES.default for el in (self, other)):
             if any(el.type() == self.TYPES.dalgebraic for el in (self, other)):
                 logger.warning(f"[dalgebraic] Addition of differential algebraic formal Puiseux series falls back into default type of series.")
                 # TODO (series): implement addition of dalgebraic series using differential elimination.
@@ -1144,6 +1273,13 @@ class PuiseuxSeries_Element(Element):
             new_num = self.numerator() * other.denominator() + other.numerator() * self.denominator()
             new_den = self.denominator() * other.denominator()
             return self.parent().element_class(self.parent(), numerator=new_num, denominator=new_den)
+        else: # none is default and one is algebraic
+            self_equ = self.equation()
+            other_equ = other.equation()
+            new_equ = self.equation_for_addition(self_equ, other_equ)
+            coeffs = lambda n : self[n] + other[n]
+            return self.parent().algebraic_element(new_equ, init_dict=coeffs)
+
 
     def __neg__(self) -> PuiseuxSeries_Element:
         r'''
@@ -1250,13 +1386,11 @@ class PuiseuxSeries_Element(Element):
             new_den = self.denominator() * other.denominator()
             return self.parent().element_class(self.parent(), numerator=new_num, denominator=new_den)
         else: # at least one is dalgebraic and none is default
-            # TODO (series): implement multiplication of dalgebraic series using differential elimination.
-            logger.error(f"[dalgebraic] Multiplication of differential algebraic formal Puiseux falls back into default type of series.")
-            E = lcm(self.ramification(), other.ramification())
-            t = self.order()
-            s = other.order()
-            mul_map = lambda k : sum(self[i]*other[k-i] for i in rat_range(t, k-s, 1/self.ramification(), True))
-            return self.parent().element_class(self.parent(), coefficient_map=mul_map, order=t+s, ramification=E)
+            self_equ = self.equation()
+            other_equ = other.equation()
+            new_equ = self.equation_for_product(self_equ, other_equ)
+            coeffs = lambda n : sum(self[i]*other[k-i] for i in rat_range(t, k-s, 1/self.ramification(), True))
+            return self.parent().algebraic_element(new_equ, init_dict=coeffs)
             
     def _div_(self, other: PuiseuxSeries_Element) -> PuiseuxSeries_Element:
         r'''
