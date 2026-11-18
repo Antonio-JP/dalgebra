@@ -8,7 +8,7 @@
       - [x] Rational series can compute their equation as a product of d-algebraic
       - [x] D-algebraic has the equation already defined
       - [x] Default series can not compute differential equation without Puiseux series as coefficients.
-   2. Implement the addition/product of d-algebraic series. 
+   2. [x] Implement the addition/product of d-algebraic series. 
       - [x] Compute the equation for each summand/factor.
       - [x] Combine the equation is a DRing with 3 d-variables (`u`, `v`, `w`). `u` for the first, `v` for the second and `w[0] = u[0]+v[0]` or `w[0]=u[0]*v[0]`.
       - [x] Perform elimination of d-variables to remove `u` and `v`. 

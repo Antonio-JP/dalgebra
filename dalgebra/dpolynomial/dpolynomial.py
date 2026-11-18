@@ -3071,7 +3071,7 @@ class DPolynomialRing_Monoid(Parent):
     ##########################################################
     def _puiseux_morphism(self, 
                           codomain, *args, operation: int = 0,
-                          images: tuple[tuple[str,tuple[DPolynomial, tuple[Element]] | Element]], 
+                          images: tuple[tuple[str | DPolynomial ,Element]], 
                           map = None, 
                           **kwds) -> Morphism:
         r'''

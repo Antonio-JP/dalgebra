@@ -580,10 +580,12 @@ class PuiseuxSeries_Element(Element):
             if len(pos_order) == 0:
                 raise ValueError(f"Initial condition for {equ} is not compatible.\n\t- Found MULTIPLE options for the order from the Newton polygon: {list(incl_charpoly.keys())}.\n\t- Characteristic polynomials for each order: {incl_charpoly}.\n\t- No initial condition was provided for any of the possible orders. Please provide more initial conditions.")
             order = min(pos_order) # we take the lowest order that is compatible with the initial conditions
-            if incl_charpoly[order](call_data(order)) != 0:
+            cond = call_data(order)
+            if cond != 0 and incl_charpoly[order](cond) != 0:
+                # We omit the check for cond == 0 since we have removed 0 as root for every characteristic polynomial.
                 raise ValueError(f"Initial condition for {equ} is not compatible.\n\t- Found MULTIPLE options for the order from the Newton polygon: {list(incl_charpoly.keys())}.\n\t- The order given matches one of the possible orders ({order}).\n\t- Characteristic polynomial {incl_charpoly[order]} evaluated at {call_data(order)} is not zero.\n\t- Try giving one of the roots: {incl_charpoly[order].roots()}.")
             else: # everything is correct, we set the order and the coefficient
-                coeff = call_data(order)
+                coeff = cond
                 used_condition = False
         return order, coeff, used_condition
 
@@ -1242,6 +1244,92 @@ class PuiseuxSeries_Element(Element):
                 2
                 sage: ((r + x) + (~(1 - x)))[0:4] == ((~(1 - x)) + (r + x))[0:4]
                 True
+
+            Check the result type, coefficients and, when available, its differential equation::
+
+                sage: from dalgebra import DifferentialPolynomialRing
+                sage: T.<u> = DifferentialPolynomialRing(QQ)
+                sage: p = 1 + x
+                sage: r = 1/(1 - x)
+                sage: s = 1/(1 + x)
+                sage: a = R.algebraic_element(u[1] - u[0], 1)
+                sage: b = R.algebraic_element(u[1] - 2*u[0], 1)
+                sage: d = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: (-1)^n/factorial(n))
+                sage: pd = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: 1 if n in (0, 1) else 0)
+                sage: rd = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: 1)
+                sage: sd = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: (-1)^n)
+                sage: ad = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: 1/factorial(n))
+                sage: bd = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: 2^n/factorial(n))
+                sage: (p.type(), r.type(), a.type(), d.type()) == (p.TYPES.polynomial, p.TYPES.rational, p.TYPES.dalgebraic, p.TYPES.default)
+                True
+
+            Polynomial and rational::
+
+                sage: result = p + r; reference = pd + rd
+                sage: result.type() == result.TYPES.rational
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+
+            Two rational series::
+
+                sage: result = r + s; reference = rd + sd
+                sage: result.type() == result.TYPES.rational
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+
+            Polynomial and differential-algebraic::
+
+                sage: result = p + a; reference = pd + ad
+                sage: result.type() == result.TYPES.dalgebraic
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+                sage: reference.is_annihilated(result.equation())
+                20
+
+            Rational and differential-algebraic::
+
+                sage: result = r + a; reference = rd + ad
+                sage: result.type() == result.TYPES.dalgebraic
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+                sage: reference.is_annihilated(result.equation())
+                20
+
+            Two differential-algebraic series::
+
+                sage: result = a + b; reference = ad + bd
+                sage: result.type() == result.TYPES.dalgebraic
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+                sage: reference.is_annihilated(result.equation())
+                20
+
+            Polynomial and default::
+
+                sage: result = p + d; reference = pd + d
+                sage: result.type() == result.TYPES.default
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+
+            Differential-algebraic and default::
+
+                sage: result = a + d; reference = ad + d
+                sage: result.type() == result.TYPES.default
+                True
+                sage: result[0:20] == reference[0:20]
+                True
         '''
         ## Checking for trivial cases
         if self.is_zero() is True:
@@ -1336,6 +1424,92 @@ class PuiseuxSeries_Element(Element):
                 sage: f = ~(1 - x)
                 sage: (f*f)[0:5]
                 [1, 2, 3, 4, 5]
+
+            Check the result type, coefficients and, when available, its differential equation::
+
+                sage: from dalgebra import DifferentialPolynomialRing
+                sage: T.<u> = DifferentialPolynomialRing(QQ)
+                sage: p = 1 + x
+                sage: r = 1/(1 - x)
+                sage: s = 1/(1 + x)
+                sage: a = R.algebraic_element(u[1] - u[0], 1)
+                sage: b = R.algebraic_element(u[1] - 2*u[0], 1)
+                sage: d = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: (-1)^n/factorial(n))
+                sage: pd = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: 1 if n in (0, 1) else 0)
+                sage: rd = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: 1)
+                sage: sd = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: (-1)^n)
+                sage: ad = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: 1/factorial(n))
+                sage: bd = R.element_class(R, ramification=1, order=0,
+                ....:     coefficient_map=lambda n: 2^n/factorial(n))
+                sage: (p.type(), r.type(), a.type(), d.type()) == (p.TYPES.polynomial, p.TYPES.rational, p.TYPES.dalgebraic, p.TYPES.default)
+                True
+
+            Polynomial and rational::
+
+                sage: result = p * r; reference = pd * rd
+                sage: result.type() == result.TYPES.rational
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+
+            Two rational series::
+
+                sage: result = r * s; reference = rd * sd
+                sage: result.type() == result.TYPES.rational
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+
+            Polynomial and differential-algebraic::
+
+                sage: result = p * a; reference = pd * ad
+                sage: result.type() == result.TYPES.dalgebraic
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+                sage: reference.is_annihilated(result.equation())
+                20
+
+            Rational and differential-algebraic::
+
+                sage: result = r * a; reference = rd * ad
+                sage: result.type() == result.TYPES.dalgebraic
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+                sage: reference.is_annihilated(result.equation())
+                20
+
+            Two differential-algebraic series::
+
+                sage: result = a * b; reference = ad * bd
+                sage: result.type() == result.TYPES.dalgebraic
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+                sage: reference.is_annihilated(result.equation())
+                20
+
+            Polynomial and default::
+
+                sage: result = p * d; reference = pd * d
+                sage: result.type() == result.TYPES.default
+                True
+                sage: result[0:20] == reference[0:20]
+                True
+
+            Differential-algebraic and default::
+
+                sage: result = a * d; reference = ad * d
+                sage: result.type() == result.TYPES.default
+                True
+                sage: result[0:20] == reference[0:20]
+                True
         '''
         ## Multiplication with trivial/simpler cases
         if (self.is_zero() is True) or (other.is_zero() is True): # multiplication by a true zero
@@ -1634,6 +1808,29 @@ class PuiseuxSeries_Element(Element):
         elif equals is False:
             return True
         return equals
+
+    @CheckBound
+    def is_annihilated(self, equation, map = None, *, bound: int | None = None) -> bool:
+        r'''
+            Check if the series is annihilated by a given differential equation.
+
+            ::NO EXAMPLES::
+        '''
+        from ..dpolynomial.dpolynomial import DPolynomial
+        if not isinstance(equation, DPolynomial):
+            raise TypeError(f"Equation must be a DPolynomial, got {type(equation)} instead.")
+        elif len(equation.infinite_variables()) != 1:
+            raise ValueError(f"Equation must be in one variable, got {len(equation.infinite_variables())} variables instead.")
+
+        map = map if map is not None else equation.parent().base().puiseux_morphism()
+        if not self.parent().has_coerce_map_from(map.codomain()):
+            raise TypeError(f"Map must be a coercion map from {map.codomain()} to {self.parent()}, got {map} instead.")
+
+        u = equation.infinite_variables()[0]
+        puiseux_map = equation.parent().puiseux_morphism(images=((u, self),) + tuple((v,0) for v in equation.parent().gens() if u != v), map=map)
+        out = puiseux_map(equation)
+
+        return out.is_zero(bound=bound)
 
     def __hash__(self) -> int:
         r'''
@@ -2254,6 +2451,12 @@ class PuiseuxSeries_Ring(Parent):
         '''
         return PSCoerceFromBase(self)
 
+    def _coerce_map_from_(self, other: PuiseuxSeries_Ring):
+        if not isinstance(other, PuiseuxSeries_Ring):
+            return None
+
+        return PSCoerceBetweenBases(other, self, self.base().coerce_map_from(other.base()))
+
     def construction(self) -> tuple[PuiseuxSeriesFunctor, Parent]:
         r'''
             Return the associated functor and input to create ``self``.
@@ -2658,13 +2861,14 @@ class PuiseuxSeries_Ring(Parent):
 
             ::NO EXAMPLE::
         '''
-        if isinstance(map, PSCoerceFromDRing) and map.codomain() == self:
-            # Normal case: built as a PSCoerceFromDRing
-            return True
-        elif map == self.hom(self):
-            # Special case: identity map from the Puiseux series ring.
-            return True
-        return False
+        return map.codomain() == self
+        # if isinstance(map, PSCoerceFromDRing) and map.codomain() == self:
+        #     # Normal case: built as a PSCoerceFromDRing
+        #     return True
+        # elif map == self.hom(self):
+        #     # Special case: identity map from the Puiseux series ring.
+        #     return True
+        # return False
 
 class PuiseuxSeriesFunctor(ConstructionFunctor):
     r'''
